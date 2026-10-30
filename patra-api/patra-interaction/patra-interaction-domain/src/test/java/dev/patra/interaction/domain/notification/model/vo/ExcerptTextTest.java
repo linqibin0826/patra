@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.patra.interaction.domain.notification.model.vo.ExcerptText.Literal;
 import dev.patra.interaction.domain.notification.model.vo.ExcerptText.Mention;
+import dev.patra.interaction.domain.subject.model.vo.PlainText;
 import org.junit.jupiter.api.Test;
 
 /// 摘录的存储写法：字面的 `\` 与 `<` 转义，提及存 `<@ID>`；按单位（字面字素各 1、提及各 1）截断。
@@ -62,5 +63,26 @@ class ExcerptTextTest {
 
     assertThat(text.segments()).containsExactly(new Literal("x <@1> "), new Mention(2));
     assertThat(text.truncated()).isTrue();
+  }
+
+  /// 从纯文本转来：`<@ID>` 成提及段，换行变空格（站内摘录是单行）。
+  @Test
+  void should_build_single_line_segments_from_plain_text() {
+    ExcerptText text = ExcerptText.fromPlainText(PlainText.of("问 <@42>\n好"));
+
+    assertThat(text.segments())
+        .containsExactly(new Literal("问 "), new Mention(42), new Literal(" 好"));
+    assertThat(text.truncated()).isFalse();
+  }
+
+  /// 断开过的同形文字仍是字面。
+  @Test
+  void should_keep_broken_token_literal() {
+    String broken = "<" + PlainText.WORD_JOINER + "@7>";
+
+    ExcerptText text = ExcerptText.fromPlainText(PlainText.of(broken));
+
+    assertThat(text.segments()).containsExactly(new Literal(broken));
+    assertThat(text.mentionIds()).isEmpty();
   }
 }

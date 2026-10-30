@@ -54,6 +54,30 @@ class ExcerptRulesTest {
     assertThat(ExcerptRules.render(ExcerptText.of("短", true), Map.of()).truncated()).isTrue();
   }
 
+  /// 提及不切开：`@chen-yu`（8 个字素）整个放不下就停在它前面（PAP-128 spec 第 5 节）。
+  @Test
+  void should_stop_before_mention_that_does_not_fit() {
+    ExcerptText text = ExcerptText.builder().literal("字".repeat(117)).mention(5).build();
+
+    RenderedExcerpt rendered =
+        ExcerptRules.render(text, Map.of(5L, card(5, "chen-yu", "陈宇", true)));
+
+    assertThat(rendered.text()).isEqualTo("字".repeat(117));
+    assertThat(rendered.truncated()).isTrue();
+  }
+
+  /// 截断后去掉末尾空白（门户接着加省略号）。
+  @Test
+  void should_strip_trailing_space_when_cut() {
+    ExcerptText text = ExcerptText.builder().literal("字".repeat(116) + " ").mention(5).build();
+
+    RenderedExcerpt rendered =
+        ExcerptRules.render(text, Map.of(5L, card(5, "chen-yu", "陈宇", true)));
+
+    assertThat(rendered.text()).isEqualTo("字".repeat(116));
+    assertThat(rendered.truncated()).isTrue();
+  }
+
   /// 测试用的名片。
   ///
   /// @param id 用户 ID

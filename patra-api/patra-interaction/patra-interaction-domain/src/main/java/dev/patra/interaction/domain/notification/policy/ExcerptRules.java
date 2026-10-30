@@ -27,31 +27,59 @@ public final class ExcerptRules {
   /// 只有静态方法，不实例化。
   private ExcerptRules() {}
 
-  /// 渲染：提及换成 `@用户名`（主页对收件人可见）/ `@昵称`（不可见）/ `@已注销用户`（不认识），再截断。
+  /// 渲染：提及换成 `@用户名`（主页对收件人可见）/ `@昵称`（不可见）/ `@已注销用户`（不认识），再截到
+  /// {@link #MAX_RENDERED_GRAPHEMES} 个字素（PAP-128 spec 第 5 节）：提及整个放得下才放，不切成半个名字；截了时
+  /// 去掉末尾空白。
   ///
   /// @param excerpt 存储的摘录
   /// @param cards 提及到的用户的名片（访客是收件人）；缺了的按已注销
   /// @return 纯文本摘录
   public static RenderedExcerpt render(ExcerptText excerpt, Map<Long, UserCard> cards) {
     StringBuilder text = new StringBuilder();
+    int used = 0;
+    boolean cut = false;
     for (Segment segment : excerpt.segments()) {
       if (segment instanceof Mention mention) {
-        text.append('@').append(nameOf(cards.get(mention.userId())));
+        String name = "@" + nameOf(cards.get(mention.userId()));
+        int length = graphemeCount(name);
+        if (used + length > MAX_RENDERED_GRAPHEMES) {
+          cut = true;
+          break;
+        }
+        text.append(name);
+        used += length;
       } else if (segment instanceof Literal literal) {
-        text.append(literal.text());
+        BreakIterator graphemes = BreakIterator.getCharacterInstance();
+        graphemes.setText(literal.text());
+        int end = 0;
+        while (used < MAX_RENDERED_GRAPHEMES && graphemes.next() != BreakIterator.DONE) {
+          end = graphemes.current();
+          used++;
+        }
+        text.append(literal.text(), 0, end);
+        if (end < literal.text().length()) {
+          cut = true;
+          break;
+        }
       }
     }
-    String full = text.toString();
+    boolean truncated = excerpt.truncated() || cut;
+    String rendered = truncated ? text.toString().stripTrailing() : text.toString();
+    return RenderedExcerpt.of(rendered, truncated);
+  }
+
+  /// 数扩展字素簇。
+  ///
+  /// @param text 文字
+  /// @return 字素数
+  private static int graphemeCount(String text) {
     BreakIterator graphemes = BreakIterator.getCharacterInstance();
-    graphemes.setText(full);
-    int end = 0;
+    graphemes.setText(text);
     int count = 0;
-    while (count < MAX_RENDERED_GRAPHEMES && graphemes.next() != BreakIterator.DONE) {
-      end = graphemes.current();
+    while (graphemes.next() != BreakIterator.DONE) {
       count++;
     }
-    boolean cut = end < full.length();
-    return RenderedExcerpt.of(full.substring(0, end), excerpt.truncated() || cut);
+    return count;
   }
 
   /// 提及在摘录里显示的名字。

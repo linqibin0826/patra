@@ -97,4 +97,15 @@ class NotificationRulesFlowIT extends NotificationFlowITSupport {
     assertThat(item.get("subject").get("key").asString()).isEqualTo("100");
     assertThat(item.get("actor").get("username").asString()).isEqualTo("user-1002");
   }
+
+  /// 摘录按 PAP-128 的规则转：引用块加中文引号，图片给原文，换行在站内压成一行。
+  @Test
+  void should_render_excerpt_by_plain_text_rules() {
+    long root = comment(A, "publication", PAPER, "根", null);
+    comment(B, "publication", PAPER, "> 原文\n\n看 ![图](u.png)\n第二行", root);
+
+    JsonNode item = inbox(A, "replies").get("items").get(0);
+    assertThat(item.get("excerpt").asString()).isEqualTo("“原文” 看 ![图](u.png) 第二行");
+    assertThat(item.get("excerptTruncated").asBoolean()).isFalse();
+  }
 }

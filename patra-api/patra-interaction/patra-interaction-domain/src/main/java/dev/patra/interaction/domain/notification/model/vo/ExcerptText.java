@@ -1,11 +1,13 @@
 package dev.patra.interaction.domain.notification.model.vo;
 
+import dev.patra.interaction.domain.subject.model.vo.PlainText;
 import java.text.BreakIterator;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
+import java.util.regex.Matcher;
 
 /// 提醒摘录的存储写法：评论转成的纯文本，提及存 `<@ID>` 标记。
 ///
@@ -35,6 +37,24 @@ public record ExcerptText(String stored, boolean truncated) {
   /// @return 构建器
   public static Builder builder() {
     return new Builder();
+  }
+
+  /// 从正文转成的纯文本拼一份摘录（PAP-128）：`<@ID>` 成提及段，其余是字面段；站内提醒是单行，换行变空格。
+  ///
+  /// @param text 纯文本
+  /// @return 未截断的摘录
+  public static ExcerptText fromPlainText(PlainText text) {
+    String singleLine = text.value().replace('\n', ' ');
+    Builder builder = builder();
+    Matcher matcher = PlainText.MENTION.matcher(singleLine);
+    int last = 0;
+    while (matcher.find()) {
+      builder.literal(singleLine.substring(last, matcher.start()));
+      builder.mention(Long.parseLong(matcher.group(1)));
+      last = matcher.end();
+    }
+    builder.literal(singleLine.substring(last));
+    return builder.build();
   }
 
   /// 解码成段：字面与提及交替。

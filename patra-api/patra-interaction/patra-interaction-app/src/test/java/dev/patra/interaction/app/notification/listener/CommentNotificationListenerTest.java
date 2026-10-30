@@ -20,12 +20,12 @@ import dev.patra.interaction.domain.discussion.event.CommentEditedEvent;
 import dev.patra.interaction.domain.discussion.event.CommentPublishedEvent;
 import dev.patra.interaction.domain.notification.exception.NotificationNotFoundException;
 import dev.patra.interaction.domain.notification.model.enums.NotificationType;
-import dev.patra.interaction.domain.notification.model.vo.ExcerptText;
 import dev.patra.interaction.domain.notification.model.vo.NotificationDraft;
-import dev.patra.interaction.domain.notification.port.excerpt.PlainTextPort;
 import dev.patra.interaction.domain.notification.port.repository.NotificationRepository;
 import dev.patra.interaction.domain.subject.model.enums.SubjectType;
+import dev.patra.interaction.domain.subject.model.vo.PlainText;
 import dev.patra.interaction.domain.subject.model.vo.SubjectId;
+import dev.patra.interaction.domain.subject.port.markdown.PlainTextPort;
 import java.time.Instant;
 import java.util.List;
 import java.util.Set;
@@ -50,8 +50,7 @@ class CommentNotificationListenerTest {
 
   @BeforeEach
   void excerpt() {
-    when(plainText.toExcerpt(anyString(), anySet()))
-        .thenReturn(ExcerptText.builder().literal("摘录").build());
+    when(plainText.toPlainText(anyString(), anySet())).thenReturn(PlainText.of("摘录"));
   }
 
   /// B 回复 A 且 @C：两条，时间取事件的发表时刻，匿名标记照事件。
@@ -73,7 +72,7 @@ class CommentNotificationListenerTest {
               assertThat(d.actorId()).isEqualTo(B);
               assertThat(d.commentId()).isEqualTo(10L);
             });
-    verify(plainText).toExcerpt("正文", Set.of(C));
+    verify(plainText).toPlainText("正文", Set.of(C));
   }
 
   /// 没人要提醒：不转摘录、不写库。

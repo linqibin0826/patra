@@ -8,7 +8,7 @@
 
 | 子域 | 职责 | 本版 |
 |---|---|---|
-| `subject` | 对象底座：每个被互动过的对象在登记表 `subject.registry` 里一行，互动数据只引用本地 `subject_id`。外部对象（文献、期刊）锚定在外部标识上（`pmid:…`、`nlm:…`），catalog 内部 ID 只是缓存，首次互动时同步向 catalog 解析并登记（catalog 不可用或对象不存在则拒绝），每日对账按锚刷新；本地对象（投稿经验，`post:…`）由所属子域在自己的事务里登记、改状态，带所有者与「是否匿名」，不对账。能力矩阵在 `SubjectType`。另外提供各子域共用的用户名片（`UserDirectoryPort`）、发表守卫（`PublishGuardGateway`：资格回查与按作者计数的频率限制）和注销清理流程（各子域实现 `UserDataCleanupGateway`）。工程设计 `docs/patra/specs/2026-10-24-subject-registry-design.md`、`docs/patra/specs/2026-10-27-interaction-foundation-extension-design.md` | PAP-112、PAP-120 |
+| `subject` | 对象底座：每个被互动过的对象在登记表 `subject.registry` 里一行，互动数据只引用本地 `subject_id`。外部对象（文献、期刊）锚定在外部标识上（`pmid:…`、`nlm:…`），catalog 内部 ID 只是缓存，首次互动时同步向 catalog 解析并登记（catalog 不可用或对象不存在则拒绝），每日对账按锚刷新；本地对象（投稿经验，`post:…`）由所属子域在自己的事务里登记、改状态，带所有者与「是否匿名」，不对账。能力矩阵在 `SubjectType`。另外提供各子域共用的用户名片（`UserDirectoryPort`）、发表守卫（`PublishGuardGateway`：资格回查与按作者计数的频率限制）、注销清理流程（各子域实现 `UserDataCleanupGateway`），以及评论与投稿经验共用的正文转纯文本（`PlainTextPort`，按门户的 Markdown 子集转，`<@用户ID>` 保留，PAP-128）。工程设计 `docs/patra/specs/2026-10-24-subject-registry-design.md`、`docs/patra/specs/2026-10-27-interaction-foundation-extension-design.md`、`docs/patra/specs/2026-10-30-plaintext-conversion-design.md` | PAP-112、PAP-120、PAP-128 |
 | `collection` | 文献库与收藏夹：文献库条目（用户 × 文献唯一，可带备注），扁平的收藏夹（私有 / 公开、一个条目可进多个夹），复制别人的公开收藏夹、批量「我的状态」、导出 key；向底座登记注销清理动作。工程设计 `docs/patra/specs/2026-10-24-interaction-collection-design.md` | PAP-113 |
 | `discussion` | 文献与投稿经验下的讨论：评论与回复（树存、两层展示、「回复 @X」）、单楼视图与对话链、Markdown 正文与 @（存 `<@用户ID>`）、修改历史（发布 5 分钟内的修改不记版本）、有回复的删除留占位、@ 联想；匿名所有者的评论对别人显示「匿名作者」。评论写入、编辑、删除时在同一事务里发布进程内事件（事件契约 `domain.discussion.event`）。工程设计 `docs/patra/specs/2026-10-27-interaction-discussion-design.md` | PAP-121 |
 | `post` | 投稿经验（按帖子结构存）：帖子基表 + 经验扩展表 + 修改历史（发布后 5 分钟内的修改不记版本）；字段与首轮 / 最终结果的一致性规则；同一作者同刊同投稿日期只能有一条；匿名由服务端遮蔽（他人拿不到作者 ID）；期刊页汇总读取时由 PG `percentile_cont` 算、Java 半进位；写入经发表守卫（每天 10 条），经验作为本地对象 `POST` 在同一事务里登记、删除时置为失效，并在同一事务里发布进程内事件 `PostDeletedEvent`（事件契约 `domain.post.event`）。工程设计 `docs/patra/specs/2026-10-27-interaction-post-design.md` | PAP-122、PAP-127 |
@@ -36,7 +36,7 @@ dev.patra.interaction.config           装配（XXL-Job 执行器等），不属
 | 子域 | 公开包 |
 |---|---|
 | 任意子域 X | `domain.X.port.read`（读端口）、`domain.X.model.read`（读端口用到的读模型）、`domain.X.event`（事件契约：X 发布的进程内事件） |
-| 底座 `subject` | 对其他子域完全公开（所有层、所有包），只放被两个以上子域共用的东西：对象登记与发表守卫的驱动端口（实现在 `app.subject`）、注销清理扩展点 `UserDataCleanupGateway`（由各子域实现）、用户名片 `domain.subject.port.user` 与 `domain.subject.model.read.UserCard`、`SubjectId` / `SubjectType` 这类所有互动都引用的值、底座端口抛出的异常 |
+| 底座 `subject` | 对其他子域完全公开（所有层、所有包），只放被两个以上子域共用的东西：对象登记与发表守卫的驱动端口（实现在 `app.subject`）、注销清理扩展点 `UserDataCleanupGateway`（由各子域实现）、用户名片 `domain.subject.port.user` 与 `domain.subject.model.read.UserCard`、`SubjectId` / `SubjectType` 这类所有互动都引用的值、正文转纯文本 `domain.subject.port.markdown` 与 `PlainText`、底座端口抛出的异常 |
 
 - 普通子域公开包之外的一切（聚合、实体、仓储、领域服务、app / infra / adapter 的任何类）只在子域内部用。
 - 子域之间无环；底座不依赖任何其他子域。
@@ -85,7 +85,7 @@ dev.patra.interaction.config           装配（XXL-Job 执行器等），不属
 - 一张表：`notification.notification`，按收件人 `recipient_id` 哈希分 16 区（同 collection），主键 `(recipient_id, notification_id)`。列按以后通知中心的信箱设计：收件人、类型（`COMMENT_REPLY` / `POST_COMMENT` / `MENTION`）、触发人与「是否匿名所有者」、对象、评论、摘录、生成时刻、已读时刻。
 - 写入：同步订阅讨论的三个事件与投稿经验的 `PostDeletedEvent`，与评论 / 经验同一事务；规则（谁收、什么类型、不提醒自己、同一条里既回复又 @ 只发一条）在 `domain.notification.policy.NotificationRules`。唯一索引 `(recipient_id, comment_id)` 保证一个人对一条评论最多一条提醒，编辑新增 @ 时用 `ON CONFLICT DO NOTHING` 跳过已被回复或已是经验作者的人。写入失败包成 500（`NotificationWriteFailedException`），评论一起回滚。
 - 删除即删提醒（PAP-127）：评论删除（变占位或整条去掉）时删掉这条评论的全部提醒（走 `comment_id` 索引）；投稿经验删除时删掉这个对象下的全部提醒（走 `idx_notification_subject`）。不留「已删除」占位，未读数自然一致；评论与经验都不能恢复，提醒也不重建。
-- 摘录：写入时用 commonmark-java 把评论 Markdown 转成纯文本存前 300 个单位，字面的 `\` 与 `<` 转义、提及存 `<@ID>`（`ExcerptText`）；读取时换成 `@用户名` / `@昵称` / `@已注销用户`，再截到 120 个字素。评论编辑后刷新它全部提醒的摘录。
+- 摘录：写入时经底座的 `PlainTextPort` 把评论转成纯文本（PAP-128 的规则），压成一行存前 300 个单位，字面的 `\` 与 `<` 转义、提及存 `<@ID>`（`ExcerptText`）；读取时换成 `@用户名` / `@昵称` / `@已注销用户`，再截到 120 个字素，`@名字` 放不下就停在它前面，不切成半个。评论编辑后刷新它全部提醒的摘录。
 - 读：未读数走部分索引 `(recipient_id, type) WHERE read_at IS NULL`，接口按两个计数出 ETag，没变化 304；列表按 `notification_id` 倒序、每页 20；对象与触发人读时经登记表与 identity 取，匿名所有者触发的不取他的名片；对象已不可用时不给摘录。
 - 清理：每日任务删 5 个月前的；注销清理经底座的 `UserDataCleanupGateway` 删收件人的全部提醒。
 

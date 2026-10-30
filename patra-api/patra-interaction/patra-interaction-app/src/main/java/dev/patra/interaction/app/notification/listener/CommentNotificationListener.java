@@ -9,8 +9,8 @@ import dev.patra.interaction.domain.notification.model.vo.NotificationDraft;
 import dev.patra.interaction.domain.notification.model.vo.Recipient;
 import dev.patra.interaction.domain.notification.policy.ExcerptRules;
 import dev.patra.interaction.domain.notification.policy.NotificationRules;
-import dev.patra.interaction.domain.notification.port.excerpt.PlainTextPort;
 import dev.patra.interaction.domain.notification.port.repository.NotificationRepository;
+import dev.patra.interaction.domain.subject.port.markdown.PlainTextPort;
 import dev.patra.tool.core.error.DomainException;
 import java.util.List;
 import java.util.Set;
@@ -98,14 +98,13 @@ public class CommentNotificationListener {
     guard(() -> notifications.deleteByComment(event.commentId()));
   }
 
-  /// 评论正文转成存储用的摘录。
+  /// 评论正文转成存储用的摘录：经底座的转换器转纯文本（PAP-128），再压成一行、截到存储上限。
   ///
   /// @param body 正文
   /// @param mentionedUserIds 提及名单
   /// @return 截到存储上限的摘录
   private ExcerptText excerptOf(String body, List<Long> mentionedUserIds) {
-    return plainText
-        .toExcerpt(body, Set.copyOf(mentionedUserIds))
+    return ExcerptText.fromPlainText(plainText.toPlainText(body, Set.copyOf(mentionedUserIds)))
         .cut(ExcerptRules.MAX_STORED_UNITS);
   }
 

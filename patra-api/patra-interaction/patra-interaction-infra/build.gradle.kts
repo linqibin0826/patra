@@ -17,7 +17,7 @@ dependencies {
     // 收藏夹所有者摘要、设公开的资格、公开收藏夹的可见性、注销清理（PAP-108 的内部接口）
     implementation(project(":patra-api:patra-identity:patra-identity-api"))
     implementation(project(":patra-tool:patra-tool-http-client"))
-    // 提醒摘录：评论 Markdown 转纯文本（PAP-123）
+    // 正文 Markdown 转纯文本（底座 subject，评论与投稿经验共用，PAP-128）
     implementation(libs.commonmark)
 
     // JPA、Flyway、PostgreSQL 驱动（自动配置生效）
