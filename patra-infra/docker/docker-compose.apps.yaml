@@ -5,11 +5,11 @@ name: patra-apps
 # 镜像 tag 由 deploy job 通过 {SVC}_IMAGE_TAG 注入；手动 compose-all.sh up apps 时回退 latest。
 #
 # env_file 按「本地变量、密钥」叠加（后者覆盖同名）：
-#   .env.common   本地变量 PATRA_INFRA_HOST、PATRA_LOG_DIR。7 个后端服务的其余配置都在 Nacos（patra-infra/nacos/dev/）
+#   .env.common   本地变量 PATRA_INFRA_HOST、PATRA_LOG_DIR。5 个后端服务的其余配置都在 Nacos（patra-infra/nacos/dev/）
 #   ${HOME}/.patra/secrets/*.env   密钥，放在仓库外（见 README「密钥」）：
 #     redis.env     Redis 密码。catalog、identity 必需（gateway 经 identity 查会话，不连 Redis）
 #     gateway.env   网关签身份断言的私钥。gateway 必需
-#     nacos.env     Nacos 应用账号 patra-app。7 个后端服务必需
+#     nacos.env     Nacos 应用账号 patra-app。5 个后端服务必需
 #     mail.env      真实邮件服务商（Resend）的 SMTP 凭据。identity 可选，缺失时邮件发往 core 栈的 Mailpit
 #     <svc>.env     外部数据源密钥等。可选，缺失时跳过
 # 必需文件缺一个，compose 对本项目的任何命令都会失败（portal 也部署不了），报错里有完整路径。
@@ -49,26 +49,6 @@ services:
         required: false
     healthcheck:
       test: [ "CMD", "curl", "-fs", "http://localhost:6000/actuator/health" ]
-      <<: *app-healthcheck
-
-  object-storage:
-    image: ghcr.io/linqibin0826/patra-object-storage:${OBJECT_STORAGE_IMAGE_TAG:-latest}
-    container_name: patra-object-storage
-    restart: unless-stopped
-    deploy:
-      resources:
-        limits:
-          memory: 1g
-    ports: [ "6200:6200" ]
-    extra_hosts: *infra-hosts
-    env_file:
-      - .env.common
-      - path: ${HOME}/.patra/secrets/nacos.env
-        required: true
-      - path: ${HOME}/.patra/secrets/object-storage.env
-        required: false
-    healthcheck:
-      test: [ "CMD", "curl", "-fs", "http://localhost:6200/actuator/health" ]
       <<: *app-healthcheck
 
   catalog:
@@ -112,26 +92,6 @@ services:
         required: false
     healthcheck:
       test: [ "CMD", "curl", "-fs", "http://localhost:6500/actuator/health" ]
-      <<: *app-healthcheck
-
-  ingest:
-    image: ghcr.io/linqibin0826/patra-ingest:${INGEST_IMAGE_TAG:-latest}
-    container_name: patra-ingest
-    restart: unless-stopped
-    deploy:
-      resources:
-        limits:
-          memory: 1g
-    ports: [ "6100:6100" ]
-    extra_hosts: *infra-hosts
-    env_file:
-      - .env.common
-      - path: ${HOME}/.patra/secrets/nacos.env
-        required: true
-      - path: ${HOME}/.patra/secrets/ingest.env
-        required: false
-    healthcheck:
-      test: [ "CMD", "curl", "-fs", "http://localhost:6100/actuator/health" ]
       <<: *app-healthcheck
 
   identity:
