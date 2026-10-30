@@ -86,6 +86,8 @@ describe("专注布局的页面", () => {
     "/confirm-email-change",
     "/revert-email-change",
     "/account/deletion-pending",
+    "/unsubscribe",
+    "/unsubscribe/one-click",
   ])("%s 不能作为 next", (page) => {
     expect(safeNextPath(page)).toBe("/");
     expect(safeNextPath(`${page}?next=%2Fpapers`)).toBe("/");

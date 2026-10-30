@@ -7,6 +7,7 @@ import { FormAlert } from "@/components/auth/FormAlert";
 import { StateIcon } from "@/components/auth/StateIcon";
 import { readFragmentToken } from "@/lib/identity/email-token";
 import { btnBlock, btnDanger, btnPrimary } from "@/lib/portal-ui";
+import { useFragmentOnce } from "@/lib/use-fragment-once";
 import { cn } from "@/lib/utils";
 
 /// 一次提交的结果：成功（带数据）、链接无效、冲突（带数据）、服务错误（回就绪态 + 通用提示条）、
@@ -57,7 +58,7 @@ type Phase<S, C> =
   | { name: "conflict"; data: C };
 
 /// 四个邮件落地页共用的状态机（spec §8.3，简报 §3.18）。首次渲染（服务端与浏览器一致）是「读取中」，挂载后
-/// 从片段读令牌并立即用 `replaceState` 抹掉，令牌不留在历史记录与截图里（刷新后就是「链接不完整」→ 无效屏）。
+/// 从片段读令牌并立即抹掉（`useFragmentOnce`；刷新后就是「链接不完整」→ 无效屏）。
 /// 打开页面不发请求，点按钮才提交，避免邮件安全网关预取把一次性令牌用掉。
 export function TokenLandingPage<S, C = never>({
   title,
@@ -74,24 +75,13 @@ export function TokenLandingPage<S, C = never>({
 }: TokenLandingPageProps<S, C>) {
   const [phase, setPhase] = useState<Phase<S, C>>({ name: "reading" });
   const actionRef = useRef<HTMLButtonElement | null>(null);
-
-  // 读到的令牌记在 ref 里：严格模式下 effect 会跑两次，第二次时片段已经被抹掉了
-  const tokenRef = useRef<string | null | undefined>(undefined);
+  const token = useFragmentOnce(readFragmentToken);
 
   useEffect(() => {
-    if (tokenRef.current === undefined) {
-      tokenRef.current = readFragmentToken(window.location.hash);
+    if (token !== undefined) {
+      setPhase(token ? { name: "ready", token, failed: false } : { name: "invalid" });
     }
-    const token = tokenRef.current;
-    if (window.location.hash) {
-      window.history.replaceState(
-        window.history.state,
-        "",
-        `${window.location.pathname}${window.location.search}`,
-      );
-    }
-    setPhase(token ? { name: "ready", token, failed: false } : { name: "invalid" });
-  }, []);
+  }, [token]);
 
   const ready = phase.name === "ready";
   useEffect(() => {

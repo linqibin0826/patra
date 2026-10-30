@@ -12,6 +12,17 @@ function renderShell() {
 }
 
 describe("AuthShell", () => {
+  it("不传标题（读取中的骨架）：不出 h1 与副文案，只有内容", () => {
+    render(
+      <AuthShell back="/">
+        <p>骨架</p>
+      </AuthShell>,
+    );
+    const main = screen.getByRole("main");
+    expect(within(main).queryByRole("heading", { level: 1 })).not.toBeInTheDocument();
+    expect(within(main).getByText("骨架")).toBeInTheDocument();
+  });
+
   it("标题、副文案和表单在主区域里", () => {
     renderShell();
     const main = screen.getByRole("main");

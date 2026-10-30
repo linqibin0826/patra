@@ -1,9 +1,10 @@
 /// 解析 `next` 用的占位地址：只用来判断解析后是否还在本站，不会出现在结果里
 const PLACEHOLDER_ORIGIN = "http://patra.invalid";
 
-/// 专注布局的页面（简报 §0）：登录、注册、找回密码、四个邮件落地页、取消注销页。它们不能作为 `next`
-/// （跳转规则 5：登录后回到登录页没有意义；落地页的令牌在片段里，跳回去也已经没了），冷静期跳转也不拦它们
-/// （spec §9.1）。
+/// 专注布局的页面（简报 §0）：登录、注册、找回密码、四个邮件落地页、取消注销页，以及 v0.16 的退订确认页与
+/// 一键退订地址。它们不能作为 `next`（跳转规则 5：登录后回到登录页没有意义；落地页的令牌在片段里，跳回去也已经
+/// 没了），冷静期跳转也不拦它们（spec §9.1）：冷静期账号的退订链接照常有效，不拦一键退订地址也免得令牌被抄进
+/// 取消注销页的 `next`（PAP-148 spec 第 2.3 节）。
 export const FOCUS_PAGES: ReadonlySet<string> = new Set([
   "/login",
   "/register",
@@ -13,6 +14,8 @@ export const FOCUS_PAGES: ReadonlySet<string> = new Set([
   "/confirm-email-change",
   "/revert-email-change",
   "/account/deletion-pending",
+  "/unsubscribe",
+  "/unsubscribe/one-click",
 ]);
 
 /// 路径（不含查询串）是不是专注布局的页面，末尾的 `/` 不算
