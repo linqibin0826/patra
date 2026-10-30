@@ -28,11 +28,18 @@ dependencies {
     // 通用事件模块：消费 interaction、identity 经 RabbitMQ 发来的集成事件（去重表与登记表见 infra 的 db/migration/kernel）
     implementation(project(":patra-tool:patra-tool-events"))
 
-    // 架构测试要看到全部五层：domain、app、api 在后续 Issue 接上层间依赖之前不在运行时类路径上
-    testImplementation(project(":patra-api:patra-notification:patra-notification-domain"))
-    testImplementation(project(":patra-api:patra-notification:patra-notification-app"))
+    // identity 内部接口的代理（批量收件信息）：infra 对 identity-api、http-client 是 implementation，传不到这里
+    implementation(project(":patra-tool:patra-tool-http-client"))
+    implementation(project(":patra-api:patra-identity:patra-identity-api"))
+
+    // 身份断言验签 → CurrentUserPort：偏好读写要知道是谁在操作
+    implementation(project(":patra-tool:patra-tool-security"))
+
+    // 架构测试要看到全部五层：domain、app 已经经 adapter、infra 传进来，api 还没有调用方
     testImplementation(project(":patra-api:patra-notification:patra-notification-api"))
 
     // 集成测试的 PG 容器初始化器
     testImplementation(testFixtures(project(":patra-api:patra-notification:patra-notification-infra")))
+    // 流程测试用测试私钥签身份断言
+    testImplementation(testFixtures(project(":patra-tool:patra-tool-security")))
 }

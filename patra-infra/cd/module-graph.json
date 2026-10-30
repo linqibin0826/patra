@@ -113,7 +113,8 @@
             "impacts": [
                 "gateway",
                 "identity",
-                "interaction"
+                "interaction",
+                "notification"
             ],
             "tasks": [
                 "check"
@@ -408,7 +409,8 @@
                 "catalog",
                 "foundation",
                 "identity",
-                "interaction"
+                "interaction",
+                "notification"
             ],
             "tasks": [
                 "check"
@@ -436,7 +438,8 @@
                 "foundation",
                 "gateway",
                 "identity",
-                "interaction"
+                "interaction",
+                "notification"
             ],
             "tasks": [
                 "check",
@@ -533,7 +536,8 @@
                 "foundation",
                 "gateway",
                 "identity",
-                "interaction"
+                "interaction",
+                "notification"
             ],
             "tasks": [
                 "check",

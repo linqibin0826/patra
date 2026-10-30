@@ -10,6 +10,13 @@ plugins {
 }
 
 dependencies {
+    // 实现领域层的仓储与读端口
+    api(project(":patra-api:patra-notification:patra-notification-domain"))
+
+    // identity 内部接口的契约（批量收件信息）与 HTTP Interface 的错误类型；代理在 boot 里装配
+    implementation(project(":patra-api:patra-identity:patra-identity-api"))
+    implementation(project(":patra-tool:patra-tool-http-client"))
+
     // JPA、Flyway、PostgreSQL 驱动（自动配置生效）
     api(project(":patra-tool:patra-tool-jpa"))
 

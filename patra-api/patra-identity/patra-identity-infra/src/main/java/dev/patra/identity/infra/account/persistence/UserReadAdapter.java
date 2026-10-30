@@ -6,6 +6,7 @@ import dev.patra.identity.domain.account.model.enums.UserStatus;
 import dev.patra.identity.domain.account.model.read.AvatarOwner;
 import dev.patra.identity.domain.account.model.read.PublicUserReadModel;
 import dev.patra.identity.domain.account.model.read.UserAccountReadModel;
+import dev.patra.identity.domain.account.model.read.UserRecipientReadModel;
 import dev.patra.identity.domain.account.model.read.UserSummaryReadModel;
 import dev.patra.identity.domain.account.model.vo.DisplayNamePrefix;
 import dev.patra.identity.domain.account.model.vo.Username;
@@ -83,6 +84,39 @@ public class UserReadAdapter implements UserReadPort {
       return List.of();
     }
     return summariesOf(userDao.findAllById(userIds));
+  }
+
+  /// 按用户 ID 批量读收件信息原始数据：用户表、资料表各一条 `IN` 查询。
+  ///
+  /// @param userIds 用户 ID
+  /// @return 存在的那些，不保证顺序
+  @Override
+  public List<UserRecipientReadModel> findRecipients(Collection<Long> userIds) {
+    if (userIds.isEmpty()) {
+      return List.of();
+    }
+    List<UserEntity> users = userDao.findAllById(userIds);
+    if (users.isEmpty()) {
+      return List.of();
+    }
+    Map<Long, UserProfileEntity> profiles =
+        profileDao.findByUserIdIn(users.stream().map(UserEntity::getId).toList()).stream()
+            .collect(Collectors.toMap(UserProfileEntity::getUserId, Function.identity()));
+    return users.stream()
+        .map(
+            user ->
+                UserRecipientReadModel.builder()
+                    .userId(user.getId())
+                    .email(user.getEmail())
+                    .emailVerified(user.getEmailVerifiedAt() != null)
+                    .status(UserStatus.valueOf(user.getStatus()))
+                    .username(user.getUsername())
+                    .displayName(
+                        Optional.ofNullable(profiles.get(user.getId()))
+                            .map(UserProfileEntity::getDisplayName)
+                            .orElse(null))
+                    .build())
+        .toList();
   }
 
   /// 按用户名前缀读正常账号：`[前缀, 前缀末字符加一)` 的范围查询，资料行一次 `IN` 取齐，保持查询的字节序。

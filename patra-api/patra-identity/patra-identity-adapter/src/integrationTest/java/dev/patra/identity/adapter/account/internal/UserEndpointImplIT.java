@@ -6,10 +6,12 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import dev.patra.identity.app.account.usecase.query.ResolvedUser;
+import dev.patra.identity.app.account.usecase.query.UserRecipientQueryService;
 import dev.patra.identity.app.account.usecase.query.UserResolutionQueryService;
 import dev.patra.identity.app.account.usecase.query.UserSuggestionQueryService;
 import dev.patra.identity.app.account.usecase.query.UserSummaryQueryService;
 import dev.patra.identity.domain.account.model.enums.UserStatus;
+import dev.patra.identity.domain.account.model.read.UserRecipientView;
 import dev.patra.identity.domain.account.model.read.UserSummaryView;
 import dev.patra.identity.domain.account.model.vo.avatar.Avatar;
 import dev.patra.identity.domain.session.exception.InvalidUserFieldsException;
@@ -41,12 +43,49 @@ class UserEndpointImplIT {
   private static final String SUMMARIES = "/_internal/users/summaries";
   private static final String SUGGEST = "/_internal/users/suggest";
   private static final String RESOLVE = "/_internal/users/resolve/by-usernames";
+  private static final String RECIPIENTS = "/_internal/users/recipients";
 
   @Autowired private RestTestClient restClient;
 
   @MockitoBean private UserSummaryQueryService userSummaryQueryService;
   @MockitoBean private UserSuggestionQueryService userSuggestionQueryService;
   @MockitoBean private UserResolutionQueryService userResolutionQueryService;
+  @MockitoBean private UserRecipientQueryService userRecipientQueryService;
+
+  /// 收件信息（PAP-142）：请求体里的 ID 是 JSON 数字；响应里用户 ID 是字符串，状态是名字，已注销的字段为 null。
+  @Test
+  @DisplayName("收件信息：用户 ID 是字符串，已注销的邮箱、用户名、显示名为 null")
+  void should_return_recipients_with_string_ids() {
+    when(userRecipientQueryService.recipients(List.of(42L, 43L)))
+        .thenReturn(
+            List.of(
+                UserRecipientView.builder()
+                    .userId(42L)
+                    .email("chen@example.com")
+                    .emailVerified(true)
+                    .status(UserStatus.ACTIVE)
+                    .username("chen-yu")
+                    .displayName("陈宇")
+                    .build(),
+                UserRecipientView.builder().userId(43L).status(UserStatus.DELETED).build()));
+
+    JsonNode recipients = post(RECIPIENTS, "{\"userIds\":[42,43]}").get("recipients");
+
+    JsonNode active = recipients.get(0);
+    assertThat(active.get("userId").isString()).isTrue();
+    assertThat(active.get("userId").asString()).isEqualTo("42");
+    assertThat(active.get("email").asString()).isEqualTo("chen@example.com");
+    assertThat(active.get("emailVerified").asBoolean()).isTrue();
+    assertThat(active.get("accountStatus").asString()).isEqualTo("ACTIVE");
+    assertThat(active.get("username").asString()).isEqualTo("chen-yu");
+    assertThat(active.get("displayName").asString()).isEqualTo("陈宇");
+    JsonNode gone = recipients.get(1);
+    assertThat(gone.get("accountStatus").asString()).isEqualTo("DELETED");
+    assertThat(gone.get("email").isNull()).isTrue();
+    assertThat(gone.get("username").isNull()).isTrue();
+    assertThat(gone.get("displayName").isNull()).isTrue();
+    assertThat(gone.get("emailVerified").asBoolean()).isFalse();
+  }
 
   @Test
   @DisplayName("请求体里的 ID 是 JSON 数字；响应里用户 ID 是字符串，状态是名字，已注销是占位")

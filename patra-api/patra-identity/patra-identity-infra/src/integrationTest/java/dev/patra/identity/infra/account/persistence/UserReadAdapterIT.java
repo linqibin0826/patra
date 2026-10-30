@@ -12,6 +12,7 @@ import dev.patra.identity.domain.account.model.enums.UserStatus;
 import dev.patra.identity.domain.account.model.read.AvatarOwner;
 import dev.patra.identity.domain.account.model.read.PublicUserReadModel;
 import dev.patra.identity.domain.account.model.read.UserAccountReadModel;
+import dev.patra.identity.domain.account.model.read.UserRecipientReadModel;
 import dev.patra.identity.domain.account.model.read.UserSummaryReadModel;
 import dev.patra.identity.domain.account.model.vo.DisplayName;
 import dev.patra.identity.domain.account.model.vo.DisplayNamePrefix;
@@ -303,6 +304,60 @@ class UserReadAdapterIT {
   @Test
   void should_return_empty_summaries_for_empty_input() {
     assertThat(reader.findSummaries(List.of())).isEmpty();
+  }
+
+  /// 收件信息（PAP-142）：邮箱、是否已验证、状态、用户名、昵称原值；已注销的邮箱在库里已是 NULL；不认识的省略。
+  @Test
+  void should_read_recipients_in_batch() {
+    User verified =
+        users.save(User.register(EmailAddress.of("rcp.a@example.com"), Username.of("u-rcp-a")));
+    UserProfile verifiedProfile = profiles.save(UserProfile.create(verified.getId()));
+    verifiedProfile.edit(ProfileContent.builder().displayName(new DisplayName("陈宇")).build());
+    profiles.save(verifiedProfile);
+    jdbcTemplate.update(
+        "UPDATE idn_user SET email_verified_at = now() WHERE id = ?", verified.getId());
+    User unverified =
+        users.save(User.register(EmailAddress.of("rcp.b@example.com"), Username.of("u-rcp-b")));
+    profiles.save(UserProfile.create(unverified.getId()));
+    User gone =
+        users.save(User.register(EmailAddress.of("rcp.c@example.com"), Username.of("u-rcp-c")));
+    profiles.save(UserProfile.create(gone.getId()));
+    jdbcTemplate.update(
+        "UPDATE idn_user SET status = 'DELETED', deleted_at = now(), email = NULL WHERE id = ?",
+        gone.getId());
+    entityManager.clear();
+
+    Map<Long, UserRecipientReadModel> byId =
+        reader
+            .findRecipients(
+                List.of(verified.getId(), unverified.getId(), gone.getId(), Long.MAX_VALUE))
+            .stream()
+            .collect(Collectors.toMap(UserRecipientReadModel::userId, Function.identity()));
+
+    assertThat(byId).containsOnlyKeys(verified.getId(), unverified.getId(), gone.getId());
+    UserRecipientReadModel a = byId.get(verified.getId());
+    assertThat(a.email()).isEqualTo("rcp.a@example.com");
+    assertThat(a.emailVerified()).isTrue();
+    assertThat(a.status()).isEqualTo(UserStatus.ACTIVE);
+    assertThat(a.username()).isEqualTo("u-rcp-a");
+    assertThat(a.displayName()).isEqualTo("陈宇");
+    UserRecipientReadModel b = byId.get(unverified.getId());
+    assertThat(b.emailVerified()).isFalse();
+    assertThat(b.displayName()).isNull();
+    UserRecipientReadModel c = byId.get(gone.getId());
+    assertThat(c.status()).isEqualTo(UserStatus.DELETED);
+    assertThat(c.email()).isNull();
+    assertThat(c.username()).isEqualTo("u-rcp-c");
+  }
+
+  @Test
+  void should_return_empty_recipients_for_empty_input() {
+    assertThat(reader.findRecipients(List.of())).isEmpty();
+  }
+
+  @Test
+  void should_return_empty_recipients_when_none_exist() {
+    assertThat(reader.findRecipients(List.of(Long.MAX_VALUE))).isEmpty();
   }
 
   @Test

@@ -27,6 +27,14 @@ patra:
   web:
     error:
       context-prefix: NOTIFICATION
+  http-client:
+    http-interface:
+      groups:
+        # 退订落地页取脱敏邮箱与账号状态（批量收件信息，按主键查，毫秒级）：超时压短，identity 卡住时很快 503
+        identity:
+          base-url: lb://patra-identity
+          connect-timeout: 1s
+          read-timeout: 2s
 
 # XXL-Job 执行器：管理端地址随环境变，在 Nacos 公共配置 patra-common.yaml；执行器端口 = 服务端口 + 1 = 6601
 xxl:
