@@ -60,6 +60,7 @@ includeAt(":patra-tool:patra-tool-test", "patra-tool/patra-tool-test")
 includeAt(":patra-tool:patra-tool-http-client", "patra-tool/patra-tool-http-client")
 includeAt(":patra-tool:patra-tool-security", "patra-tool/patra-tool-security")
 includeAt(":patra-tool:patra-tool-launch", "patra-tool/patra-tool-launch")
+includeAt(":patra-tool:patra-tool-events", "patra-tool/patra-tool-events")
 mapParent(":patra-tool", "patra-tool")
 
 // ==================== patra-api / Microservices ====================

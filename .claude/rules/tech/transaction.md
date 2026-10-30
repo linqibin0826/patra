@@ -17,7 +17,7 @@ paths: patra-api/**/*.java, patra-tool/**/*.java
 | Spring Batch | 交给 chunk 事务；Processor 里建的参照数据（期刊实例）例外，走 `REQUIRES_NEW`：chunk 回滚重写后还要被引用 |
 | 同成同败的事件 | 同步 `@EventListener` |
 | 提交后可丢的副作用 | `@TransactionalEventListener(AFTER_COMMIT)`，要写库再加 `REQUIRES_NEW` + `rollbackFor` |
-| 提交后不能丢的副作用 | Outbox，与业务同事务写入 |
+| 提交后不能丢的副作用（跨服务） | 事务里 `publishEvent(领域事件)`，由 `patra-tool-events` 外送：登记行与业务同事务写入，提交后发送并等 broker 确认，失败留给补投任务 |
 
 ## 2. 事务里不许放
 
@@ -30,7 +30,7 @@ paths: patra-api/**/*.java, patra-tool/**/*.java
 - 事务外预读只做校验和取锁键，锁内重读为准（参照 `DeleteCommentHandler`）。
 - 多把锁顺序：配额锁 → 业务对象锁 → 行锁。
 - find-or-create 用 `INSERT … ON CONFLICT DO NOTHING` 再查；禁止 catch `DataIntegrityViolationException` 后继续用同一事务（PG 事务已作废）。
-- Outbox 中继：短事务写租约 → 事务外发送 → 短事务标记；没标记成的消息停在 `PUBLISHING`，租约过期后重新领取。
+- 消费跨服务事件：在业务事务里先 `ProcessedEventPort.markProcessed(队列名, eventId)`，返回 `false` 直接结束，再写业务；事件 ID 必须在领域事件创建时生成（补投会重新映射）。
 
 ## 4. 细则
 

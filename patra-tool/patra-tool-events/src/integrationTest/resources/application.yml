@@ -1,0 +1,16 @@
+spring:
+  application:
+    name: events-it
+  rabbitmq:
+    listener:
+      simple:
+        retry:
+          # 死信用例要跑完 4 次尝试，测试里把退避调到毫秒级
+          initial-interval: 10ms
+          max-interval: 50ms
+
+patra:
+  events:
+    resubmit:
+      # 用例里等登记行变成 FAILED 后立刻补投
+      min-age: 0s

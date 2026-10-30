@@ -415,6 +415,18 @@
             ]
         },
         {
+            "dir": "patra-tool/patra-tool-events",
+            "project": ":patra-tool:patra-tool-events",
+            "unit": "foundation",
+            "impacts": [
+                "foundation"
+            ],
+            "tasks": [
+                "check",
+                "integrationTest"
+            ]
+        },
+        {
             "dir": "patra-tool/patra-tool-http-client",
             "project": ":patra-tool:patra-tool-http-client",
             "unit": "foundation",

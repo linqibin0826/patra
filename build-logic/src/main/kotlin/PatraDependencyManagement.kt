@@ -30,7 +30,7 @@ import org.gradle.kotlin.dsl.configure
 /// 应用 Patra 统一的依赖管理配置
 ///
 /// 包括：
-/// - Spring Boot / Cloud / Cloud Alibaba / Testcontainers BOM
+/// - Spring Boot / Cloud / Cloud Alibaba / Testcontainers / Spring Modulith BOM
 /// - 强制版本约束（解决依赖冲突）
 /// - 安全版本覆盖（上游 BOM / 传递依赖尚未跟进漏洞修复的构件）
 ///
@@ -62,6 +62,7 @@ fun Project.applyPatraDependencyManagement(libs: VersionCatalog) {
                 bomProperty("log4j-slf4j2-impl.version", log4jVersion)
             }
             mavenBom("org.testcontainers:testcontainers-bom:$testcontainersVersion")
+            mavenBom("org.springframework.modulith:spring-modulith-bom:${version("spring-modulith")}")
         }
         dependencies {
             // minio 8.6.0 / spring-cloud-starter 传递引入

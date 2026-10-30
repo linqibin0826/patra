@@ -56,6 +56,7 @@ dependencies {
     api(libs.testcontainers.junit.jupiter)
     api(libs.testcontainers.postgresql)
     api(libs.testcontainers.minio)
+    api(libs.testcontainers.rabbitmq)
 
     // MinIO Java Client（MinIOContainerInitializer 创建存储桶需要）
     api(libs.minio) {

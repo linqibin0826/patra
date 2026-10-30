@@ -39,5 +39,10 @@ public enum ContainerType {
   /// MinIO 对象存储容器。
   ///
   /// 使用 minio/minio:RELEASE.2024-01-18T22-51-28Z 镜像，支持文件缓存集成测试。
-  MINIO
+  MINIO,
+
+  /// RabbitMQ 消息容器。
+  ///
+  /// 使用 rabbitmq:4.4.0-management 镜像，与 compose 一致，支持事件外送与消费的集成测试。
+  RABBITMQ
 }
