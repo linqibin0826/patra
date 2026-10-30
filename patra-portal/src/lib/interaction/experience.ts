@@ -2,6 +2,7 @@ import "server-only";
 import { cache } from "react";
 import {
   type ExperiencePage,
+  type ExperienceSort,
   experiencePageSchema,
   type PostDetail,
   postDetailSchema,
@@ -29,16 +30,17 @@ function withCursor(path: string, cursor: string | undefined): string {
   return cursor ? `${path}&cursor=${encodeURIComponent(cursor)}` : path;
 }
 
-/// 期刊的一页经验：投稿日期倒序，不受统计窗口影响
+/// 期刊的一页经验：最新投稿（投稿日期倒序）或最有帮助，不受统计窗口影响
 export async function fetchJournalExperiences(
   journalId: string,
+  sort: ExperienceSort,
   cursor?: string,
 ): Promise<Read<ExperiencePage>> {
   if (!isEntityId(journalId)) {
     return NOT_FOUND;
   }
   return readPublic(
-    withCursor(`/journals/${journalId}/posts?limit=${JOURNAL_PAGE_SIZE}`, cursor),
+    withCursor(`/journals/${journalId}/posts?limit=${JOURNAL_PAGE_SIZE}&sort=${sort}`, cursor),
     experiencePageSchema,
   );
 }

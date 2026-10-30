@@ -28,8 +28,10 @@ vi.mock("@/lib/interaction/experience-actions", () => ({
 vi.mock("next/navigation", async (original) => ({
   ...(await original<typeof import("next/navigation")>()),
   usePathname: () => "/journals/100",
-  useSearchParams: () => new URLSearchParams(),
+  useSearchParams: () => params,
 }));
+
+let params = new URLSearchParams();
 
 const fetchMock = vi.fn<typeof fetch>();
 const publish = vi.mocked(publishExperience);
@@ -42,6 +44,8 @@ const VERIFIED: ViewerSeed = {
 };
 
 beforeEach(() => {
+  params = new URLSearchParams();
+  window.history.replaceState(null, "", "/journals/100");
   vi.stubGlobal("fetch", fetchMock);
 });
 
@@ -54,13 +58,17 @@ afterEach(() => {
 const page = (items = [makeExperience()], nextCursor: string | null = null): ExperiencePage => ({
   items,
   nextCursor,
+  total: items.length,
 });
 
 /// 首屏数据：汇总与列表第一页都在缓存里
 function seed(summary: Summary = makeSummary(), first: ExperiencePage = page()) {
   return (client: QueryClient) => {
     client.setQueryData(queryKeys.experienceSummary("100", "3y"), summary);
-    client.setQueryData(queryKeys.experienceList("100"), { pages: [first], pageParams: [null] });
+    client.setQueryData(queryKeys.experienceList("100", "latest"), {
+      pages: [first],
+      pageParams: [null],
+    });
   };
 }
 
@@ -158,7 +166,7 @@ describe("表单与发布", () => {
     );
     const urls = fetchMock.mock.calls.map(([input]) => String(input));
     expect(urls).toContain("/api/journals/100/posts/summary?window=3y");
-    expect(urls).toContain("/api/journals/100/posts");
+    expect(urls).toContain("/api/journals/100/posts?sort=latest");
   });
 });
 
@@ -169,7 +177,9 @@ describe("列表", () => {
     renderArea({ seed: seed(makeSummary(), page([makeExperience()], "c2")) });
     await user.click(screen.getByRole("button", { name: "加载更多投稿经验" }));
     await waitFor(() => expect(screen.getAllByRole("link", { name: /首轮/ })).toHaveLength(2));
-    expect(String(fetchMock.mock.calls[0]?.[0])).toBe("/api/journals/100/posts?cursor=c2");
+    expect(String(fetchMock.mock.calls[0]?.[0])).toBe(
+      "/api/journals/100/posts?sort=latest&cursor=c2",
+    );
   });
 
   it("exp.list.empty：写第一条投稿经验", async () => {
@@ -235,5 +245,132 @@ describe("切到「全部」（final review I3）", () => {
     expect(screen.getAllByRole("link", { name: /首轮/ })).toHaveLength(1);
     await user.click(screen.getByRole("button", { name: "近 3 年" }));
     expect(screen.getByRole("article", { name: "同行经验" })).toHaveTextContent("42");
+  });
+});
+
+describe("工具行与排序（简报 v0.15 §3.8）", () => {
+  const two = [makeExperience(), makeExperience({ postId: "10" })];
+
+  it("总条数取第一页的 total，两项排序", () => {
+    renderArea({ seed: seed(makeSummary(), { ...page(two, "c2"), total: 18 }) });
+    expect(screen.getByText("18 条投稿经验")).toBeVisible();
+    const group = screen.getByRole("group", { name: "排序" });
+    expect(
+      within(group)
+        .getAllByRole("button")
+        .map((button) => button.textContent),
+    ).toEqual(["最新投稿", "最有帮助"]);
+    expect(within(group).getByRole("button", { name: "最新投稿" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+  });
+
+  it("只有 1 条：有总条数、没有排序", () => {
+    renderArea({ seed: seed(makeSummary(), page([makeExperience()])) });
+    expect(screen.getByText("1 条投稿经验")).toBeVisible();
+    expect(screen.queryByRole("group", { name: "排序" })).toBeNull();
+  });
+
+  it("没有经验：整行不出", () => {
+    renderArea({ seed: seed(makeFewSummary(0, 0), page([])) });
+    expect(screen.queryByText(/^[\d,]+ 条投稿经验$/)).toBeNull();
+  });
+
+  it("地址 sort=helpful：选中最有帮助，取这种排序", () => {
+    params = new URLSearchParams("sort=helpful");
+    renderArea({
+      seed: (client) => {
+        client.setQueryData(queryKeys.experienceSummary("100", "3y"), makeSummary());
+        client.setQueryData(queryKeys.experienceList("100", "helpful"), {
+          pages: [{ ...page(two), total: 2 }],
+          pageParams: [null],
+        });
+      },
+    });
+    expect(screen.getByRole("button", { name: "最有帮助" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("点最有帮助：写进地址、清掉这种排序已缓存的页，从第一页取，取回前旧列表还在", async () => {
+    const replace = vi.spyOn(window.history, "replaceState");
+    fetchMock.mockReturnValue(new Promise(() => {}));
+    const view = renderArea({
+      seed: (client) => {
+        seed(makeSummary(), { ...page(two, "c2"), total: 18 })(client);
+        client.setQueryData(queryKeys.experienceList("100", "helpful"), {
+          pages: [page(two, "h2"), page([makeExperience({ postId: "11" })])],
+          pageParams: [null, "h2"],
+        });
+      },
+    });
+    await userEvent.setup().click(screen.getByRole("button", { name: "最有帮助" }));
+    expect(replace).toHaveBeenLastCalledWith(null, "", "/journals/100?sort=helpful");
+    expect(view.client.getQueryData(queryKeys.experienceList("100", "helpful"))).toBeUndefined();
+    params = new URLSearchParams("sort=helpful");
+    view.rerender(
+      <ExperienceArea
+        journalId="100"
+        journalTitle="Journal of the American Heart Association"
+        viewer={VERIFIED}
+        now={NOW}
+      />,
+    );
+    await waitFor(() =>
+      expect(fetchMock.mock.calls.map(([input]) => String(input))).toContain(
+        "/api/journals/100/posts?sort=helpful",
+      ),
+    );
+    expect(screen.getAllByRole("link", { name: /首轮/ })).toHaveLength(2);
+  });
+
+  it("两页里有同一条经验只渲染一次", () => {
+    renderArea({
+      seed: (client) => {
+        client.setQueryData(queryKeys.experienceSummary("100", "3y"), makeSummary());
+        client.setQueryData(queryKeys.experienceList("100", "latest"), {
+          pages: [page(two, "c2"), page([makeExperience({ postId: "10" })])],
+          pageParams: [null, "c2"],
+        });
+      },
+    });
+    expect(screen.getAllByRole("link", { name: /首轮/ })).toHaveLength(2);
+  });
+});
+
+describe("换排序失败（评审补充）", () => {
+  it("只在列表就地提示，工具行、写投稿经验与另一种排序都还在", async () => {
+    const two = [makeExperience(), makeExperience({ postId: "10" })];
+    fetchMock.mockResolvedValue(Response.json({ reason: "unavailable" }, { status: 502 }));
+    const element = () => (
+      <ExperienceArea
+        journalId="100"
+        journalTitle="Journal of the American Heart Association"
+        viewer={VERIFIED}
+        now={NOW}
+      />
+    );
+    const view = renderArea({ seed: seed(makeSummary(), { ...page(two), total: 18 }) });
+    await userEvent.setup().click(screen.getByRole("button", { name: "最有帮助" }));
+    params = new URLSearchParams("sort=helpful");
+    view.rerender(element());
+    expect(await screen.findByRole("alert")).toHaveTextContent("没有加载成功，请稍后再试");
+    expect(screen.getByRole("button", { name: "写投稿经验" })).toBeVisible();
+    expect(screen.getByText("18 条投稿经验")).toBeVisible();
+    expect(screen.getByRole("button", { name: "最有帮助" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    expect(screen.getByRole("button", { name: "重试" })).toBeVisible();
+    // 切回最新投稿：从第一页重新取，这次取到了
+    fetchMock.mockResolvedValue(Response.json({ ...page(two), total: 18 }));
+    await userEvent.setup().click(screen.getByRole("button", { name: "最新投稿" }));
+    params = new URLSearchParams();
+    view.rerender(element());
+    expect(await screen.findAllByRole("link", { name: /首轮/ })).toHaveLength(2);
+    expect(screen.queryByRole("alert")).toBeNull();
   });
 });

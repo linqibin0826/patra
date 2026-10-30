@@ -47,6 +47,15 @@ describe("讨论的 Route Handler", () => {
     );
   });
 
+  it("最有帮助原样转发", async () => {
+    fetchMock.mockResolvedValue(Response.json({ items: [], nextCursor: null }));
+    await getThreads(
+      get("/api/discussions/publication/11/threads?sort=helpful"),
+      params({ type: "publication", key: "11" }),
+    );
+    expect(gatewayUrl()).toContain("sort=helpful");
+  });
+
   it("sort 不认识时按正序", async () => {
     fetchMock.mockResolvedValue(Response.json({ items: [], nextCursor: null }));
     await getThreads(

@@ -228,9 +228,9 @@ test.describe("投稿经验", () => {
     postIds.push(await publishExperience(section, first.input, first.month));
     const card = section.getByRole("article", { name: "同行经验" });
     await expect(card).toContainText("近 3 年有 1 条投稿经验，满 5 条后显示统计。", ROUND_TRIP);
-    await expect(section.getByRole("link", { name: /2026 年 1 月投稿/ })).toContainText(
-      "首轮 42 天 · 大修 → 录用",
-    );
+    await expect(
+      section.getByRole("article").filter({ hasText: /2026 年 1 月投稿/ }),
+    ).toContainText("首轮 42 天 · 大修 → 录用");
 
     // 同刊同投稿日期
     await section.getByRole("button", { name: "写投稿经验" }).click();
@@ -311,7 +311,7 @@ test.describe("投稿经验", () => {
     expect(await detail.text()).not.toContain(authorUserId);
 
     const section = await openExperiences(page, journalId);
-    const row = section.getByRole("link", { name: /2026 年 5 月投稿/ });
+    const row = section.getByRole("article").filter({ hasText: /2026 年 5 月投稿/ });
     await expect(row).toContainText("匿名作者");
     await page.goto(`/posts/${anonymous}`);
     const main = page.getByRole("article").first();
@@ -376,7 +376,9 @@ test.describe("投稿经验", () => {
     }
 
     const author = await signedIn(browser, DESKTOP, `/u/${authorUsername}/experiences`);
-    const anonymousRow = author.locator(`a[href="/posts/${anonymous}"]`);
+    const anonymousRow = author
+      .getByRole("article")
+      .filter({ has: author.locator(`a[href="/posts/${anonymous}"]`) });
     await expect(anonymousRow).toContainText("匿名 · 仅你可见", ROUND_TRIP);
     await expect(
       author.getByText("这里列出你写过的投稿经验，匿名发布的只有你看得到。"),

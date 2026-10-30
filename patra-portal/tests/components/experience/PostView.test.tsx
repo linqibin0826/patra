@@ -8,6 +8,7 @@ import "@testing-library/jest-dom/vitest";
 import { PostView } from "@/components/experience/PostView";
 import { deleteExperience, editExperience } from "@/lib/interaction/experience-actions";
 import type { Experience, PostDetail } from "@/lib/interaction/experience-schema";
+import { setHelpful } from "@/lib/interaction/helpful-actions";
 import { queryKeys } from "@/lib/query-keys";
 
 const toastSuccess = vi.fn();
@@ -17,6 +18,7 @@ vi.mock("@/lib/interaction/experience-actions", () => ({
   editExperience: vi.fn(),
   deleteExperience: vi.fn(),
 }));
+vi.mock("@/lib/interaction/helpful-actions", () => ({ setHelpful: vi.fn() }));
 vi.mock("next/navigation", async (original) => ({
   ...(await original<typeof import("next/navigation")>()),
   usePathname: () => "/posts/9",
@@ -214,5 +216,54 @@ describe("身份在页面上变化（final review I2）", () => {
       within(await screen.findByRole("dialog")).getByRole("button", { name: "删除投稿经验" }),
     );
     await waitFor(() => expect(router.push).toHaveBeenCalledWith("/login?next=%2Fposts%2F9"));
+  });
+});
+
+describe("经验页的有帮助（简报 v0.15 §3.10）", () => {
+  const pill = () => within(main()).getByRole("button", { name: /^有帮助/ });
+
+  it("别人的经验：正文之后的胶囊按钮", () => {
+    renderPost({ helpfulCount: 5, helpful: true });
+    expect(pill()).toHaveAccessibleName("有帮助，5 人觉得有帮助");
+    expect(pill()).toHaveAttribute("aria-pressed", "true");
+    const body = main().querySelector("[data-post-body]") as HTMLElement;
+    expect(body.compareDocumentPosition(pill()) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it("自己的经验：只有人数；为 0 时没有", () => {
+    const view = renderPost({ mine: true, helpfulCount: 5 });
+    expect(within(main()).queryByRole("button", { name: /^有帮助/ })).toBeNull();
+    expect(main()).toHaveTextContent("5 人觉得有帮助");
+    view.unmount();
+    renderPost({ mine: true, helpfulCount: 0 });
+    expect(main()).not.toHaveTextContent("有帮助");
+  });
+
+  it("编辑时没有", async () => {
+    renderPost({ mine: true, helpfulCount: 2 });
+    await userEvent.setup().click(screen.getByRole("button", { name: "编辑" }));
+    expect(main()).not.toHaveTextContent("人觉得有帮助");
+  });
+
+  it("成功后显示返回值（页面数据不变）", async () => {
+    vi.mocked(setHelpful).mockResolvedValue({
+      ok: true,
+      result: { helpful: true, helpfulCount: 1 },
+    });
+    renderPost();
+    await userEvent.setup().click(pill());
+    await waitFor(() => expect(pill()).toHaveAccessibleName("有帮助，1 人觉得有帮助"));
+  });
+
+  it("这条已被删除：提示之后刷新页面", async () => {
+    vi.useRealTimers();
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    vi.mocked(setHelpful).mockResolvedValue({ ok: false, reason: "gone" });
+    const { router } = renderPost();
+    await userEvent.setup({ advanceTimers: vi.advanceTimersByTime }).click(pill());
+    expect(await screen.findByText("这条投稿经验已被删除")).toBeVisible();
+    expect(router.refresh).not.toHaveBeenCalled();
+    await act(() => vi.advanceTimersByTimeAsync(4100));
+    expect(router.refresh).toHaveBeenCalled();
   });
 });

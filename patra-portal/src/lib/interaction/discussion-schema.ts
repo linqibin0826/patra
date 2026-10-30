@@ -15,8 +15,8 @@ export interface Subject {
   key: string;
 }
 
-/// 根评论的排序：正序（默认）/ 最新
-export type DiscussionSort = "asc" | "latest";
+/// 根评论的排序：正序（默认）/ 最新 / 最有帮助
+export type DiscussionSort = "asc" | "latest" | "helpful";
 
 /// 作者名片（与 PAP-122 的作者对象同形）。`profileVisible` 为假时 `username`、`avatarUrl` 为 null（后端 5.8）；
 /// 已注销时 `state = DELETED`，名字也为 null
@@ -47,7 +47,8 @@ export const replyToSchema = z.object({
   author: cardSchema.nullable().default(null),
 });
 
-/// 一条评论（后端 6.4）。占位只有 `commentId`、`rootId`、`parentId`、`deleted: true`、`hasReplies`、`createdAt`
+/// 一条评论（后端 6.4）。占位只有 `commentId`、`rootId`、`parentId`、`deleted: true`、`hasReplies`、`createdAt`。
+/// `helpfulCount` 是有帮助数（占位为 0），`helpful` 是访客点过没有（没有会话、占位为 null）
 export const commentSchema = z.object({
   commentId: id,
   rootId: id,
@@ -63,6 +64,8 @@ export const commentSchema = z.object({
   hasReplies: z.boolean(),
   createdAt: z.string(),
   edited: z.boolean(),
+  helpfulCount: z.number().int().nonnegative(),
+  helpful: z.boolean().nullable(),
 });
 export type Comment = z.infer<typeof commentSchema>;
 

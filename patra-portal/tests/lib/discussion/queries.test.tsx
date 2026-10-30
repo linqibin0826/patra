@@ -60,3 +60,24 @@ describe("useSingleThread", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 });
+
+describe("换排序时留着上一份，身份变化清缓存后不留", () => {
+  it("缓存被清掉（换了访客）后不拿上一位的列表当占位", async () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const own = ({ children }: { children: ReactNode }) => (
+      <QueryClientProvider client={client}>{children}</QueryClientProvider>
+    );
+    fetchMock.mockResolvedValueOnce(Response.json({ items: [makeThread()], nextCursor: null }));
+    const { result, rerender } = renderHook(({ sort }) => useThreads(PAPER, sort), {
+      wrapper: own,
+      initialProps: { sort: "asc" as "asc" | "latest" },
+    });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    fetchMock.mockReturnValue(new Promise(() => {}));
+    rerender({ sort: "latest" });
+    expect(result.current.data?.pages).toHaveLength(1);
+    client.removeQueries({ queryKey: ["discussion"] });
+    rerender({ sort: "asc" });
+    await waitFor(() => expect(result.current.data).toBeUndefined());
+  });
+});

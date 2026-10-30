@@ -1,5 +1,5 @@
 import type { QueryClient } from "@tanstack/react-query";
-import { fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { makeComment, makeReply, makeThread } from "@tests/fixtures/discussion";
 import { renderDiscussion } from "@tests/support/discussion";
@@ -9,6 +9,7 @@ import { DiscussionView } from "@/components/discussion/DiscussionView";
 import { PAPER_DISCUSSION_COPY } from "@/lib/discussion/copy";
 import { publishComment } from "@/lib/interaction/discussion-actions";
 import type { Thread } from "@/lib/interaction/discussion-schema";
+import { setHelpful } from "@/lib/interaction/helpful-actions";
 import { queryKeys } from "@/lib/query-keys";
 
 let params = new URLSearchParams();
@@ -22,6 +23,7 @@ vi.mock("@/lib/interaction/discussion-actions", () => ({
   editComment: vi.fn(),
   deleteComment: vi.fn(),
 }));
+vi.mock("@/lib/interaction/helpful-actions", () => ({ setHelpful: vi.fn() }));
 
 const SUBJECT = { type: "publication", key: "1" } as const;
 const SEED = {
@@ -252,5 +254,127 @@ describe("降级", () => {
     window.dispatchEvent(new Event("visibilitychange"));
     await waitFor(() => expect(fetchMock.mock.calls.length).toBeGreaterThan(before));
     expect(await screen.findByText("每组只有 47 例")).toBeInTheDocument();
+  });
+});
+
+describe("有帮助", () => {
+  const first = makeThread({ root: makeComment({ commentId: "1", rootId: "1", helpfulCount: 3 }) });
+  const second = makeThread({ root: makeComment({ commentId: "2", rootId: "2", body: "第二楼" }) });
+
+  it("点了数字立刻变、楼不重排，缓存里这条也改了", async () => {
+    vi.mocked(setHelpful).mockResolvedValue({
+      ok: true,
+      result: { helpful: true, helpfulCount: 1 },
+    });
+    const { client } = renderView(seedThreads([first, second]));
+    const secondRoot = document.getElementById("comment-2") as HTMLElement;
+    await userEvent.setup().click(within(secondRoot).getByRole("button", { name: "有帮助" }));
+    await waitFor(() =>
+      expect(
+        within(secondRoot).getByRole("button", { name: "有帮助，1 人觉得有帮助" }),
+      ).toBeVisible(),
+    );
+    const ids = screen.getAllByRole("article").map((article) => article.id);
+    expect(ids).toEqual(["comment-1", "comment-2"]);
+    const data = client.getQueryData<{ pages: { items: Thread[] }[] }>(
+      queryKeys.discussionThreads("publication", "1", "asc"),
+    );
+    expect(data?.pages[0]?.items[1]?.root).toMatchObject({ helpful: true, helpfulCount: 1 });
+  });
+
+  it("这条已被删除：提示之后重取这一楼", async () => {
+    vi.mocked(setHelpful).mockResolvedValue({ ok: false, reason: "gone" });
+    const placeholder = makeThread({
+      root: makeComment({
+        commentId: "2",
+        rootId: "2",
+        deleted: true,
+        author: null,
+        body: null,
+        helpful: null,
+      }),
+      replies: [makeReply("8", "2")],
+    });
+    fetchMock.mockImplementation(async (input) =>
+      String(input).endsWith("/comments/2/thread")
+        ? Response.json({ targetId: "2", thread: placeholder })
+        : Response.json([]),
+    );
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      renderView(seedThreads([first, second]));
+      const secondRoot = document.getElementById("comment-2") as HTMLElement;
+      await userEvent
+        .setup({ advanceTimers: vi.advanceTimersByTime })
+        .click(within(secondRoot).getByRole("button", { name: "有帮助" }));
+      expect(await screen.findByText("这条评论已被删除")).toBeVisible();
+      await act(() => vi.advanceTimersByTimeAsync(4100));
+      await waitFor(() => expect(screen.getByText("该评论已删除")).toBeVisible());
+      expect(fetchMock.mock.calls.map((call) => String(call[0]))).toContain(
+        "/api/discussions/publication/1/comments/2/thread",
+      );
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});
+
+describe("最有帮助", () => {
+  const top = makeThread({ root: makeComment({ commentId: "1", rootId: "1", helpfulCount: 5 }) });
+  const next = makeThread({ root: makeComment({ commentId: "2", rootId: "2", body: "第二楼" }) });
+
+  it("排序三项，地址 sort=helpful 时选中最有帮助", () => {
+    params = new URLSearchParams("sort=helpful");
+    renderView(seedThreads([top, next], null, "helpful"));
+    const group = screen.getByRole("group", { name: "排序" });
+    expect(
+      within(group)
+        .getAllByRole("button")
+        .map((button) => button.textContent),
+    ).toEqual(["正序", "最新", "最有帮助"]);
+    expect(within(group).getByRole("button", { name: "最有帮助" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+  });
+
+  it("点最有帮助：写进地址", async () => {
+    const replace = vi.spyOn(window.history, "replaceState");
+    renderView(seedThreads([top, next]));
+    await userEvent.setup().click(screen.getByRole("button", { name: "最有帮助" }));
+    expect(replace).toHaveBeenLastCalledWith(null, "", "/papers/1?sort=helpful");
+  });
+
+  it("最有帮助下发表根评论：插在最前、没有去看看", async () => {
+    params = new URLSearchParams("sort=helpful");
+    publish.mockResolvedValue({
+      ok: true,
+      comment: makeComment({ commentId: "9", rootId: "9", body: "新的" }),
+    });
+    renderView(seedThreads([top, next], "c2", "helpful"));
+    const user = userEvent.setup();
+    await user.click(
+      screen.getByRole("button", { name: "写下你对这篇文献的看法、疑问或补充证据…" }),
+    );
+    fireEvent.change(screen.getByRole("combobox", { name: "评论内容" }), {
+      target: { value: "新的" },
+    });
+    await user.click(screen.getByRole("button", { name: "发表" }));
+    await waitFor(() => expect(screen.getAllByRole("article")[0]).toHaveTextContent("新的"));
+    expect(screen.queryByRole("link", { name: "去看看" })).toBeNull();
+  });
+
+  it("同一楼出现在两页里只渲染一次", () => {
+    params = new URLSearchParams("sort=helpful");
+    renderView((client: QueryClient) =>
+      client.setQueryData(queryKeys.discussionThreads("publication", "1", "helpful"), {
+        pages: [
+          { items: [top, next], nextCursor: "c1" },
+          { items: [next], nextCursor: null },
+        ],
+        pageParams: [null, "c1"],
+      }),
+    );
+    expect(document.querySelectorAll("#comment-2")).toHaveLength(1);
   });
 });

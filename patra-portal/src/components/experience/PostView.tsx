@@ -13,6 +13,7 @@ import { ExperienceFacts } from "@/components/experience/ExperienceFacts";
 import { ExperienceForm } from "@/components/experience/ExperienceForm";
 import { ExperienceTimeline } from "@/components/experience/ExperienceTimeline";
 import { PostRevisionDialog } from "@/components/experience/PostRevisionDialog";
+import { HelpfulButton } from "@/components/helpful/HelpfulButton";
 import { SectionEyebrow } from "@/components/portal/SectionEyebrow";
 import {
   DropdownMenu,
@@ -176,6 +177,19 @@ export function PostView({ detail, shareUrl }: PostViewProps) {
           {experience.body && (
             <div data-post-body>
               <MarkdownBody source={experience.body} mentions={[]} variant="reading" />
+            </div>
+          )}
+          {/* 经验是页面主对象：胶囊形；props 来自页面、不在查询缓存里，按钮自己显示返回值，删了就刷新页面 */}
+          {(!experience.mine || experience.helpfulCount > 0) && (
+            <div className="flex">
+              <HelpfulButton
+                target={{ type: "post", id: shown.postId }}
+                helpful={experience.helpful}
+                count={experience.helpfulCount}
+                own={experience.mine}
+                variant="pill"
+                onGone={() => router.refresh()}
+              />
             </div>
           )}
         </>

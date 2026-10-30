@@ -5,6 +5,7 @@ import { AuthorAvatar } from "@/components/discussion/AuthorIdentity";
 import { CommentByline } from "@/components/discussion/CommentByline";
 import { CommentMenu } from "@/components/discussion/CommentMenu";
 import { MarkdownBody } from "@/components/discussion/MarkdownBody";
+import { HelpfulButton } from "@/components/helpful/HelpfulButton";
 import { authorView, isSelfReply } from "@/lib/discussion/author";
 import type { Comment } from "@/lib/interaction/discussion-schema";
 import { cn } from "@/lib/utils";
@@ -18,6 +19,8 @@ export interface CommentActions {
   onDelete: (comment: Comment) => void;
   onCopyLink: (comment: Comment, target: HTMLElement | null) => void;
   onOpenPermalink: (comment: Comment) => void;
+  /// 点有帮助时这条已被删除：提示结束后重取它所在的楼
+  onHelpfulGone: (comment: Comment) => void;
 }
 
 interface CommentItemProps {
@@ -108,6 +111,14 @@ export function CommentItem({
         )}
         {!editing && !readOnly && (
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs leading-4.5">
+            <HelpfulButton
+              target={{ type: "comment", id: comment.commentId }}
+              helpful={comment.helpful}
+              count={comment.helpfulCount}
+              own={comment.mine}
+              variant="text"
+              onGone={() => actions.onHelpfulGone(comment)}
+            />
             <TextAction onClick={() => actions.onReply(comment)}>回复</TextAction>
             {comment.replyTo && !isSelfReply(comment) && (
               <TextAction onClick={() => actions.onShowConversation(comment)}>查看对话</TextAction>

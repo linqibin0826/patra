@@ -112,6 +112,8 @@ export function SingleThreadView({
       setReply(comment);
     },
     onOpenPermalink: (comment) => location.openSingle(comment.commentId),
+    // 点有帮助时这条已被删除：重取这一楼（正在看，立刻取）
+    onHelpfulGone: () => void client.invalidateQueries({ queryKey: key }),
   };
 
   const notice = (text: string) => (

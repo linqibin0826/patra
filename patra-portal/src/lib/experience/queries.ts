@@ -3,14 +3,17 @@ import {
   type QueryClient,
   useInfiniteQuery,
   useQuery,
+  useQueryClient,
 } from "@tanstack/react-query";
 import type {
   ExperiencePage,
+  ExperienceSort,
   Revision,
   Summary,
   SummaryWindow,
   UserExperiencePage,
 } from "@/lib/interaction/experience-schema";
+import { keepPreviousWhileCached } from "@/lib/keep-previous";
 import { queryKeys } from "@/lib/query-keys";
 
 /// 门户自己的 Route Handler 的响应：非 2xx 抛错（查询进入 error，界面显示降级）
@@ -41,16 +44,23 @@ export function useExperienceSummary(journalId: string, window: SummaryWindow) {
   });
 }
 
-/// 期刊页经验列表：每页 10 条，游标翻页
-export function useJournalExperiences(journalId: string) {
+/// 期刊页经验列表：每页 10 条，游标翻页，按排序分别缓存
+export function useJournalExperiences(journalId: string, sort: ExperienceSort) {
+  const client = useQueryClient();
   return useInfiniteQuery({
-    queryKey: queryKeys.experienceList(journalId),
-    queryFn: async ({ pageParam }) =>
-      readOk<ExperiencePage>(
-        await fetch(`/api/journals/${journalId}/posts${cursorQuery(pageParam)}`),
-      ),
+    queryKey: queryKeys.experienceList(journalId, sort),
+    queryFn: async ({ pageParam }) => {
+      const query = new URLSearchParams({ sort });
+      if (pageParam) {
+        query.set("cursor", pageParam);
+      }
+      return readOk<ExperiencePage>(await fetch(`/api/journals/${journalId}/posts?${query}`));
+    },
     initialPageParam: null as string | null,
     getNextPageParam: (last) => last.nextCursor,
+    // 换排序时先留着当前列表（工具行与列表不闪没），取到再换
+    placeholderData: (previous, previousQuery) =>
+      keepPreviousWhileCached(client, previous, previousQuery),
     retry: false,
     refetchOnWindowFocus: refetchWhenFailed,
   });
@@ -91,7 +101,7 @@ export async function afterPublish(client: QueryClient, journalId: string): Prom
   await client.cancelQueries({ queryKey: journal });
   await Promise.all([
     client.invalidateQueries({ queryKey: [...journal, "summary"] }),
-    client.resetQueries({ queryKey: queryKeys.experienceList(journalId) }),
+    client.resetQueries({ queryKey: queryKeys.experienceListAll(journalId) }),
   ]);
 }
 

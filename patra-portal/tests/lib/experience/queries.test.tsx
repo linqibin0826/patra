@@ -41,14 +41,16 @@ describe("客户端查询的地址", () => {
 
   it("期刊列表第一页不带游标，下一页带", async () => {
     fetchMock
-      .mockResolvedValueOnce(Response.json({ items: [makeExperience()], nextCursor: "c2" }))
-      .mockResolvedValueOnce(Response.json({ items: [], nextCursor: null }));
-    const { result } = renderHook(() => useJournalExperiences("100"), { wrapper });
+      .mockResolvedValueOnce(
+        Response.json({ items: [makeExperience()], nextCursor: "c2", total: 1 }),
+      )
+      .mockResolvedValueOnce(Response.json({ items: [], nextCursor: null, total: 1 }));
+    const { result } = renderHook(() => useJournalExperiences("100", "helpful"), { wrapper });
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     await result.current.fetchNextPage();
     expect(fetchMock.mock.calls.map(([url]) => String(url))).toEqual([
-      "/api/journals/100/posts",
-      "/api/journals/100/posts?cursor=c2",
+      "/api/journals/100/posts?sort=helpful",
+      "/api/journals/100/posts?sort=helpful&cursor=c2",
     ]);
   });
 
@@ -78,6 +80,25 @@ describe("客户端查询的地址", () => {
   });
 });
 
+describe("期刊列表换排序时的占位", () => {
+  it("缓存被清掉（换了访客）后不拿上一位的列表当占位", async () => {
+    fetchMock.mockResolvedValueOnce(
+      Response.json({ items: [makeExperience()], nextCursor: null, total: 1 }),
+    );
+    const { result, rerender } = renderHook(({ sort }) => useJournalExperiences("100", sort), {
+      wrapper,
+      initialProps: { sort: "latest" as "latest" | "helpful" },
+    });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    fetchMock.mockReturnValue(new Promise(() => {}));
+    rerender({ sort: "helpful" });
+    expect(result.current.data?.pages).toHaveLength(1);
+    client.removeQueries({ queryKey: ["experience"] });
+    rerender({ sort: "latest" });
+    await waitFor(() => expect(result.current.data).toBeUndefined());
+  });
+});
+
 describe("afterPublish：写后先取消在途请求，再重取（PAP-124 交接第 5 节）", () => {
   it("先 cancelQueries 再失效汇总、重置列表", async () => {
     const order: string[] = [];
@@ -91,6 +112,9 @@ describe("afterPublish：写后先取消在途请求，再重取（PAP-124 交�
       order.push("reset");
     });
     await afterPublish(client, "100");
+    expect(client.resetQueries).toHaveBeenCalledWith({
+      queryKey: queryKeys.experienceListAll("100"),
+    });
     expect(order[0]).toBe("cancel");
     expect(order).toContain("invalidate");
     expect(order).toContain("reset");

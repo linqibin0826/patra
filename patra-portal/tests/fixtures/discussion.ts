@@ -31,6 +31,8 @@ export function makeComment(overrides: Partial<Comment> = {}): Comment {
     hasReplies: false,
     createdAt: "2026-10-24T06:20:00Z",
     edited: false,
+    helpfulCount: 0,
+    helpful: false,
     ...overrides,
   };
 }

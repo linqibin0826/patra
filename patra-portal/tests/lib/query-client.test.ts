@@ -92,7 +92,7 @@ describe("createQueryClient · 当前用户变化时清掉投稿经验缓存（P
     const client = createQueryClient();
     client.setQueryData(queryKeys.currentUser, A);
     client.setQueryData(queryKeys.experienceSummary("100", "3y"), { count: 1 });
-    client.setQueryData(queryKeys.experienceList("100"), { pages: [] });
+    client.setQueryData(queryKeys.experienceList("100", "latest"), { pages: [] });
     client.setQueryData(queryKeys.experienceUser("7"), { pages: [] });
     client.setQueryData(queryKeys.experienceRevisions("9"), { items: [] });
     client.setQueryData(queryKeys.currentUser, B);

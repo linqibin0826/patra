@@ -97,9 +97,13 @@ export async function publishExperience(
   await fillExperience(form, input);
   await form.getByRole("button", { name: "发布投稿经验" }).click();
   await expect(form).toBeHidden(ROUND_TRIP);
-  const row = section.getByRole("link", { name: new RegExp(month) }).first();
+  // 经验行是 article，链接只是标题行（v0.15 改结构）：按月份文字找行，再取行里的链接
+  const row = section
+    .getByRole("article")
+    .filter({ hasText: new RegExp(month) })
+    .first();
   await expect(row).toBeVisible(ROUND_TRIP);
-  const href = (await row.getAttribute("href")) ?? "";
+  const href = (await row.getByRole("link").getAttribute("href")) ?? "";
   return href.replace("/posts/", "");
 }
 

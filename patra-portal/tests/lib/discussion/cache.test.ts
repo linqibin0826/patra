@@ -45,6 +45,12 @@ describe("insertRoot", () => {
     expect(rootIds(result.data)).toEqual(["9", "1", "2"]);
   });
 
+  it("最有帮助：同最新，插到第一页最前", () => {
+    const result = insertRoot(frozen(data([{ ids: ["1", "2"], next: "c1" }])), fresh, "helpful");
+    expect(result.placed).toBe("top");
+    expect(rootIds(result.data)).toEqual(["9", "1", "2"]);
+  });
+
   it("正序且已到最后一页：接到末尾", () => {
     const result = insertRoot(
       frozen(
@@ -196,6 +202,13 @@ describe("toPlaceholder", () => {
       edited: false,
       replyTo: null,
       hasReplies: true,
+    });
+  });
+
+  it("占位不带有帮助数、没有「我点过没有」", () => {
+    expect(toPlaceholder(makeComment({ helpfulCount: 5, helpful: true }))).toMatchObject({
+      helpfulCount: 0,
+      helpful: null,
     });
   });
 });

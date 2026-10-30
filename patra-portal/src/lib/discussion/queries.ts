@@ -3,6 +3,7 @@ import {
   type QueryClient,
   useInfiniteQuery,
   useQuery,
+  useQueryClient,
 } from "@tanstack/react-query";
 import type { SingleData } from "@/lib/discussion/cache";
 import type {
@@ -15,6 +16,7 @@ import type {
   Subject,
   ThreadPage,
 } from "@/lib/interaction/discussion-schema";
+import { keepPreviousWhileCached } from "@/lib/keep-previous";
 import { queryKeys } from "@/lib/query-keys";
 
 /// 门户自己的 Route Handler 的响应：非 2xx 抛错（查询进入 error，界面显示降级）
@@ -34,6 +36,7 @@ const at = (subject: Subject) => `${subject.type}/${subject.key}`;
 
 /// 讨论区列表：一页 20 楼，游标翻页。失败不自动重试，「重试」由用户点或切回页面时触发
 export function useThreads(subject: Subject, sort: DiscussionSort) {
+  const client = useQueryClient();
   return useInfiniteQuery({
     queryKey: queryKeys.discussionThreads(subject.type, subject.key, sort),
     queryFn: async ({ pageParam }) => {
@@ -46,7 +49,8 @@ export function useThreads(subject: Subject, sort: DiscussionSort) {
     initialPageParam: null as string | null,
     getNextPageParam: (last) => last.nextCursor,
     // 切换排序时先留着上一份（排序控件与列表不闪没），取到再换
-    placeholderData: keepPreviousData,
+    placeholderData: (previous, previousQuery) =>
+      keepPreviousWhileCached(client, previous, previousQuery),
     retry: false,
     refetchOnWindowFocus: refetchWhenFailed,
   });

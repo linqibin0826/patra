@@ -15,7 +15,8 @@ export type ThreadsData = InfiniteData<ThreadPage, string | null>;
 /// 单楼视图在缓存里的形状：目标不存在（被删且没有回复、或不在这个对象下）时是 `{ missing: true }`
 export type SingleData = SingleThread | { missing: true };
 
-/// 写操作的结果并进缓存（spec 4.5）：都是纯函数，不改入参；不乐观，拿到服务端的返回才调用
+/// 写操作的结果并进缓存（spec 4.5）：都是纯函数，不改入参；不乐观，拿到服务端的返回才调用。
+/// 有帮助例外（乐观，按目标 ID 写回所有副本），见 `lib/helpful/cache.ts`
 
 /// 删成占位：只留位置与结构字段（后端占位条目的形状）
 export function toPlaceholder(comment: Comment): Comment {
@@ -31,6 +32,8 @@ export function toPlaceholder(comment: Comment): Comment {
     mentions: [],
     hasReplies: true,
     edited: false,
+    helpfulCount: 0,
+    helpful: null,
   };
 }
 
@@ -47,7 +50,8 @@ function mapThreads(data: ThreadsData, fn: (thread: Thread) => Thread | null): T
   };
 }
 
-/// 发表根评论：`latest` 插到最前；`asc` 已加载到最后一页时接到末尾；否则不动（编辑器下方给「去看看」）
+/// 发表根评论：`latest`、`helpful` 插到最前（刷新后「最有帮助」按数字排，新评论是 0）；`asc` 已加载到最后一页时
+/// 接到末尾；否则不动（编辑器下方给「去看看」）
 export function insertRoot(
   data: ThreadsData,
   comment: Comment,
@@ -55,7 +59,7 @@ export function insertRoot(
 ): { data: ThreadsData; placed: "top" | "bottom" | "offpage" } {
   const thread: Thread = { root: comment, replies: [], hasMoreReplies: false, repliesCursor: null };
   const pages = data.pages;
-  if (sort === "latest") {
+  if (sort !== "asc") {
     const [first, ...rest] = pages;
     const head = first ?? { items: [], nextCursor: null };
     return {

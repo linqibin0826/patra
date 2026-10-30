@@ -38,6 +38,13 @@ describe("prefetchDiscussion", () => {
     });
   });
 
+  it("最有帮助：按 sort=helpful 取，放进这种排序的缓存", async () => {
+    fetchMock.mockResolvedValue(Response.json({ items: [makeThread()], nextCursor: null }));
+    const state = await prefetchDiscussion(PAPER, { mode: "list", sort: "helpful" });
+    expect(String(fetchMock.mock.calls[0]?.[0])).toContain("/threads?sort=helpful");
+    expect(keysOf(state)).toEqual([["discussion", "publication", "11", "threads", "helpful"]]);
+  });
+
   it("列表取不到：不放，客户端自己再取", async () => {
     fetchMock.mockResolvedValue(Response.json({}, { status: 503 }));
     expect(keysOf(await prefetchDiscussion(PAPER, { mode: "list", sort: "latest" }))).toEqual([]);
@@ -58,6 +65,8 @@ describe("parseDiscussionView", () => {
       { mode: "single", commentId: "5" },
     ],
     [{ comment: "x" }, { mode: "list", sort: "asc" }],
+    [{ sort: "helpful" }, { mode: "list", sort: "helpful" }],
+    [{ sort: ["helpful", "asc"] }, { mode: "list", sort: "asc" }],
     [{ sort: "latest" }, { mode: "list", sort: "latest" }],
     [{ sort: ["latest", "asc"] }, { mode: "list", sort: "asc" }],
     [{}, { mode: "list", sort: "asc" }],

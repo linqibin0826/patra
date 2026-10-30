@@ -33,6 +33,15 @@ describe("useDiscussionLocation", () => {
     });
   });
 
+  it("最有帮助写进地址，读得回来", () => {
+    const replace = vi.spyOn(window.history, "replaceState");
+    params = new URLSearchParams("sort=helpful");
+    const { result } = renderHook(() => useDiscussionLocation());
+    expect(result.current.view).toEqual({ mode: "list", sort: "helpful" });
+    result.current.setSort("helpful");
+    expect(replace).toHaveBeenLastCalledWith(null, "", "/papers/1?from=search&sort=helpful");
+  });
+
   it("排序走 replaceState，保留其他参数；正序时去掉 sort", () => {
     const replace = vi.spyOn(window.history, "replaceState");
     const { result } = renderHook(() => useDiscussionLocation());
