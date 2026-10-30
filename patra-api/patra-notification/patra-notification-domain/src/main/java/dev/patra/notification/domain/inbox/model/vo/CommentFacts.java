@@ -1,5 +1,6 @@
 package dev.patra.notification.domain.inbox.model.vo;
 
+import dev.patra.notification.domain.inbox.model.enums.NotificationType;
 import dev.patra.notification.domain.kernel.model.enums.SubjectType;
 import java.time.Instant;
 import java.util.List;
@@ -47,6 +48,25 @@ public record CommentFacts(
   /// @return 没有父评论
   public boolean root() {
     return parentCommentId == null;
+  }
+
+  /// 这条评论给某个人的提醒草稿：触发人是作者，排序时间是发表或编辑的时刻。
+  ///
+  /// @param recipientId 收件人
+  /// @param type 提醒类型
+  /// @param createdAt 写入信箱的时刻
+  /// @return 草稿
+  public NotificationDraft draftFor(long recipientId, NotificationType type, Instant createdAt) {
+    return NotificationDraft.builder()
+        .recipientId(recipientId)
+        .type(type)
+        .actorId(authorId)
+        .actorAnonymous(authorAnonymous)
+        .subjectId(subjectId)
+        .commentId(commentId)
+        .occurredAt(occurredAt)
+        .createdAt(createdAt)
+        .build();
   }
 
   /// 是不是投稿经验下的根评论（经验作者要收「评论了你的投稿经验」）。
