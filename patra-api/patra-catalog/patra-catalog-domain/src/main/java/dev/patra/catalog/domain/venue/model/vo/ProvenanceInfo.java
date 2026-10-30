@@ -1,7 +1,7 @@
 package dev.patra.catalog.domain.venue.model.vo;
 
 import cn.hutool.core.lang.Assert;
-import dev.patra.common.ProvenanceCode;
+import dev.patra.catalog.domain.kernel.model.enums.ProvenanceCode;
 import java.io.Serial;
 import java.io.Serializable;
 import java.time.Instant;

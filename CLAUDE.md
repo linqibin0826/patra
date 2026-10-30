@@ -2,7 +2,7 @@
 
 ## 产品定义
 
-**Patra** — 医学出版物数据平台，采集、解析、存储来自 PubMed / EPMC / Crossref 等 10+ 外部数据源的文献和期刊数据。
+**Patra** — 医学出版物数据平台，采集、解析、存储来自 PubMed、MeSH、ROR、PMC 开放获取、OpenAlex、Scopus、LetPub 等外部数据源的文献和期刊数据（由 catalog 下载或调用后直接入库）。
 
 ## 项目背景
 
@@ -33,7 +33,7 @@
 
 **本仓库 `linqibin0826/patra` 是 GitHub 公开仓库**——任何提交内容（含 git 历史）都全互联网可读且永久留痕。
 
-1. 禁止提交真正敏感的密钥：外部数据源 API key（PubMed / EPMC / Crossref 等）、个人访问令牌、生产数据库/对象存储凭据、私钥证书。这类密钥一律走环境变量或外部 secret 注入，绝不进仓库。
+1. 禁止提交真正敏感的密钥：外部数据源 API key（Scopus、PubMed 等）、个人访问令牌、生产数据库/对象存储凭据、私钥证书。这类密钥一律走环境变量或外部 secret 注入，绝不进仓库。
 2. 一旦发现敏感密钥被提交，立即轮换作废，再清理跟踪——"反正服务连不上"不是不轮换的理由。
 3. **已知例外**：`patra-infra/docker/.env` 含 dev 默认凭据且有意随仓库提交（Mac mini 靠 git pull 同步），对应服务仅在 tailscale 内网暴露，公网打不到端口。Nacos 的 token 签名密钥、identity 和各账号密码**不在**此例外内，只放 `~/.patra/secrets/`。详见 `patra-infra/CLAUDE.md`。
 4. 写文档、注释、commit message、Issue/PR 时不要粘贴真实凭据、内网 IP 以外的隐私信息。

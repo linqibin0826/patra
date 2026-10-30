@@ -52,12 +52,11 @@ export default function DeployLoopArticle() {
 
       <ArticleSection title="按依赖顺序换新">
         <p>
-          换新不是乱序齐上，脚本里写死了一个顺序表：
-          <InlineCode>
-            ORDER=&apos;object-storage registry gateway catalog ingest portal&apos;
-          </InlineCode>
-          。object-storage 排最前，因为 catalog 和 ingest
-          运行时要调它——跟开饭先上米饭一个道理。脚本按这个顺序过一遍，
+          换新不是乱序齐上，服务清单 <InlineCode>patra-infra/cd/services.json</InlineCode>{" "}
+          的条目顺序就是换新顺序：
+          <InlineCode>registry identity gateway catalog interaction portal learn</InlineCode>
+          。identity 排在 gateway 前面，因为网关每个请求都要找 identity 查会话；interaction 排在
+          catalog 后面，因为它运行时要调 catalog——跟开饭先上米饭一个道理。脚本按这个顺序过一遍，
           <strong className="text-ink">只处理本次名单里点到名的服务</strong>
           ，没改的服务连碰都不碰。轮到谁，就用带版本号的环境变量（如{" "}
           <InlineCode>CATALOG_IMAGE_TAG</InlineCode>）执行 <Term>docker compose</Term> 的{" "}
@@ -282,7 +281,7 @@ export default function DeployLoopArticle() {
         </p>
         <p>
           注意两个细节。一是<strong className="text-ink">每个服务一份账</strong>
-          ，不是整批一份：catalog 的 last-good 和 ingest 的各记各的，回滚时互不牵连。二是
+          ，不是整批一份：catalog 的 last-good 和 identity 的各记各的，回滚时互不牵连。二是
           <strong className="text-ink">通过一个记一个</strong>
           ，不等整批结束：就算这批里最后一个服务翻了车，前面成功的几个也已经把自己的新版本记上账了。这本账就是下下站"自动回滚"的全部底气——出事的时候，机器人翻的就是它。
         </p>

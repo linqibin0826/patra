@@ -136,7 +136,7 @@ PAP-24 提速版，5 个 job 拆分 + 容器预拉取 + 全套 Gradle cache：
 
 | Job | 内容 |
 |---|---|
-| **unit-tests** | matrix 4 个分片并行（`commons-and-starters` / `registry` / `ingest` / `catalog-and-misc`），每个分片跑 `check`（test + spotbugs + spotless），不出 JaCoCo 报告 |
+| **unit-tests** | 按受影响单元 matrix 并行（`registry` / `catalog` / `identity` / `interaction` / `gateway` / `foundation`，见 `patra-infra/cd/module-graph.json`），每个单元跑 `check`（test + spotbugs + spotless），不出 JaCoCo 报告 |
 | **integration-tests** | 单 job，启 Testcontainers，提前并发预拉取镜像 |
 | **e2e-tests** | 单 job，端到端 |
 | **coverage-and-upload** | 聚合 unit + integration 的 `jacoco-exec`，产 JaCoCo 聚合报告，上传 Codecov |
@@ -163,5 +163,5 @@ PAP-24 提速版，5 个 job 拆分 + 容器预拉取 + 全套 Gradle cache：
 
 各微服务的架构与启动方式参见各自的 README：
 
-- [`patra-api/README.md`](patra-api/README.md) —— 后端微服务总览（registry / ingest / catalog / object-storage / identity / interaction / gateway）
+- [`patra-api/README.md`](patra-api/README.md) —— 后端微服务总览（registry / catalog / identity / interaction / gateway）
 - [`patra-portal/README.md`](patra-portal/README.md) —— 前端门户（开发中）

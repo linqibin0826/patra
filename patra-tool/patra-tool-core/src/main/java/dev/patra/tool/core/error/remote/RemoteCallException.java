@@ -26,10 +26,10 @@ import org.slf4j.LoggerFactory;
 /// **使用示例：**
 /// ```java
 /// try {
-///     return provenanceEndpoint.getProvenance(code);
+///     return dictionaryEndpoint.resolve(request);
 /// } catch (RemoteCallException ex) {
 ///     if (RemoteErrorHelper.isNotFound(ex)) {
-///         throw new ProvenanceNotFoundException(code);
+///         throw new DictionaryTypeNotFoundException(request.typeCode());
 ///     }
 ///     throw ex;
 /// }

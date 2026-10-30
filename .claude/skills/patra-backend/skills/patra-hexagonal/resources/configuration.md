@@ -2,7 +2,7 @@
 
 ## 环境配置
 
-7 个后端服务的配置分两处，不用 Spring profile：
+5 个后端服务的配置分两处，不用 Spring profile：
 
 ```
 patra-{service}-boot/src/main/resources/
@@ -63,8 +63,8 @@ public class AppConfig {
 
 ```yaml
 # 层级结构 + 语义化命名
-app:
-  ingest:
+patra:
+  catalog:
     pubmed:
       batch-size: 1000
       api-timeout: 30s

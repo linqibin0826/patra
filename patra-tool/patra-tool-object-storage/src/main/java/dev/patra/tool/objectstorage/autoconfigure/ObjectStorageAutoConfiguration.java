@@ -2,8 +2,6 @@ package dev.patra.tool.objectstorage.autoconfigure;
 
 import dev.patra.tool.objectstorage.ObjectStorageOperations;
 import dev.patra.tool.objectstorage.ObjectStorageTemplate;
-import dev.patra.tool.objectstorage.StorageLocationResolver;
-import dev.patra.tool.objectstorage.key.ObjectKeyGenerator;
 import dev.patra.tool.objectstorage.metrics.ObjectStorageMetrics;
 import dev.patra.tool.objectstorage.provider.MinioStorageProvider;
 import dev.patra.tool.objectstorage.provider.ObjectStorageProvider;
@@ -20,7 +18,6 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
-import org.springframework.core.env.Environment;
 import org.springframework.retry.support.RetryTemplate;
 
 /// 对象存储自动配置入口点,暴露 {@link ObjectStorageTemplate} Bean。
@@ -32,7 +29,6 @@ import org.springframework.retry.support.RetryTemplate;
 ///   - 根据 active-provider 配置初始化 MinIO 客户端(默认提供者)
 ///   - 创建 MinIO 存储提供者 {@link MinioStorageProvider}
 ///   - 组装对象存储模板 {@link ObjectStorageTemplate}
-///   - 创建存储位置解析器 {@link StorageLocationResolver}
 ///
 /// **配置示例:**
 ///
@@ -159,25 +155,6 @@ public final class ObjectStorageAutoConfiguration {
   public ObjectStorageTemplate objectStorageTemplate(
       ObjectStorageProvider provider, RetryTemplate retryTemplate, ObjectStorageMetrics metrics) {
     return new ObjectStorageTemplate(provider, retryTemplate, metrics);
-  }
-
-  /// 创建存储位置解析器,负责生成对象键的完整路径。
-  ///
-  /// **路径生成规则:** `{profile`/{service}/{generated-key}}
-  ///
-  /// 例如: `prod/patra-ingest/2024/01/15/abc123.pdf`
-  ///
-  /// @param environment Spring 环境对象,用于读取 profile 和服务名
-  /// @param keyGeneratorProvider 对象键生成器提供者(可选)
-  /// @return 存储位置解析器
-  @Bean
-  @ConditionalOnMissingBean
-  public StorageLocationResolver storageLocationResolver(
-      Environment environment, ObjectProvider<ObjectKeyGenerator> keyGeneratorProvider) {
-    String profile = environment.getProperty("spring.profiles.active", "dev");
-    String service = environment.getProperty("spring.application.name", "service");
-    ObjectKeyGenerator keyGenerator = keyGeneratorProvider.getIfAvailable();
-    return new StorageLocationResolver(profile, service, keyGenerator);
   }
 
   /// 解析指定提供者的配置。

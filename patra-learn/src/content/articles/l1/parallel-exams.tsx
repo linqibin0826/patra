@@ -127,7 +127,7 @@ export default function ParallelExamsArticle() {
                 backend 分科矩阵
               </text>
               <text x="360" y="162" textAnchor="middle" fontSize="11.5" fill="#565d66">
-                registry · catalog · ingest…
+                registry · catalog · identity…
               </text>
               <text x="360" y="182" textAnchor="middle" fontSize="11.5" fill="#565d66">
                 一单元一考场，同时开考
@@ -210,10 +210,10 @@ export default function ParallelExamsArticle() {
         </p>
         <ul className="flex list-disc flex-col gap-1.5 pl-5">
           <li>
-            <strong className="text-ink">容器镜像版本三处一致。</strong>集成测试用的容器{" "}
-            <Term>Docker 镜像</Term>版本（PostgreSQL 和 RocketMQ），散落在 <Term>workflow</Term>{" "}
-            的环境变量、Java 测试基建的常量、RocketMQ 的 compose 文件三处。preflight
-            逐处核对，防止"升级时改了一处忘了另两处"——版本号只有一个事实源，其他地方必须跟它对齐。
+            <strong className="text-ink">容器镜像版本两处一致。</strong>集成测试用的容器{" "}
+            <Term>Docker 镜像</Term>版本（PostgreSQL 和 Redis），同时写在 <Term>workflow</Term>{" "}
+            的环境变量和 Java 测试基建的常量里。preflight
+            逐个核对，防止"升级时改了一处忘了另一处"——版本号只有一个事实源，其他地方必须跟它对齐。
           </li>
           <li>
             <strong className="text-ink">module-graph.json 没过期。</strong>
@@ -236,7 +236,7 @@ export default function ParallelExamsArticle() {
         <ul className="flex list-disc flex-col gap-1.5 pl-5">
           <li>从 module-graph.json 查出这个单元该跑哪些 Gradle 任务（编译、单测、集成测试）；</li>
           <li>
-            如果这科含集成测试，先把 PostgreSQL 和 RocketMQ 的 <Term>Docker 镜像</Term>
+            如果这科含集成测试，先把 PostgreSQL 和 Redis 的 <Term>Docker 镜像</Term>
             并行预拉下来，别让测试框架现场慢慢下载；
           </li>
           <li>跑测试，把测试报告存档 7 天备查。</li>

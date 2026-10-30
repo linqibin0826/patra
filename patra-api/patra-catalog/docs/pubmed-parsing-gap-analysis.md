@@ -5,7 +5,7 @@
 ```
 PubMed XML (DTD 元素)
     ↓  CanonicalPublicationParsingStrategy 解析
-CanonicalPublication (Shared Kernel 模型)
+CanonicalPublication (catalog publication 子域的解析结果模型)
     ↓  PubmedArticleItemProcessor 处理
 PublicationImportResult (9 种关联数据)
     ↓  PublicationItemWriter 写入

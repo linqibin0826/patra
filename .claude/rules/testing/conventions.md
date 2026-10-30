@@ -9,7 +9,7 @@ patra-api 是 Java 25 + Spring Boot 4 + Gradle 项目，TDD / 验证时遵循以
 | 端到端测试位置 | `src/e2eTest/java/{对应包路径}/` |
 | 共享 fixture/资源 | `src/testFixtures/java/{对应包路径}/` + `src/testFixtures/resources/` ——跨 sourceSet 或跨模块共享的 builder / generator / application yaml |
 | 单元测试命名 | `{被测类}Test`（例：`ProvenanceCode` → `ProvenanceCodeTest`） |
-| 集成测试命名 | `{被测类或场景}IT`（例：`OutboxRelayIT`） |
+| 集成测试命名 | `{被测类或场景}IT`（例：`DictionarySeedIT`） |
 | 端到端测试命名 | `{被测场景}E2E`（例：`CatalogIngestionE2E`） |
 | IT Bootstrap | `{Module}ITBootstrap`（@DataJpaTest / @SpringBootTest placeholder Application） |
 | IT WebMvc Config | `{Module}ITWebMvcConfig`（@WebMvcTest 切片的 @SpringBootConfiguration 根） |

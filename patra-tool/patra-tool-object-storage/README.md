@@ -2,7 +2,7 @@
 
 ## 能力
 
-给服务提供对象存储访问。`ObjectStorageAutoConfiguration` 装配 MinIO provider、`ObjectStorageTemplate`、重试、`StorageLocationResolver` 与对象键生成；`ObjectStorageS3AutoConfiguration` 在 `active-provider=s3` 且类路径有 AWS SDK 时装配 S3 provider。
+给服务提供对象存储访问。`ObjectStorageAutoConfiguration` 装配 MinIO provider、`ObjectStorageTemplate` 与重试；`ObjectStorageS3AutoConfiguration` 在 `active-provider=s3` 且类路径有 AWS SDK 时装配 S3 provider。
 
 `ObjectStorageOperations` 提供上传、流式下载、下载到文件、`statObject`，以及删除：`delete(bucket, key)` 幂等（对象不在不算错），`deleteByPrefix(bucket, prefix)` 列出前缀下的全部键、每批 1000 个删除，返回个数，桶不存在返回 0，空前缀拒绝（防止删光整桶）。删除只包重试，不记指标。
 

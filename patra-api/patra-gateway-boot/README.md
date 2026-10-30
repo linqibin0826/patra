@@ -6,7 +6,7 @@ Patra 的 API 网关：所有外部请求的统一入口，按路径前缀路由
 
 ## 职责
 
-- **路由**：`/patra-catalog/**`、`/patra-registry/**`、`/patra-ingest/**`、`/patra-identity/**`、`/patra-interaction/**` 剥掉第一段后转给对应服务，经 Nacos 发现、Spring Cloud LoadBalancer 选实例。
+- **路由**：`/patra-catalog/**`、`/patra-registry/**`、`/patra-identity/**`、`/patra-interaction/**` 剥掉第一段后转给对应服务，经 Nacos 发现、Spring Cloud LoadBalancer 选实例。
 - **鉴权**：`Authorization: Bearer <会话令牌>` → 调 identity 的 `POST /_internal/sessions/introspect`（`lb://patra-identity`，令牌放请求体，不缓存）→ 建认证对象；不是「恰好一个非空 Bearer 头 + identity 说 active」的一律按匿名，是否放行由下面的路径规则决定。令牌格式只由 identity 判断，网关不连 Redis。
 - **入站转发头**：只有受信代理（门户）发来的 `X-Forwarded-For` 被采用，Tomcat `RemoteIpValve` 据此改写客户端地址；其余一切 `Forwarded` / `X-Forwarded-*`（包括非受信来源的 `X-Forwarded-For`）在 servlet 层直接剥掉、不解释（`ForwardedHeaderFilter` 的 `removeOnly`），路径规则、路由和下面的出站头都按真实请求算。
 - **出站请求头**：剥掉外部自带的 `Authorization`；已登录时写入网关现签的 60 秒身份断言（`Authorization: Bearer <JWT>`），匿名不写；再由框架追加网关自己的 `X-Forwarded-*` / `Forwarded`，剥逐跳头。下游收到的 `Authorization` 只可能是网关签的断言，或者没有。
@@ -23,7 +23,7 @@ Patra 的 API 网关：所有外部请求的统一入口，按路径前缀路由
 | 第一条链 | `/*/_internal/**`、`/*/admin/**`、`/*/actuator/**` | 任何人 403 `GW-0403`；不读令牌、不查会话。服务之间的直连调用不过网关，不受影响 |
 | 第二条链 | `/patra-identity/auth/register`、`/auth/login`、`/auth/logout`、`/v3/api-docs`、`/v3/api-docs/**` | 放行（登出公开是为了幂等：会话已失效也要能到达 identity） |
 | 第二条链 | `/patra-identity/**` 其余 | 需登录；匿名 401 `GW-0401` |
-| 第二条链 | 其他一切（catalog、registry、ingest、网关自己的 `/actuator/**` 与 `/scalar`） | 放行 |
+| 第二条链 | 其他一切（catalog、registry、interaction、网关自己的 `/actuator/**` 与 `/scalar`） | 放行 |
 
 规则只看路径不看方法。网关自己的 `/actuator/health` 没有服务前缀，compose 健康检查照常。`//`、`%2F`、`;`、`..` 这类路径由 Spring Security 的防火墙以 400 拒绝（框架默认，不是 ProblemDetail）。
 

@@ -6,7 +6,7 @@ class DomainPurityRulesTest {
     @Test
     fun allows_only_the_whitelist() {
         val artifacts = listOf(
-            "dev.patra:patra-tool-core", "dev.patra:patra-common", "org.projectlombok:lombok",
+            "dev.patra:patra-tool-core", "org.projectlombok:lombok",
             "com.fasterxml.jackson.core:jackson-annotations", "tools.jackson.core:jackson-core",
             "tools.jackson.core:jackson-databind", "cn.hutool:hutool-core", "org.mapstruct:mapstruct",
         )

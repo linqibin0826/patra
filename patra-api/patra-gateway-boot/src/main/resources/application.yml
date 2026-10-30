@@ -52,17 +52,8 @@ spring:
           # server.tomcat.remoteip 与 ForwardedHeaderFilter 处理，出站的 X-Forwarded-For 用处理后的客户端地址。
           trusted-proxies: ".*"
           routes:
-            # Ingest Service Route
-            # Example: /patra-ingest/plans -> lb://patra-ingest/plans
-            - id: patra-ingest
-              uri: lb://patra-ingest
-              predicates:
-                - Path=/patra-ingest/**
-              filters:
-                - StripPrefix=1
-
             # Registry Service Route
-            # Example: /patra-registry/provenance -> lb://patra-registry/provenance
+            # Example: /patra-registry/dictionaries/items -> lb://patra-registry/dictionaries/items
             - id: patra-registry
               uri: lb://patra-registry
               predicates:
@@ -109,9 +100,6 @@ scalar:
     - url: /patra-registry/v3/api-docs
       title: Registry Service
       slug: registry
-    - url: /patra-ingest/v3/api-docs
-      title: Ingest Service
-      slug: ingest
     - url: /patra-identity/v3/api-docs
       title: Identity Service
       slug: identity

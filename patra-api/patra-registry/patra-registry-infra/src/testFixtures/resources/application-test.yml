@@ -1,10 +1,9 @@
 # Registry Infra 集成测试配置
-# 使用 target 版本限制，跳过种子数据迁移
+# 使用 target 版本限制，跳过种子数据迁移（DictionarySeedIT 单独覆盖为 latest）
 
 spring:
   flyway:
-    # 只执行到 V1（schema 迁移），跳过 V2~V4 种子数据
-    # 迁移脚本命名已从 V1.0.x 改为 V1/V2/V3/V4（PG 迁移重命名）
+    # 只执行到 V1（schema 迁移），跳过 V2、V3 种子数据
     target: 1
     # 允许清理数据库（仅用于测试）
     clean-disabled: false

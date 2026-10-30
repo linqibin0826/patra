@@ -14,12 +14,6 @@ class ToolDependencyRulesTest {
     }
 
     @Test
-    fun r1_also_rejects_patra_common_because_it_lives_under_patra_api() {
-        assertThat(ToolDependencyRules.r1Violations(listOf(d("testImplementation", ":patra-api:patra-common"))))
-            .containsExactly("testImplementation -> :patra-api:patra-common")
-    }
-
-    @Test
     fun r1_accepts_tool_and_third_party_targets() {
         assertThat(ToolDependencyRules.r1Violations(listOf(d("api", ":patra-tool:patra-tool-core")))).isEmpty()
     }

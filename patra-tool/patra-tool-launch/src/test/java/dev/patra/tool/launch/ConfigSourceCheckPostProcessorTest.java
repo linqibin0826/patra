@@ -19,7 +19,7 @@ class ConfigSourceCheckPostProcessorTest {
   private static final String COMMON_MISSING =
       "没拿到 Nacos 配置 patra-common.yaml：Nacos 不可达且本地没有快照，或该文件不存在";
   private static final String SERVICE_MISSING =
-      "没拿到本服务的 Nacos 配置 patra-ingest.yaml：Nacos 不可达且本地没有快照，或该文件不存在";
+      "没拿到本服务的 Nacos 配置 patra-catalog.yaml：Nacos 不可达且本地没有快照，或该文件不存在";
 
   private final ConfigSourceCheckPostProcessor postProcessor = new ConfigSourceCheckPostProcessor();
 
@@ -37,7 +37,7 @@ class ConfigSourceCheckPostProcessorTest {
     MockEnvironment environment =
         requiredEnvironment()
             .withProperty("patra.config-source.common", "patra-common.yaml")
-            .withProperty("patra.config-source.service", "patra-ingest.yaml");
+            .withProperty("patra.config-source.service", "patra-catalog.yaml");
 
     assertThatCode(() -> check(environment)).doesNotThrowAnyException();
   }
@@ -46,7 +46,7 @@ class ConfigSourceCheckPostProcessorTest {
   @DisplayName("缺公共配置的签到：启动失败，说明没拿到 patra-common.yaml")
   void should_fail_with_common_message_when_common_signature_missing() {
     MockEnvironment environment =
-        requiredEnvironment().withProperty("patra.config-source.service", "patra-ingest.yaml");
+        requiredEnvironment().withProperty("patra.config-source.service", "patra-catalog.yaml");
 
     assertThatThrownBy(() -> check(environment))
         .isInstanceOf(IllegalStateException.class)
@@ -78,7 +78,7 @@ class ConfigSourceCheckPostProcessorTest {
     MockEnvironment environment =
         requiredEnvironment()
             .withProperty("patra.config-source.common", "  ")
-            .withProperty("patra.config-source.service", "patra-ingest.yaml");
+            .withProperty("patra.config-source.service", "patra-catalog.yaml");
 
     assertThatThrownBy(() -> check(environment)).hasMessage(COMMON_MISSING);
   }
@@ -145,7 +145,7 @@ class ConfigSourceCheckPostProcessorTest {
   private static MockEnvironment signedEnvironment() {
     return requiredEnvironment()
         .withProperty("patra.config-source.common", "patra-common.yaml")
-        .withProperty("patra.config-source.service", "patra-ingest.yaml");
+        .withProperty("patra.config-source.service", "patra-catalog.yaml");
   }
 
   /// 按 SCA 的 `NacosConfigDataLoader` 放进环境的样子造一份 Nacos 配置：名字是 `分组@dataId`。
@@ -161,6 +161,6 @@ class ConfigSourceCheckPostProcessorTest {
   private static MockEnvironment requiredEnvironment() {
     return new MockEnvironment()
         .withProperty(ConfigSourceCheckPostProcessor.REQUIRED_PROPERTY, "true")
-        .withProperty("spring.application.name", "patra-ingest");
+        .withProperty("spring.application.name", "patra-catalog");
   }
 }

@@ -42,7 +42,7 @@ allowed-tools: Read, Edit, Write, Grep, Glob, Bash
 │   └── 调用应用层服务 → `{Entity}Gateway`（domain）→ `{Entity}GatewayImpl`（app）
 │
 ├── 创建定时任务
-│   └── XXL-Job → 继承 `AbstractProvenanceScheduleJob`
+│   └── XXL-Job → `adapter.{子域}.scheduler` 下的 `*ScheduleJob`，经 CommandBus 调 Handler
 │       模块: adapter
 │       参考: [controller-guide.md](resources/controller-guide.md) 的"XXL-Job 模式"部分
 │
@@ -100,7 +100,7 @@ allowed-tools: Read, Edit, Write, Grep, Glob, Bash
 │   ├── 需要数据库 → patra-tool-jpa
 │   ├── 需要调用内部服务或外部 REST API → patra-tool-http-client
 │   └── 需要对象存储 → patra-tool-object-storage
-├── domain 层 → 不能添加任何工具模块（core、patra-common 由插件给）
+├── domain 层 → 不能添加任何工具模块（core 由插件给）
 └── 详细指南 → [patra-starters.md](resources/patra-starters.md)
 ```
 

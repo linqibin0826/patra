@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import dev.patra.catalog.domain.kernel.model.enums.ProvenanceCode;
 import dev.patra.catalog.domain.venue.model.aggregate.VenueAggregate;
 import dev.patra.catalog.domain.venue.model.enums.VenueIdentifierType;
 import dev.patra.catalog.domain.venue.model.vo.CitationMetrics;
@@ -18,7 +19,6 @@ import dev.patra.catalog.infra.config.CatalogITPostgreSQLContainerInitializer;
 import dev.patra.catalog.infra.venue.persistence.dao.VenueDao;
 import dev.patra.catalog.infra.venue.persistence.dao.VenueIdentifierDao;
 import dev.patra.catalog.infra.venue.persistence.entity.VenueEntity;
-import dev.patra.common.ProvenanceCode;
 import dev.patra.tool.jpa.autoconfigure.JpaAuditingConfiguration;
 import dev.patra.tool.jpa.json.JsonColumnCodec;
 import jakarta.persistence.PersistenceException;

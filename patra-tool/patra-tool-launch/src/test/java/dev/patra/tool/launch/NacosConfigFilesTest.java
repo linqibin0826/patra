@@ -22,9 +22,9 @@ class NacosConfigFilesTest {
   void should_pass_when_files_follow_rules() throws IOException {
     write("patra-common.yaml", "patra.config-source.common: patra-common.yaml\n");
     write(
-        "patra-ingest.yaml",
+        "patra-catalog.yaml",
         """
-        patra.config-source.service: patra-ingest.yaml
+        patra.config-source.service: patra-catalog.yaml
         spring:
           datasource:
             password: ${INGEST_DB_PASSWORD}
@@ -87,10 +87,10 @@ class NacosConfigFilesTest {
   @DisplayName("签到值与文件名不一致时不通过")
   void should_reject_signature_value_mismatch() throws IOException {
     write("patra-common.yaml", "patra.config-source.common: patra-common.yaml\n");
-    write("patra-ingest.yaml", "patra.config-source.service: patra-catalog.yaml\n");
+    write("patra-catalog.yaml", "patra.config-source.service: patra-identity.yaml\n");
 
     assertThat(NacosConfigFileChecker.check(directory))
-        .contains("patra-ingest.yaml：签到 patra.config-source.service 的值必须是 patra-ingest.yaml");
+        .contains("patra-catalog.yaml：签到 patra.config-source.service 的值必须是 patra-catalog.yaml");
   }
 
   @Test
@@ -203,7 +203,7 @@ class NacosConfigFilesTest {
   @Test
   @DisplayName("缺公共配置时不通过")
   void should_require_common_file() throws IOException {
-    write("patra-ingest.yaml", "patra.config-source.service: patra-ingest.yaml\n");
+    write("patra-catalog.yaml", "patra.config-source.service: patra-catalog.yaml\n");
 
     assertThat(NacosConfigFileChecker.check(directory)).containsExactly("缺少 patra-common.yaml");
   }

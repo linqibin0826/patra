@@ -25,7 +25,7 @@ class ProxyFailureClassifierTest {
   void should_wrap_gateway_service_unavailable_as_downstream_unavailable() {
     HttpServerErrorException noInstance =
         new HttpServerErrorException(
-            HttpStatus.SERVICE_UNAVAILABLE, "Unable to find instance for patra-ingest");
+            HttpStatus.SERVICE_UNAVAILABLE, "Unable to find instance for patra-interaction");
 
     ApplicationException wrapped = ProxyFailureClassifier.wrap(noInstance, http).orElseThrow();
 

@@ -10,6 +10,6 @@ plugins {
 }
 
 // 所有依赖由 patra.hexagonal-domain 插件提供:
-// - patra-common-core (api)
+// - patra-tool-core (api)
 // - Hutool, MapStruct
 // - 测试依赖

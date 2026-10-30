@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.patra.catalog.domain.fulltext.model.enums.FullTextUnavailableReason;
 import dev.patra.catalog.domain.kernel.model.enums.FullTextStatus;
+import dev.patra.catalog.domain.kernel.model.enums.PublicationIdentifierType;
 import dev.patra.catalog.domain.portal.model.read.PublicationDetailReadModel;
 import dev.patra.catalog.domain.portal.model.read.PublicationDetailReadModel.AbstractSectionView;
 import dev.patra.catalog.domain.portal.model.read.PublicationDetailReadModel.AuthorView;
@@ -26,7 +27,6 @@ import dev.patra.catalog.infra.publication.persistence.entity.PublicationMeshHea
 import dev.patra.catalog.infra.publication.persistence.entity.PublicationMetadataEntity;
 import dev.patra.catalog.infra.publication.persistence.entity.PublicationTypeEntity;
 import dev.patra.catalog.infra.venue.persistence.entity.VenueEntity;
-import dev.patra.common.PublicationIdentifierType;
 import dev.patra.tool.jpa.autoconfigure.JpaAuditingConfiguration;
 import dev.patra.tool.jpa.id.SnowflakeIdGenerator;
 import java.util.List;

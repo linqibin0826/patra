@@ -8,7 +8,6 @@ class DeclaredDependencyRulesTest {
     private val targets = mapOf(
         ":patra-tool:patra-tool-core" to DeclaredDependencyRules.Target(setOf("dev.patra.tool.core", "dev.patra.tool.core.error"), autoConfigured = false),
         ":patra-tool:patra-tool-web" to DeclaredDependencyRules.Target(setOf("dev.patra.tool.web"), autoConfigured = true),
-        ":patra-api:patra-common" to DeclaredDependencyRules.Target(setOf("dev.patra.common"), autoConfigured = false),
     )
 
     @Test
@@ -49,13 +48,13 @@ class DeclaredDependencyRulesTest {
     fun exempt_targets_and_soft_configurations_and_third_party_are_ignored() {
         val v = DeclaredDependencyRules.violations(
             listOf(
-                d("api", ":patra-api:patra-common"),
+                d("api", ":patra-tool:patra-tool-core"),
                 d("compileOnly", ":patra-tool:patra-tool-core"),
                 d("testImplementation", ":patra-tool:patra-tool-core"),
                 d("runtimeOnly", ":patra-tool:patra-tool-core"),
                 d("api", "org.springframework:spring-context"),
             ),
-            imports = emptySet(), targets = targets, exempt = setOf(":patra-api:patra-common"),
+            imports = emptySet(), targets = targets, exempt = setOf(":patra-tool:patra-tool-core"),
         )
         assertThat(v).isEmpty()
     }

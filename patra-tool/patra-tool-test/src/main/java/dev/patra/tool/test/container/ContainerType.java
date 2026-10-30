@@ -7,7 +7,6 @@ package dev.patra.tool.test.container;
 /// ### 支持的容器类型
 ///
 /// - **POSTGRESQL**: PostgreSQL 数据库容器
-/// - **ROCKETMQ**: RocketMQ 消息队列容器
 /// - **REDIS**: Redis 缓存容器
 ///
 /// ### 使用示例
@@ -31,11 +30,6 @@ public enum ContainerType {
   ///
   /// 使用 postgres:17 镜像，支持配置化数据库名。
   POSTGRESQL,
-
-  /// RocketMQ 消息队列容器。
-  ///
-  /// 使用 apache/rocketmq:5.3.1 镜像，包含 NameServer 和 Broker。
-  ROCKETMQ,
 
   /// Redis 缓存容器。
   ///

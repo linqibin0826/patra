@@ -23,15 +23,15 @@ class JarConfigOverlapCheckerTest {
   void should_report_key_written_in_jar_and_service_file() throws IOException {
     write("nacos/patra-common.yaml", "patra.config-source.common: patra-common.yaml\n");
     write(
-        "nacos/patra-ingest.yaml",
-        "patra.config-source.service: patra-ingest.yaml\nspring.datasource.url: jdbc:x\n");
+        "nacos/patra-catalog.yaml",
+        "patra.config-source.service: patra-catalog.yaml\nspring.datasource.url: jdbc:x\n");
     write(
-        "api/patra-ingest/patra-ingest-boot/src/main/resources/application.yml",
+        "api/patra-catalog/patra-catalog-boot/src/main/resources/application.yml",
         "spring:\n  datasource:\n    url: jdbc:y\n");
 
     assertThat(check())
         .containsExactly(
-            "patra-ingest-boot 的 application.yml 与 Nacos 的 patra-ingest.yaml 都写了"
+            "patra-catalog-boot 的 application.yml 与 Nacos 的 patra-catalog.yaml 都写了"
                 + " spring.datasource.url");
   }
 
@@ -73,12 +73,12 @@ class JarConfigOverlapCheckerTest {
   @DisplayName("找不到服务的 boot 模块时报出，不悄悄跳过")
   void should_report_missing_boot_module() throws IOException {
     write("nacos/patra-common.yaml", "patra.config-source.common: patra-common.yaml\n");
-    write("nacos/patra-ingest.yaml", "patra.config-source.service: patra-ingest.yaml\n");
+    write("nacos/patra-catalog.yaml", "patra.config-source.service: patra-catalog.yaml\n");
 
     assertThat(check())
         .containsExactly(
-            "找不到 patra-ingest 的 boot 模块配置目录：patra-ingest/patra-ingest-boot/src/main/resources"
-                + " 或 patra-ingest-boot/src/main/resources");
+            "找不到 patra-catalog 的 boot 模块配置目录：patra-catalog/patra-catalog-boot/src/main/resources"
+                + " 或 patra-catalog-boot/src/main/resources");
   }
 
   @Test
@@ -100,7 +100,7 @@ class JarConfigOverlapCheckerTest {
   }
 
   @Test
-  @DisplayName("仓库里 7 个服务的 jar 配置与 patra-infra/nacos/dev 没有重复的键")
+  @DisplayName("仓库里 5 个服务的 jar 配置与 patra-infra/nacos/dev 没有重复的键")
   void should_pass_for_repository() {
     String repoRoot =
         Objects.requireNonNull(

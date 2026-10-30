@@ -13,9 +13,6 @@ dependencies {
     api(project(":patra-api:patra-catalog:patra-catalog-app"))
     api(project(":patra-tool:patra-tool-web"))
 
-    // RocketMQ
-    api(libs.rocketmq.spring.boot)
-
     // XXL-Job
     api(libs.xxl.job)
 

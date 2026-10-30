@@ -112,7 +112,7 @@ digraph release_planning {
 **形式**：遵循 Linear Method 「[Write issues, not user stories](https://linear.app/method/write-issues-not-user-stories)」——每条直接写交付物，不写用户故事格式。
 
 - ✅ 优秀示例：
-  - "[BE] 实现 GET /api/v1/health（聚合 registry/ingest/catalog actuator）"（area:be）
+  - "[BE] 实现 GET /api/v1/health（聚合 registry/catalog actuator）"（area:be）
   - "[Design] portal Health 卡片 hi-fi 稿（3 卡片 + 状态色 + 时延）"（area:design）
   - "[FE] portal 首页 Health 卡片组件 + 30s 轮询"（area:fe）
 - ❌ 反面示例：
@@ -157,7 +157,7 @@ digraph release_planning {
 
 **优秀示例**：
 - 收藏数据存 PostgreSQL，不引入 Redis 缓存（影响所有 BE Issue 的数据层）
-- 复用 patra-ingest 模块，不新建 adapter（影响所有"采集 PubMed"相关 Issue）
+- 复用 catalog 的 PubMed 文件流水线，不新建服务（影响所有"采集 PubMed"相关 Issue）
 - 前端按页面拆 server / client 组件（跨 FE Issue 的渲染策略）
 
 **反例（不该写在字段 4）**：

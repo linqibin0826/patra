@@ -67,7 +67,7 @@ class GatewayBlockedPathsIT {
     String token = GatewayITSessions.issue(identity, 4301L, 9301L);
     List<String> blocked =
         List.of(
-            "/patra-registry/_internal/provenances",
+            "/patra-registry/_internal/dictionaries/resolve",
             "/patra-catalog/_internal/organizations/04jztag35",
             "/patra-catalog/_internal/mesh/descriptors/D003920",
             "/patra-catalog/_internal/publications/resolve/by-ids",

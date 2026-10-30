@@ -37,19 +37,15 @@ class RegistryArchitectureTest {
 
   /// 参数化的六边形架构规则（基础包: dev.patra.registry）。
   private static final HexagonalArchitectureRules rules =
-      new HexagonalArchitectureRules(
-          "dev.patra.registry", List.of("dev.patra.common..", "dev.patra.tool.."));
+      new HexagonalArchitectureRules("dev.patra.registry", List.of("dev.patra.tool.."));
 
-  /// 底座子域：只在 domain 层，放异常根与注册键规范化规则。
+  /// 底座子域：只在 domain 层，放异常根。
   private static final String FOUNDATION = "kernel";
 
-  /// 子域边界规则：expr 经 provenance 的读端口把数据源代码解析成 ID。
+  /// 子域边界规则：只有一个业务子域 dictionary。
   private static final SubdomainArchitectureRules subdomainRules =
       new SubdomainArchitectureRules(
-              "dev.patra.registry",
-              FOUNDATION,
-              Set.of(FOUNDATION, "dictionary", "provenance", "expr"))
-          .allowingDependency("expr", "provenance");
+          "dev.patra.registry", FOUNDATION, Set.of(FOUNDATION, "dictionary"));
 
   /// 导入 patra-registry 全部模块的主代码。
   @BeforeAll

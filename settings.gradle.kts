@@ -47,9 +47,6 @@ fun mapParent(path: String, dir: String) {
     project(path).projectDir = file(dir)
 }
 
-// ==================== patra-api / patra-common ====================
-includeAt(":patra-api:patra-common", "patra-api/patra-common")
-
 // ==================== patra-tool ====================
 includeAt(":patra-tool:patra-tool-core", "patra-tool/patra-tool-core")
 includeAt(":patra-tool:patra-tool-cqrs", "patra-tool/patra-tool-cqrs")
@@ -65,7 +62,6 @@ includeAt(":patra-tool:patra-tool-security", "patra-tool/patra-tool-security")
 includeAt(":patra-tool:patra-tool-launch", "patra-tool/patra-tool-launch")
 mapParent(":patra-tool", "patra-tool")
 
-
 // ==================== patra-api / Microservices ====================
 includeAt(":patra-api:patra-registry:patra-registry-domain", "patra-api/patra-registry/patra-registry-domain")
 includeAt(":patra-api:patra-registry:patra-registry-api", "patra-api/patra-registry/patra-registry-api")
@@ -75,16 +71,6 @@ includeAt(":patra-api:patra-registry:patra-registry-adapter", "patra-api/patra-r
 includeAt(":patra-api:patra-registry:patra-registry-boot", "patra-api/patra-registry/patra-registry-boot")
 mapParent(":patra-api:patra-registry", "patra-api/patra-registry")
 
-includeAt(":patra-api:patra-ingest:patra-ingest-domain", "patra-api/patra-ingest/patra-ingest-domain")
-includeAt(":patra-api:patra-ingest:patra-ingest-api", "patra-api/patra-ingest/patra-ingest-api")
-includeAt(":patra-api:patra-ingest:patra-ingest-app", "patra-api/patra-ingest/patra-ingest-app")
-includeAt(":patra-api:patra-ingest:patra-ingest-infra", "patra-api/patra-ingest/patra-ingest-infra")
-includeAt(":patra-api:patra-ingest:patra-ingest-adapter", "patra-api/patra-ingest/patra-ingest-adapter")
-includeAt(":patra-api:patra-ingest:patra-ingest-boot", "patra-api/patra-ingest/patra-ingest-boot")
-includeAt(":patra-api:patra-ingest:patra-ingest-provenance", "patra-api/patra-ingest/patra-ingest-provenance")
-includeAt(":patra-api:patra-ingest:patra-ingest-expr", "patra-api/patra-ingest/patra-ingest-expr")
-mapParent(":patra-api:patra-ingest", "patra-api/patra-ingest")
-
 includeAt(":patra-api:patra-catalog:patra-catalog-domain", "patra-api/patra-catalog/patra-catalog-domain")
 includeAt(":patra-api:patra-catalog:patra-catalog-api", "patra-api/patra-catalog/patra-catalog-api")
 includeAt(":patra-api:patra-catalog:patra-catalog-app", "patra-api/patra-catalog/patra-catalog-app")
@@ -92,14 +78,6 @@ includeAt(":patra-api:patra-catalog:patra-catalog-infra", "patra-api/patra-catal
 includeAt(":patra-api:patra-catalog:patra-catalog-adapter", "patra-api/patra-catalog/patra-catalog-adapter")
 includeAt(":patra-api:patra-catalog:patra-catalog-boot", "patra-api/patra-catalog/patra-catalog-boot")
 mapParent(":patra-api:patra-catalog", "patra-api/patra-catalog")
-
-includeAt(":patra-api:patra-object-storage:patra-object-storage-domain", "patra-api/patra-object-storage/patra-object-storage-domain")
-includeAt(":patra-api:patra-object-storage:patra-object-storage-api", "patra-api/patra-object-storage/patra-object-storage-api")
-includeAt(":patra-api:patra-object-storage:patra-object-storage-app", "patra-api/patra-object-storage/patra-object-storage-app")
-includeAt(":patra-api:patra-object-storage:patra-object-storage-infra", "patra-api/patra-object-storage/patra-object-storage-infra")
-includeAt(":patra-api:patra-object-storage:patra-object-storage-adapter", "patra-api/patra-object-storage/patra-object-storage-adapter")
-includeAt(":patra-api:patra-object-storage:patra-object-storage-boot", "patra-api/patra-object-storage/patra-object-storage-boot")
-mapParent(":patra-api:patra-object-storage", "patra-api/patra-object-storage")
 
 includeAt(":patra-api:patra-identity:patra-identity-api", "patra-api/patra-identity/patra-identity-api")
 includeAt(":patra-api:patra-identity:patra-identity-domain", "patra-api/patra-identity/patra-identity-domain")

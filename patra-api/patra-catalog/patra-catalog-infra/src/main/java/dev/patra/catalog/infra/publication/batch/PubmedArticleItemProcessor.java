@@ -2,7 +2,9 @@ package dev.patra.catalog.infra.publication.batch;
 
 import static dev.patra.catalog.infra.publication.support.StringUtils.trimToNull;
 
+import dev.patra.catalog.domain.kernel.model.enums.ProvenanceCode;
 import dev.patra.catalog.domain.kernel.model.enums.PublicationDateType;
+import dev.patra.catalog.domain.kernel.model.enums.PublicationIdentifierType;
 import dev.patra.catalog.domain.kernel.model.vo.Orcid;
 import dev.patra.catalog.domain.kernel.model.vo.Pagination;
 import dev.patra.catalog.domain.kernel.model.vo.VenueId;
@@ -12,6 +14,21 @@ import dev.patra.catalog.domain.publication.model.aggregate.VenueInstanceAggrega
 import dev.patra.catalog.domain.publication.model.enums.IndexingStatus;
 import dev.patra.catalog.domain.publication.model.enums.PublicationMedium;
 import dev.patra.catalog.domain.publication.model.enums.PublicationStatus;
+import dev.patra.catalog.domain.publication.model.vo.CanonicalPublication;
+import dev.patra.catalog.domain.publication.model.vo.CanonicalPublication.Abstract;
+import dev.patra.catalog.domain.publication.model.vo.CanonicalPublication.AbstractSection;
+import dev.patra.catalog.domain.publication.model.vo.CanonicalPublication.Affiliation;
+import dev.patra.catalog.domain.publication.model.vo.CanonicalPublication.Author;
+import dev.patra.catalog.domain.publication.model.vo.CanonicalPublication.DescriptorName;
+import dev.patra.catalog.domain.publication.model.vo.CanonicalPublication.FundingInfo;
+import dev.patra.catalog.domain.publication.model.vo.CanonicalPublication.Identifier;
+import dev.patra.catalog.domain.publication.model.vo.CanonicalPublication.Journal;
+import dev.patra.catalog.domain.publication.model.vo.CanonicalPublication.Keyword;
+import dev.patra.catalog.domain.publication.model.vo.CanonicalPublication.KeywordSet;
+import dev.patra.catalog.domain.publication.model.vo.CanonicalPublication.MeshHeading;
+import dev.patra.catalog.domain.publication.model.vo.CanonicalPublication.PublicationDates;
+import dev.patra.catalog.domain.publication.model.vo.CanonicalPublication.PublicationType;
+import dev.patra.catalog.domain.publication.model.vo.CanonicalPublication.QualifierName;
 import dev.patra.catalog.domain.publication.model.vo.JournalInstanceParams;
 import dev.patra.catalog.domain.publication.model.vo.LanguageInfo;
 import dev.patra.catalog.domain.publication.model.vo.PublicationAbstract;
@@ -33,23 +50,6 @@ import dev.patra.catalog.infra.publication.batch.PublicationImportResult.Publica
 import dev.patra.catalog.infra.publication.batch.PublicationImportResult.PublicationTypeData;
 import dev.patra.catalog.infra.publication.batch.PublicationImportResult.QualifierData;
 import dev.patra.catalog.infra.publication.batch.PublicationImportResult.SupplMeshData;
-import dev.patra.common.CanonicalPublication;
-import dev.patra.common.CanonicalPublication.Abstract;
-import dev.patra.common.CanonicalPublication.AbstractSection;
-import dev.patra.common.CanonicalPublication.Affiliation;
-import dev.patra.common.CanonicalPublication.Author;
-import dev.patra.common.CanonicalPublication.DescriptorName;
-import dev.patra.common.CanonicalPublication.FundingInfo;
-import dev.patra.common.CanonicalPublication.Identifier;
-import dev.patra.common.CanonicalPublication.Journal;
-import dev.patra.common.CanonicalPublication.Keyword;
-import dev.patra.common.CanonicalPublication.KeywordSet;
-import dev.patra.common.CanonicalPublication.MeshHeading;
-import dev.patra.common.CanonicalPublication.PublicationDates;
-import dev.patra.common.CanonicalPublication.PublicationType;
-import dev.patra.common.CanonicalPublication.QualifierName;
-import dev.patra.common.ProvenanceCode;
-import dev.patra.common.PublicationIdentifierType;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -848,7 +848,7 @@ public class PubmedArticleItemProcessor
         continue;
       }
 
-      // sections 可能为 null（starter-provenance 路径不填充），必须判空
+      // sections 可能为 null，必须判空
       List<PublicationAbstractSection> sections = toAbstractSections(altAbstract.getSections());
       // 文本与段落都为空才跳过
       if (isBlank(altAbstract.getText()) && sections.isEmpty()) {
@@ -939,7 +939,7 @@ public class PubmedArticleItemProcessor
   /// **特殊处理**：
   ///
   /// - `published` 日期标记为 `isPrimary=true`（主要发表日期）
-  /// - 日期按实际精度（[dev.patra.common.PartialDate]），缺的月 / 日不补
+  /// - 日期按实际精度（[dev.patra.catalog.domain.publication.model.vo.PartialDate]），缺的月 / 日不补
   ///
   /// @param publication 规范化文献
   /// @return 日期数据列表（可能为空，不会为 null）

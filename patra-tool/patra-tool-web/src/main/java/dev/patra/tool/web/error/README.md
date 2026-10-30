@@ -152,7 +152,7 @@ public class DataLayerErrorMappingContributor implements ErrorMappingContributor
   @Override
   public Optional<ErrorCodeLike> mapException(Throwable exception) {
     if (exception instanceof SQLException) {
-      return Optional.of(HttpStdErrors.of("INGEST").INTERNAL_ERROR());
+      return Optional.of(HttpStdErrors.of("CAT").INTERNAL_ERROR());
     }
     return Optional.empty();  // 传递给下一个 Contributor
   }
@@ -194,7 +194,7 @@ public class ServiceInfoContributor implements ProblemFieldContributor {
 
   @Override
   public void contribute(Map<String, Object> fields, Throwable exception) {
-    fields.put("service", "patra-ingest");
+    fields.put("service", "patra-catalog");
     fields.put("timestamp", Instant.now().toString());
   }
 }
@@ -233,8 +233,8 @@ linqibin:
         # 是否启用错误解析框架（默认: true）
         enabled: true
 
-        # [必需] 错误码上下文前缀，如 INGEST、REG、CATALOG
-        context-prefix: INGEST
+        # [必需] 错误码上下文前缀，如 CAT、REG、IDN
+        context-prefix: CAT
 
         # 解析引擎配置
         engine:
@@ -395,7 +395,7 @@ public class MessageErrorHandler {
 
 | 示例 | 含义 |
 |------|------|
-| `INGEST-0404` | 采集服务，资源未找到 |
+| `IDN-0404` | 身份服务，资源未找到 |
 | `REG-0409` | 注册服务，资源冲突 |
 | `CATALOG-0500` | 目录服务，内部错误 |
 | `UNKNOWN-0503` | 未配置前缀，服务不可用 |

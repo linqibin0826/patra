@@ -9,6 +9,7 @@ import dev.patra.catalog.adapter.portal.rest.response.PortalPublicationFacetsRes
 import dev.patra.catalog.adapter.portal.rest.response.PortalVenueBrowseResponse;
 import dev.patra.catalog.adapter.portal.rest.response.PortalVenueDetailResponse;
 import dev.patra.catalog.adapter.portal.rest.response.PortalVenueFacetsResponse;
+import dev.patra.catalog.domain.kernel.model.enums.ProvenanceCode;
 import dev.patra.catalog.domain.portal.model.read.FacetCount;
 import dev.patra.catalog.domain.portal.model.read.PortalPaperReadModel;
 import dev.patra.catalog.domain.portal.model.read.PublicationDetailReadModel;
@@ -16,7 +17,6 @@ import dev.patra.catalog.domain.portal.model.read.PublicationSearchFacets;
 import dev.patra.catalog.domain.portal.model.read.VenueBrowseFacets;
 import dev.patra.catalog.domain.portal.model.read.VenueBrowseReadModel;
 import dev.patra.catalog.domain.portal.model.read.VenueDetailReadModel;
-import dev.patra.common.ProvenanceCode;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;

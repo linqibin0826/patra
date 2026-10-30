@@ -55,9 +55,9 @@ import org.springframework.web.service.invoker.HttpServiceProxyFactory;
 ///   }
 ///
 ///   @Bean
-///   public ProvenanceEndpoint provenanceEndpoint(RestClient registryRestClient, RestClientFactory
+///   public DictionaryEndpoint dictionaryEndpoint(RestClient registryRestClient, RestClientFactory
 // factory) {
-///     return factory.createProxy(registryRestClient, ProvenanceEndpoint.class);
+///     return factory.createProxy(registryRestClient, DictionaryEndpoint.class);
 ///   }
 /// }
 /// ```

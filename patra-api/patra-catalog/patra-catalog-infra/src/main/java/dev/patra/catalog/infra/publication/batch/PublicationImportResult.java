@@ -1,9 +1,9 @@
 package dev.patra.catalog.infra.publication.batch;
 
 import dev.patra.catalog.domain.publication.model.aggregate.PublicationAggregate;
+import dev.patra.catalog.domain.publication.model.vo.PartialDate;
 import dev.patra.catalog.domain.publication.model.vo.PublicationAbstractSection;
 import dev.patra.catalog.domain.publication.model.vo.PublicationMetadata;
-import dev.patra.common.PartialDate;
 import java.util.List;
 import lombok.Builder;
 

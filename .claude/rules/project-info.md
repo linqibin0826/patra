@@ -2,7 +2,7 @@
 
 ## 概览
 
-**Patra** — 医学出版物数据平台 (v0.1.0-SNAPSHOT)，采集、解析、存储来自 PubMed/EPMC/Crossref 等 10+ 外部数据源的文献和期刊数据。
+**Patra** — 医学出版物数据平台 (v0.1.0-SNAPSHOT)，采集、解析、存储来自 PubMed、MeSH、ROR、PMC 开放获取、OpenAlex、Scopus、LetPub 等外部数据源的文献和期刊数据（由 catalog 下载或调用后直接入库）。
 
 **架构**: 微服务 + 六边形架构 + DDD + 事件驱动
 **技术栈**: Java 25 | Spring Boot 4.0.8 | Spring Data JPA | PostgreSQL 17 | Nacos
@@ -10,10 +10,8 @@
 
 ## 核心服务
 
-- `patra-registry` - SSOT 注册中心 (Provenance 配置、Expression 元数据、字典管理)
-- `patra-ingest` - 数据采集服务 (Plan → Task → 外部 API 调用)
-- `patra-catalog` - 目录服务 (文献、期刊数据索引)
-- `patra-object-storage` - 对象存储元数据服务 (记录上传到 MinIO/S3 的文件元数据，仅对内提供 HTTP Interface)
+- `patra-registry` - 字典服务 (国家、语言等平台字典及来源标准，catalog 导入时调它解析)
+- `patra-catalog` - 目录服务 (采集外部数据源并直接入库；文献、期刊、MeSH、机构、全文)
 - `patra-identity` - 身份服务 (前台用户的注册、登录、会话、封禁)
 - `patra-interaction` - 社区互动服务 (文献库、收藏夹、讨论、投稿经验、提醒、有帮助；以后的关注)，每层按子域分包，子域边界由 ArchUnit 守
 - `patra-gateway-boot` - API 网关 (路由、认证、限流)
@@ -41,13 +39,9 @@ patra-{service}/
 - `patra-tool-launch` - `PatraApplication`、Nacos 默认值、`Clock`
 - `patra-tool-test` - 测试自动配置与 Testcontainers 基座
 
-**服务内分包**：层模块内先按子域、再按组件类型，模板与子域规则见 `.claude/rules/tech/package-layout.md`，由 `patra-tool-test` 的 `SubdomainArchitectureRules` 守（ingest 尚未迁移）。
+**服务内分包**：层模块内先按子域、再按组件类型，模板与子域规则见 `.claude/rules/tech/package-layout.md`，由 `patra-tool-test` 的 `SubdomainArchitectureRules` 守。
 
-**Patra 共享模块** (`patra-api/patra-common/`，一个模块): Shared Kernel 数据模型、共享枚举、Provenance 服务契约
-
-**ingest 专属子模块** (`patra-api/patra-ingest/`):
-- `patra-ingest-provenance` - Provenance 配置接入
-- `patra-ingest-expr` - 表达式引擎（查询 AST → 各数据源查询语法）与其 Spring 接入
+对象存储由各服务经 `patra-tool-object-storage` 直接读写 MinIO，文件引用记在各自的业务表里，没有集中的文件服务。
 
 **构建逻辑** (仓库根 `build-logic/`):
 - Convention Plugins 定义六边形架构各层与工具模块的构建约束

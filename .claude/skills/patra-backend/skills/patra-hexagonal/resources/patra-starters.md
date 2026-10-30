@@ -14,7 +14,7 @@
 | **infra（内部服务 HTTP Interface / 外部 REST 调用）** | `patra-tool-http-client` |
 | **infra（对象存储）** | `patra-tool-object-storage` |
 | **infra（批处理）** | `patra-tool-batch` |
-| **domain / api（插件自动给，不手写）** | `patra-tool-core`、`patra-common` |
+| **domain / api（插件自动给，不手写）** | `patra-tool-core` |
 | **boot** | `patra-tool-launch`（插件自动给）、`patra-tool-observability`、`patra-tool-openapi`、`patra-tool-security`（需要鉴权时） |
 | **测试** | `patra-tool-test`（插件自动给到 testImplementation） |
 
@@ -48,10 +48,10 @@
 
 ```java
 // -api 模块
-@HttpExchange(url = "/_internal/provenances", accept = "application/json")
-public interface ProvenanceEndpoint {
-    @GetExchange("/{code}/config")
-    ProvenanceConfigResp getConfiguration(@PathVariable("code") ProvenanceCode code);
+@HttpExchange(url = "/_internal/dictionaries", accept = "application/json")
+public interface DictionaryEndpoint {
+    @PostExchange("/resolve")
+    DictionaryResolveResp resolve(@RequestBody DictionaryResolveReq request);
 }
 
 // -boot 模块
@@ -65,9 +65,9 @@ public class HttpClientConfiguration {
     }
 
     @Bean
-    public ProvenanceEndpoint provenanceEndpoint(
+    public DictionaryEndpoint dictionaryEndpoint(
             RestClient registryRestClient, RestClientFactory factory) {
-        return factory.createProxy(registryRestClient, ProvenanceEndpoint.class);
+        return factory.createProxy(registryRestClient, DictionaryEndpoint.class);
     }
 }
 ```
@@ -75,7 +75,7 @@ public class HttpClientConfiguration {
 ### patra-tool-object-storage
 
 **适用**：`patra-{service}-infra`（需要对象存储）
-**功能**：MinIO / S3 抽象、`ObjectStorageTemplate`、`StorageLocationResolver`、存储键模板
+**功能**：MinIO / S3 抽象、`ObjectStorageTemplate`（上传、下载、删除、按前缀删除）；对象键由各服务自己定
 
 ### patra-tool-batch
 

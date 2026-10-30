@@ -295,12 +295,6 @@
     <Bug pattern="CT_CONSTRUCTOR_THROW"/>
   </Match>
 
-  <!-- Provenance metadata 构造器验证配置是合理设计 -->
-  <Match>
-    <Class name="~.*\.provenance\.internal\.metadata\..*"/>
-    <Bug pattern="CT_CONSTRUCTOR_THROW"/>
-  </Match>
-
   <!-- 注册表类（Registry）在构造时做合法性检查是合理设计 -->
   <Match>
     <Class name="~.*Registry$"/>
@@ -321,24 +315,10 @@
     <Bug pattern="CT_CONSTRUCTOR_THROW"/>
   </Match>
 
-  <!-- TypeReference 构造时反射获取类型参数可能抛异常，是标准泛型工具做法 -->
-  <Match>
-    <Class name="dev.patra.ingest.domain.support.TypeReference"/>
-    <Bug pattern="CT_CONSTRUCTOR_THROW"/>
-  </Match>
-
-  <!-- DataType 内部枚举/常量类构造器做类型检查 -->
-  <Match>
-    <Class name="~dev\.patra\.common\.DataType\$.*"/>
-    <Bug pattern="CT_CONSTRUCTOR_THROW"/>
-  </Match>
-
   <!-- 基础设施批处理迭代器构造时初始化 JSON 流是合理设计 -->
   <Match>
     <Or>
       <Class name="dev.patra.catalog.infra.organization.batch.RorOrganizationParser$RorRecordIterator"/>
-      <Class name="dev.patra.ingest.app.usecase.execution.strategy.builder.BatchScheduleBuilder"/>
-      <Class name="dev.patra.ingest.infra.mapper.ProviderParameterMapperRegistry"/>
     </Or>
     <Bug pattern="CT_CONSTRUCTOR_THROW"/>
   </Match>
@@ -346,24 +326,6 @@
   <!-- ========================================================================
        EI_EXPOSE_REP / EI_EXPOSE_REP2: 以下包/类暴露可变集合属设计意图
        ======================================================================== -->
-
-  <!-- Provenance starter 处理结果/适配器类：内部可变数据是设计意图 -->
-  <Match>
-    <Package name="~dev\.patra\.ingest\.provenance\..*"/>
-    <Or>
-      <Bug pattern="EI_EXPOSE_REP"/>
-      <Bug pattern="EI_EXPOSE_REP2"/>
-    </Or>
-  </Match>
-
-  <!-- Expr 编译器内部类：内部状态暴露是设计意图 -->
-  <Match>
-    <Package name="~dev\.patra\.ingest\.expr\..*"/>
-    <Or>
-      <Bug pattern="EI_EXPOSE_REP"/>
-      <Bug pattern="EI_EXPOSE_REP2"/>
-    </Or>
-  </Match>
 
   <!-- Security starter 基础设施类：持有注入的依赖是设计意图 -->
   <Match>
@@ -392,7 +354,7 @@
     </Or>
   </Match>
 
-  <!-- 工具层（patra-tool/*）：ObjectKeyContext、StorageLocation 等暴露集合、基础设施类持有注入依赖是设计意图 -->
+  <!-- 工具层（patra-tool/*）：值对象暴露集合、基础设施类持有注入依赖是设计意图 -->
   <Match>
     <Package name="~dev\.patra\.tool\..*"/>
     <Or>
@@ -413,42 +375,6 @@
   <!-- Catalog infra 批处理/集成类：内部可变数据是设计意图 -->
   <Match>
     <Package name="~dev\.patra\.catalog\.infra\..*"/>
-    <Or>
-      <Bug pattern="EI_EXPOSE_REP"/>
-      <Bug pattern="EI_EXPOSE_REP2"/>
-    </Or>
-  </Match>
-
-  <!-- Ingest app 命令/结果/DTO 类：内部可变数据是设计意图 -->
-  <Match>
-    <Package name="~dev\.patra\.ingest\.app\..*"/>
-    <Or>
-      <Bug pattern="EI_EXPOSE_REP"/>
-      <Bug pattern="EI_EXPOSE_REP2"/>
-    </Or>
-  </Match>
-
-  <!-- Ingest domain port 内部类：MetadataRequest/RetryContext 暴露数组是设计意图 -->
-  <Match>
-    <Package name="~dev\.patra\.ingest\.domain\..*"/>
-    <Or>
-      <Bug pattern="EI_EXPOSE_REP"/>
-      <Bug pattern="EI_EXPOSE_REP2"/>
-    </Or>
-  </Match>
-
-  <!-- Ingest infra 消息发布器：暴露依赖是设计意图 -->
-  <Match>
-    <Package name="~dev\.patra\.ingest\.infra\..*"/>
-    <Or>
-      <Bug pattern="EI_EXPOSE_REP"/>
-      <Bug pattern="EI_EXPOSE_REP2"/>
-    </Or>
-  </Match>
-
-  <!-- ObjectStorage app 命令类 Builder 暴露字节数组是设计意图 -->
-  <Match>
-    <Package name="~dev\.patra\.objectstorage\..*"/>
     <Or>
       <Bug pattern="EI_EXPOSE_REP"/>
       <Bug pattern="EI_EXPOSE_REP2"/>
@@ -554,27 +480,6 @@
   </Match>
 
   <!-- ========================================================================
-       DM_DEFAULT_ENCODING: getBytes() 用于哈希计算，平台编码不影响唯一性
-       ======================================================================== -->
-
-  <Match>
-    <Or>
-      <Class name="dev.patra.ingest.expr.compiler.DefaultExprCompiler"/>
-      <Class name="dev.patra.ingest.infra.outbox.TechnicalRetryAdapter"/>
-    </Or>
-    <Bug pattern="DM_DEFAULT_ENCODING"/>
-  </Match>
-
-  <!-- ========================================================================
-       BC_UNCONFIRMED_CAST: 已通过类型注册/instanceof 确认 cast 安全
-       ======================================================================== -->
-
-  <Match>
-    <Package name="~dev\.patra\.ingest\.infra\.mapper\..*"/>
-    <Bug pattern="BC_UNCONFIRMED_CAST"/>
-  </Match>
-
-  <!-- ========================================================================
        SE_TRANSIENT_FIELD_NOT_RESTORED: AggregateRoot transient 字段由聚合根重建
        ======================================================================== -->
 
@@ -617,60 +522,13 @@
   </Match>
 
   <!-- ========================================================================
-       UC_USELESS_CONDITION: 防御性条件检查，保留逻辑清晰性
-       ======================================================================== -->
-
-  <!-- PubmedPublicationProcessor.formatErrorMessage: 看似冗余的条件是
-       防御性编程，确保逻辑意图明确 -->
-  <Match>
-    <Class name="dev.patra.ingest.provenance.pubmed.processor.PubmedPublicationProcessor"/>
-    <Bug pattern="UC_USELESS_CONDITION"/>
-  </Match>
-
-  <!-- ========================================================================
-       RpC_REPEATED_CONDITIONAL_TEST: 重复子条件是为可读性保留的明确意图表达
-       ======================================================================== -->
-
-  <Match>
-    <Class name="dev.patra.ingest.app.usecase.plan.window.PlanningWindowResolverImpl"/>
-    <Bug pattern="RpC_REPEATED_CONDITIONAL_TEST"/>
-  </Match>
-
-  <!-- ========================================================================
        PZLA_PREFER_ZERO_LENGTH_ARRAYS: 返回 null 有语义区分（未找到 vs 空结果）
        ======================================================================== -->
-
-  <!-- StorageEndpointImpl.resolveIp: null 表示"解析失败"，语义上区别于"无 IP" -->
-  <Match>
-    <Class name="dev.patra.objectstorage.adapter.file.internal.StorageEndpointImpl"/>
-    <Bug pattern="PZLA_PREFER_ZERO_LENGTH_ARRAYS"/>
-  </Match>
 
   <!-- VenueBrowseReadAdapter.toArray: null 表示"不过滤"，语义上区别于"空过滤数组" -->
   <Match>
     <Class name="dev.patra.catalog.infra.portal.persistence.VenueBrowseReadAdapter"/>
     <Bug pattern="PZLA_PREFER_ZERO_LENGTH_ARRAYS"/>
-  </Match>
-
-  <!-- ========================================================================
-       NP_NULL_PARAM_DEREF: Jackson DeserializationContext.reportInputMismatch
-       ======================================================================== -->
-
-  <!-- ExprJsonCodec.ExprDeserializer: reportInputMismatch 不保证抛出异常，
-       SpotBugs 误判 valueNode 在此后可能为 null -->
-  <Match>
-    <Class name="dev.patra.ingest.expr.json.ExprJsonCodec$ExprDeserializer"/>
-    <Bug pattern="NP_NULL_PARAM_DEREF"/>
-  </Match>
-
-  <!-- ========================================================================
-       NP_LOAD_OF_KNOWN_NULL_VALUE: MapStruct 生成代码，null 赋值是占位符
-       ======================================================================== -->
-
-  <!-- StorageMetadataRequestConverterImpl 是 MapStruct 生成的，不应手动修改 -->
-  <Match>
-    <Class name="dev.patra.ingest.infra.integration.storage.converter.StorageMetadataRequestConverterImpl"/>
-    <Bug pattern="NP_LOAD_OF_KNOWN_NULL_VALUE"/>
   </Match>
 
   <!-- ========================================================================
@@ -701,29 +559,6 @@
   <Match>
     <Class name="dev.patra.tool.httpclient.download.strategy.FtpStreamingDownloader$FtpInputStreamWrapper"/>
     <Bug pattern="DCN_NULLPOINTER_EXCEPTION"/>
-  </Match>
-
-  <!-- ========================================================================
-       DB_DUPLICATE_SWITCH_CLAUSES: default 回退到 HOUR 逻辑是明确设计意图
-       ======================================================================== -->
-
-  <!-- PlanningWindowSupport.alignFloor: HOUR case 与 default 返回相同结果
-       是有意设计——未知单位回退到 HOUR 对齐是正确的兜底逻辑 -->
-  <Match>
-    <Class name="dev.patra.ingest.app.usecase.plan.window.PlanningWindowSupport"/>
-    <Bug pattern="DB_DUPLICATE_SWITCH_CLAUSES"/>
-  </Match>
-
-  <!-- ========================================================================
-       UPM_UNCALLED_PRIVATE_METHOD: private 方法通过间接路径调用
-       ======================================================================== -->
-
-  <Match>
-    <Or>
-      <Class name="dev.patra.ingest.expr.compiler.render.DefaultExprRenderer"/>
-      <Class name="dev.patra.ingest.app.usecase.execution.session.ExecutionContextLoaderImpl"/>
-    </Or>
-    <Bug pattern="UPM_UNCALLED_PRIVATE_METHOD"/>
   </Match>
 
   <!-- ========================================================================

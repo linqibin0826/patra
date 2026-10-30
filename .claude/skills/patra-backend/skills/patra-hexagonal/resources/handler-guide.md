@@ -41,32 +41,42 @@ public record CreateUserCommand(
 ### 标准写法
 
 ```java
+// identity 的 UnbanUserHandler
 @Override
-public CreatePlanResult handle(CreatePlanCommand command) {
-    PlanAggregate plan = assemblePlan(command);              // 事务外：组装、计算
+public Void handle(UnbanUserCommand command) {
     transactions.executeWithoutResult(status -> {
-        planRepository.save(plan);
-        outboxRepository.save(createOutboxMessage(plan));     // 同一事务
+        User user = users.findById(command.userId()).orElseThrow(UserNotFoundException::new);
+        user.unban();
+        users.save(user);
     });
-    return new CreatePlanResult(plan.getId());
+    log.info("前台用户已解封: userId={}", command.userId());
+    return null;
 }
 ```
 
 ### 有外部调用：事务只包写库段
 
 ```java
+// identity 的 ChangeAvatarHandler（节选）
 @Override
-public HarvestResult handle(HarvestCommand command) {
-    // 事务 1：创建计划
-    PlanAggregate plan = transactions.execute(status -> planRepository.save(assemblePlan(command)));
+public Avatar handle(ChangeAvatarCommand command) {
+    long userId = currentUserPort.require().userId();
+    // 无事务：渲染图片、写对象存储
+    AvatarRenditions renditions = images.render(command.content());
+    Avatar avatar = Avatar.forContent(userId, renditions.large());
+    storage.store(avatar, renditions);
 
-    // 无事务：调用外部 API
-    SearchResult results = pubmedSearchPort.search(plan.getQuery());
-
-    // 事务 2：保存结果
-    transactions.executeWithoutResult(status -> publicationRepository.saveAll(results.publications()));
-
-    return new HarvestResult(plan.getId());
+    // 事务只包「锁用户行 → 复核状态 → 换头像」
+    Optional<Avatar> previous;
+    try {
+        previous = transactions.execute(status -> swap(userId, avatar));
+    } catch (RuntimeException e) {
+        deleteQuietly(avatar, "提交失败后删除新头像对象失败");   // 提交失败：补偿删掉刚写的对象
+        throw e;
+    }
+    // 无事务：提交后再删旧对象
+    previous.filter(old -> !old.equals(avatar)).ifPresent(old -> deleteQuietly(old, "删除旧头像对象失败"));
+    return avatar;
 }
 ```
 

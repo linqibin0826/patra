@@ -13,7 +13,7 @@ import java.util.Map;
 /// public class MyProblemFieldContributor implements ProblemFieldContributor {
 ///   @Override
 ///   public void contribute(Map<String, Object> fields, Throwable exception) {
-///     fields.put("service", "patra-ingest");
+///     fields.put("service", "patra-catalog");
 ///     fields.put("timestamp", Instant.now().toString());
 /// ```
 ///

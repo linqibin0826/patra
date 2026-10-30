@@ -37,8 +37,7 @@ class IdentityArchitectureTest {
 
   /// 参数化的六边形架构规则（基础包: dev.patra.identity）。
   private static final HexagonalArchitectureRules rules =
-      new HexagonalArchitectureRules(
-          "dev.patra.identity", List.of("dev.patra.common..", "dev.patra.tool.."));
+      new HexagonalArchitectureRules("dev.patra.identity", List.of("dev.patra.tool.."));
 
   /// 底座子域：会话签发与撤销、登录记录、客户端与设备值、限流脚本等被账号流程共用的部分。
   private static final String FOUNDATION = "session";

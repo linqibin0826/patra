@@ -15,7 +15,7 @@
 
 ## 错误码格式
 
-格式：`{SERVICE}-{0xxx}`，SERVICE 为服务前缀（如 INGEST、REG、CATALOG，由 `patra.web.error.context-prefix` 配置），0xxx 映射到 HTTP 状态码
+格式：`{SERVICE}-{0xxx}`，SERVICE 为服务前缀（如 CAT、REG、IDN，由 `patra.web.error.context-prefix` 配置），0xxx 映射到 HTTP 状态码
 常用映射：0404（Not Found）、0409（Conflict）、0422（Unprocessable Entity）、0500（Internal Error）
 
 ## HTTP Interface 错误处理

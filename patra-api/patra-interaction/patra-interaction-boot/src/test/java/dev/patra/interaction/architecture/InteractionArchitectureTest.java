@@ -35,10 +35,9 @@ class InteractionArchitectureTest {
 
   private static JavaClasses classes;
 
-  /// 参数化的六边形架构规则（基础包: dev.patra.interaction，业务公共包: patra-common、tool）。
+  /// 参数化的六边形架构规则（基础包: dev.patra.interaction，业务公共包: tool）。
   private static final HexagonalArchitectureRules rules =
-      new HexagonalArchitectureRules(
-          "dev.patra.interaction", List.of("dev.patra.common..", "dev.patra.tool.."));
+      new HexagonalArchitectureRules("dev.patra.interaction", List.of("dev.patra.tool.."));
 
   /// 底座子域。
   private static final String FOUNDATION = "subject";

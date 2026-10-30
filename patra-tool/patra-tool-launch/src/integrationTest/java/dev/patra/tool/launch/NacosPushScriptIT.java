@@ -64,69 +64,69 @@ class NacosPushScriptIT {
   @DisplayName("首次推送：全部新增，Nacos 里的正文与文件逐字节一致，输出里没有密码")
   void should_publish_all_files_byte_for_byte_on_first_push() throws Exception {
     writeConfig("patra-common.yaml", "shared: 中文\n");
-    writeConfig("patra-ingest.yaml", "k: ${X:1}\n\n");
+    writeConfig("patra-catalog.yaml", "k: ${X:1}\n\n");
 
     ScriptResult result = push();
 
     assertThat(result.exitCode()).as(result.output()).isZero();
     assertThat(result.output())
-        .contains("新增 patra-common.yaml", "新增 patra-ingest.yaml", "新增 2，更新 0，删除 0，未变化 0")
+        .contains("新增 patra-common.yaml", "新增 patra-catalog.yaml", "新增 2，更新 0，删除 0，未变化 0")
         .doesNotContain(pushPassword, "accessToken", "Bearer");
     assertThat(nacos.content("patra-common.yaml")).isEqualTo(read("patra-common.yaml"));
-    assertThat(nacos.content("patra-ingest.yaml")).isEqualTo(read("patra-ingest.yaml"));
+    assertThat(nacos.content("patra-catalog.yaml")).isEqualTo(read("patra-catalog.yaml"));
   }
 
   @Test
   @DisplayName("改一个文件：只更新这一个，其余未变化")
   void should_update_only_changed_file() throws Exception {
     writeConfig("patra-common.yaml", "a: 1\n");
-    writeConfig("patra-ingest.yaml", "b: 1\n");
+    writeConfig("patra-catalog.yaml", "b: 1\n");
     assertThat(push().exitCode()).isZero();
-    writeConfig("patra-ingest.yaml", "b: 2\n");
+    writeConfig("patra-catalog.yaml", "b: 2\n");
 
     ScriptResult result = push();
 
     assertThat(result.exitCode()).as(result.output()).isZero();
     assertThat(result.output())
-        .contains("未变化 patra-common.yaml", "更新 patra-ingest.yaml", "新增 0，更新 1，删除 0，未变化 1");
-    assertThat(nacos.content("patra-ingest.yaml")).isEqualTo(read("patra-ingest.yaml"));
+        .contains("未变化 patra-common.yaml", "更新 patra-catalog.yaml", "新增 0，更新 1，删除 0，未变化 1");
+    assertThat(nacos.content("patra-catalog.yaml")).isEqualTo(read("patra-catalog.yaml"));
   }
 
   @Test
   @DisplayName("连跑两次：第二次全部未变化，历史条数不变")
   void should_be_idempotent() throws Exception {
     writeConfig("patra-common.yaml", "a: 1\n");
-    writeConfig("patra-ingest.yaml", "b: 1\n");
+    writeConfig("patra-catalog.yaml", "b: 1\n");
     assertThat(push().exitCode()).isZero();
     int commonHistory = nacos.historyCount("patra-common.yaml");
-    int ingestHistory = nacos.historyCount("patra-ingest.yaml");
+    int catalogHistory = nacos.historyCount("patra-catalog.yaml");
 
     ScriptResult result = push();
 
     assertThat(result.exitCode()).as(result.output()).isZero();
     assertThat(result.output()).contains("新增 0，更新 0，删除 0，未变化 2");
     assertThat(nacos.historyCount("patra-common.yaml")).isEqualTo(commonHistory);
-    assertThat(nacos.historyCount("patra-ingest.yaml")).isEqualTo(ingestHistory);
+    assertThat(nacos.historyCount("patra-catalog.yaml")).isEqualTo(catalogHistory);
   }
 
   @Test
   @DisplayName("有文件缺签到行：拒绝推送，Nacos 里没有任何写入")
   void should_refuse_when_signature_missing() throws Exception {
     writeConfig("patra-common.yaml", "a: 1\n");
-    Files.writeString(dev.resolve("patra-ingest.yaml"), "b: 1\n", StandardCharsets.UTF_8);
+    Files.writeString(dev.resolve("patra-catalog.yaml"), "b: 1\n", StandardCharsets.UTF_8);
 
     ScriptResult result = push();
 
     assertThat(result.exitCode()).isEqualTo(1);
     assertThat(result.output())
-        .contains("patra-ingest.yaml 缺少签到行「patra.config-source.service: patra-ingest.yaml」");
+        .contains("patra-catalog.yaml 缺少签到行「patra.config-source.service: patra-catalog.yaml」");
     assertThat(nacos.dataIds()).isEmpty();
   }
 
   @Test
   @DisplayName("缺公共配置：拒绝推送，Nacos 里没有任何写入")
   void should_refuse_without_common_file() throws Exception {
-    writeConfig("patra-ingest.yaml", "b: 1\n");
+    writeConfig("patra-catalog.yaml", "b: 1\n");
 
     ScriptResult result = push();
 
@@ -178,15 +178,15 @@ class NacosPushScriptIT {
   @DisplayName("删一个本地文件：Nacos 里对应的配置被删，其他分组不受影响")
   void should_delete_configs_missing_from_directory() throws Exception {
     writeConfig("patra-common.yaml", "a: 1\n");
-    writeConfig("patra-ingest.yaml", "b: 1\n");
+    writeConfig("patra-catalog.yaml", "b: 1\n");
     assertThat(push().exitCode()).isZero();
     nacos.publish("OTHER", "keep.yaml", "k: 1\n");
-    Files.delete(dev.resolve("patra-ingest.yaml"));
+    Files.delete(dev.resolve("patra-catalog.yaml"));
 
     ScriptResult result = push();
 
     assertThat(result.exitCode()).as(result.output()).isZero();
-    assertThat(result.output()).contains("删除 patra-ingest.yaml", "新增 0，更新 0，删除 1，未变化 1");
+    assertThat(result.output()).contains("删除 patra-catalog.yaml", "新增 0，更新 0，删除 1，未变化 1");
     assertThat(nacos.dataIds()).containsExactly("patra-common.yaml");
     assertThat(nacos.content("OTHER", "keep.yaml")).isEqualTo("k: 1\n");
   }
@@ -223,11 +223,11 @@ class NacosPushScriptIT {
   @DisplayName("--check：有差异时退出码 2，Nacos 一个字节都不变")
   void check_should_report_differences_without_writing() throws Exception {
     writeConfig("patra-common.yaml", "a: 1\n");
-    writeConfig("patra-ingest.yaml", "b: 1\n");
+    writeConfig("patra-catalog.yaml", "b: 1\n");
     assertThat(push().exitCode()).isZero();
     nacos.publish("DEFAULT_GROUP", "stale.yaml", "k: 1\n");
-    String ingestBefore = nacos.content("patra-ingest.yaml");
-    writeConfig("patra-ingest.yaml", "b: 2\n");
+    String catalogBefore = nacos.content("patra-catalog.yaml");
+    writeConfig("patra-catalog.yaml", "b: 2\n");
     writeConfig("patra-identity.yaml", "c: 1\n");
 
     ScriptResult result = push("--check");
@@ -235,11 +235,11 @@ class NacosPushScriptIT {
     assertThat(result.exitCode()).as(result.output()).isEqualTo(2);
     assertThat(result.output())
         .contains(
-            "更新 patra-ingest.yaml",
+            "更新 patra-catalog.yaml",
             "新增 patra-identity.yaml",
             "删除 stale.yaml",
             "新增 1，更新 1，删除 1，未变化 1");
-    assertThat(nacos.content("patra-ingest.yaml")).isEqualTo(ingestBefore);
+    assertThat(nacos.content("patra-catalog.yaml")).isEqualTo(catalogBefore);
     assertThat(nacos.content("patra-identity.yaml")).isNull();
     assertThat(nacos.content("stale.yaml")).isEqualTo("k: 1\n");
   }

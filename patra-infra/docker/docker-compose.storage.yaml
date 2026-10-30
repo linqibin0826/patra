@@ -43,12 +43,6 @@ services:
       echo 'Configuring MinIO client...';
       mc alias set patra http://minio:9000 ${MINIO_ROOT_USER:-minioadmin} ${MINIO_ROOT_PASSWORD:-minioadmin123};
 
-      echo 'Creating ingest cache bucket...';
-      mc mb --ignore-existing patra/patra-ingest-cache;
-
-      echo 'Setting bucket policy to private (authenticated access only)...';
-      mc anonymous set none patra/patra-ingest-cache;
-
       echo 'Creating identity avatar bucket (private; served through identity, never public)...';
       mc mb --ignore-existing patra/patra-identity-avatar;
       mc anonymous set none patra/patra-identity-avatar;
@@ -59,8 +53,8 @@ services:
 
       echo '';
       echo '==================================================';
-      echo 'MinIO is ready for patra-ingest and patra-identity';
-      echo 'Buckets: patra-ingest-cache, patra-identity-avatar';
+      echo 'MinIO is ready for patra-identity (catalog creates its buckets on first upload)';
+      echo 'Buckets: patra-identity-avatar';
       echo 'Access: Private (authenticated only)';
       echo '==================================================';
       echo '';

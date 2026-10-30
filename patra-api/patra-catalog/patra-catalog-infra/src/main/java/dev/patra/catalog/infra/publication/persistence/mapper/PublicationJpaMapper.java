@@ -2,6 +2,7 @@ package dev.patra.catalog.infra.publication.persistence.mapper;
 
 import cn.hutool.core.util.StrUtil;
 import dev.patra.catalog.domain.kernel.model.enums.DatePrecision;
+import dev.patra.catalog.domain.kernel.model.enums.ProvenanceCode;
 import dev.patra.catalog.domain.kernel.model.enums.PublicationDateType;
 import dev.patra.catalog.domain.kernel.model.vo.Pagination;
 import dev.patra.catalog.domain.kernel.model.vo.PublicationDate;
@@ -37,7 +38,6 @@ import dev.patra.catalog.infra.publication.persistence.entity.PublicationEntity;
 import dev.patra.catalog.infra.publication.persistence.entity.PublicationIdentifierEntity;
 import dev.patra.catalog.infra.publication.persistence.entity.PublicationMetadataEntity;
 import dev.patra.catalog.infra.publication.persistence.entity.PublicationOaLocationEntity;
-import dev.patra.common.ProvenanceCode;
 import java.util.Comparator;
 import java.util.List;
 import org.mapstruct.Mapper;

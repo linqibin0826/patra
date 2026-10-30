@@ -2,10 +2,10 @@ package dev.patra.catalog.domain.publication.model.aggregate;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import dev.patra.catalog.domain.kernel.model.enums.ProvenanceCode;
 import dev.patra.catalog.domain.kernel.model.vo.VenueId;
 import dev.patra.catalog.domain.publication.model.vo.PublicationAuthorSnapshot;
 import dev.patra.catalog.domain.publication.model.vo.VenueInstanceId;
-import dev.patra.common.ProvenanceCode;
 import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;

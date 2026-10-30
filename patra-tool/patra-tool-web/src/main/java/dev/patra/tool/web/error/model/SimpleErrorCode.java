@@ -9,7 +9,7 @@ import dev.patra.tool.core.error.codes.ErrorCodeLike;
 /// 错误码格式: `{contextPrefix}-{httpStatus}`,例如:
 ///
 /// - REG-0404 (注册服务,资源未找到)
-///   - INGEST-0500 (采集服务,内部服务器错误)
+///   - CAT-0500 (目录服务,内部服务器错误)
 ///
 /// @author linqibin
 /// @since 0.1.0
@@ -32,7 +32,7 @@ public final class SimpleErrorCode implements ErrorCodeLike {
   ///
   /// 生成的错误码格式: `{contextPrefix}-{suffix}`
   ///
-  /// @param contextPrefix 上下文前缀(例如 "REG"、"INGEST"),如果为空则使用 "UNKNOWN"
+  /// @param contextPrefix 上下文前缀(例如 "REG"、"CAT"),如果为空则使用 "UNKNOWN"
   /// @param suffix HTTP 状态码后缀(例如 "0404"、"0500")
   /// @return 新创建的错误码实例
 
