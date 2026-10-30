@@ -38,7 +38,9 @@ import dev.patra.interaction.domain.subject.exception.SubjectNotFoundException;
 import dev.patra.interaction.domain.subject.model.enums.AccountState;
 import dev.patra.interaction.domain.subject.model.enums.SubjectState;
 import dev.patra.interaction.domain.subject.model.read.SubjectView;
+import dev.patra.interaction.domain.subject.model.vo.PlainText;
 import dev.patra.interaction.domain.subject.port.gateway.PublishGuardGateway;
+import dev.patra.interaction.domain.subject.port.markdown.PlainTextPort;
 import dev.patra.interaction.domain.subject.port.read.SubjectReadPort;
 import java.time.Clock;
 import java.time.Instant;
@@ -49,6 +51,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.TreeSet;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -64,6 +67,10 @@ class EditCommentHandlerTest {
   private static final Instant LATER = T0.plus(10, ChronoUnit.MINUTES);
 
   private final List<String> events = new ArrayList<>();
+  /// 假的纯文本转换：把收到的正文与提及名单拼出来，测试据此核对两个参数。
+  private static final PlainTextPort ECHO_PLAIN_TEXT =
+      (markdown, mentioned) -> PlainText.of(markdown + "|" + new TreeSet<>(mentioned));
+
   private final SubjectReadPort subjectReads = mock(SubjectReadPort.class);
   private final PublishGuardGateway guard = mock(PublishGuardGateway.class);
   private final MentionDirectoryPort directory = mock(MentionDirectoryPort.class);
@@ -169,6 +176,9 @@ class EditCommentHandlerTest {
     assertThat(event.mentionedUserIds()).containsExactly(8L, 9L);
     assertThat(event.addedMentionedUserIds()).containsExactly(9L);
     assertThat(event.body()).isEqualTo("<@8> <@9> 改");
+    assertThat(event.plainText()).isEqualTo("<@8> <@9> 改|[8, 9]");
+    assertThat(event.eventId()).isNotNull();
+    assertThat(event.version()).isEqualTo(2);
     assertThat(event.editedAt()).isEqualTo(LATER);
     assertThat(updated().getRevisedAt()).isEqualTo(LATER);
   }
@@ -181,6 +191,17 @@ class EditCommentHandlerTest {
     verify(comments, never()).appendRevision(anyLong(), any());
     verify(comments).updateBody(any());
     assertThat(published().commentId()).isEqualTo(ID);
+  }
+
+  /// 事件带改完后的正文版本，与写进库的一致（PAP-141）。
+  @Test
+  void should_publish_next_version() {
+    stubComment(comment("hi", Set.of(8L)).toBuilder().version(3).build());
+
+    handler(LATER).handle(EditCommentCommand.of(ID, "改"));
+
+    assertThat(updated().getVersion()).isEqualTo(4);
+    assertThat(published().version()).isEqualTo(4);
   }
 
   /// 指定时刻的处理器。
@@ -197,6 +218,7 @@ class EditCommentHandlerTest {
         views,
         signedIn(EDITOR),
         recording(events),
+        ECHO_PLAIN_TEXT,
         publisher,
         Clock.fixed(now, ZoneOffset.UTC));
   }

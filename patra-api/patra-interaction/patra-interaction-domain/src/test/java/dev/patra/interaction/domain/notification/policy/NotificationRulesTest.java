@@ -11,6 +11,7 @@ import dev.patra.interaction.domain.subject.model.vo.SubjectId;
 import dev.patra.interaction.domain.subject.model.vo.SubjectOwner;
 import java.time.Instant;
 import java.util.List;
+import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
 /// 生成规则（spec 4.2、4.3）：回复、经验根评论、@ 的先后；不提醒自己；同一人只发一条。
@@ -79,6 +80,7 @@ class NotificationRulesTest {
   void should_notify_only_added_mentions_on_edit() {
     CommentEditedEvent event =
         CommentEditedEvent.builder()
+            .eventId(UUID.randomUUID())
             .commentId(10L)
             .subjectId(SubjectId.of(100L))
             .subjectType(SubjectType.PUBLICATION)
@@ -141,6 +143,7 @@ class NotificationRulesTest {
   /// @return 构建器
   private static CommentPublishedEvent.CommentPublishedEventBuilder base(long author) {
     return CommentPublishedEvent.builder()
+        .eventId(UUID.randomUUID())
         .commentId(10L)
         .subjectId(SubjectId.of(100L))
         .rootCommentId(10L)

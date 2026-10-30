@@ -9,6 +9,7 @@ import dev.patra.interaction.domain.subject.model.vo.SubjectOwner;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
 /// 事件是不可变的契约：列表字段在构造时拷贝，`null` 视为空。
@@ -58,11 +59,23 @@ class DiscussionEventsTest {
         .hasMessageContaining("eventId");
   }
 
+  /// 发表、编辑事件缺事件 ID 同样拒绝。
+  @Test
+  void should_reject_published_and_edited_without_event_id() {
+    assertThatThrownBy(() -> published().eventId(null).build())
+        .isInstanceOf(NullPointerException.class)
+        .hasMessageContaining("eventId");
+    assertThatThrownBy(() -> edited().eventId(null).build())
+        .isInstanceOf(NullPointerException.class)
+        .hasMessageContaining("eventId");
+  }
+
   /// 一个发表事件（列表另给）。
   ///
   /// @return 构造器
   private static CommentPublishedEvent.CommentPublishedEventBuilder published() {
     return CommentPublishedEvent.builder()
+        .eventId(UUID.randomUUID())
         .commentId(100L)
         .subjectId(SubjectId.of(11L))
         .subjectType(SubjectType.POST)
@@ -79,6 +92,7 @@ class DiscussionEventsTest {
   /// @return 构造器
   private static CommentEditedEvent.CommentEditedEventBuilder edited() {
     return CommentEditedEvent.builder()
+        .eventId(UUID.randomUUID())
         .commentId(100L)
         .subjectId(SubjectId.of(11L))
         .subjectType(SubjectType.PUBLICATION)

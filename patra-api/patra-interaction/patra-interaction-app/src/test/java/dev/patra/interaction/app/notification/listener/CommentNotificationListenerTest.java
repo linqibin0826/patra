@@ -146,6 +146,7 @@ class CommentNotificationListenerTest {
   private static CommentPublishedEvent published(
       long author, long parentAuthor, List<Long> mentions, boolean anonymous) {
     return CommentPublishedEvent.builder()
+        .eventId(UUID.randomUUID())
         .commentId(10L)
         .subjectId(SubjectId.of(100L))
         .subjectType(SubjectType.PUBLICATION)
@@ -168,6 +169,7 @@ class CommentNotificationListenerTest {
   /// @return 事件
   private static CommentEditedEvent edited(long author, List<Long> mentions, List<Long> added) {
     return CommentEditedEvent.builder()
+        .eventId(UUID.randomUUID())
         .commentId(10L)
         .subjectId(SubjectId.of(100L))
         .subjectType(SubjectType.PUBLICATION)

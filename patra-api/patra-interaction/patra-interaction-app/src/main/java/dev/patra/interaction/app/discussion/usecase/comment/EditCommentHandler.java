@@ -20,6 +20,7 @@ import dev.patra.interaction.domain.subject.model.read.SubjectView;
 import dev.patra.interaction.domain.subject.model.read.UserCard;
 import dev.patra.interaction.domain.subject.model.vo.SubjectOwner;
 import dev.patra.interaction.domain.subject.port.gateway.PublishGuardGateway;
+import dev.patra.interaction.domain.subject.port.markdown.PlainTextPort;
 import dev.patra.tool.core.security.CurrentUserPort;
 import dev.patra.tool.cqrs.CommandHandler;
 import java.time.Clock;
@@ -29,6 +30,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
@@ -38,7 +40,8 @@ import org.springframework.transaction.support.TransactionOperations;
 ///
 /// 1. 本地校验正文与 @ 候选；预读：不存在或占位 404、不是作者 403；对象已失效 404；
 /// 2. 事务外：发表资格（冷静期、封禁、邮箱未验证不能改；不计频率）→ 解析 @，当前版本里已有的提及承接；
-/// 3. 事务：锁行重读 → 正文没变什么都不做；超过 5 分钟先存旧版本 → 改正文 → 发布 {@link CommentEditedEvent}。
+/// 3. 事务：锁行重读 → 正文没变什么都不做；超过 5 分钟先存旧版本 → 改正文与正文版本 → 发布
+///    {@link CommentEditedEvent}（带事件 ID、新版本与事务外转好的纯文本，PAP-141）。
 @Component
 @RequiredArgsConstructor
 public class EditCommentHandler implements CommandHandler<EditCommentCommand, CommentView> {
@@ -51,6 +54,7 @@ public class EditCommentHandler implements CommandHandler<EditCommentCommand, Co
   private final CommentViews views;
   private final CurrentUserPort currentUser;
   private final TransactionOperations transactions;
+  private final PlainTextPort plainText;
   private final ApplicationEventPublisher events;
   private final Clock clock;
 
@@ -72,6 +76,8 @@ public class EditCommentHandler implements CommandHandler<EditCommentCommand, Co
     UserCard self = guard.requireEligible(editor);
     ResolvedBody resolved =
         mentions.resolve(draft, Set.copyOf(MentionSyntax.mentionedIds(current.getBody())));
+    String plain =
+        plainText.toPlainText(resolved.body(), Set.copyOf(resolved.mentionedUserIds())).value();
     Instant now = clock.instant().truncatedTo(ChronoUnit.MICROS);
     CommentRecord record =
         transactions.execute(
@@ -87,7 +93,8 @@ public class EditCommentHandler implements CommandHandler<EditCommentCommand, Co
                 comments.updateBody(edit.get().updated());
               }
               CommentRecord after = reads.findById(id).orElseThrow();
-              edit.ifPresent(e -> events.publishEvent(edited(after, subject, e, resolved, now)));
+              edit.ifPresent(
+                  e -> events.publishEvent(edited(after, subject, e, resolved, plain, now)));
               return after;
             });
     return views
@@ -101,6 +108,7 @@ public class EditCommentHandler implements CommandHandler<EditCommentCommand, Co
   /// @param subject 对象
   /// @param edit 编辑结果
   /// @param resolved 新正文与提及
+  /// @param plain 新正文的纯文本
   /// @param now 编辑时刻
   /// @return 事件
   private static CommentEditedEvent edited(
@@ -108,10 +116,13 @@ public class EditCommentHandler implements CommandHandler<EditCommentCommand, Co
       SubjectView subject,
       CommentEdit edit,
       ResolvedBody resolved,
+      String plain,
       Instant now) {
     SubjectOwner owner = subject.owner();
     return CommentEditedEvent.builder()
+        .eventId(UUID.randomUUID())
         .commentId(after.commentId())
+        .version(edit.updated().getVersion())
         .subjectId(subject.subjectId())
         .subjectType(subject.type())
         .subjectOwner(owner)
@@ -123,6 +134,7 @@ public class EditCommentHandler implements CommandHandler<EditCommentCommand, Co
         .mentionedUserIds(resolved.mentionedUserIds())
         .addedMentionedUserIds(edit.addedMentionedUserIds())
         .body(resolved.body())
+        .plainText(plain)
         .editedAt(now)
         .build();
   }
