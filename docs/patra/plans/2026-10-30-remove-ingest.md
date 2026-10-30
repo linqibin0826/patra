@@ -385,6 +385,9 @@ Expected: BUILD SUCCESSFUL
 Run: `./gradlew -p build-logic test && bash patra-infra/cd/detect-changes.test.sh && bash patra-infra/cd/deploy.test.sh`
 Expected: 全部通过
 
+Run（在 `patra-learn/` 下）：`pnpm lint && pnpm typecheck && pnpm test && pnpm build`
+Expected: 全部通过
+
 - [ ] **Step 3：请用户在本地验收**（记忆：改动做完先停在本地，确认后才开 PR）。给出改动摘要与 Step 1、2 的结果。
 - [ ] **Step 4：用户同意后推送并开 draft PR**：标题 `refactor: 删除 ingest 及只为它存在的模块与基础设施 (PAP-136)`；描述逐行写 `Closes PAP-136`，列出 spec §4 的 mini 运维步骤，结尾带 `🤖 Generated with [Claude Code](https://claude.com/claude-code)`。开 PR 后用 ccd_pr 工具绑定 PR 并开监控。CI 绿后转 ready：Claude Action 自动首评，再在评论区发 `@coderabbitai review`；每条评审意见在 PR 里回复「已修复（附 SHA）」或「不修复（附理由）」。
 

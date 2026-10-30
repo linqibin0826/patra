@@ -100,7 +100,7 @@ class JarConfigOverlapCheckerTest {
   }
 
   @Test
-  @DisplayName("仓库里 7 个服务的 jar 配置与 patra-infra/nacos/dev 没有重复的键")
+  @DisplayName("仓库里 5 个服务的 jar 配置与 patra-infra/nacos/dev 没有重复的键")
   void should_pass_for_repository() {
     String repoRoot =
         Objects.requireNonNull(

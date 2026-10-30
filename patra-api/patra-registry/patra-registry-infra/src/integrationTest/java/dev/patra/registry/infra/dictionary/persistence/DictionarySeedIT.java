@@ -53,13 +53,19 @@ class DictionarySeedIT {
   @Autowired private ReferenceStandardRepositoryAdapter standards;
   @Autowired private DictionaryRepositoryAdapter dictionaries;
 
-  /// catalog 用到的参考标准都应由种子灌入，国家的 ISO 代码是规范标准。
+  /// catalog 用到的参考标准都应由种子灌入并启用（停用的标准解析时会被拒绝），国家的 ISO 代码是规范标准。
   @Test
   void should_seed_reference_standards_used_by_catalog() {
     assertThat(standards.findByDictTypeCodeAndStandardCode("country", "ISO_3166_1_ALPHA2"))
-        .hasValueSatisfying(standard -> assertThat(standard.canonical()).isTrue());
-    assertThat(standards.findByDictTypeCodeAndStandardCode("country", "NAME_EN")).isPresent();
-    assertThat(standards.findByDictTypeCodeAndStandardCode("language", "ISO_639_3")).isPresent();
+        .hasValueSatisfying(
+            standard -> {
+              assertThat(standard.canonical()).isTrue();
+              assertThat(standard.enabled()).isTrue();
+            });
+    assertThat(standards.findByDictTypeCodeAndStandardCode("country", "NAME_EN"))
+        .hasValueSatisfying(standard -> assertThat(standard.enabled()).isTrue());
+    assertThat(standards.findByDictTypeCodeAndStandardCode("language", "ISO_639_3"))
+        .hasValueSatisfying(standard -> assertThat(standard.enabled()).isTrue());
   }
 
   /// 英文国家名应能经 `name_en` 别名解析成 ISO 3166-1 alpha-2 代码。

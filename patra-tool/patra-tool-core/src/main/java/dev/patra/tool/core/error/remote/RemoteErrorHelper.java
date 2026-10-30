@@ -14,14 +14,14 @@ package dev.patra.tool.core.error.remote;
 /// **使用示例：**
 /// ```java
 /// try {
-///     return provenanceEndpoint.getProvenance(code);
+///     return dictionaryEndpoint.resolve(request);
 /// } catch (RemoteCallException ex) {
 ///     if (RemoteErrorHelper.isNotFound(ex)) {
-///         throw new ProvenanceNotFoundException(code);
+///         throw new DictionaryTypeNotFoundException(request.typeCode());
 ///     }
 ///     if (RemoteErrorHelper.isServerError(ex)) {
 ///         log.warn("下游服务错误，降级处理: {}", ex.getMessage());
-///         return fallbackProvenance(code);
+///         return emptyResolution(request);
 ///     }
 ///     throw ex;
 /// }

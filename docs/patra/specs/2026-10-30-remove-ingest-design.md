@@ -159,6 +159,8 @@ ingest 从未在线上跑过：XXL-Job 上没有它的执行器，库里的表�
    3. 尽快合并，让 CD 拉起新 registry，由 Flyway 建表并灌入字典。
 
    不重建的话，CD 部署新 registry 时 Flyway 会因 V1 校验和变化、旧 V2 已执行却找不到而校验失败，服务起不来。从停容器到新 registry 起来这段时间，避开 catalog 的导入任务（导入时要解析字典）。本机若另有 PG 实例跑过 registry，同样处理。
+
+   这段时间里还要注意两点：本机 IDE 起的 registry 连的也是 mini 的 `patra_registry`，此时若从旧分支在本机启动 registry，旧的 Flyway 会把旧 V1～V4 灌进空库，等于没重建；不要合并别的会触发 registry 部署的后端 PR，否则 CD 会先用 main 上的旧代码建出旧表结构。合并后，没 rebase 的分支在本机启动 registry 会因 V1 校验和不符而失败（不会写坏库），rebase 即可。另外，新 registry 健康检查若失败，`deploy.sh` 会回滚到旧镜像，而旧镜像在新表结构上同样校验失败，需要手动处理。
 2. 合并后 CD 自动部署。`services.json` 里没有了 ingest 和 object-storage，但 CD 不会清理孤儿容器，要手动 `docker rm -f patra-ingest patra-object-storage`。
 3. 下线 RocketMQ：`docker rm -f patra-rocketmq-namesrv patra-rocketmq-broker patra-rocketmq-dashboard`（jobs compose 不归 CD 管）。
 4. 删库：`DROP DATABASE patra_ingest`、`DROP DATABASE patra_storage`。

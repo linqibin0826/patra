@@ -118,6 +118,6 @@ class IdentityAssertionForwardingInterceptorTest {
   }
 
   private static URI uri() {
-    return URI.create("http://patra-registry/_internal/provenances");
+    return URI.create("http://patra-registry/_internal/dictionaries/resolve");
   }
 }

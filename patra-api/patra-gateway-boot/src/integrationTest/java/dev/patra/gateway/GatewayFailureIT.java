@@ -105,7 +105,7 @@ class GatewayFailureIT {
   void should_return_503_when_connection_is_refused() {
     restClient
         .get()
-        .uri("/patra-registry/provenance/pubmed")
+        .uri("/patra-registry/dictionaries/items")
         .exchange()
         .expectStatus()
         .isEqualTo(503)

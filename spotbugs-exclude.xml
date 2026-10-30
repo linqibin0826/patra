@@ -295,12 +295,6 @@
     <Bug pattern="CT_CONSTRUCTOR_THROW"/>
   </Match>
 
-  <!-- Provenance metadata 构造器验证配置是合理设计 -->
-  <Match>
-    <Class name="~.*\.provenance\.internal\.metadata\..*"/>
-    <Bug pattern="CT_CONSTRUCTOR_THROW"/>
-  </Match>
-
   <!-- 注册表类（Registry）在构造时做合法性检查是合理设计 -->
   <Match>
     <Class name="~.*Registry$"/>

@@ -848,7 +848,7 @@ public class PubmedArticleItemProcessor
         continue;
       }
 
-      // sections 可能为 null（starter-provenance 路径不填充），必须判空
+      // sections 可能为 null，必须判空
       List<PublicationAbstractSection> sections = toAbstractSections(altAbstract.getSections());
       // 文本与段落都为空才跳过
       if (isBlank(altAbstract.getText()) && sections.isEmpty()) {

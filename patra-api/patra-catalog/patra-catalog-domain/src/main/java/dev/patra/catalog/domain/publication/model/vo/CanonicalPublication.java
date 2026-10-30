@@ -328,8 +328,7 @@ public class CanonicalPublication {
 
     /// 结构化摘要段落列表（保留 label 与顺序；`text` 为拼接后的便捷形态）。
     ///
-    /// **可能为 null**：starter-provenance 的 PubMed 转换路径不填充该字段，
-    /// 仅 catalog parser 会填充，消费方必须判空。
+    /// **可能为 null**，消费方必须判空。
     List<AbstractSection> sections;
 
     /// 版权信息。
