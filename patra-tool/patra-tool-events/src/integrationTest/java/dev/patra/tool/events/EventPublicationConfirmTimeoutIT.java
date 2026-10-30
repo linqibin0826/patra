@@ -14,24 +14,46 @@ import java.time.Duration;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.amqp.rabbit.connection.CorrelationData;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.amqp.autoconfigure.RabbitTemplateCustomizer;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Bean;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.TestPropertySource;
 
-/// 等不到确认的集成测试：确认超时设成 1 纳秒，broker 的 ack 一定来不及。
+/// 等不到确认的集成测试：broker 的 ack 送不到发送模板等着的那个关联数据，模板必然等满确认超时。
 ///
+/// 不靠「超时设得极短、ack 来不及」的时间赛跑（ack 偶尔先到就会被当成成功）：本类的测试配置给 `RabbitTemplate`
+/// 设一个关联数据后处理器，发送时把登记到信道上的关联数据换成新对象，ack 只完成新对象，模板等的 future 永远不完成。
 /// 消息其实已经进了队列，所以同时验证「至少一次 + 去重」：登记行留着、补投再发一遍，消费端业务仍只执行一次。
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
 @ContextConfiguration(
     initializers = {PostgreSQLContainerInitializer.class, RabbitMQContainerInitializer.class})
-@TestPropertySource(properties = "patra.events.publisher.confirm-timeout=1ns")
+@TestPropertySource(properties = "patra.events.publisher.confirm-timeout=200ms")
 @DirtiesContext
 @DisplayName("确认超时集成测试")
 class EventPublicationConfirmTimeoutIT {
 
   private static final Duration WAIT = Duration.ofSeconds(10);
+
+  /// 让 ack 落不到模板等着的关联数据上。
+  @TestConfiguration(proxyBeanMethods = false)
+  static class UnreachableConfirmConfig {
+
+    /// 发送时把登记到信道上的关联数据换成同 ID 的新对象：ack 完成的是新对象，模板等的原对象一直不完成。
+    ///
+    /// @return 模板定制
+    @Bean
+    RabbitTemplateCustomizer unreachableConfirmCustomizer() {
+      return template ->
+          template.setCorrelationDataPostProcessor(
+              (message, correlation) ->
+                  correlation == null ? null : new CorrelationData(correlation.getId()));
+    }
+  }
 
   @Autowired private EventsITOrderService orders;
 
