@@ -3,6 +3,7 @@ package dev.patra.catalog.infra.publication.batch;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.patra.catalog.domain.kernel.model.enums.DatePrecision;
+import dev.patra.catalog.domain.kernel.model.enums.ProvenanceCode;
 import dev.patra.catalog.domain.kernel.model.enums.PublicationDateType;
 import dev.patra.catalog.domain.kernel.model.vo.PublicationDate;
 import dev.patra.catalog.domain.kernel.model.vo.VenueId;
@@ -30,7 +31,6 @@ import dev.patra.catalog.infra.publication.batch.PublicationImportResult.Publica
 import dev.patra.catalog.infra.publication.batch.PublicationImportResult.PublicationTypeData;
 import dev.patra.catalog.infra.publication.batch.PublicationImportResult.QualifierData;
 import dev.patra.catalog.infra.publication.batch.PublicationImportResult.SupplMeshData;
-import dev.patra.common.ProvenanceCode;
 import java.util.List;
 import java.util.Locale;
 import org.junit.jupiter.api.BeforeEach;

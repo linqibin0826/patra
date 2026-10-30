@@ -15,6 +15,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import dev.patra.catalog.domain.kernel.model.enums.ProvenanceCode;
 import dev.patra.catalog.domain.kernel.model.vo.VenueId;
 import dev.patra.catalog.domain.publication.model.aggregate.PublicationAggregate;
 import dev.patra.catalog.domain.publication.model.enums.PublicationMedium;
@@ -29,7 +30,6 @@ import dev.patra.catalog.domain.publication.port.repository.PublicationSyncRepos
 import dev.patra.catalog.infra.publication.batch.PublicationImportResult;
 import dev.patra.catalog.infra.publication.batch.PublicationImportResultMapper;
 import dev.patra.catalog.infra.publication.batch.PublicationItemWriter;
-import dev.patra.common.ProvenanceCode;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;

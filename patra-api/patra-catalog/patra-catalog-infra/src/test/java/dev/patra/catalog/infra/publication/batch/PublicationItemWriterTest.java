@@ -9,6 +9,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import dev.patra.catalog.domain.kernel.model.enums.ProvenanceCode;
 import dev.patra.catalog.domain.kernel.model.vo.VenueId;
 import dev.patra.catalog.domain.publication.model.aggregate.PublicationAggregate;
 import dev.patra.catalog.domain.publication.model.vo.ExistingPublicationKeys;
@@ -16,7 +17,6 @@ import dev.patra.catalog.domain.publication.model.vo.PublicationCompleteData;
 import dev.patra.catalog.domain.publication.model.vo.PublicationId;
 import dev.patra.catalog.domain.publication.model.vo.VenueInstanceId;
 import dev.patra.catalog.domain.publication.port.repository.PublicationRepository;
-import dev.patra.common.ProvenanceCode;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;

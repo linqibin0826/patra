@@ -11,7 +11,6 @@ plugins {
 dependencies {
     // 内部模块
     api(project(":patra-api:patra-catalog:patra-catalog-domain"))
-    api(project(":patra-api:patra-common"))
     api(project(":patra-tool:patra-tool-jpa"))
     api(project(":patra-tool:patra-tool-batch"))
     api(project(":patra-tool:patra-tool-http-client"))

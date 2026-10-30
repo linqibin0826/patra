@@ -4,7 +4,6 @@ object DomainPurityRules {
     /// 允许出现在 *-domain compileClasspath 上的构件（group:name）；JDK 不是构件，天然允许。
     val ALLOWED: Set<String> = setOf(
         "dev.patra:patra-tool-core",
-        "dev.patra:patra-common",
         "org.projectlombok:lombok",
         "com.fasterxml.jackson.core:jackson-annotations",
         "tools.jackson.core:jackson-core",

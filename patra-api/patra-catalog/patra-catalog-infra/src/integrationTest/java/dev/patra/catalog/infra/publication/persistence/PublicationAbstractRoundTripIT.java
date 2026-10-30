@@ -3,6 +3,7 @@ package dev.patra.catalog.infra.publication.persistence;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.tuple;
 
+import dev.patra.catalog.domain.kernel.model.enums.ProvenanceCode;
 import dev.patra.catalog.domain.kernel.model.vo.VenueId;
 import dev.patra.catalog.domain.portal.model.read.PublicationDetailReadModel;
 import dev.patra.catalog.domain.portal.model.read.PublicationDetailReadModel.AbstractSectionView;
@@ -23,7 +24,6 @@ import dev.patra.catalog.infra.publication.persistence.dao.PublicationAbstractDa
 import dev.patra.catalog.infra.publication.persistence.dao.PublicationAlternativeAbstractDao;
 import dev.patra.catalog.infra.publication.persistence.entity.PublicationAbstractEntity;
 import dev.patra.catalog.infra.publication.persistence.entity.PublicationAlternativeAbstractEntity;
-import dev.patra.common.ProvenanceCode;
 import dev.patra.tool.jpa.autoconfigure.JpaAuditingConfiguration;
 import dev.patra.tool.jpa.autoconfigure.PatraHibernatePropertiesCustomizer;
 import dev.patra.tool.jpa.json.Jackson3JsonFormatMapper;

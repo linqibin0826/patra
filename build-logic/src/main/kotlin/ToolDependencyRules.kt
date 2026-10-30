@@ -17,7 +17,7 @@ object ToolDependencyRules {
     /// 一条声明的 project 依赖。
     data class Declared(val configuration: String, val target: String)
 
-    /// R1：任何配置都不得指向 `:patra-api` 下的模块（含 patra-common）。
+    /// R1：任何配置都不得指向 `:patra-api` 下的模块。
     fun r1Violations(declared: List<Declared>): List<String> =
         declared.filter { it.target.startsWith(":patra-api") }.map { "${it.configuration} -> ${it.target}" }
 

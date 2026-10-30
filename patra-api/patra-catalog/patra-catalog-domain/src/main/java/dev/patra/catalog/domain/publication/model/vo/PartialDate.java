@@ -1,4 +1,4 @@
-package dev.patra.common;
+package dev.patra.catalog.domain.publication.model.vo;
 
 import java.time.LocalDate;
 import java.time.YearMonth;

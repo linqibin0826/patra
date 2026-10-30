@@ -2,6 +2,8 @@ package dev.patra.catalog.domain.publication.model.aggregate;
 
 import cn.hutool.core.lang.Assert;
 import cn.hutool.core.util.StrUtil;
+import dev.patra.catalog.domain.kernel.model.enums.ProvenanceCode;
+import dev.patra.catalog.domain.kernel.model.enums.PublicationIdentifierType;
 import dev.patra.catalog.domain.kernel.model.vo.Pagination;
 import dev.patra.catalog.domain.kernel.model.vo.VenueId;
 import dev.patra.catalog.domain.publication.model.enums.OaStatus;
@@ -13,8 +15,6 @@ import dev.patra.catalog.domain.publication.model.vo.PublicationAuthorSnapshot;
 import dev.patra.catalog.domain.publication.model.vo.PublicationId;
 import dev.patra.catalog.domain.publication.model.vo.PublicationIdentifier;
 import dev.patra.catalog.domain.publication.model.vo.VenueInstanceId;
-import dev.patra.common.ProvenanceCode;
-import dev.patra.common.PublicationIdentifierType;
 import dev.patra.tool.core.domain.AggregateRoot;
 import java.io.Serial;
 import java.time.Instant;

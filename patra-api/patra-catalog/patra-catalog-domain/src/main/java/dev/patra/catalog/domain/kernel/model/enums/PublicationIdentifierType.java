@@ -1,4 +1,4 @@
-package dev.patra.common;
+package dev.patra.catalog.domain.kernel.model.enums;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
@@ -6,7 +6,7 @@ import java.util.Locale;
 
 /// 标识符类型枚举。
 ///
-/// 用于标识不同来源的实体标识符，支持跨服务共享使用。
+/// 用于标识不同来源的实体标识符，在 catalog 的文献与门户读子域共用。
 /// 可用于文献标识符、作者标识符、机构标识符等场景。
 ///
 /// **文献标识符**：

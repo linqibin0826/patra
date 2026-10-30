@@ -1,10 +1,10 @@
 package dev.patra.catalog.domain.publication.model.vo;
 
 import cn.hutool.core.util.StrUtil;
+import dev.patra.catalog.domain.kernel.model.enums.ProvenanceCode;
 import dev.patra.catalog.domain.publication.model.enums.IndexingStatus;
 import dev.patra.catalog.domain.publication.model.enums.QualityScore;
 import dev.patra.catalog.domain.publication.model.enums.ReviewStatus;
-import dev.patra.common.ProvenanceCode;
 import java.io.Serial;
 import java.io.Serializable;
 import java.time.Instant;

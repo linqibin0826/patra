@@ -4,7 +4,7 @@
  * 领域层 - 六边形架构的核心
  *
  * 关键约束（R3，决策 C）：领域层编译类路径只允许白名单构件，
- * 名单在 DomainPurityRules.ALLOWED（patra-tool-core、patra-common、Lombok、Jackson、Hutool、MapStruct）。
+ * 名单在 DomainPurityRules.ALLOWED（patra-tool-core、Lombok、Jackson、Hutool、MapStruct）。
  */
 
 plugins {
@@ -50,7 +50,6 @@ tasks.named("check") {
 // 使用 Version Catalog (libs) 声明依赖
 dependencies {
     // 领域层核心依赖
-    api(project(":patra-api:patra-common"))
     api(project(":patra-tool:patra-tool-core"))
 
     // Hutool 工具库
@@ -63,5 +62,5 @@ dependencies {
 }
 
 // ==================== R5：声明的 project 依赖必须被使用 ====================
-// patra-common / patra-tool-core 由本插件按层统一给出，不要求模块逐个 import
-registerDeclaredDependencyCheck(exempt = setOf(":patra-api:patra-common", ":patra-tool:patra-tool-core"))
+// patra-tool-core 由本插件按层统一给出，不要求模块逐个 import
+registerDeclaredDependencyCheck(exempt = setOf(":patra-tool:patra-tool-core"))

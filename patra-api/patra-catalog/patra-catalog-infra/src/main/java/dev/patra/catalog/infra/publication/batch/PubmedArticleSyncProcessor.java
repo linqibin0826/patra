@@ -1,7 +1,11 @@
 package dev.patra.catalog.infra.publication.batch;
 
 import dev.patra.catalog.domain.kernel.exception.XmlParseException;
+import dev.patra.catalog.domain.kernel.model.enums.PublicationIdentifierType;
 import dev.patra.catalog.domain.publication.model.enums.PubmedImportScope;
+import dev.patra.catalog.domain.publication.model.vo.CanonicalPublication;
+import dev.patra.catalog.domain.publication.model.vo.CanonicalPublication.Identifier;
+import dev.patra.catalog.domain.publication.model.vo.PartialDate;
 import dev.patra.catalog.domain.publication.model.vo.PublicationSyncTarget;
 import dev.patra.catalog.domain.publication.model.vo.PubmedSourceRecord;
 import dev.patra.catalog.domain.publication.model.vo.SourcePosition;
@@ -9,10 +13,6 @@ import dev.patra.catalog.domain.publication.port.parser.PubmedXmlParserPort;
 import dev.patra.catalog.domain.publication.port.repository.PublicationSyncRepository;
 import dev.patra.catalog.infra.publication.batch.update.PublicationSyncItem;
 import dev.patra.catalog.infra.publication.batch.update.PubmedImportCounters;
-import dev.patra.common.CanonicalPublication;
-import dev.patra.common.CanonicalPublication.Identifier;
-import dev.patra.common.PartialDate;
-import dev.patra.common.PublicationIdentifierType;
 import java.time.DateTimeException;
 import java.util.Set;
 import lombok.extern.slf4j.Slf4j;

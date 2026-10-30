@@ -9,9 +9,13 @@ plugins {
     id("patra.hexagonal-domain")
 }
 
-// patra-common-core 由 patra.hexagonal-domain 插件提供
+// patra-tool-core 由 patra.hexagonal-domain 插件提供
 dependencies {
-    api(project(":patra-api:patra-common"))
+    // 领域模型上的 Jackson 注解（@JsonIgnore、@JsonCreator、@JsonValue 等）
+    api("com.fasterxml.jackson.core:jackson-annotations")
     // Hutool 工具库（原经 patra-tool-core 传递，core 去第三方依赖后由领域层自己声明）
     api(libs.hutool.core)
+
+    // 两个测试用 JsonMapper 校验注解效果
+    testImplementation("tools.jackson.core:jackson-databind")
 }

@@ -3,7 +3,7 @@ package dev.patra.catalog.domain.venue.model.vo;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import dev.patra.common.ProvenanceCode;
+import dev.patra.catalog.domain.kernel.model.enums.ProvenanceCode;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import org.junit.jupiter.api.DisplayName;

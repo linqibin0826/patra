@@ -321,12 +321,6 @@
     <Bug pattern="CT_CONSTRUCTOR_THROW"/>
   </Match>
 
-  <!-- DataType 内部枚举/常量类构造器做类型检查 -->
-  <Match>
-    <Class name="~dev\.patra\.common\.DataType\$.*"/>
-    <Bug pattern="CT_CONSTRUCTOR_THROW"/>
-  </Match>
-
   <!-- 基础设施批处理迭代器构造时初始化 JSON 流是合理设计 -->
   <Match>
     <Or>

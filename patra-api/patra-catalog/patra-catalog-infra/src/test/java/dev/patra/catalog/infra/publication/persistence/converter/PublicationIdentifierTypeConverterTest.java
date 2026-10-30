@@ -2,7 +2,7 @@ package dev.patra.catalog.infra.publication.persistence.converter;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import dev.patra.common.PublicationIdentifierType;
+import dev.patra.catalog.domain.kernel.model.enums.PublicationIdentifierType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;

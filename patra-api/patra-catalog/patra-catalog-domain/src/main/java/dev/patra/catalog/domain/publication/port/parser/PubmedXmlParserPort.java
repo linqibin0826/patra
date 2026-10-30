@@ -1,6 +1,6 @@
 package dev.patra.catalog.domain.publication.port.parser;
 
-import dev.patra.common.CanonicalPublication;
+import dev.patra.catalog.domain.publication.model.vo.CanonicalPublication;
 
 /// PubMed 文献 XML 解析端口（领域层定义，基础设施层实现）。
 ///

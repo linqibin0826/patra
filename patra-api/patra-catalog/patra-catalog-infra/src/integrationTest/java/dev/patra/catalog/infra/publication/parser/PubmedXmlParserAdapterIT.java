@@ -4,8 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import dev.patra.catalog.domain.kernel.exception.XmlParseException;
-import dev.patra.common.CanonicalPublication;
-import dev.patra.common.PublicationIdentifierType;
+import dev.patra.catalog.domain.kernel.model.enums.PublicationIdentifierType;
+import dev.patra.catalog.domain.publication.model.vo.CanonicalPublication;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 

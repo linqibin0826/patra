@@ -82,22 +82,6 @@
             ]
         },
         {
-            "dir": "patra-api/patra-common",
-            "project": ":patra-api:patra-common",
-            "unit": "foundation",
-            "impacts": [
-                "catalog",
-                "foundation",
-                "gateway",
-                "identity",
-                "interaction",
-                "registry"
-            ],
-            "tasks": [
-                "check"
-            ]
-        },
-        {
             "dir": "patra-api/patra-gateway-boot",
             "project": ":patra-api:patra-gateway-boot",
             "unit": "gateway",

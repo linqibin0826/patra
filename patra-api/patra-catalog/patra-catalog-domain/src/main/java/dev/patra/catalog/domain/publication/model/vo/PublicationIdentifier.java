@@ -2,7 +2,7 @@ package dev.patra.catalog.domain.publication.model.vo;
 
 import cn.hutool.core.lang.Assert;
 import cn.hutool.core.util.StrUtil;
-import dev.patra.common.PublicationIdentifierType;
+import dev.patra.catalog.domain.kernel.model.enums.PublicationIdentifierType;
 import java.io.Serial;
 import java.io.Serializable;
 import java.util.Locale;

@@ -54,10 +54,9 @@ class CatalogArchitectureTest {
 
   private static JavaClasses classes;
 
-  /// 参数化的六边形架构规则（基础包: dev.patra.catalog，业务公共包: patra-common）。
+  /// 参数化的六边形架构规则（基础包: dev.patra.catalog，业务公共包: tool）。
   private static final HexagonalArchitectureRules rules =
-      new HexagonalArchitectureRules(
-          "dev.patra.catalog", List.of("dev.patra.common..", "dev.patra.tool.."));
+      new HexagonalArchitectureRules("dev.patra.catalog", List.of("dev.patra.tool.."));
 
   /// 底座子域：异常基类、数据源与字典枚举、跨子域 ID、书目值对象、文件下载、运行锁、字典解析、StAX 解析基座等。
   private static final String FOUNDATION = "kernel";

@@ -16,7 +16,6 @@ plugins {
 
 dependencies {
     // API 层核心依赖
-    api(project(":patra-api:patra-common"))
     api(project(":patra-tool:patra-tool-core"))
 
     // Jakarta Validation (仅用于 DTO 校验注解)
@@ -36,5 +35,5 @@ tasks.jacocoTestReport {
 }
 
 // ==================== R5：声明的 project 依赖必须被使用 ====================
-// patra-common / patra-tool-core 由本插件按层统一给出，不要求模块逐个 import
-registerDeclaredDependencyCheck(exempt = setOf(":patra-api:patra-common", ":patra-tool:patra-tool-core"))
+// patra-tool-core 由本插件按层统一给出，不要求模块逐个 import
+registerDeclaredDependencyCheck(exempt = setOf(":patra-tool:patra-tool-core"))

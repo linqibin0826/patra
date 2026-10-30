@@ -2,8 +2,8 @@ package dev.patra.catalog.infra.publication.batch;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import dev.patra.catalog.domain.publication.model.vo.CanonicalPublication;
 import dev.patra.catalog.infra.publication.parser.PubmedXmlParserAdapter;
-import dev.patra.common.CanonicalPublication;
 import java.io.ByteArrayInputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;

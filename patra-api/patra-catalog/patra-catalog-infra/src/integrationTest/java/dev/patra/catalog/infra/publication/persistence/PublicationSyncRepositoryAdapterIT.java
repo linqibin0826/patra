@@ -3,7 +3,9 @@ package dev.patra.catalog.infra.publication.persistence;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import dev.patra.catalog.domain.kernel.model.enums.ProvenanceCode;
 import dev.patra.catalog.domain.kernel.model.enums.PublicationDateType;
+import dev.patra.catalog.domain.kernel.model.enums.PublicationIdentifierType;
 import dev.patra.catalog.domain.kernel.model.vo.Pagination;
 import dev.patra.catalog.domain.kernel.model.vo.PublicationDate;
 import dev.patra.catalog.domain.kernel.model.vo.VenueId;
@@ -22,8 +24,6 @@ import dev.patra.catalog.domain.publication.model.vo.SourcePosition;
 import dev.patra.catalog.domain.publication.model.vo.VenueInstanceId;
 import dev.patra.catalog.infra.author.persistence.AuthorOrcidReadAdapter;
 import dev.patra.catalog.infra.config.CatalogITPostgreSQLContainerInitializer;
-import dev.patra.common.ProvenanceCode;
-import dev.patra.common.PublicationIdentifierType;
 import dev.patra.tool.jpa.autoconfigure.JpaAuditingConfiguration;
 import dev.patra.tool.jpa.json.JsonColumnCodec;
 import jakarta.persistence.EntityManager;

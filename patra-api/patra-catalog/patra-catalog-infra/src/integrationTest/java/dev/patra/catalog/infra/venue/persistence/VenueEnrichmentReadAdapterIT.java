@@ -2,6 +2,7 @@ package dev.patra.catalog.infra.venue.persistence;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import dev.patra.catalog.domain.kernel.model.enums.ProvenanceCode;
 import dev.patra.catalog.domain.venue.port.enrichment.VenueSnapshot;
 import dev.patra.catalog.infra.config.CatalogITPostgreSQLContainerInitializer;
 import dev.patra.catalog.infra.venue.persistence.dao.JcrRatingDao;
@@ -10,7 +11,6 @@ import dev.patra.catalog.infra.venue.persistence.dao.VenueDao;
 import dev.patra.catalog.infra.venue.persistence.entity.JcrRatingEntity;
 import dev.patra.catalog.infra.venue.persistence.entity.ScopusRatingEntity;
 import dev.patra.catalog.infra.venue.persistence.entity.VenueEntity;
-import dev.patra.common.ProvenanceCode;
 import dev.patra.tool.jpa.autoconfigure.JpaAuditingConfiguration;
 import dev.patra.tool.jpa.id.SnowflakeIdGenerator;
 import dev.patra.tool.jpa.json.JsonColumnCodec;

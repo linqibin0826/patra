@@ -40,8 +40,8 @@ assert_field "$F" '.backend_units' '["catalog","identity","interaction"]' "catal
 
 echo "== 场景 6：全局 path → 全量；foundation 模块 → 扇出（非全量）=="
 assert_field "build-logic/src/main/kotlin/x.gradle.kts" '.full_run' 'true' "build-logic 全量"
-assert_field "patra-api/patra-common/src/main/java/X.java" '.full_run' 'false' "patra-common 非全量"
-assert_field "patra-api/patra-common/src/main/java/X.java" '.backend_units' '["catalog","foundation","gateway","identity","interaction","registry"]' "patra-common 扇出全部 5 个服务与 foundation（网关经 identity-api 间接依赖它）"
+assert_field "patra-tool/patra-tool-core/src/main/java/X.java" '.full_run' 'false' "patra-tool-core 非全量"
+assert_field "patra-tool/patra-tool-core/src/main/java/X.java" '.backend_units' '["catalog","foundation","gateway","identity","interaction","registry"]' "patra-tool-core 扇出全部 5 个服务与 foundation"
 
 echo "== 场景 7：workflow 自身变更 → 全量后端 + portal =="
 assert_field ".github/workflows/ci.yml" '.full_run' 'true' "workflow 全量"

@@ -1,10 +1,10 @@
 package dev.patra.catalog.infra.publication.parser;
 
 import dev.patra.catalog.domain.kernel.exception.XmlParseException;
+import dev.patra.catalog.domain.publication.model.vo.CanonicalPublication;
 import dev.patra.catalog.domain.publication.port.parser.PubmedXmlParserPort;
 import dev.patra.catalog.infra.kernel.support.SecureXmlInputFactory;
 import dev.patra.catalog.infra.kernel.support.XmlParsingContext;
-import dev.patra.common.CanonicalPublication;
 import java.io.StringReader;
 import javax.xml.stream.XMLStreamConstants;
 import javax.xml.stream.XMLStreamException;

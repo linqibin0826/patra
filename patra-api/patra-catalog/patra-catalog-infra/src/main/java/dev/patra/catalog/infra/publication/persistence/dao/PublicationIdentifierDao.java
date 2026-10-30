@@ -1,7 +1,7 @@
 package dev.patra.catalog.infra.publication.persistence.dao;
 
+import dev.patra.catalog.domain.kernel.model.enums.PublicationIdentifierType;
 import dev.patra.catalog.infra.publication.persistence.entity.PublicationIdentifierEntity;
-import dev.patra.common.PublicationIdentifierType;
 import java.util.Collection;
 import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;

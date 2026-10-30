@@ -47,9 +47,6 @@ fun mapParent(path: String, dir: String) {
     project(path).projectDir = file(dir)
 }
 
-// ==================== patra-api / patra-common ====================
-includeAt(":patra-api:patra-common", "patra-api/patra-common")
-
 // ==================== patra-tool ====================
 includeAt(":patra-tool:patra-tool-core", "patra-tool/patra-tool-core")
 includeAt(":patra-tool:patra-tool-cqrs", "patra-tool/patra-tool-cqrs")

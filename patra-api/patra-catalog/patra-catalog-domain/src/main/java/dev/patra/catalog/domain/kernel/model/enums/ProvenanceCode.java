@@ -1,4 +1,4 @@
-package dev.patra.common;
+package dev.patra.catalog.domain.kernel.model.enums;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
@@ -99,7 +99,7 @@ public enum ProvenanceCode {
   /// 返回小写的数据源代码
   ///
   /// 用于配置文件键、API参数、内部标识符等需要小写的场景。
-  /// 例如：`patra.ingest.provenance.sources.pubmed`
+  /// 例如配置键里的 `pubmed`。
   ///
   /// 注意：此方法返回构造时缓存的小写值，避免重复调用 `toLowerCase()`。
   ///

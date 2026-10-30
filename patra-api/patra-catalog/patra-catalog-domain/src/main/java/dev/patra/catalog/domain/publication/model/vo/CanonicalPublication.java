@@ -1,11 +1,10 @@
-package dev.patra.common;
+package dev.patra.catalog.domain.publication.model.vo;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import dev.patra.catalog.domain.kernel.model.enums.PublicationIdentifierType;
 import java.util.List;
 import lombok.Builder;
 import lombok.Value;
-import tools.jackson.databind.annotation.JsonDeserialize;
-import tools.jackson.databind.annotation.JsonPOJOBuilder;
 
 /// Patra 平台规范化医学出版物模型（基于 PubMed/MEDLINE 标准设计）。
 ///
@@ -29,13 +28,8 @@ import tools.jackson.databind.annotation.JsonPOJOBuilder;
 /// @since 0.1.0
 @Value
 @Builder
-@JsonDeserialize(builder = CanonicalPublication.CanonicalPublicationBuilder.class)
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class CanonicalPublication {
-
-  /// Jackson 3.x Builder 配置（Lombok 会生成实际实现）。
-  @JsonPOJOBuilder(withPrefix = "")
-  public static class CanonicalPublicationBuilder {}
 
   // ==================== 标识符组 ====================
 
@@ -118,8 +112,8 @@ public class CanonicalPublication {
   /// 多种日期信息（出版、修订、接收、接受等）。
   PublicationDates dates;
 
-  /// 发布历史时间线（详细的发布事件记录）。
-  List<PublicationHistoryEvent> publicationHistory;
+  /// 发布历史时间线（每个时间节点一条记录）。
+  List<PublicationHistoryEntry> publicationHistory;
 
   // ==================== 关联数据组 ====================
 
@@ -157,7 +151,6 @@ public class CanonicalPublication {
   /// 标识符（支持多种类型）。
   @Value
   @Builder
-  @JsonDeserialize(builder = Identifier.IdentifierBuilder.class)
   public static class Identifier {
 
     /// 标识符类型。
@@ -168,16 +161,11 @@ public class CanonicalPublication {
 
     /// 标识符的实际值。
     String value;
-
-    /// Jackson 3.x Builder 配置。
-    @JsonPOJOBuilder(withPrefix = "")
-    public static class IdentifierBuilder {}
   }
 
   /// 发表类型。
   @Value
   @Builder
-  @JsonDeserialize(builder = PublicationType.PublicationTypeBuilder.class)
   public static class PublicationType {
 
     /// 发表类型的唯一标识符（来自受控词表）。
@@ -188,16 +176,11 @@ public class CanonicalPublication {
 
     /// 词表来源（如 "MeSH", "Crossref"，可选）。
     String vocabularySource;
-
-    /// Jackson 3.x Builder 配置。
-    @JsonPOJOBuilder(withPrefix = "")
-    public static class PublicationTypeBuilder {}
   }
 
   /// 作者信息。
   @Value
   @Builder
-  @JsonDeserialize(builder = Author.AuthorBuilder.class)
   public static class Author {
 
     /// 姓氏。
@@ -226,16 +209,11 @@ public class CanonicalPublication {
 
     /// 作者标识符列表（如 ORCID, ResearcherID）。
     List<Identifier> identifiers;
-
-    /// Jackson 3.x Builder 配置。
-    @JsonPOJOBuilder(withPrefix = "")
-    public static class AuthorBuilder {}
   }
 
   /// 机构信息。
   @Value
   @Builder
-  @JsonDeserialize(builder = Affiliation.AffiliationBuilder.class)
   public static class Affiliation {
 
     /// 机构名称（自由文本，包含部门、学校等信息）。
@@ -243,16 +221,11 @@ public class CanonicalPublication {
 
     /// 机构标识符列表（如 ROR, GRID）。
     List<Identifier> identifiers;
-
-    /// Jackson 3.x Builder 配置。
-    @JsonPOJOBuilder(withPrefix = "")
-    public static class AffiliationBuilder {}
   }
 
   /// 期刊/会议/图书信息（出版载体）。
   @Value
   @Builder
-  @JsonDeserialize(builder = Journal.JournalBuilder.class)
   public static class Journal {
 
     /// 期刊全名。
@@ -290,10 +263,6 @@ public class CanonicalPublication {
 
     /// 出版商名称。
     String publisher;
-
-    /// Jackson 3.x Builder 配置。
-    @JsonPOJOBuilder(withPrefix = "")
-    public static class JournalBuilder {}
   }
 
   /// 页码信息。
@@ -301,7 +270,6 @@ public class CanonicalPublication {
   /// 支持传统的起止页码以及 MEDLINE 标准格式页码（可能包含电子文章编号）。
   @Value
   @Builder
-  @JsonDeserialize(builder = Pagination.PaginationBuilder.class)
   public static class Pagination {
 
     /// 起始页码。
@@ -312,16 +280,11 @@ public class CanonicalPublication {
 
     /// MEDLINE 标准格式页码（如 "123-145" 或 "e12345"）。
     String medlinePgn;
-
-    /// Jackson 3.x Builder 配置。
-    @JsonPOJOBuilder(withPrefix = "")
-    public static class PaginationBuilder {}
   }
 
   /// 摘要信息（支持结构化和非结构化摘要）。
   @Value
   @Builder
-  @JsonDeserialize(builder = Abstract.AbstractBuilder.class)
   public static class Abstract {
 
     /// 纯文本摘要（非结构化摘要直接使用此字段）。
@@ -332,16 +295,11 @@ public class CanonicalPublication {
 
     /// 版权信息。
     String copyright;
-
-    /// Jackson 3.x Builder 配置。
-    @JsonPOJOBuilder(withPrefix = "")
-    public static class AbstractBuilder {}
   }
 
   /// 摘要段落（结构化摘要的组成部分）。
   @Value
   @Builder
-  @JsonDeserialize(builder = AbstractSection.AbstractSectionBuilder.class)
   public static class AbstractSection {
 
     /// 段落标签（如 BACKGROUND, METHODS, RESULTS, CONCLUSIONS, OBJECTIVE）。
@@ -352,16 +310,11 @@ public class CanonicalPublication {
 
     /// 段落内容。
     String content;
-
-    /// Jackson 3.x Builder 配置。
-    @JsonPOJOBuilder(withPrefix = "")
-    public static class AbstractSectionBuilder {}
   }
 
   /// 其他语言或版本的摘要。
   @Value
   @Builder
-  @JsonDeserialize(builder = AlternativeAbstract.AlternativeAbstractBuilder.class)
   public static class AlternativeAbstract {
 
     /// 摘要类型（如 "author", "publisher", "plain-language"）。
@@ -381,16 +334,11 @@ public class CanonicalPublication {
 
     /// 版权信息。
     String copyright;
-
-    /// Jackson 3.x Builder 配置。
-    @JsonPOJOBuilder(withPrefix = "")
-    public static class AlternativeAbstractBuilder {}
   }
 
   /// 关键词集合（支持多个来源）。
   @Value
   @Builder
-  @JsonDeserialize(builder = KeywordSet.KeywordSetBuilder.class)
   public static class KeywordSet {
 
     /// 关键词来源。
@@ -400,16 +348,11 @@ public class CanonicalPublication {
 
     /// 关键词列表。
     List<Keyword> keywords;
-
-    /// Jackson 3.x Builder 配置。
-    @JsonPOJOBuilder(withPrefix = "")
-    public static class KeywordSetBuilder {}
   }
 
   /// 单个关键词。
   @Value
   @Builder
-  @JsonDeserialize(builder = Keyword.KeywordBuilder.class)
   public static class Keyword {
 
     /// 是否为主要主题。
@@ -417,10 +360,6 @@ public class CanonicalPublication {
 
     /// 关键词文本。
     String term;
-
-    /// Jackson 3.x Builder 配置。
-    @JsonPOJOBuilder(withPrefix = "")
-    public static class KeywordBuilder {}
   }
 
   /// 物质信息（化学物质、生物制品、药物等）。
@@ -428,7 +367,6 @@ public class CanonicalPublication {
   /// 主要用于医学、化学、生物学领域。
   @Value
   @Builder
-  @JsonDeserialize(builder = Substance.SubstanceBuilder.class)
   public static class Substance {
 
     /// 注册号（如 CAS 号，"0" 表示非特指物质）。
@@ -442,16 +380,11 @@ public class CanonicalPublication {
 
     /// 受控词表来源（如 "MeSH", "ChEBI", "DrugBank"）。
     String vocabularySource;
-
-    /// Jackson 3.x Builder 配置。
-    @JsonPOJOBuilder(withPrefix = "")
-    public static class SubstanceBuilder {}
   }
 
   /// 多种日期信息，按实际精度记录（见 [PartialDate]），缺的月 / 日不补。
   @Value
   @Builder
-  @JsonDeserialize(builder = PublicationDates.PublicationDatesBuilder.class)
   public static class PublicationDates {
 
     /// 主要出版日期（期刊出版日期）。
@@ -480,16 +413,11 @@ public class CanonicalPublication {
 
     /// PMC 放开日期（PubMed `History` 里 `PubStatus="pmc-release"`，禁发期结束、PMC 全文可公开的日期）。
     PartialDate pmcRelease;
-
-    /// Jackson 3.x Builder 配置。
-    @JsonPOJOBuilder(withPrefix = "")
-    public static class PublicationDatesBuilder {}
   }
 
   /// 资助信息。
   @Value
   @Builder
-  @JsonDeserialize(builder = FundingInfo.FundingInfoBuilder.class)
   public static class FundingInfo {
 
     /// 资助项目编号/授权号。
@@ -506,16 +434,11 @@ public class CanonicalPublication {
 
     /// 资助机构所在国家/地区。
     String country;
-
-    /// Jackson 3.x Builder 配置。
-    @JsonPOJOBuilder(withPrefix = "")
-    public static class FundingInfoBuilder {}
   }
 
   /// 外部关联数据（如基因库、临床试验、软件仓库等）。
   @Value
   @Builder
-  @JsonDeserialize(builder = ExternalReference.ExternalReferenceBuilder.class)
   public static class ExternalReference {
 
     /// 引用类型。
@@ -528,16 +451,11 @@ public class CanonicalPublication {
 
     /// 登记号/标识符列表（如基因序列号、临床试验号）。
     List<String> identifiers;
-
-    /// Jackson 3.x Builder 配置。
-    @JsonPOJOBuilder(withPrefix = "")
-    public static class ExternalReferenceBuilder {}
   }
 
   /// 相关项目（更正、撤稿、评论、转载等）。
   @Value
   @Builder
-  @JsonDeserialize(builder = RelatedItem.RelatedItemBuilder.class)
   public static class RelatedItem {
 
     /// 关系类型。
@@ -563,19 +481,14 @@ public class CanonicalPublication {
 
     /// 说明信息。
     String description;
-
-    /// Jackson 3.x Builder 配置。
-    @JsonPOJOBuilder(withPrefix = "")
-    public static class RelatedItemBuilder {}
   }
 
-  /// 发布历史事件。
+  /// 发布历史条目（对应 PubMed 的 `<History>/<PubMedPubDate>`）。
   ///
   /// 记录出版物在发布过程中的关键时间节点，如收稿、接受、电子发布、PubMed 收录等。
   @Value
   @Builder
-  @JsonDeserialize(builder = PublicationHistoryEvent.PublicationHistoryEventBuilder.class)
-  public static class PublicationHistoryEvent {
+  public static class PublicationHistoryEntry {
 
     /// 发布状态。
     ///
@@ -606,10 +519,6 @@ public class CanonicalPublication {
 
     /// 事件发生的分钟。
     String minute;
-
-    /// Jackson 3.x Builder 配置。
-    @JsonPOJOBuilder(withPrefix = "")
-    public static class PublicationHistoryEventBuilder {}
   }
 
   /// 出版物元数据。
@@ -617,7 +526,6 @@ public class CanonicalPublication {
   /// 包含出版物记录的处理信息和质量标注。
   @Value
   @Builder
-  @JsonDeserialize(builder = PublicationMetadata.PublicationMetadataBuilder.class)
   public static class PublicationMetadata {
 
     /// 索引方法（如 "Automated", "Manual"）。
@@ -631,10 +539,6 @@ public class CanonicalPublication {
 
     /// 引文子集标识（如 "IM" 表示 Index Medicus）。
     String citationSubset;
-
-    /// Jackson 3.x Builder 配置。
-    @JsonPOJOBuilder(withPrefix = "")
-    public static class PublicationMetadataBuilder {}
   }
 
   /// 参考出版物。
@@ -642,7 +546,6 @@ public class CanonicalPublication {
   /// 表示文章引用的其他出版物。
   @Value
   @Builder
-  @JsonDeserialize(builder = Reference.ReferenceBuilder.class)
   public static class Reference {
 
     /// 引文文本（格式化的引用字符串）。
@@ -650,10 +553,6 @@ public class CanonicalPublication {
 
     /// 参考出版物的标识符列表（如 PMID, DOI）。
     List<Identifier> identifiers;
-
-    /// Jackson 3.x Builder 配置。
-    @JsonPOJOBuilder(withPrefix = "")
-    public static class ReferenceBuilder {}
   }
 
   /// 研究者（非作者）。
@@ -661,7 +560,6 @@ public class CanonicalPublication {
   /// 参与研究但未列为文章作者的研究人员，常见于大型临床试验、多中心研究等。
   @Value
   @Builder
-  @JsonDeserialize(builder = Investigator.InvestigatorBuilder.class)
   public static class Investigator {
 
     /// 姓氏。
@@ -684,10 +582,6 @@ public class CanonicalPublication {
 
     /// 标识符列表（如 ORCID）。
     List<Identifier> identifiers;
-
-    /// Jackson 3.x Builder 配置。
-    @JsonPOJOBuilder(withPrefix = "")
-    public static class InvestigatorBuilder {}
   }
 
   /// 作为主题的人物。
@@ -695,7 +589,6 @@ public class CanonicalPublication {
   /// 用于传记、医学史、案例报告等以特定人物为主题的出版物。
   @Value
   @Builder
-  @JsonDeserialize(builder = PersonalNameSubject.PersonalNameSubjectBuilder.class)
   public static class PersonalNameSubject {
 
     /// 姓氏。
@@ -709,10 +602,6 @@ public class CanonicalPublication {
 
     /// 后缀。
     String suffix;
-
-    /// Jackson 3.x Builder 配置。
-    @JsonPOJOBuilder(withPrefix = "")
-    public static class PersonalNameSubjectBuilder {}
   }
 
   /// 补充对象。
@@ -720,7 +609,6 @@ public class CanonicalPublication {
   /// 表示出版物的附加材料，如图表、数据集、关键词列表、多媒体文件等。
   @Value
   @Builder
-  @JsonDeserialize(builder = SupplementalObject.SupplementalObjectBuilder.class)
   public static class SupplementalObject {
 
     /// 对象类型（如 "keyword", "figure", "dataset", "video"）。
@@ -728,10 +616,6 @@ public class CanonicalPublication {
 
     /// 对象参数列表（键值对形式的属性）。
     List<ObjectParam> params;
-
-    /// Jackson 3.x Builder 配置。
-    @JsonPOJOBuilder(withPrefix = "")
-    public static class SupplementalObjectBuilder {}
   }
 
   /// 对象参数。
@@ -739,7 +623,6 @@ public class CanonicalPublication {
   /// 表示补充对象的属性键值对。
   @Value
   @Builder
-  @JsonDeserialize(builder = ObjectParam.ObjectParamBuilder.class)
   public static class ObjectParam {
 
     /// 参数名称。
@@ -747,10 +630,6 @@ public class CanonicalPublication {
 
     /// 参数值。
     String value;
-
-    /// Jackson 3.x Builder 配置。
-    @JsonPOJOBuilder(withPrefix = "")
-    public static class ObjectParamBuilder {}
   }
 
   /// MeSH 主题标引。
@@ -762,7 +641,6 @@ public class CanonicalPublication {
   /// 例如：{@code "Humans" [主题词]} + {@code "genetics" [限定词]} 表示"人类遗传学"主题。
   @Value
   @Builder
-  @JsonDeserialize(builder = MeshHeading.MeshHeadingBuilder.class)
   public static class MeshHeading {
 
     /// MeSH 主题词（Descriptor）。
@@ -770,10 +648,6 @@ public class CanonicalPublication {
 
     /// MeSH 限定词列表（Qualifiers），用于进一步细化主题范围。
     List<QualifierName> qualifierNames;
-
-    /// Jackson 3.x Builder 配置。
-    @JsonPOJOBuilder(withPrefix = "")
-    public static class MeshHeadingBuilder {}
   }
 
   /// MeSH 主题词（Descriptor）。
@@ -781,7 +655,6 @@ public class CanonicalPublication {
   /// 主题词是 MeSH 术语的主要部分，描述文章的核心主题。
   @Value
   @Builder
-  @JsonDeserialize(builder = DescriptorName.DescriptorNameBuilder.class)
   public static class DescriptorName {
 
     /// MeSH 唯一标识符（UI）。
@@ -797,10 +670,6 @@ public class CanonicalPublication {
     ///
     /// 如 "Geographic" 表示地理名称。
     String type;
-
-    /// Jackson 3.x Builder 配置。
-    @JsonPOJOBuilder(withPrefix = "")
-    public static class DescriptorNameBuilder {}
   }
 
   /// MeSH 限定词（Qualifier）。
@@ -814,7 +683,6 @@ public class CanonicalPublication {
   ///
   @Value
   @Builder
-  @JsonDeserialize(builder = QualifierName.QualifierNameBuilder.class)
   public static class QualifierName {
 
     /// MeSH 唯一标识符（UI）。
@@ -825,10 +693,6 @@ public class CanonicalPublication {
 
     /// 是否为文章的主要主题。
     Boolean majorTopic;
-
-    /// Jackson 3.x Builder 配置。
-    @JsonPOJOBuilder(withPrefix = "")
-    public static class QualifierNameBuilder {}
   }
 
   /// 补充 MeSH 概念。
@@ -837,7 +701,6 @@ public class CanonicalPublication {
   /// 是对标准 MeSH 主题词的补充。
   @Value
   @Builder
-  @JsonDeserialize(builder = SupplMeshName.SupplMeshNameBuilder.class)
   public static class SupplMeshName {
 
     /// MeSH 唯一标识符（UI）。
@@ -850,9 +713,5 @@ public class CanonicalPublication {
     ///
     /// 常见值：Protocol（研究方案）, Disease（疾病）。
     String type;
-
-    /// Jackson 3.x Builder 配置。
-    @JsonPOJOBuilder(withPrefix = "")
-    public static class SupplMeshNameBuilder {}
   }
 }

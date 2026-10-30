@@ -1,5 +1,6 @@
 package dev.patra.catalog.infra.venue.persistence.mapper;
 
+import dev.patra.catalog.domain.kernel.model.enums.ProvenanceCode;
 import dev.patra.catalog.domain.kernel.model.vo.VenueId;
 import dev.patra.catalog.domain.venue.model.aggregate.VenueAggregate;
 import dev.patra.catalog.domain.venue.model.enums.CitationSubset;
@@ -19,7 +20,6 @@ import dev.patra.catalog.infra.venue.persistence.entity.VenueIndexingHistoryEnti
 import dev.patra.catalog.infra.venue.persistence.entity.VenueMeshEntity;
 import dev.patra.catalog.infra.venue.persistence.entity.VenuePublicationStatsEntity;
 import dev.patra.catalog.infra.venue.persistence.entity.VenueRelationEntity;
-import dev.patra.common.ProvenanceCode;
 import java.util.List;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;

@@ -1,4 +1,4 @@
-package dev.patra.common;
+package dev.patra.catalog.domain.publication.model.vo;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
