@@ -2,7 +2,7 @@
 
 通知服务：v0.16 起接管站内提醒、提醒偏好与一键退订、邮件（安全邮件与提醒邮件）、实时推送。interaction 与 identity 只发「发生了什么」的集成事件，由本服务决定提醒谁、怎么送达（release spec `docs/patra/release-specs/v0.16-notification.md` 决策 A）。
 
-工程设计：`docs/patra/specs/2026-10-30-notification-skeleton-design.md`（服务骨架、子域划分、存储与部署接入）；`docs/patra/specs/2026-10-31-notification-preference-unsubscribe-design.md`（提醒偏好与一键退订，PAP-142）。
+工程设计：`docs/patra/specs/2026-10-30-notification-skeleton-design.md`（服务骨架、子域划分、存储与部署接入）；`docs/patra/specs/2026-10-31-notification-preference-unsubscribe-design.md`（提醒偏好与一键退订，PAP-142）；`docs/patra/specs/2026-10-31-notification-inbox-design.md`（信箱接管站内提醒，PAP-143）。
 
 ## 1. 三个概念
 
@@ -14,7 +14,7 @@
 
 | 子域 | 职责 | Issue |
 |---|---|---|
-| `kernel`（底座） | 提醒类别 `NotificationCategory`（回复我的 / @ 我的 / 有帮助，有帮助没有邮件）；收件信息端口 `RecipientPort`（调 identity 的批量收件信息：邮箱、是否已验证、账号状态、用户名与显示名）；注销清理：扩展点 `UserDataCleanupGateway`、底座流程 `CleanupDeletedUsersHandler`（XXL `deletedUserCleanupJob`，每天 06:30）、账号状态端口 `AccountStatePort`（调 `/summaries`）；在站信号（决策 H，随 PAP-143 / 146） | PAP-142 起，随用到的 Issue 补 |
+| `kernel`（底座） | 提醒类别 `NotificationCategory`（回复我的 / @ 我的 / 有帮助，有帮助没有邮件）；收件信息端口 `RecipientPort`（调 identity 的批量收件信息：邮箱、是否已验证、账号状态、用户名与显示名）；注销清理：扩展点 `UserDataCleanupGateway`、底座流程 `CleanupDeletedUsersHandler`（XXL `deletedUserCleanupJob`，每天 06:30）、账号状态端口 `AccountStatePort`（调 `/summaries`）；名片端口 `UserCardPort`（调 `/summaries`，带访客算主页可见性）；对象视图端口 `SubjectViewPort`（调 interaction 的两个内部接口）；摘录渲染 `ExcerptRenderer` 与提及名字规则 `MentionNames`；在站信号 `PresenceGateway`（决策 H，存 `kernel.presence`） | PAP-142 起，随用到的 Issue 补 |
 | `inbox` | 站内信箱：消费 interaction 的事件写提醒，收件人规则，去重与乱序防护，未读数、列表、已读、删除联动、5 个月保留；有帮助按「内容 × 北京时间一天」合并 | PAP-143、PAP-144 |
 | `preference` | 每类提醒的邮件档位（关 / 离站逐条 / 每日汇总）、退订令牌、RFC 8058 一键退订、退订落地页数据 | PAP-142 |
 | `mail` | 渠道（模板、SMTP 与幂等键、重试与死信、发送记录，发安全邮件）与提醒邮件（离站逐条、每日汇总、退订头）。收件地址经底座的 `RecipientPort` 取（preference 的退订落地页也要邮箱，所以进了底座） | PAP-105、PAP-146 |
@@ -39,6 +39,14 @@ inbox 不依赖 preference：偏好只管邮件，站内提醒照常。
 - 退订按「设成关」实现，重复调用结果相同；写用例锁行后按列写回，同一个人的并发修改不会互相覆盖。
 - 给 mail 的公开读端口 `EmailSubscriptionReadPort.subscriptionOf(userId)`：档位与令牌，没有行时建一行。邮件里的两个退订地址都在门户上（网关不对公网），格式见 spec 第 7 节。
 
+### inbox：信箱
+
+- 一个队列 `notification.inbox`（死信 `.dlx` / `.dlq`），绑定 interaction 的评论发表 / 编辑 / 删除、经验删除（PAP-144 加有帮助），单消费线程顺序处理。每个事件一个事务：先 `ProcessedEventPort` 按事件 ID 去重，再写业务。
+- 三张表：`inbox.notification`（一行一个收件人一条提醒，按收件人哈希分 16 区；列表按可变的排序时间 `occurred_at` 加 ID 翻页；`created_at` 是写入信箱的时刻，提醒邮件的时间窗口从它算）、`inbox.comment`（每条评论最新版本的纯文本与墓碑：版本更新才覆盖正文，删除后变墓碑，之后这条评论的事件都丢弃）、`inbox.subject_tombstone`（已删除的投稿经验）。
+- 收件人规则 `RecipientRules`（搬自 interaction）：先被回复的人、再经验作者（只对经验下的根评论）、最后 @ 到的人，同一人取第一次出现的类型，去掉作者本人；编辑只给第一次 @ 到的人发，并去掉发表负责的那两类人，结果与到达顺序无关。
+- 读时组合：列表的对象信息（链接 key、标题、期刊、是否还在、经验结果）调 interaction 现查，挂了降级为不带对象信息；名片调 identity，挂了 503。
+- 给别的子域的：读端口 `InboxReadPort`（列表、三个未读数），领域事件 `UnreadCountsChangedEvent`（实时推送提交后订阅）、`NotificationsCreatedEvent`（提醒邮件同事务订阅）。
+
 「已处理事件」表（决策 D）不属于任何子域：表结构按事件模块（PAP-137），库里只建一张，inbox 与 mail 的消费者共用，谁先落地谁建。
 
 ## 3. 存储
@@ -57,8 +65,9 @@ inbox 不依赖 preference：偏好只管邮件，站内提醒照常。
 | 错误码前缀 | `NOTIFICATION`（如 `NOTIFICATION-0404`） |
 | 配置 | jar 里的 `application.yml` 放随代码变的默认值；库地址与 RabbitMQ 密码引用在 Nacos `patra-notification.yaml`，库账号、RabbitMQ 坐标与 xxl-job 管理端地址在 `patra-common.yaml` |
 | 密钥 | `~/.patra/secrets/nacos.env`、`rabbitmq.env`（都必需） |
-| 定时任务 | 执行器 `patra-notification`：注销清理 `deletedUserCleanupJob`（PAP-142）；提醒清理、离站邮件、每日汇总随各 Issue 加 |
-| 调用的服务 | identity 内部接口 `POST /_internal/users/recipients`（收件信息）与 `POST /_internal/users/summaries`（注销清理取账号状态），`lb://patra-identity`，连接 1 秒、读 2 秒 |
+| 定时任务 | 执行器 `patra-notification`：注销清理 `deletedUserCleanupJob`（PAP-142，每天 06:30，含偏好、信箱、在站记录）；信箱保留期 `inboxRetentionJob`（PAP-143，每天 06:45，北京时间 5 个自然月）；离站邮件、每日汇总随各 Issue 加 |
+| 调用的服务 | identity 内部接口 `POST /_internal/users/recipients`（收件信息）与 `POST /_internal/users/summaries`（注销清理取账号状态、列表取名片），`lb://patra-identity`；interaction 内部接口 `POST /_internal/subjects/views`（对象视图）与 `POST /_internal/posts/outlines`（经验结果），`lb://patra-interaction`；都是连接 1 秒、读 2 秒 |
+| 消费的事件 | interaction 的 `interaction.events`（队列 `notification.inbox`） |
 | 上线 | `docs/patra/runbooks/v0.16-notification-go-live-runbook.md` |
 
 ## 5. 邮件渠道（mail）
