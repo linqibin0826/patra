@@ -2,7 +2,9 @@ package dev.patra.interaction.domain.reaction.port.repository;
 
 import dev.patra.interaction.domain.reaction.model.vo.HelpfulMark;
 import dev.patra.interaction.domain.reaction.model.vo.HelpfulTarget;
+import dev.patra.interaction.domain.subject.model.read.StatsCorrection;
 import java.time.Instant;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -63,4 +65,28 @@ public interface HelpfulRepository {
   /// @param target 目标
   /// @return 有帮助数；没有统计行为 0
   int countOf(HelpfulTarget target);
+
+  /// 按明细重算第一步：明细条数与有帮助数统计行不一致的目标（任一边缺行按 0 算）。不加锁。
+  ///
+  /// @return 目标
+  List<HelpfulTarget> findHelpfulCountDrift();
+
+  /// 按明细重算第二步：调用方已拿目标锁（点、取消、删除联动都拿它，锁内没有并发写），按明细数、不一致才写；明细没了
+  /// 置 0、保留行。须在调用方的事务里调用。
+  ///
+  /// @param target 目标
+  /// @return 改了才有值
+  Optional<StatsCorrection> recountHelpfulCount(HelpfulTarget target);
+
+  /// 按明细重算第一步：有受益人的明细条数与获赞统计行不一致的用户（任一边缺行按 0 算）。不加锁。
+  ///
+  /// @return 用户 ID
+  List<Long> findReceivedDrift();
+
+  /// 按明细重算第二步：写方不拿用户级锁，所以先建出统计行、`FOR UPDATE` 锁住，再用新语句数，不一致才写。只拿用户行
+  /// 锁，与写方「目标锁 → 目标行 → 用户行」的顺序不成环。须在调用方的事务里调用。
+  ///
+  /// @param userId 用户
+  /// @return 改了才有值
+  Optional<StatsCorrection> recountReceived(long userId);
 }

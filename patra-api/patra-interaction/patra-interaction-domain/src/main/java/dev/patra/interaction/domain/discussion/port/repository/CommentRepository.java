@@ -3,8 +3,10 @@ package dev.patra.interaction.domain.discussion.port.repository;
 import dev.patra.interaction.domain.discussion.model.aggregate.CommentAggregate;
 import dev.patra.interaction.domain.discussion.model.read.RevisionRecord;
 import dev.patra.interaction.domain.discussion.model.vo.NewComment;
+import dev.patra.interaction.domain.subject.model.read.StatsCorrection;
 import dev.patra.interaction.domain.subject.model.vo.SubjectId;
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 
 /// 评论的写端（`discussion.comment`、`discussion.comment_revision`）与随评论同事务维护的楼统计、对象统计
@@ -94,4 +96,29 @@ public interface CommentRepository {
   ///
   /// @param subjectId 对象
   void decrementCommentCount(SubjectId subjectId);
+
+  /// 按明细重算第一步：未删除回复数或最后回复时间与楼统计行不一致的楼，以及根评论已不存在的统计行（任一边缺行按
+  /// 0 / 空算）。不加锁。
+  ///
+  /// @return 根评论 ID
+  List<Long> findThreadStatsDrift();
+
+  /// 按明细重算第二步：调用方已拿楼锁（回复与删除都拿它，锁内没有并发写），按明细重取回复数与最后回复时间，不一致
+  /// 才写；根评论已不存在就删行。须在调用方的事务里调用。
+  ///
+  /// @param rootId 根评论
+  /// @return 改了才有值，前后值是回复数
+  Optional<StatsCorrection> recountThreadStats(long rootId);
+
+  /// 按明细重算第一步：未删除的评论数与对象统计行不一致的对象（任一边缺行按 0 算）。不加锁。
+  ///
+  /// @return 对象
+  List<SubjectId> findCommentCountDrift();
+
+  /// 按明细重算第二步：发根评论不拿楼锁，所以先建出统计行、`FOR UPDATE` 锁住，再用新语句数，不一致才写。须在调用方
+  /// 的事务里调用。
+  ///
+  /// @param subjectId 对象
+  /// @return 改了才有值
+  Optional<StatsCorrection> recountCommentCount(SubjectId subjectId);
 }

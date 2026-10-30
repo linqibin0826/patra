@@ -49,6 +49,35 @@ class DeletedUserCleanupFlowIT extends InteractionFlowITSupport {
     identity.verify(1, postRequestedFor(urlEqualTo("/_internal/users/summaries")));
   }
 
+  /// AC（PAP-133）：注销清理删掉 A 的文献库条目后，这篇的收藏人数从 2 减到 1，批量对象统计随之变化。
+  @Test
+  void should_decrement_collector_counts_when_cleaning_deleted_users() {
+    CATALOG_DATA.put(100L, "1", "Lancet", "2019");
+    assertThat(status(call(HttpMethod.PUT, A, "/me/library/publication/100", null))).isEqualTo(200);
+    assertThat(status(call(HttpMethod.PUT, C, "/me/library/publication/100", null))).isEqualTo(200);
+    assertThat(collectorCountOf100()).isEqualTo(2);
+    IDENTITY_DATA.put(A, "DELETED", false, "PUBLIC");
+    IDENTITY_DATA.put(C, "ACTIVE", true, "PUBLIC");
+
+    commandBus.handle(CleanupDeletedUsersCommand.of());
+
+    assertThat(collectorCountOf100()).isEqualTo(1);
+  }
+
+  /// 匿名调批量对象统计，取文献 100 的收藏人数。
+  ///
+  /// @return 收藏人数
+  private int collectorCountOf100() {
+    EntityExchangeResult<String> result =
+        call(
+            HttpMethod.POST,
+            null,
+            "/subjects/stats",
+            "{\"type\":\"publication\",\"keys\":[\"100\"]}");
+    assertThat(status(result)).as(result.getResponseBody()).isEqualTo(200);
+    return json(result).get("items").get(0).get("collectorCount").asInt();
+  }
+
   /// 有帮助不接入注销清理（PAP-131）：两个注销用户互相点过的有帮助、两人的获赞在清理后原样保留。
   @Test
   void should_keep_helpful_data_of_deleted_users() {

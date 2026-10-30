@@ -1,8 +1,10 @@
 package dev.patra.interaction.infra.reaction.persistence;
 
+import dev.patra.interaction.domain.reaction.model.enums.HelpfulTargetType;
 import dev.patra.interaction.domain.reaction.model.vo.HelpfulMark;
 import dev.patra.interaction.domain.reaction.model.vo.HelpfulTarget;
 import dev.patra.interaction.domain.reaction.port.repository.HelpfulRepository;
+import dev.patra.interaction.domain.subject.model.read.StatsCorrection;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.HashMap;
@@ -177,5 +179,114 @@ public class HelpfulRepositoryAdapter implements HelpfulRepository {
         .query(Integer.class)
         .optional()
         .orElse(0);
+  }
+
+  /// 明细按目标聚合，与统计表全外连接，两边缺行都按 0 比较。
+  ///
+  /// @return 不一致的目标
+  @Override
+  public List<HelpfulTarget> findHelpfulCountDrift() {
+    return jdbc.sql(
+            """
+            SELECT COALESCE(d.target_type, s.target_type) AS target_type,
+                   COALESCE(d.target_id, s.target_id) AS target_id
+              FROM (SELECT target_type, target_id, count(*) AS n
+                      FROM reaction.helpful GROUP BY target_type, target_id) d
+              FULL JOIN reaction.target_stats s
+                ON s.target_type = d.target_type AND s.target_id = d.target_id
+             WHERE COALESCE(d.n, 0) <> COALESCE(s.helpful_count, 0)
+            """)
+        .query(
+            (rs, rowNum) ->
+                HelpfulTarget.of(
+                    HelpfulTargetType.valueOf(rs.getString("target_type")),
+                    rs.getLong("target_id")))
+        .list();
+  }
+
+  /// 目标锁内没有并发写：直接数、读旧值（缺行为 0），不一致就 upsert 成明细数。
+  ///
+  /// @param target 目标
+  /// @return 改了才有值
+  @Override
+  @Transactional(propagation = Propagation.MANDATORY)
+  public Optional<StatsCorrection> recountHelpfulCount(HelpfulTarget target) {
+    int after =
+        jdbc.sql(
+                "SELECT count(*) FROM reaction.helpful WHERE target_type = :type"
+                    + " AND target_id = :id")
+            .param("type", target.type().name())
+            .param("id", target.id())
+            .query(Integer.class)
+            .single();
+    int before = countOf(target);
+    if (before == after) {
+      return Optional.empty();
+    }
+    jdbc.sql(
+            """
+            INSERT INTO reaction.target_stats (target_type, target_id, helpful_count)
+            VALUES (:type, :id, :n)
+            ON CONFLICT (target_type, target_id) DO UPDATE SET helpful_count = EXCLUDED.helpful_count
+            """)
+        .param("type", target.type().name())
+        .param("id", target.id())
+        .param("n", after)
+        .update();
+    return Optional.of(StatsCorrection.of(before, after));
+  }
+
+  /// 有受益人的明细按受益人聚合，与统计表全外连接，两边缺行都按 0 比较。
+  ///
+  /// @return 不一致的用户
+  @Override
+  public List<Long> findReceivedDrift() {
+    return jdbc.sql(
+            """
+            SELECT COALESCE(d.user_id, s.user_id) AS user_id
+              FROM (SELECT credited_user_id AS user_id, count(*) AS n
+                      FROM reaction.helpful
+                     WHERE credited_user_id IS NOT NULL
+                     GROUP BY credited_user_id) d
+              FULL JOIN reaction.user_stats s ON s.user_id = d.user_id
+             WHERE COALESCE(d.n, 0) <> COALESCE(s.helpful_received, 0)
+            """)
+        .query(Long.class)
+        .list();
+  }
+
+  /// 先建出行、`FOR UPDATE` 锁住，再用新语句数：读已提交下新语句的快照晚于拿到锁，没提交的写入会在锁释放后在写下的
+  /// 值上再 ±1，不会丢。
+  ///
+  /// @param userId 用户
+  /// @return 改了才有值
+  @Override
+  @Transactional(propagation = Propagation.MANDATORY)
+  public Optional<StatsCorrection> recountReceived(long userId) {
+    jdbc.sql(
+            "INSERT INTO reaction.user_stats (user_id, helpful_received) VALUES (:userId, 0)"
+                + " ON CONFLICT (user_id) DO NOTHING")
+        .param("userId", userId)
+        .update();
+    long before =
+        jdbc.sql(
+                "SELECT helpful_received FROM reaction.user_stats WHERE user_id = :userId"
+                    + " FOR UPDATE")
+            .param("userId", userId)
+            .query(Long.class)
+            .single();
+    long after =
+        jdbc.sql("SELECT count(*) FROM reaction.helpful WHERE credited_user_id = :userId")
+            .param("userId", userId)
+            .query(Long.class)
+            .single();
+    if (before == after) {
+      return Optional.empty();
+    }
+    jdbc.sql("UPDATE reaction.user_stats SET helpful_received = :n WHERE user_id = :userId")
+        .param("n", after)
+        .param("userId", userId)
+        .update();
+    return Optional.of(StatsCorrection.of(before, after));
   }
 }

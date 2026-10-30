@@ -63,6 +63,7 @@ dev.patra.interaction.config           装配（XXL-Job 执行器等），不属
 - 新增收藏经 subject 的 `SubjectGateway`（事务外，可能同步调 catalog）；已有条目只用 `subject_id`（= 对外的 `itemId`），对象失效、catalog 整行消失后仍能改备注、移出、移除。
 - 排序：加入时间走 SQL 分页；出版日期、期刊在内存里排（快照经 `SubjectReadPort.findByIds` 每 5,000 个一块取），不把排序键抄进条目。
 - 公开资格与可见性只问 identity（批量用户摘要）：设公开回查账号状态与邮箱，读公开收藏夹透传访客 ID、看 `profileVisible`。
+- 收藏人数 `collection.subject_stats`（每个对象一行，没有行即为 0）：`LibraryRepositoryAdapter` 改文献库条目的四个方法（收藏、复制收藏夹、移出、注销清理）按 `RETURNING` 到的行在同一事务里 ±1；多行 ±1 按 `subject_id` 升序拿行锁。一人放进多个收藏夹只算一次（PAP-133）。
 
 ## 4.2 post 的存储与并发
 
@@ -95,6 +96,11 @@ dev.patra.interaction.config           装配（XXL-Job 执行器等），不属
 - 删除联动：同步订阅 `CommentDeletedEvent`（变占位与整条去掉）与 `PostDeletedEvent`，拿目标锁后删明细与统计行、扣回获赞；失败包成 500（`HelpfulWriteFailedException`），删除一起回滚。经验下的评论不连带。
 - 给讨论串统计与对象统计（PAP-132 / 133）的表名、列与关联写法见工程 spec 第 9 节。
 
+## 4.6 公开计数的读与重算（PAP-133）
+
+- 批量对象统计 `POST /subjects/stats`（不要会话）挂在底座读端：`SubjectStatsReadAdapter` 只经 SQL 读收藏、讨论两张统计表，是本服务唯一一处跨子域读。主页获赞 `GET /users/{userId}/helpful-received` 读 `reaction.user_stats`。
+- 按明细重算：底座定扩展点 `StatsRecountGateway<K>`，每项计数一个 `*RecountGatewayImpl`（各在自己子域的 app 层）；`RecountStatsHandler` 先让每项不加锁地找差异，再每个差异键一个短事务「先锁、再用新语句数、不一致才写」。锁与写方相同：收藏人数、获赞、对象评论总数锁统计行，有帮助数拿目标锁，楼统计拿楼锁（根评论已不在的楼统计行删掉）。设计见 `docs/patra/specs/2026-10-29-object-stats-design.md`。
+
 ## 5. 运行
 
 | 项 | 值 |
@@ -103,8 +109,8 @@ dev.patra.interaction.config           装配（XXL-Job 执行器等），不属
 | 网关前缀 | `/patra-interaction/**` |
 | 错误码前缀 | `INTERACTION`（如 `INTERACTION-0404`） |
 | 配置 | jar 里的 `application.yml` 放随代码变的默认值；库地址在 Nacos `patra-interaction.yaml`，账号与 xxl-job 管理端地址在 `patra-common.yaml` |
-| 定时任务 | 执行器 `patra-interaction`；对象对账 `subjectReconciliationJob`（`0 30 6 * * ?`，超时 600 秒、不重试，PAP-112；只对外部对象，文献按 PMID、期刊按 NLM ID；catalog 换库重建或重跑导入后立即手动触发一次）、注销清理 `deletedUserCleanupJob`（`0 0 6 * * ?`，超时 600 秒、不重试；PAP-120 起是底座的公共流程：合并各子域有数据的用户，分批回查 identity，只删 `DELETED` 用户在各子域登记的个人数据：收藏、发表计数与提醒）、提醒清理 `notificationRetentionJob`（`0 45 6 * * ?`，超时 300 秒、不重试，PAP-123；删除北京时间 5 个自然月前的提醒） |
-| 上线 | `docs/patra/runbooks/v0.13-library-go-live-runbook.md`、`docs/patra/runbooks/v0.14-discussion-go-live-runbook.md` |
+| 定时任务 | 执行器 `patra-interaction`；对象对账 `subjectReconciliationJob`（`0 30 6 * * ?`，超时 600 秒、不重试，PAP-112；只对外部对象，文献按 PMID、期刊按 NLM ID；catalog 换库重建或重跑导入后立即手动触发一次）、注销清理 `deletedUserCleanupJob`（`0 0 6 * * ?`，超时 600 秒、不重试；PAP-120 起是底座的公共流程：合并各子域有数据的用户，分批回查 identity，只删 `DELETED` 用户在各子域登记的个人数据：收藏、发表计数与提醒）、提醒清理 `notificationRetentionJob`（`0 45 6 * * ?`，超时 300 秒、不重试，PAP-123；删除北京时间 5 个自然月前的提醒）、统计重算 `statsRecountJob`（只手动触发，调度类型「无」，超时 600 秒、不重试，PAP-133；按明细修正各项公开计数，回写「差异 N 行：{…}」） |
+| 上线 | `docs/patra/runbooks/v0.13-library-go-live-runbook.md`、`docs/patra/runbooks/v0.14-discussion-go-live-runbook.md`、`docs/patra/runbooks/v0.15-helpful-go-live-runbook.md` |
 
 ## 6. 什么时候拆分
 

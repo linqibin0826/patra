@@ -7,6 +7,7 @@ import dev.patra.interaction.domain.reaction.model.enums.HelpfulTargetType;
 import dev.patra.interaction.domain.reaction.model.vo.HelpfulMark;
 import dev.patra.interaction.domain.reaction.model.vo.HelpfulTarget;
 import dev.patra.interaction.domain.reaction.port.repository.HelpfulRepository;
+import dev.patra.interaction.domain.subject.model.read.StatsCorrection;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.util.Map;
@@ -160,6 +161,84 @@ class HelpfulRepositoryAdapterIT extends ReactionPersistenceITSupport {
       holder.get(5, TimeUnit.SECONDS);
       same.get(5, TimeUnit.SECONDS);
     }
+  }
+
+  /// 有帮助数的重算：多、少、缺行都找得到；锁内修正并带回前后值；明细没了置 0、保留行；修完再找为空。
+  @Test
+  void should_find_and_fix_helpful_count_drift() {
+    transactions.executeWithoutResult(
+        s -> {
+          helpful.insert(1L, C1, 9L, T0);
+          helpful.insert(2L, C1, 9L, T0);
+          helpful.insert(1L, P1, null, T0);
+        });
+    jdbcTemplate.update(
+        "INSERT INTO reaction.target_stats (target_type, target_id, helpful_count) VALUES"
+            + " ('COMMENT', 101, 5), ('COMMENT', 102, 3)");
+
+    assertThat(helpful.findHelpfulCountDrift()).containsExactlyInAnyOrder(C1, C2, P1);
+
+    assertThat(locked(C1)).contains(StatsCorrection.of(5, 2));
+    assertThat(locked(C1)).isEmpty();
+    assertThat(locked(C2)).contains(StatsCorrection.of(3, 0));
+    assertThat(locked(P1)).contains(StatsCorrection.of(0, 1));
+    assertThat(helpful.countOf(C2)).isZero();
+    assertThat(count("SELECT count(*) FROM reaction.target_stats WHERE target_id = 102"))
+        .isEqualTo(1L);
+    assertThat(helpful.findHelpfulCountDrift()).isEmpty();
+  }
+
+  /// 获赞的重算：只数有受益人的明细；多、少都修正并带回前后值；修完再找为空。
+  @Test
+  void should_find_and_fix_received_drift() {
+    transactions.executeWithoutResult(
+        s -> {
+          helpful.insert(1L, C1, 9L, T0);
+          helpful.insert(2L, C1, 9L, T0);
+          helpful.insert(1L, P1, null, T0);
+        });
+    jdbcTemplate.update(
+        "INSERT INTO reaction.user_stats (user_id, helpful_received) VALUES (9, 7), (8, 2)");
+
+    assertThat(helpful.findReceivedDrift()).containsExactlyInAnyOrder(9L, 8L);
+
+    assertThat(received(9L)).contains(StatsCorrection.of(7, 2));
+    assertThat(received(8L)).contains(StatsCorrection.of(2, 0));
+    assertThat(received(9L)).isEmpty();
+    assertThat(helpful.findReceivedDrift()).isEmpty();
+  }
+
+  /// 两步里的锁内修正都要在事务里调用。
+  @Test
+  void should_require_transaction_for_recount() {
+    assertThatThrownBy(() -> helpful.recountHelpfulCount(C1))
+        .isInstanceOf(IllegalTransactionStateException.class);
+    assertThatThrownBy(() -> helpful.recountReceived(9L))
+        .isInstanceOf(IllegalTransactionStateException.class);
+  }
+
+  /// 在事务里重算获赞。
+  ///
+  /// @param userId 用户
+  /// @return 修正
+  private Optional<StatsCorrection> received(long userId) {
+    Optional<StatsCorrection> correction =
+        transactions.execute(s -> helpful.recountReceived(userId));
+    return correction;
+  }
+
+  /// 拿目标锁后重算有帮助数（与重算任务的调用方式一致）。
+  ///
+  /// @param target 目标
+  /// @return 修正
+  private Optional<StatsCorrection> locked(HelpfulTarget target) {
+    Optional<StatsCorrection> correction =
+        transactions.execute(
+            s -> {
+              helpful.lockTarget(target);
+              return helpful.recountHelpfulCount(target);
+            });
+    return correction;
   }
 
   /// 等信号。
