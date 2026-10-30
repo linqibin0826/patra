@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{html/fragments/layout :: mail('账号状态', '即将删除 · DELETION REMINDER', |你的账号将在 ${daysLeft} 天后删除|, ~{::content}, '这是一封账号安全提醒。')}">
+<body>
+<th:block th:fragment="content">
+<p style="margin:16px 0 0 0;"><span th:text="${displayName}">陈宇</span>，你好。<span th:text="|你申请注销的 ${siteName} 账号快到删除时间了。|">你申请注销的 Patra 账号快到删除时间了。</span></p>
+<th:block th:replace="~{html/fragments/button :: deadline(${deletionDueAt})}"></th:block>
+<p class="p-fg1" style="margin:28px 0 0 0;font-size:15px;font-weight:500;line-height:1.6;color:#1c1917;">想保留账号</p>
+<p style="margin:6px 0 0 0;font-size:14px;" th:text="|删除之前，用这个邮箱和密码登录 ${siteName}，按页面提示取消注销即可。|">删除之前，用这个邮箱和密码登录 Patra，按页面提示取消注销即可。</p>
+<p class="p-fg1" style="margin:28px 0 0 0;font-size:15px;font-weight:500;line-height:1.6;color:#1c1917;">到期之后</p>
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" class="p-rule" style="margin-top:8px;border-top:1px solid #e7e1d4;">
+  <tr><td class="p-rule" style="padding:10px 0;border-bottom:1px solid #e7e1d4;font-size:14px;line-height:1.7;">资料、头像和关注领域被删除，无法恢复。</td></tr>
+  <tr><td class="p-rule" style="padding:10px 0;border-bottom:1px solid #e7e1d4;font-size:14px;line-height:1.7;">用户名不会释放，任何人都不能再用。</td></tr>
+</table>
+</th:block>
+</body>
+</html>

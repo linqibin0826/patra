@@ -1,0 +1,8 @@
+[# th:replace="~{text/fragments/header}" /]
+你好，[(${displayName})]：
+
+你的 [(${siteName})] 账号已取消注销，恢复正常，资料都还在。
+
+[# th:replace="~{text/fragments/security-notice}" /]
+
+[# th:replace="~{text/fragments/footer}" /]

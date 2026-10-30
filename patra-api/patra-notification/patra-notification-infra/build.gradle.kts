@@ -20,6 +20,12 @@ dependencies {
     // JPA、Flyway、PostgreSQL 驱动（自动配置生效）
     api(project(":patra-tool:patra-tool-jpa"))
 
+    // 发信：Boot 的 JavaMailSender 自动配置 + Jakarta Mail。用 api：boot 的装配类签名里要用 JavaMailSender
+    api("org.springframework.boot:spring-boot-starter-mail")
+
+    // 邮件模板：只要 Thymeleaf 引擎本体，不用 starter——通知服务的邮件不走 MVC 视图解析器
+    implementation("org.thymeleaf:thymeleaf")
+
     // 集成测试的 PG 容器初始化器放 testFixtures，infra 与 boot 的集成测试共用
     testFixturesImplementation(project(":patra-tool:patra-tool-test"))
 }
