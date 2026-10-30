@@ -93,7 +93,8 @@ data: {"total":3,"replies":2,"mentions":1,"helpful":0}
 
 - 推送失败让「写提醒」或「标已读」失败、回滚或变慢。推送是锦上添花，信箱是本体。
 - 推送把数字推错且停在错的值上（并发时旧值覆盖新值）。
-- 部署通知服务时，挂着的推送连接拖住优雅停机（第 6.6 节）。
+- 部署通知服务或网关时，挂着的推送连接拖住优雅停机（第 6.6、7.6 节）。
+- 事件攒在中间某一层、不及时到达浏览器（第 7.5 节：网关默认就会这样）。
 
 ## 4. 已定的前提
 
@@ -251,13 +252,14 @@ patra:
 
 **实现要点**：
 
-- 推送用的 `RestClientProxyExchange` 和 `ProxyExchangeHandlerFunction` 都**不能**声明成 Bean。自带的 `restClientProxyExchange` 是 `@ConditionalOnMissingBean(ProxyExchange.class)`、自带的处理器注入「唯一的」`ProxyExchange`：多注册一个，所有 `lb://` 路由会悄悄换到推送池上；处理器同理，`lb://` 路由按类型查找它会查到两个。两者都在 `lb-pushHandlerFunctionDefinition` 这个 Bean 内部建（`@Bean(name = "lb-pushHandlerFunctionDefinition")`，横线在 Bean 名和 URI scheme 里都合法）。
+- 推送用的代理交换（`PushProxyExchange`，继承 `RestClientProxyExchange`，见 7.5）和 `ProxyExchangeHandlerFunction` 都**不能**声明成 Bean。自带的 `restClientProxyExchange` 是 `@ConditionalOnMissingBean(ProxyExchange.class)`、自带的处理器注入「唯一的」`ProxyExchange`：多注册一个，所有 `lb://` 路由会悄悄换到推送池上；处理器同理，`lb://` 路由按类型查找它会查到两个。两者都在 `lb-pushHandlerFunctionDefinition` 这个 Bean 内部建（`@Bean(name = "lb-pushHandlerFunctionDefinition")`，横线在 Bean 名和 URI scheme 里都合法）。
 - 内部那个处理器要收到容器刷新事件才会收集出站头过滤器（`init()`）；收不到时它**原样转发全部请求头**，浏览器带的会话令牌会直达通知服务。所以把它包在一个小 Bean 里，由这个 Bean 实现刷新事件监听并转交。路由测试要断言下游**收不到**会话令牌（第 9 节）。
 
 ### 7.2 推送专用连接池
 
 - 一个 Reactor Netty `ConnectionProvider`（Bean，停机时 `dispose`）：最多 `patra.gateway.push.max-connections` 条（默认 500），**不排队**（`pendingAcquireMaxCount(0)`：借不到立即失败）。
 - 推送用的 HTTP 客户端从 Boot 装好的那个 `ClientHttpRequestFactoryBuilder` 派生，只换掉「从哪个池子建 `HttpClient`」（`withHttpClientFactory(() -> HttpClient.create(推送池))`），所以连接超时 5 秒、读超时 60 秒（空闲）、不跟随重定向、不谈压缩、写超时处理器都和普通路由一样。
+- 推送用的 `RestClient` 由容器里的 `RestClient.Builder` **先 `clone()`** 再换请求工厂：这个 Builder 是 `patra-tool-http-client` 注册的单例（`@Primary`），自带的代理交换也用它，直接改它，普通路由会跟着换到推送池上（实施时被池满用例抓到：普通请求也 503 了）。
 - 读超时仍是 60 秒：通知服务每 25 秒一次心跳，正常连接不会撞上；通知服务卡死时 60 秒后断开。
 
 **为什么上限 500**：和普通池同一个量级；现在用户是个位数，远远够；它的意义是「有上限、满了立刻失败」，而不是精确的容量规划。网关这边每条推送连接占一个 Tomcat 连接、一个虚拟线程、一条 Netty 连接，通知服务那边占一个 Tomcat 连接和一个 emitter，两边 Tomcat 默认都允许 8192 条连接，500 条离哪个上限都很远。
@@ -281,6 +283,22 @@ patra:
 ### 7.4 配置
 
 `patra.gateway.push.max-connections` 放 `application.yml`（默认 500），不进 Nacos：只有调容量时才改。集成测试设成 2。
+
+### 7.5 逐条事件刷出（实施时发现）
+
+**问题**：Gateway 对 `text/event-stream` 的做法是「读一块、往浏览器写、刷一次」（`AbstractProxyExchange.copyResponseBodyWithFlushing`，缓冲 16 KB）。这对 JDK 客户端成立：它的响应体输入流有多少给多少。但网关用的是 Reactor Netty，Spring 7.0.10 给它的响应体输入流（`SubscriberInputStream`）一次读**要读满整个缓冲区或读到流结束才返回**。几十字节的事件和 7 字节的心跳会一直攒在网关里，30 分钟后流结束才一起出来，推送等于没有。
+
+**实测**：下游每 300 毫秒滴一条心跳，第一条到浏览器用了约 5 秒，正是流结束的时刻（`GatewayPushRouteIT.should_deliver_each_event_as_soon_as_it_arrives` 先红）。网关 WebMVC spec 和 release spec 调研里「网关对事件流逐块 flush」的说法，对 Reactor 客户端不成立；普通路由目前没有事件流，不受影响。
+
+**做法**：推送路由的代理交换 `PushProxyExchange` 覆盖 `copyResponseBody`：逐字节读（单字节读只等「有数据」，不等凑满），写进 Tomcat 的响应缓冲（写本身不出网），读到空行（一条 SSE 事件的结尾）就刷出去。通知服务的事件都以 `\n\n` 结尾，不处理 `\r`。
+
+**代价**：每个字节一次方法调用和一次锁（`SubscriberInputStream` 内部）。推送流量是每条连接每 25 秒几个字节加偶尔一条事件，可以忽略。
+
+### 7.6 网关停机时结束推送流（评审补充）
+
+推送流在网关上是一个正在进行的阻塞代理请求，要挂 30 分钟。Boot 的优雅停机会等它，最多 30 秒；compose 没设 `stop_grace_period`，docker 10 秒后直接强杀。结果是每次部署网关，只要有人开着门户，都要白等 10 秒再被强杀。
+
+做法同通知服务（6.6）：推送处理器监听 `ContextClosedEvent`（先于优雅停机的等待），关掉所有正在转发的下游响应体（`PushProxyExchange.closeOpenStreams()`）。卡在读上的线程被唤醒、读到结尾，转发正常结束，浏览器 3 秒后重连。推送连接池在 Bean 销毁时 `dispose`，那已经在优雅停机之后，挡不住这件事，所以要这一步。
 
 ## 8. 两条网络路径与各层空闲超时
 
@@ -306,6 +324,8 @@ HTTP/1.1 下浏览器对同一站点最多 6 条连接，所以门户在标签�
 | 推送长连接占满时普通请求不受影响 | 推送池设 2；WireMock 顶替通知服务、推送路径回一个持续滴数据的事件流；占满 2 条后：第 3 条推送立即 503 `GW-0503`，同时 `/patra-notification/me/notifications/unread-count` 照常 200 | 网关 `integrationTest` |
 | 登出后重连被网关拒绝 | 有效会话能连上；吊销会话后再连 401 `GW-0401`，WireMock 收不到这次请求；不带令牌同样 401 | 网关 `integrationTest` |
 | 推送路由转发正确 | 带会话连上，下游收到剥了前缀的路径与网关签的断言、**收不到**浏览器带的会话令牌，事件流原样透传 | 网关 `integrationTest` |
+| 每条事件一到就到浏览器 | 下游每 600ms 滴一条心跳、共 6 秒，第一条 3 秒内到达客户端（7.5） | 网关 `integrationTest` |
+| 网关停机不等推送流 | 卡在读上的转发，`closeOpenStreams()` 后 1 秒内结束 | 网关单元测试 `PushProxyExchangeTest` |
 | 推送不进事件登记表 | 一次提交后推送之后，`event_publication` 里没有 `UnreadCountsChangedEvent` 的行（登记表只认 `@ApplicationModuleListener`，`patra-tool-events` 的默认值） | boot `integrationTest`（随回滚用例） |
 | 表的行为 | 登记推当前值并记在站；按用户推到他的全部连接、不推别人；没连接不查库；发送失败的被剔除；心跳一轮每人记一次在站；读数失败不抛；全部结束 | app 单元测试 |
 | 监听器 | 收到事件后对每个收件人调表的推送 | app 单元测试 |
@@ -337,6 +357,8 @@ HTTP/1.1 下浏览器对同一站点最多 6 条连接，所以门户在标签�
 | 推送路由用 Java DSL 写一条 `RouterFunction` | 能做到同样的事，但路由会分成「配置里的」和「代码里的」两处，排序也要另外处理；按 scheme 注册处理器是框架自带 `lb://` 用的同一个扩展点 |
 | 包一层 `ClientHttpRequestFactory`，按下游路径选池子 | 「哪个路径用哪个池」藏在客户端里、和路由配置脱节，换路径时容易漏改 |
 | 推送连接池满时排队 | 见 7.2：白等 45 秒再失败，不如立刻回退轮询 |
+| 推送路由改用 JDK HTTP 客户端（它的输入流有多少给多少，Gateway 原本的「读一块刷一次」就成立） | JDK 客户端的超时是「从发请求到收到响应头」的总时长，响应开始后没有空闲超时，通知服务卡死时网关这条连接永远不断；连接数也要另外用信号量限。网关从 JDK 换到 Reactor 正是为了空闲超时（网关 WebMVC spec 第 6 节） |
+| 把 `streaming-buffer-size` 设成 1 | 全局配置，所有事件流类型都按字节刷，每个字节一个 HTTP 分块；只改推送路由的拷贝更准 |
 | 在 AFTER_COMMIT 的原线程里同步推 | 推送的慢和错会落到 RabbitMQ 消费线程和「标已读」请求上；原线程查库还会碰到已提交事务的残留资源 |
 | `@ApplicationModuleListener`（Modulith 的「提交后、异步」） | 本服务的登记表触发注解就是它（决策 C），用它会把每次推送都记进 `event_publication` 并在重启后补推过期的数字 |
 | 另起定时器数 30 分钟 | 见 6.4：异步超时本身就是这个定时器 |
@@ -355,3 +377,4 @@ HTTP/1.1 下浏览器对同一站点最多 6 条连接，所以门户在标签�
 5. 推送换线程、读数放在每用户的锁里（6.3）。
 6. 响应头带 `Cache-Control: no-cache, no-transform`（6.2）。
 7. release spec 决策 I 里连接池默认值的说法有误（2.4），交编排会话更正。
+8. 推送路由逐字节读、按事件刷（7.5）；网关停机时主动结束推送流（7.6）。

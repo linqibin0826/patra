@@ -80,6 +80,11 @@
 - [ ] **Step 7：README**：路由清单、路径规则表加推送路径；「HTTP 客户端、超时与线程」表加「推送连接池」一行；模块结构加三个新类与 `GatewayPushRouteIT`；只追加。
 - [ ] **Step 8：提交**：subject「新增推送专用路由与独立连接池」。
 
+**实施补充（2026-10-31）**：池满用例与新增的 `should_deliver_each_event_as_soon_as_it_arrives` 先后暴露两个问题，按 spec 7.5、7.2 处理：
+- 新增 `PushProxyExchange extends RestClientProxyExchange`：覆盖 `copyResponseBody`，逐字节读、读到空行就刷；`closeOpenStreams()` 关掉正在转发的响应体。`PushProxyHandlerFunction` 构造改为 `(ProxyExchangeHandlerFunction delegate, PushProxyExchange exchange, ConnectionProvider pool)`，加 `@EventListener(ContextClosedEvent.class) closeOpenStreams()`（spec 7.6）。单元测试 `PushProxyExchangeTest.should_end_copy_when_open_streams_are_closed`。
+- 推送 `RestClient` 用 `restClientBuilder.clone()`：容器里的 Builder 是 `patra-tool-http-client` 的单例。
+- 出站头用例用「去掉刷新事件转交」的变异确认会变红。
+
 ---
 
 ## 第二段：通知服务（等编排会话给出含 PAP-143 的 SHA，`git reset --hard <SHA>` 对齐后做）

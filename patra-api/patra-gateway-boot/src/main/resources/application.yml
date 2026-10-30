@@ -88,7 +88,18 @@ spring:
               filters:
                 - StripPrefix=1
 
-            # Notification Service Route（站内提醒、提醒偏好与退订；以后的实时推送）
+            # Notification 推送连接（PAP-145）：必须排在通用 notification 路由之前（按列表顺序匹配）。
+            # lb-push 是自定义 scheme：负载均衡同 lb://，但走推送专用连接池（PushRouteConfiguration），
+            # 推送连接一借 30 分钟，不和普通请求抢连接。网关对这个路径要求登录（GatewaySecurityConfiguration）
+            # Example: /patra-notification/me/notifications/stream -> lb://patra-notification/me/notifications/stream
+            - id: patra-notification-stream
+              uri: lb-push://patra-notification
+              predicates:
+                - Path=/patra-notification/me/notifications/stream
+              filters:
+                - StripPrefix=1
+
+            # Notification Service Route（站内提醒、提醒偏好与退订）
             # Example: /patra-notification/notifications -> lb://patra-notification/notifications
             - id: patra-notification
               uri: lb://patra-notification
@@ -131,6 +142,11 @@ patra:
   web:
     error:
       context-prefix: GW
+  gateway:
+    # 推送专用连接池（PAP-145）：上限单独算、不排队，满了新的推送立即 503（前端退回轮询），普通请求的池子不受影响。
+    # 500 与普通池同一量级，现阶段远远够；它的意义是「有上限、满了立刻失败」
+    push:
+      max-connections: 500
   http-client:
     http-interface:
       groups:
