@@ -258,6 +258,7 @@ class DeleteCommentHandlerTest {
         .state(state)
         .body(state == CommentState.ACTIVE ? "正文" : null)
         .createdAt(T0)
+        .version(CommentAggregate.INITIAL_VERSION)
         .build();
   }
 

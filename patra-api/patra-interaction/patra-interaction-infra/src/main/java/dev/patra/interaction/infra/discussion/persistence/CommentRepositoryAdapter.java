@@ -113,7 +113,7 @@ public class CommentRepositoryAdapter implements CommentRepository {
     return id;
   }
 
-  /// 改正文。
+  /// 改正文，连同加一后的正文版本。
   ///
   /// @param comment 改完的评论
   @Override
@@ -122,12 +122,13 @@ public class CommentRepositoryAdapter implements CommentRepository {
             """
             UPDATE discussion.comment
                SET body = :body, mentioned_user_ids = CAST(:mentioned AS bigint[]),
-                   revised_at = :revisedAt
+                   revised_at = :revisedAt, version = :version
              WHERE comment_id = :id
             """)
         .param("body", comment.getBody())
         .param("mentioned", CommentRows.idArray(comment.getMentionedUserIds()))
         .param("revisedAt", CommentRows.utc(comment.getRevisedAt()))
+        .param("version", comment.getVersion())
         .param("id", comment.getCommentId())
         .update();
   }

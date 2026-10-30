@@ -92,6 +92,32 @@ class CommentAggregateTest {
     assertThat(edit.updated().getMentionedUserIds()).containsExactlyInAnyOrder(7L, 8L, 9L);
   }
 
+  /// 发布 5 分钟内的原地修改也加版本：摘录变了，事件的消费方要能分出新旧。
+  @Test
+  void should_increment_version_when_body_changes_within_grace() {
+    CommentEdit edit =
+        root().build().edit(AUTHOR, "新", List.of(), T0.plusSeconds(60)).orElseThrow();
+
+    assertThat(edit.updated().getVersion()).isEqualTo(2);
+  }
+
+  /// 超过 5 分钟、记了版本的修改同样加一。
+  @Test
+  void should_increment_version_when_body_changes_after_grace() {
+    CommentAggregate comment = root().version(2).build();
+
+    CommentEdit edit =
+        comment.edit(AUTHOR, "新", List.of(), T0.plus(1, ChronoUnit.HOURS)).orElseThrow();
+
+    assertThat(edit.updated().getVersion()).isEqualTo(3);
+  }
+
+  /// 版本从 1 起。
+  @Test
+  void should_reject_non_positive_version() {
+    assertThatThrownBy(() -> root().version(0).build()).isInstanceOf(IllegalStateException.class);
+  }
+
   /// 正常评论、已成占位的根评论都能被回复；已成占位的回复不能。
   @Test
   void should_allow_replies_to_active_or_root_placeholder_only() {
@@ -139,7 +165,8 @@ class CommentAggregateTest {
         .state(CommentState.ACTIVE)
         .body("旧")
         .mentionedUserIds(Set.of(7L))
-        .createdAt(T0);
+        .createdAt(T0)
+        .version(CommentAggregate.INITIAL_VERSION);
   }
 
   /// 根评论下的一条回复。

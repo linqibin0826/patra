@@ -40,6 +40,21 @@ class DiscussionMigrationIT extends DiscussionPersistenceITSupport {
     assertViolates(() -> insertRaw(14, 14, null, "DELETED", null, null), "ck_comment_deleted_at");
   }
 
+  /// 正文版本（PAP-141）：不写时是 1，必须为正。
+  @Test
+  void should_add_comment_version_with_default_one() {
+    insertRaw(10, 10, null, "ACTIVE", "根", null);
+
+    assertThat(
+            jdbcTemplate.queryForObject(
+                "SELECT version FROM discussion.comment WHERE comment_id = 10", Integer.class))
+        .isEqualTo(1);
+    assertViolates(
+        () ->
+            jdbcTemplate.update("UPDATE discussion.comment SET version = 0 WHERE comment_id = 10"),
+        "ck_comment_version");
+  }
+
   /// 父评论、根评论必须存在；还有回复的评论删不掉；删评论连带删修改历史。
   @Test
   void should_enforce_tree_foreign_keys() {

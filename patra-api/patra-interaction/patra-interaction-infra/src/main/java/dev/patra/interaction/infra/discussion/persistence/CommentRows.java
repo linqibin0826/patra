@@ -20,7 +20,7 @@ final class CommentRows {
   /// 读回聚合要的列。
   static final String AGGREGATE_COLUMNS =
       "comment_id, subject_id, root_id, parent_id, author_id, state, body, mentioned_user_ids,"
-          + " created_at, revised_at";
+          + " created_at, revised_at, version";
 
   /// 评论行 → 聚合。
   static final RowMapper<CommentAggregate> AGGREGATE =
@@ -36,6 +36,7 @@ final class CommentRows {
               .mentionedUserIds(longSet(rs, "mentioned_user_ids"))
               .createdAt(instant(rs, "created_at"))
               .revisedAt(instant(rs, "revised_at"))
+              .version(rs.getInt("version"))
               .build();
 
   /// 读回带父评论信息的评论要的 `SELECT … FROM … LEFT JOIN`（表别名 `c` 是评论，`p` 是父评论，`hs` 是 reaction 的

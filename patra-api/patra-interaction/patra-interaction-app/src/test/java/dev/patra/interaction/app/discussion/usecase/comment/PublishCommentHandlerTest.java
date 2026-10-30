@@ -249,6 +249,7 @@ class PublishCommentHandlerTest {
             .authorId(6L)
             .state(CommentState.DELETED)
             .createdAt(NOW)
+            .version(CommentAggregate.INITIAL_VERSION)
             .build();
     when(comments.find(40L)).thenReturn(Optional.of(placeholderRoot));
 
@@ -309,6 +310,7 @@ class PublishCommentHandlerTest {
         .body("父评论")
         .mentionedUserIds(Set.of())
         .createdAt(NOW)
+        .version(CommentAggregate.INITIAL_VERSION)
         .build();
   }
 

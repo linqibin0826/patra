@@ -216,6 +216,7 @@ class EditCommentHandlerTest {
         .body(body)
         .mentionedUserIds(mentioned)
         .createdAt(T0)
+        .version(CommentAggregate.INITIAL_VERSION)
         .build();
   }
 
