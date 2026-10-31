@@ -65,7 +65,7 @@ personalEnv: false
 
 Patra 的门户对公网开放，地址是 patra.linqibin.dev。它运行在作者家里常驻的一台 Mac mini 上（文中叫 mini），互联网上的请求不是直接打到这台机器，而是先到一个中转：Cloudflare 的隧道。
 
-<CodeRef at="patra-infra/docker/README.md@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="337-341" />
+<CodeRef at="patra-infra/docker/README.md@26cdec9df840016230344598ab7ff109775c49f9" lines="337-341" />
 
 隧道之后，门户要展示文献数据，还得问后端：门户把请求交给**网关**，网关再按路径转给具体的服务（比如 catalog）。点一点下面的方块，再按按钮看一条请求怎么走。
 
@@ -73,7 +73,7 @@ Patra 的门户对公网开放，地址是 patra.linqibin.dev。它运行在作�
   title="门户首页的一次请求"
   nodes={[
     { id: "browser", label: "浏览器", sub: "你", col: 1, desc: "发出请求的一方。它只认识一个网址，不知道后面有多少层。" },
-    { id: "cf", label: "Cloudflare", sub: "公网入口", col: 2, desc: "公网上的第一站。请求从这里经隧道送进 mini。只有门户对外开放。" },
+    { id: "cf", label: "Cloudflare", sub: "公网入口", col: 2, desc: "公网上的第一站。请求从这里经隧道送进 mini。只有门户和学习站对外开放。" },
     { id: "portal", label: "门户", sub: "端口 4000", col: 3, desc: "Next.js 写的网站程序。自己能回答的就直接答，要数据就去问网关。" },
     { id: "gateway", label: "网关", sub: "端口 9528", col: 4, desc: "后端服务的统一入口，按路径把请求转给对应的服务。" },
     { id: "catalog", label: "catalog", sub: "文献目录服务", col: 5, desc: "真正存着文献和期刊数据的服务。" }

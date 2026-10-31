@@ -85,13 +85,13 @@ Patra 的门户自 2026 年 10 月 28 日起，经 Cloudflare Tunnel 对公网�
 
 | 部分 | 在哪里 | 说明 |
 |---|---|---|
-| 转发规则 | Cloudflare 后台 | 远程管理：域名 `patra.linqibin.dev` 转到部署机本地的门户，其余一律 404。不在仓库里 |
-| DNS 记录 | Cloudflare 后台 | 一条代理的 CNAME，把子域名指向这条隧道 |
+| 转发规则 | Cloudflare 后台 | 远程管理：域名 `patra.linqibin.dev` 转到部署机本地的门户，`learn.linqibin.dev` 转到本地的学习站，其余一律 404。不在仓库里 |
+| DNS 记录 | Cloudflare 后台 | 每个子域名一条代理的 CNAME，指向这条隧道 |
 | 常驻进程 | 部署机 | `cloudflared` 由 macOS 的 LaunchAgent 常驻，崩了自动拉起；它的运行说明写在基础设施的 README 里 |
 
 隧道的**令牌**相当于这条隧道的钥匙，谁拿到谁就能冒充这台机器接入。它保存在部署机上仓库之外的 `~/.patra/secrets/` 目录里，权限只允许本人读写，不进 git，也不进 Nacos。泄露后的做法是到 Cloudflare 后台轮换令牌，再覆盖这个文件。
 
-<CodeRef at="patra-infra/docker/README.md@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="337-343" />
+<CodeRef at="patra-infra/docker/README.md@26cdec9df840016230344598ab7ff109775c49f9" lines="337-343" />
 
 要暂停对外开放也很干脆：停掉这个常驻进程，隧道断开，外面立即访问不到；恢复时重新加载它。
 
