@@ -1,8 +1,8 @@
 package dev.patra.notification.infra.inbox.persistence;
 
-import static dev.patra.notification.domain.inbox.model.enums.NotificationType.COMMENT_REPLY;
-import static dev.patra.notification.domain.inbox.model.enums.NotificationType.MENTION;
-import static dev.patra.notification.domain.inbox.model.enums.NotificationType.POST_COMMENT;
+import static dev.patra.notification.domain.inbox.model.read.NotificationType.COMMENT_REPLY;
+import static dev.patra.notification.domain.inbox.model.read.NotificationType.MENTION;
+import static dev.patra.notification.domain.inbox.model.read.NotificationType.POST_COMMENT;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.tuple;
 

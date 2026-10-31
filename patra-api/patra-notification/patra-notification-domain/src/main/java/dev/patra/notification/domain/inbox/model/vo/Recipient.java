@@ -1,6 +1,6 @@
 package dev.patra.notification.domain.inbox.model.vo;
 
-import dev.patra.notification.domain.inbox.model.enums.NotificationType;
+import dev.patra.notification.domain.inbox.model.read.NotificationType;
 import java.util.Objects;
 
 /// 一条评论要提醒的一个人。

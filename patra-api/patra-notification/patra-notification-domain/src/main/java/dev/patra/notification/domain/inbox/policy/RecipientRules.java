@@ -1,6 +1,6 @@
 package dev.patra.notification.domain.inbox.policy;
 
-import dev.patra.notification.domain.inbox.model.enums.NotificationType;
+import dev.patra.notification.domain.inbox.model.read.NotificationType;
 import dev.patra.notification.domain.inbox.model.vo.CommentFacts;
 import dev.patra.notification.domain.inbox.model.vo.Recipient;
 import java.util.ArrayList;

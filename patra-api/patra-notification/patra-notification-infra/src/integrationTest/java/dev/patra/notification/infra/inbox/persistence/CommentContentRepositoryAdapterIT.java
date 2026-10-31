@@ -2,7 +2,7 @@ package dev.patra.notification.infra.inbox.persistence;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import dev.patra.notification.domain.inbox.model.enums.NotificationType;
+import dev.patra.notification.domain.inbox.model.read.NotificationType;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;

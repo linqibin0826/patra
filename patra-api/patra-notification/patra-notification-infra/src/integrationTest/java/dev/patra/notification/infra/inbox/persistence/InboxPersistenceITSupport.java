@@ -1,6 +1,6 @@
 package dev.patra.notification.infra.inbox.persistence;
 
-import dev.patra.notification.domain.inbox.model.enums.NotificationType;
+import dev.patra.notification.domain.inbox.model.read.NotificationType;
 import dev.patra.notification.domain.inbox.model.vo.NotificationDraft;
 import dev.patra.notification.infra.config.NotificationITPostgreSQLContainerInitializer;
 import java.time.Instant;

@@ -1,6 +1,6 @@
 package dev.patra.notification.app.inbox.usecase.query;
 
-import dev.patra.notification.domain.inbox.model.enums.NotificationType;
+import dev.patra.notification.domain.inbox.model.read.NotificationType;
 import dev.patra.notification.domain.kernel.model.read.UserCard;
 import java.time.Instant;
 import lombok.Builder;

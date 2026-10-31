@@ -83,7 +83,7 @@ Expected: 编译失败（类不存在）
 
 **Files:**
 - Create: `.../domain/kernel/model/enums/SubjectType.java`
-- Create: `.../domain/inbox/model/enums/NotificationType.java`、`.../model/enums/InboxTab.java`
+- Create: `.../domain/inbox/model/read/NotificationType.java`（公开包：mail 要按它写动作文案）、`.../model/enums/InboxTab.java`
 - Create: `.../domain/inbox/model/vo/CommentFacts.java`、`Recipient.java`
 - Create: `.../domain/inbox/policy/RecipientRules.java`
 - Create: `.../domain/inbox/exception/InboxErrorTrait.java`、`InvalidInboxRequestException.java`、`NotificationNotFoundException.java`

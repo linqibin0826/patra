@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import dev.patra.notification.domain.inbox.exception.InvalidInboxRequestException;
+import dev.patra.notification.domain.inbox.model.read.NotificationType;
 import dev.patra.notification.domain.kernel.model.enums.NotificationCategory;
 import org.junit.jupiter.api.Test;
 

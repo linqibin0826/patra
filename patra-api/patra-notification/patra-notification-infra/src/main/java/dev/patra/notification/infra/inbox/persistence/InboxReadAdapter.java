@@ -1,7 +1,7 @@
 package dev.patra.notification.infra.inbox.persistence;
 
-import dev.patra.notification.domain.inbox.model.enums.NotificationType;
 import dev.patra.notification.domain.inbox.model.read.InboxEntry;
+import dev.patra.notification.domain.inbox.model.read.NotificationType;
 import dev.patra.notification.domain.inbox.model.read.UnreadCounts;
 import dev.patra.notification.domain.inbox.model.vo.InboxCursor;
 import dev.patra.notification.domain.inbox.port.read.InboxReadPort;

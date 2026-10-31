@@ -141,13 +141,16 @@ public class InboxQueryService {
         .build();
   }
 
-  /// 要不要显示摘录：有正文，且对象查得到、还在。
+  /// 要不要显示摘录：有文字（正文只有 Markdown 结构时纯文本是空串），且对象查得到、还在。
   ///
   /// @param entry 一行
   /// @param subject 对象视图，可空
   /// @return 显示为 `true`
   private static boolean showsExcerpt(InboxEntry entry, SubjectView subject) {
-    return entry.plainText() != null && subject != null && subject.available();
+    return entry.plainText() != null
+        && !entry.plainText().isBlank()
+        && subject != null
+        && subject.available();
   }
 
   /// 摘录里 @ 到的人显示的名字。

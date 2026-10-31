@@ -1,6 +1,6 @@
 package dev.patra.notification.domain.inbox.model.vo;
 
-import dev.patra.notification.domain.inbox.model.enums.NotificationType;
+import dev.patra.notification.domain.inbox.model.read.NotificationType;
 import java.time.Instant;
 import java.util.Objects;
 import lombok.Builder;

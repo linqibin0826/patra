@@ -11,7 +11,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import dev.patra.notification.app.inbox.service.NotificationWriter;
-import dev.patra.notification.domain.inbox.model.enums.NotificationType;
+import dev.patra.notification.domain.inbox.model.read.NotificationType;
 import dev.patra.notification.domain.inbox.model.vo.CommentFacts;
 import dev.patra.notification.domain.inbox.model.vo.NotificationDraft;
 import dev.patra.notification.domain.inbox.port.repository.CommentContentRepository;

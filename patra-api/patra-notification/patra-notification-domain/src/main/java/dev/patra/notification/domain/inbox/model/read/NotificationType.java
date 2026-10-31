@@ -1,4 +1,4 @@
-package dev.patra.notification.domain.inbox.model.enums;
+package dev.patra.notification.domain.inbox.model.read;
 
 import dev.patra.notification.domain.kernel.model.enums.NotificationCategory;
 import java.util.Arrays;

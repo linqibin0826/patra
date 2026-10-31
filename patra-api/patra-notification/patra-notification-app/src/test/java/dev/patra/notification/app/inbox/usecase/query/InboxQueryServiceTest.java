@@ -13,8 +13,8 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import dev.patra.notification.domain.inbox.exception.InvalidInboxRequestException;
-import dev.patra.notification.domain.inbox.model.enums.NotificationType;
 import dev.patra.notification.domain.inbox.model.read.InboxEntry;
+import dev.patra.notification.domain.inbox.model.read.NotificationType;
 import dev.patra.notification.domain.inbox.model.vo.InboxCursor;
 import dev.patra.notification.domain.inbox.port.read.InboxReadPort;
 import dev.patra.notification.domain.kernel.exception.IdentityUnavailableException;
@@ -158,6 +158,19 @@ class InboxQueryServiceTest {
 
     assertThat(view.subject().available()).isFalse();
     assertThat(view.excerpt()).isNull();
+  }
+
+  /// 正文只有 Markdown 结构时纯文本是空串（PAP-141 契约修订 4）：不给摘录，不出空字符串。
+  @Test
+  void should_hide_blank_excerpt() {
+    when(reads.page(ME, NotificationCategory.REPLY, null, 21))
+        .thenReturn(List.of(entry(11L, NotificationType.COMMENT_REPLY, true, " ")));
+    when(subjects.findViews(any())).thenReturn(Map.of(40L, publication(40L)));
+
+    NotificationView view = query.page(null, null).items().getFirst();
+
+    assertThat(view.excerpt()).isNull();
+    assertThat(view.excerptTruncated()).isFalse();
   }
 
   /// identity 挂了：没有名字的提醒看不懂，整页 503。
