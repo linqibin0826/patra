@@ -127,6 +127,21 @@ class ReminderDeliveryTest {
     assertThat(delivery.getFinishedAt()).isEqualTo(expiry);
   }
 
+  /// 发送窗口：没调用过发信端口时一直开着；调用过以后满 24 小时就关了，可以直接记过期。
+  @Test
+  void send_window_closes_24_hours_after_first_send() {
+    ReminderDelivery delivery = instant();
+    assertThat(delivery.sendWindowClosed(NOW.plus(Duration.ofDays(30)))).isFalse();
+
+    delivery.recordSendAttempt(NOW);
+    assertThat(delivery.sendWindowClosed(NOW.plus(Duration.ofHours(24)).minusSeconds(1))).isFalse();
+    assertThat(delivery.sendWindowClosed(NOW.plus(Duration.ofHours(24)))).isTrue();
+
+    delivery.expire(NOW.plus(Duration.ofHours(25)));
+    assertThat(delivery.getStatus()).isEqualTo(DeliveryStatus.EXPIRED);
+    assertThat(delivery.getFinishedAt()).isEqualTo(NOW.plus(Duration.ofHours(25)));
+  }
+
   /// 跳过记下原因与结束时刻。
   @Test
   void skip_records_reason_and_finish() {

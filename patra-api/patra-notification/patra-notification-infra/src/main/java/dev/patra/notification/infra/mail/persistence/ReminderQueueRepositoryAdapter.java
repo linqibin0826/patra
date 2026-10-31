@@ -88,18 +88,21 @@ public class ReminderQueueRepositoryAdapter implements ReminderQueueRepository {
         .list();
   }
 
-  /// 按提醒 ID 删除。
+  /// 认领：删掉给定的行，返回真删到的 ID（并发的另一轮已删掉的行，这里删不到、也不返回）。
   ///
   /// @param notificationIds 提醒 ID
-  /// @return 删掉的行数
+  /// @return 这一次删掉的提醒 ID
   @Override
-  public int delete(Collection<Long> notificationIds) {
+  public List<Long> claim(Collection<Long> notificationIds) {
     if (notificationIds.isEmpty()) {
-      return 0;
+      return List.of();
     }
-    return jdbc.sql("DELETE FROM mail.reminder_queue WHERE notification_id IN (:ids)")
+    return jdbc.sql(
+            "DELETE FROM mail.reminder_queue WHERE notification_id IN (:ids)"
+                + " RETURNING notification_id")
         .param("ids", notificationIds)
-        .update();
+        .query(Long.class)
+        .list();
   }
 
   /// 时刻按 UTC 绑定。

@@ -86,15 +86,16 @@ class ReminderQueueRepositoryAdapterIT {
     assertThat(queue.findByRecipient(7L)).containsExactlyInAnyOrder(reply, mention);
   }
 
-  /// 按提醒 ID 删除，返回删掉的行数。
+  /// 认领：删掉给定的行，只返回真删到的 ID（不在队里的、已被别人认领的不返回）。
   @Test
-  void delete_removes_given_rows() {
+  void claim_returns_only_rows_it_deleted() {
     enqueue(
         QueuedReminder.queue(1L, 7L, NotificationCategory.REPLY, T0),
         QueuedReminder.queue(2L, 7L, NotificationCategory.REPLY, T0));
 
-    assertThat(queue.delete(List.of(1L, 99L))).isEqualTo(1);
-    assertThat(queue.delete(List.of())).isZero();
+    assertThat(queue.claim(List.of(1L, 99L))).containsExactly(1L);
+    assertThat(queue.claim(List.of(1L))).isEmpty();
+    assertThat(queue.claim(List.of())).isEmpty();
     assertThat(queue.findByRecipient(7L))
         .extracting(QueuedReminder::notificationId)
         .containsExactly(2L);

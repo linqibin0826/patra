@@ -215,6 +215,22 @@ class SendPendingDeliveriesHandlerTest {
     assertThat(delivery.getStatus()).isEqualTo(DeliveryStatus.EXPIRED);
   }
 
+  /// 调用过发信端口、已满 24 小时：哪怕依赖都恢复了、装配得出来，也不再调发信端口（幂等键已失效），直接过期。
+  @Test
+  void send_window_closed_expires_without_delivering() {
+    ReminderDelivery delivery = delivery();
+    delivery.recordSendAttempt(NOW.minus(Duration.ofHours(24)));
+    page(delivery);
+    ready(delivery, Layout.SINGLE);
+
+    SendResult result = handler.handle(SendPendingDeliveriesCommand.of());
+
+    assertThat(delivery.getStatus()).isEqualTo(DeliveryStatus.EXPIRED);
+    verify(mail, never()).deliver(any());
+    verify(deliveries).update(delivery);
+    assertThat(result.sent()).isZero();
+  }
+
   /// 写回本身失败、一直取到同一条：一轮里每条只处理一次，不死循环。
   @Test
   void same_delivery_is_processed_once_per_run() {

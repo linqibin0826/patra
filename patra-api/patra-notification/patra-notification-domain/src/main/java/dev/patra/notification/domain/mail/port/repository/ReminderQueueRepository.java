@@ -27,9 +27,10 @@ public interface ReminderQueueRepository {
   /// @return 排队行
   List<QueuedReminder> findByRecipient(long recipientId);
 
-  /// 按提醒 ID 删除。
+  /// 认领：删掉给定的行，返回真删到的提醒 ID。两轮到点处理重叠时（部署切换），同一行只有一轮认领得到，
+  /// 只有认领到的行才建投递，同一条提醒不会进两封邮件。
   ///
   /// @param notificationIds 提醒 ID
-  /// @return 删掉的行数
-  int delete(Collection<Long> notificationIds);
+  /// @return 这一次删掉的提醒 ID
+  List<Long> claim(Collection<Long> notificationIds);
 }

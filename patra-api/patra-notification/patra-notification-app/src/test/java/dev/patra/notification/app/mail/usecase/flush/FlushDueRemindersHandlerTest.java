@@ -24,9 +24,11 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.LongStream;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.transaction.support.TransactionOperations;
@@ -50,6 +52,13 @@ class FlushDueRemindersHandlerTest {
           TransactionOperations.withoutTransaction(),
           Clock.fixed(NOW, ZoneOffset.UTC));
 
+  /// 默认认领到全部要处理的行（没有并发的另一轮）。
+  @BeforeEach
+  void claimEverything() {
+    when(queue.claim(anyCollection()))
+        .thenAnswer(call -> List.copyOf(call.<Collection<Long>>getArgument(0)));
+  }
+
   /// 到点的一类合成一条逐条投递，排队行删掉。
   @Test
   void due_batch_becomes_one_delivery_and_rows_are_deleted() {
@@ -67,7 +76,7 @@ class FlushDueRemindersHandlerTest {
     assertThat(delivery.getValue().getCategory()).isEqualTo(NotificationCategory.REPLY);
     assertThat(delivery.getValue().getNotificationIds()).containsExactly(1L, 2L);
     assertThat(delivery.getValue().getNextAttemptAt()).isEqualTo(NOW);
-    verify(queue).delete(List.of(1L, 2L));
+    verify(queue).claim(List.of(1L, 2L));
     assertThat(result).isEqualTo(FlushResult.of(1, 0, 1));
   }
 
@@ -82,7 +91,7 @@ class FlushDueRemindersHandlerTest {
     FlushResult result = handler.handle(FlushDueRemindersCommand.of());
 
     verify(deliveries, never()).insert(any());
-    verify(queue).delete(List.of(1L, 2L));
+    verify(queue).claim(List.of(1L, 2L));
     assertThat(result).isEqualTo(FlushResult.of(1, 2, 0));
   }
 
@@ -100,7 +109,37 @@ class FlushDueRemindersHandlerTest {
 
     handler.handle(FlushDueRemindersCommand.of());
 
-    verify(queue).delete(List.of(1L));
+    verify(queue).claim(List.of(1L));
+  }
+
+  /// 两轮重叠（部署切换时新旧执行器各跑一次）：只有自己认领到（删掉）的排队行才建投递，别人先认领走的不再建。
+  @Test
+  void only_claimed_rows_become_deliveries() {
+    dueRecipients(List.of(7L));
+    when(queue.findByRecipient(7L)).thenReturn(List.of(reply(1L, T0), reply(2L, T0)));
+    unread(7L, 1L, 2L);
+    when(queue.claim(List.of(1L, 2L))).thenReturn(List.of(2L));
+
+    FlushResult result = handler.handle(FlushDueRemindersCommand.of());
+
+    ArgumentCaptor<ReminderDelivery> delivery = ArgumentCaptor.captor();
+    verify(deliveries).insert(delivery.capture());
+    assertThat(delivery.getValue().getNotificationIds()).containsExactly(2L);
+    assertThat(result.deliveries()).isEqualTo(1);
+  }
+
+  /// 全被别人认领走了：一条投递都不建。
+  @Test
+  void nothing_claimed_creates_no_delivery() {
+    dueRecipients(List.of(7L));
+    when(queue.findByRecipient(7L)).thenReturn(List.of(reply(1L, T0)));
+    unread(7L, 1L);
+    when(queue.claim(List.of(1L))).thenReturn(List.of());
+
+    FlushResult result = handler.handle(FlushDueRemindersCommand.of());
+
+    verify(deliveries, never()).insert(any());
+    assertThat(result.deliveries()).isZero();
   }
 
   /// 收件人按页取：一页满了，以最后一个 ID 为游标再取。

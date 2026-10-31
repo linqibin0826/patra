@@ -28,7 +28,8 @@ import org.springframework.stereotype.Component;
 
 /// 装配并发出到点的投递（spec 5.4、7.2、7.3）：按下一次尝试时刻先后，每次取 {@value #PAGE} 条，直到取完。
 ///
-/// 每一条：装配 → 不该发记跳过；该发就先记下「第一次调用发信端口」，再在事务外调用发信端口（投递 ID 是幂等键）。
+/// 每一条：调用过发信端口且已满 24 小时的直接记过期（幂等键已失效，再发可能重复送达）；否则装配 → 不该发记跳过；
+/// 该发就先记下「第一次调用发信端口」，再在事务外调用发信端口（投递 ID 是幂等键）。
 /// identity、interaction 不可用或临时发信故障：这一条推迟，本轮停下（别人也一样会失败）；永久拒绝：跳过、继续；
 /// 意外异常：推迟、记 ERROR、继续。写回都是单条更新，不跨远程调用开事务。同一轮里每条只处理一次。
 @Slf4j
@@ -90,6 +91,12 @@ public class SendPendingDeliveriesHandler
   /// @param now 此刻
   /// @return 结果
   private Outcome attempt(ReminderDelivery delivery, Instant now) {
+    if (delivery.sendWindowClosed(now)) {
+      log.error("提醒邮件第一次发送后 24 小时仍未成功，放弃（幂等键已失效，不再重发）: deliveryId={}", delivery.getDeliveryId());
+      delivery.expire(now);
+      deliveries.update(delivery);
+      return Outcome.DEFERRED;
+    }
     try {
       AssembledReminder assembled = assembler.assemble(delivery, now);
       if (assembled instanceof Skip skip) {

@@ -159,13 +159,29 @@ public final class ReminderDelivery {
     finish(DeliveryStatus.SKIPPED, Objects.requireNonNull(reason, "reason 不能为 null"), now);
   }
 
+  /// 发送窗口是否已关：调用过发信端口、且已满 {@link #SEND_WINDOW}。关了以后不能再调发信端口（幂等键已失效），
+  /// 即使这次装配得出来也只能记过期。
+  ///
+  /// @param now 此刻
+  /// @return 关了为真；从没调用过发信端口时永远为假
+  public boolean sendWindowClosed(Instant now) {
+    return firstSentAt != null && !now.isBefore(firstSentAt.plus(SEND_WINDOW));
+  }
+
+  /// 记为过期：发送窗口已关，不再尝试。
+  ///
+  /// @param now 此刻
+  public void expire(Instant now) {
+    finish(DeliveryStatus.EXPIRED, null, now);
+  }
+
   /// 这一次失败了，按退避推迟；调用过发信端口且已满 {@link #SEND_WINDOW} 时改记过期。
   ///
   /// @param now 此刻
   public void defer(Instant now) {
     requirePending();
-    if (firstSentAt != null && !now.isBefore(firstSentAt.plus(SEND_WINDOW))) {
-      finish(DeliveryStatus.EXPIRED, null, now);
+    if (sendWindowClosed(now)) {
+      expire(now);
       return;
     }
     attempts++;
