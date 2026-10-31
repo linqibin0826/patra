@@ -1,6 +1,6 @@
 {
   "name": "patra",
-  "description": "Patra 项目专属能力 plugin：2 个 skills（release-planning / create-issue）。流程方法论改用上游 superpowers plugin，Patra 约定见仓库根 .claude/rules/superpowers.md。",
+  "description": "Patra 项目专属能力 plugin：3 个 skills（release-planning / create-issue / learn）。流程方法论改用上游 superpowers plugin，Patra 约定见仓库根 .claude/rules/superpowers.md。",
   "version": "0.1.0",
   "author": {
     "name": "linqibin0826",
@@ -14,6 +14,7 @@
     "release-planning",
     "linear",
     "github-issue",
+    "learn",
     "中文"
   ]
 }
