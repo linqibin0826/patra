@@ -12,7 +12,7 @@ personalEnv: false
   question="一个方法贴了 `@Transactional`，里面往数据库写了两行，写完第二行之后抛出一个 `RuntimeException`。方法结束后数据库里会留下几行？"
   options={["2 行，写进去了就是写进去了", "1 行，只回滚最后那一行", "0 行，事务回滚，两行都撤销"]}
   answer="C"
-  ifRight="对，前提是 `@Transactional` 真的生效了。这篇讲它在什么情况下会悄悄不生效，那时答案就变成了 2 行。"
+  ifRight="对，前提是 `@Transactional` 真的生效了。这篇讲它在什么情况下会悄悄不生效，那时写库就没有事务包着，后果取决于每次写库怎么执行：可能第一次就报错，也可能各自提交、留下 2 行。"
   ifWrong="答案是 C：事务里的写入要么一起提交、要么一起撤销，抛异常就整体回滚。事务本身是什么、回滚意味着什么，在数据库事务那篇讲，这篇建立在它上面。"
   suggest="db-transactions"
 />
@@ -105,22 +105,48 @@ Spring 发现一个 Bean 的方法上有 `@Transactional`，就不把原对象�
     { caption: "定时任务调 `runner.run()`。它拿到的是 Runner 的代理，调用先到代理。", focus: ["job", "proxy"], links: ["job>proxy"], tokens: [{ id: "call", label: "run()", at: "proxy" }] },
     { caption: "`run()` 上没有 `@Transactional`，代理什么也不做，直接转给原对象。", focus: ["proxy", "target"], links: ["proxy>target"], tokens: [{ id: "call", label: "run()", at: "target" }], notes: [{ at: "proxy", text: "没注解，不开事务" }] },
     { caption: "原对象在 `run()` 里调 `this.recordParsed(...)`。`this` 就是原对象自己，这次调用从头到尾没离开原对象，代理根本不知道发生过。", focus: ["target"], tokens: [{ id: "call", label: "recordParsed()", at: "target" }], notes: [{ at: "proxy", text: "没经过", tone: "wait" }] },
-    { caption: "`recordParsed` 里的三次写库，没有事务包着，各自提交。写完正文和状态后，第三次写库出错：前两次已经落库，收不回来了。", focus: ["target", "db"], links: ["target>db"], tokens: [{ id: "call", label: "写库", at: "db" }], notes: [{ at: "db", text: "写进了 2 次", tone: "bad" }] }
+    { caption: "`recordParsed` 开始写库，这时没有事务。第一次写库 `saveBody` 走的是 `EntityManager` 的 `executeUpdate`，Hibernate 执行前发现没有进行中的事务，直接抛 `TransactionRequiredException`。一行也没写进去，异常一路抛出 `run()`。", focus: ["target", "db"], links: ["target>db"], tokens: [{ id: "call", label: "saveBody()", at: "db", state: "dropped" }], notes: [{ at: "db", text: "拒绝执行 · 0 行", tone: "bad" }, { at: "target", text: "TransactionRequiredException", tone: "bad" }] }
   ]}
   guesses={[
     { before: 3, question: "`recordParsed` 上明明贴着 `@Transactional(REQUIRES_NEW)`。原对象用 `this` 调它，会开一个新事务吗？", options: ["会，注解贴在方法上就会生效", "不会：读注解、开事务的是代理，`this` 调用不经过代理", "会，但要等方法结束才开"], answer: "B", explain: "事务是代理开的。`this` 指向原对象，调用直接落在原对象上，代理没机会插手。" },
-    { before: 4, question: "这时写到第三次出错，数据库里这篇文章会怎样？", options: ["三次都撤销，和有事务时一样", "前两次已经提交，正文和状态写进去了，标记却没改", "数据库自动把三次合成一个事务"], answer: "B", explain: "没有事务，每次写库各自提交。这正是开头那道诊断题的反面：答案从 0 行变成了 2 行。" }
+    { before: 4, question: "没有事务，`recordParsed` 开始写库。第一步 `saveBody` 用的是 `EntityManager` 的 `executeUpdate`。会怎样？", options: ["三次各自提交，顺利的话和有事务时一样", "数据库自动把三次合成一个事务", "第一次写库就抛 `TransactionRequiredException`，什么也没写进去"], answer: "C", explain: "Hibernate 执行 `executeUpdate` 前要求有进行中的事务（开关 `hibernate.allow_update_outside_transaction` 默认关，Patra 没开），没有就抛异常。所以在这份代码里，事务丢了反而一跑就报错。" }
   ]}
 />
 
-这种 bug 最难发现的地方是：**顺利的时候和有事务一模一样**。测试只跑顺利的路径，永远是绿的；要等哪天数据库在中间出一次错，才留下一篇「正文在、标记没改」的半成品。
+在这份代码里，事务丢了反而是好事：错误马上暴露。`saveBody` 和 `setHasFullText` 都是用共享的 `EntityManager` 直接执行语句，适配器上没有 `@Transactional`：
+
+<CodeRef at="patra-api/patra-catalog/patra-catalog-infra/src/main/java/dev/patra/catalog/infra/fulltext/persistence/PublicationFullTextRepositoryAdapter.java@5073ab1358404ecd989e722373cd9f7edafe238b" lines="109-122" />
+
+```java
+  @Override
+  public void saveBody(long publicationId, FullTextBody body, int parserVersion) {
+    entityManager
+        .createNativeQuery(
+            """
+            INSERT INTO cat_publication_fulltext_body (publication_id, body, parser_version)
+            VALUES (:id, CAST(:body AS jsonb), :version)
+            ON CONFLICT (publication_id) DO UPDATE
+               SET body = EXCLUDED.body, parser_version = EXCLUDED.parser_version, updated_at = now()
+            """)
+        .setParameter("id", publicationId)
+        .setParameter("body", jsonMapper.writeValueAsString(body))
+        .setParameter("version", parserVersion)
+        .executeUpdate();
+```
+
+没有事务时 Hibernate 不肯执行 `executeUpdate`，抛出 `TransactionRequiredException`（「No active transaction for update or delete query」）。只要真连着数据库跑一篇，异常就冒出来：catalog 的端到端测试 `FullTextPipelineE2E` 会真跑一遍解析，它会红。只用 mock 仓储的单元测试看不出来，它们根本不碰事务。
+
+最难发现的是另一种情况：**写库方法在没有事务时也能执行**。中间那步 `repository.save(...)` 就是这种，它最后调的是 Spring Data 的 `dao.save`，而 Spring Data 的 `save` 自己带着 `@Transactional`：外面没有事务，它就自己开一个，写完立刻提交。`JdbcClient`、`JdbcTemplate` 在没有 Spring 事务时用的是连接池默认的自动提交，每条语句单独提交，也是一样。假如三次写库都是这样写的，**顺利的时候和有事务一模一样**，测试只跑顺利的路径，永远是绿的；要等哪天在中间出一次错，才留下一篇「正文在、标记没改」的半成品。
+
+顺序也会改变后果。同一个 Persister 里的 `recordNoBody` 先 `save` 状态、再 `setHasFullText`；它要是也被自调用，状态会先由 Spring Data 自己的事务提交，到第二步才抛异常。报错照样马上看得见，可库里已经留下了改了一半的数据。
 
 <Compare
-  title="逐篇提交，两种写法"
+  title="逐篇提交，三种写法"
   failureLabel="在第 2、3 步之间出错"
   variants={[
-    { label: "同类自调用", steps: ["写正文 `saveBody`", "写状态 `PARSED`", "置 `has_full_text = true`"], results: [{ label: "这篇文章", value: "三样都写好了", tone: "ok" }], verdict: { tone: "ok", head: "看不出问题。", text: "顺利的时候，有没有事务结果一样。" }, failure: { after: 2, results: [{ label: "正文、状态", value: "已提交", tone: "bad" }, { label: "has_full_text", value: "还是 false", tone: "bad" }], verdict: { tone: "bad", head: "留下半成品。", text: "注解没生效，前两次写库各自提交，撤不回来。" } } },
-    { label: "独立的 Persister Bean", steps: ["写正文 `saveBody`", "写状态 `PARSED`", "置 `has_full_text = true`"], results: [{ label: "这篇文章", value: "三样都写好了", tone: "ok" }], verdict: { tone: "ok", head: "看不出区别。", text: "顺利的时候两种写法一样。" }, failure: { after: 2, results: [{ label: "正文、状态", value: "回滚了", tone: "ok" }, { label: "has_full_text", value: "原样", tone: "ok" }], verdict: { tone: "ok", head: "整篇撤销。", text: "调用经过代理，三次写库在同一个新事务里，出错一起回滚，这篇保持原状态等下次。" } } }
+    { label: "自调用 · 现在的仓储", steps: ["写正文 `saveBody`（executeUpdate）", "写状态 `PARSED`（Spring Data save）", "置 `has_full_text = true`（executeUpdate）"], results: [{ label: "第 1 步", value: "抛 TransactionRequiredException", tone: "bad" }, { label: "这篇文章", value: "什么也没写", tone: "bad" }], verdict: { tone: "bad", head: "一跑就红。", text: "没有事务，Hibernate 拒绝执行 executeUpdate，第一次写库就报错，错误马上暴露。" }, failure: { after: 2, results: [{ label: "第 1 步", value: "抛 TransactionRequiredException", tone: "bad" }, { label: "这篇文章", value: "什么也没写", tone: "bad" }], verdict: { tone: "bad", head: "走不到第 2 步。", text: "和顺利时一样，第一次写库就抛异常了。" } } },
+    { label: "自调用 · 每步自带事务", steps: ["写正文（自己开事务、提交）", "写状态 `PARSED`（自己开事务、提交）", "置 `has_full_text = true`（自己开事务、提交）"], results: [{ label: "这篇文章", value: "三样都写好了", tone: "ok" }], verdict: { tone: "ok", head: "看不出问题。", text: "每步各自提交，顺利的时候结果和有事务时一样，测试是绿的。" }, failure: { after: 2, results: [{ label: "正文、状态", value: "已提交", tone: "bad" }, { label: "has_full_text", value: "还是 false", tone: "bad" }], verdict: { tone: "bad", head: "留下半成品。", text: "注解没生效，前两次写库各自提交，撤不回来。" } } },
+    { label: "独立的 Persister Bean", steps: ["写正文 `saveBody`", "写状态 `PARSED`", "置 `has_full_text = true`"], results: [{ label: "这篇文章", value: "三样都写好了", tone: "ok" }], verdict: { tone: "ok", head: "正常。", text: "调用经过代理，三次写库在同一个新事务里，一起提交。" }, failure: { after: 2, results: [{ label: "正文、状态", value: "回滚了", tone: "ok" }, { label: "has_full_text", value: "原样", tone: "ok" }], verdict: { tone: "ok", head: "整篇撤销。", text: "调用经过代理，三次写库在同一个新事务里，出错一起回滚，这篇保持原状态等下次。" } } }
   ]}
 />
 

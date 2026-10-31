@@ -95,7 +95,7 @@ Patra 早先在 ingest 里手写的发件箱靠分区键保证顺序（ingest �
 
 <CodeRef at="patra-api/patra-notification/patra-notification-app/src/main/java/dev/patra/notification/app/inbox/usecase/ingest/RecordCommentDeletedHandler.java@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="17-52" />
 
-“已编辑”的处理器见上一篇引用的 `RecordCommentEditedHandler`：看到墓碑或者版本不够新，就返回 `DISCARDED`，什么也不写。
+“已编辑”的处理器是「至少一次投递与消费端去重」那篇引用过的 `RecordCommentEditedHandler`：评论所在的投稿经验已经删了（对象墓碑），或者这条评论已是墓碑，就返回 `DISCARDED`，什么也不写。版本比库里的旧时不一样：`saveIfNewer` 只是不覆盖正文，它的返回值表示“这条评论没被删”，不是“写入成功”，所以处理器照常给这次编辑新 @ 到的人写提醒，返回 `APPLIED`。
 
 <Callout kind="cost">
 

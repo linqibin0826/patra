@@ -51,7 +51,7 @@ personalEnv: false
       question: "新建收藏夹时，名字和你已有的另一个收藏夹重名。该返回？",
       options: ["409，和现有状态冲突", "422，内容不合规则", "500，服务端出错"],
       answer: "A",
-      explain: "名称本身合法，只是当前已被占用，属于与现状冲突。Patra 在这种情况下返回 409，错误码叫 COLLECTION_NAME_TAKEN。"
+      explain: "名称本身合法，只是当前已被占用，属于与现状冲突。Patra 在这种情况下返回 409，响应的 traits 里带着原因码 COLLECTION_NAME_TAKEN，门户按它给专门的提示。"
     },
     {
       question: "用户已经登录，但访问了不属于自己的资源。该返回？",
@@ -86,8 +86,8 @@ Patra 的后端有一个约定：业务代码里抛的是**有语义的异常**�
   steps={[
     { caption: "查收藏夹的代码发现它不存在，抛出一个领域异常，异常上带着语义标记：NOT_FOUND（找不到）。", focus: ["domain"], tokens: [{ id: "err", label: "NOT_FOUND", at: "domain" }] },
     { caption: "异常一路向上，没人在中间包装。到了统一的错误引擎。", focus: ["engine"], links: ["domain>engine"], tokens: [{ id: "err", label: "NOT_FOUND", at: "engine" }] },
-    { caption: "引擎查一张对照表：NOT_FOUND 对应后缀 0404。再拼上服务的前缀，得到错误码，比如 CAT-0404。", focus: ["engine"], notes: [{ at: "engine", text: "NOT_FOUND → 0404", tone: "wait" }] },
-    { caption: "响应的状态码是 404，正文里带着错误码 CAT-0404。调用方既能按状态码处理，也能按错误码精确区分。", focus: ["http"], links: ["engine>http"], tokens: [{ id: "err", label: "404 · CAT-0404", at: "http" }], notes: [{ at: "http", text: "状态码 404", tone: "ok" }] }
+    { caption: "引擎查一张对照表：NOT_FOUND 对应后缀 0404。再拼上服务的前缀（收藏夹归 interaction 服务，前缀是 INTERACTION），得到错误码 INTERACTION-0404。", focus: ["engine"], notes: [{ at: "engine", text: "NOT_FOUND → 0404", tone: "wait" }] },
+    { caption: "响应的状态码是 404，正文里带着错误码 INTERACTION-0404：前缀说是哪个服务回的，后缀和状态码一一对应。要更精确地区分是哪种错误，调用方看正文里的 traits，不看错误码。", focus: ["http"], links: ["engine>http"], tokens: [{ id: "err", label: "404 · INTERACTION-0404", at: "http" }], notes: [{ at: "http", text: "状态码 404", tone: "ok" }] }
   ]}
   guesses={[
     { before: 3, question: "领域代码里并没有出现数字 404。那么是谁决定这次响应是 404？", options: ["领域代码自己，写在异常里", "错误引擎，按异常的语义查表", "浏览器根据页面猜"], answer: "B", explain: "领域代码只表达语义，不碰 HTTP。把语义翻成状态码是引擎的工作，这样领域层不依赖 Web。" }

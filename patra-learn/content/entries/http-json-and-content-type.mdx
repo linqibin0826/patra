@@ -75,9 +75,9 @@ JSON 里的数字在 JavaScript 里是 64 位浮点数，大整数会丢精度�
   title="一个错误响应里有什么"
   nodes={[
     { id: "status", label: "status", sub: "404", code: true, col: 1, desc: "HTTP 状态码，和响应第一行一致。调用方先看它决定大方向。" },
-    { id: "code", label: "code", sub: "CAT-0404", code: true, col: 2, desc: "稳定的错误码：服务前缀加四位后缀。比状态码更精确，程序可以按它写判断。" },
+    { id: "code", label: "code", sub: "CAT-0404", code: true, col: 2, desc: "稳定的错误码：服务前缀加四位后缀。前缀说明是哪个服务回的；后缀通常就是状态码（0404 对应 404），只有应用层包装的意外错误才有自己的编号（如 CAT-1001）。它不比状态码更细，主要用来写日志、对照排查。" },
     { id: "detail", label: "detail", sub: "给人看的说明", code: true, col: 3, desc: "一句人话，用来展示或写日志。不要靠解析它的文字做判断，文案随时会改。" },
-    { id: "traits", label: "traits", sub: "语义标记", code: true, col: 4, desc: "有的错误会带上语义标记（如 NOT_FOUND），服务之间传递错误时用它，不依赖状态码。" },
+    { id: "traits", label: "traits", sub: "语义标记", code: true, col: 4, desc: "语义标记的集合。一个是标准标记（如 NOT_FOUND、CONFLICT），引擎按它定状态码；有的错误还带一个原因码（如 COLLECTION_NAME_TAKEN），调用方按它做精确分支。顺序不定，只能按「包含」判断。" },
     { id: "errors", label: "errors", sub: "字段错误", code: true, col: 1, row: 2, desc: "表单校验失败时列出每个字段哪里错了，前端可以直接标在对应输入框旁边。" },
     { id: "trace", label: "traceId", sub: "追踪号", code: true, col: 2, row: 2, desc: "这次请求的追踪号。用户报问题时给你这个号，你能在日志里找到整条链路。" },
     { id: "retry", label: "retryAfterSeconds", sub: "等多久", code: true, col: 3, row: 2, desc: "被限流时告诉调用方还要等几秒，和响应头 Retry-After 对应。" }
@@ -94,7 +94,7 @@ JSON 里的数字在 JavaScript 里是 64 位浮点数，大整数会丢精度�
 
 <Callout kind="insight">
 
-调用方遇到错误，先看 `status` 判断大类，再看 `code` 做精确分支，最后才把 `detail` 展示给人。顺序反了，改一句文案就会让程序出错。
+调用方遇到错误，先看 `status` 判断大类，再看 `traits` 里有没有约定好的原因码做精确分支（字段错误看 `errors`，标到对应输入框旁），最后才把 `detail` 展示给人。`code` 主要写进日志，方便对照是哪个服务回的。顺序反了，改一句文案就会让程序出错。
 
 </Callout>
 
@@ -102,9 +102,9 @@ JSON 里的数字在 JavaScript 里是 64 位浮点数，大整数会丢精度�
   questions={[
     {
       question: "前端想在「收藏夹名称重复」时给用户一个专门提示。最稳的做法是什么？",
-      options: ["检查 detail 里有没有「已存在」三个字", "检查 code 字段是不是约定好的那个错误码", "检查响应 HTML 里的标题"],
-      answer: "B",
-      explain: "错误码是稳定的契约，文案可能被改。这正是 code 字段存在的原因。"
+      options: ["检查 detail 里有没有「已存在」三个字", "检查 code 字段是不是某个错误码", "检查 traits 里有没有约定好的原因码"],
+      answer: "C",
+      explain: "重名时 code 是 INTERACTION-0409，和「收藏夹数量到上限」这类别的 409 冲突一模一样，靠它分不开。traits 里带着原因码 COLLECTION_NAME_TAKEN，这是稳定的契约，门户就按它给专门提示；detail 的文案随时会改。"
     },
     {
       question: "一个接口出错时返回 200 状态码，正文里写 {\"success\": false}。这样做的问题是？",
@@ -119,7 +119,7 @@ JSON 里的数字在 JavaScript 里是 64 位浮点数，大整数会丢精度�
   prompt="设计「新建收藏夹时名称已存在」这个错误的响应：用什么状态码，Content-Type 是什么，正文里放哪些字段，哪些东西不该放？"
   points={[
     { label: "状态码与类型", text: "409（与现状冲突），Content-Type 是 application/problem+json。" },
-    { label: "稳定的错误码", text: "放一个固定的 code（Patra 里叫 COLLECTION_NAME_TAKEN），前端据此给专门的提示。" },
+    { label: "稳定的原因码", text: "在 traits 里放一个固定的原因码（Patra 里叫 COLLECTION_NAME_TAKEN），前端据此给专门的提示；errors 里再标出是名称字段，提示可以落在输入框旁。code 只是 INTERACTION-0409，区分不出是哪种冲突。" },
     { label: "给人看的 detail", text: "一句清楚的说明，但程序不要依赖它的文字。" },
     { label: "不该放的", text: "堆栈、内部类名、数据库语句、别人的数据。错误信息会被任何调用方看到。" }
   ]}

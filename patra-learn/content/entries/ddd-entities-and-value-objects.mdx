@@ -37,7 +37,7 @@ personalEnv: false
 注意两点：
 
 1. record 的 `equals` 按值比较，所以两个 `CollectionName("读书笔记")` 相等。
-2. 构造入口 `parse` 把规则都守了：去首尾空白、不能为空、不超过 100 个字素。不合法的名称根本造不出来。
+2. 构造入口 `parse` 守着规则：去首尾空白、不能为空、不超过 100 个字素，不合法就抛异常。但它只是约定的入口：record 的规范构造器不能比 record 本身更不公开，`new CollectionName("   ")` 照样能编译，造出一个非法的名称。Patra 也没有 ArchUnit 规则拦这种写法，靠的是约定：调用方都走 `parse`，代码里除了 `parse` 自己，没有别处直接 `new CollectionName`。要真正做到不合法的值造不出来，得把校验写进紧凑构造器，后面的 `AuthorId` 就是这样。
 
 下面一步步看一次 `parse`。
 
@@ -45,7 +45,7 @@ personalEnv: false
   title="一个名称是怎么被造出来的"
   nodes={[
     { id: "raw", label: "用户输入", sub: "原始字符串" },
-    { id: "parse", label: "CollectionName.parse", sub: "唯一入口" },
+    { id: "parse", label: "CollectionName.parse", sub: "约定入口" },
     { id: "rules", label: "TextRules", sub: "文本规则" },
     { id: "name", label: "CollectionName", sub: "值对象" }
   ]}
@@ -58,18 +58,18 @@ personalEnv: false
     { caption: "用户在页面输入「  读书笔记  」，两头有空格。", focus: ["raw"], tokens: [{ id: "t", label: "  读书笔记  ", at: "raw" }] },
     { caption: "交给 parse。它先请 TextRules 规范化：统一 Unicode 写法，去掉首尾空白。", focus: ["parse", "rules"], links: ["raw>parse", "parse>rules"], tokens: [{ id: "t", label: "读书笔记", at: "rules" }] },
     { caption: "再检查：不含控制字符，不超过 100 个字素。通过。", focus: ["rules"], tokens: [{ id: "t", label: "读书笔记", at: "rules" }], notes: [{ at: "rules", text: "通过", tone: "ok" }] },
-    { caption: "通过之后才 new CollectionName。从这里往后，拿到它的代码都不必再检查。", focus: ["parse", "name"], links: ["parse>name"], tokens: [{ id: "t", label: "读书笔记", at: "name" }] },
+    { caption: "通过之后才 new CollectionName。只要都从 parse 造，往后拿到它的代码都不必再检查。", focus: ["parse", "name"], links: ["parse>name"], tokens: [{ id: "t", label: "读书笔记", at: "name" }] },
     { caption: "换一个输入：只有几个空格。规范化之后，什么都没剩。", focus: ["parse", "rules"], links: ["parse>rules"], tokens: [{ id: "u", label: "空串", at: "parse" }] },
     { caption: "parse 抛出异常，CollectionName 根本没有被造出来。", focus: ["parse"], tokens: [{ id: "u", label: "空串", at: "parse", state: "dropped" }], notes: [{ at: "parse", text: "抛异常", tone: "bad" }] }
   ]}
   guesses={[
-    { before: 6, question: "输入全是空格，规范化后是空串。parse 会怎么处理？", options: ["造出一个名字为空的 CollectionName", "抛异常，不造对象", "返回 null"], answer: "B", explain: "parse 的约定是：要么造出合法的值，要么抛异常。手里有一个 CollectionName，它就一定是合法的。" }
+    { before: 6, question: "输入全是空格，规范化后是空串。parse 会怎么处理？", options: ["造出一个名字为空的 CollectionName", "抛异常，不造对象", "返回 null"], answer: "B", explain: "parse 的约定是：要么造出合法的值，要么抛异常。只要大家都走 parse，手里的 CollectionName 就是合法的。" }
   ]}
 />
 
 <Callout kind="lead">
 
-值对象把规则「焊」在类型上：只要手里是 `CollectionName`，名称就一定合法。检查只在造它的一处做一次，不用在每个用到的地方再检查。
+值对象把规则「焊」在类型上：检查只在造它的一处做一次，不用在每个用到的地方再检查。焊得牢不牢，看校验写在哪：写在 `parse` 里，靠的是大家都走 `parse`；写进紧凑构造器，连 `new` 也绕不过去。
 
 </Callout>
 
@@ -83,7 +83,7 @@ personalEnv: false
 
 <CodeRef at="patra-api/patra-catalog/patra-catalog-domain/src/main/java/dev/patra/catalog/domain/author/model/vo/AuthorId.java@5073ab1358404ecd989e722373cd9f7edafe238b" lines="15-25" />
 
-它在构造时就拒绝空值和非正数。更重要的是类型不同：函数要 `AuthorId`，你就没法误传一个 `OrganizationId` 或随手写的数字。裸 `long` 做不到这一点。
+它把校验写在紧凑构造器里，拒绝空值和非正数：不管走 `of` 还是直接 `new AuthorId(0L)`，都会抛异常，这才是真正造不出非法值，和只靠 `parse` 约定的 `CollectionName` 不同。更重要的是类型不同：函数要 `AuthorId`，你就没法误传一个 `OrganizationId` 或随手写的数字。裸 `long` 做不到这一点。
 
 ## 实体：Patra 里的评论
 
@@ -98,7 +98,7 @@ personalEnv: false
   questions={[
     {
       question: "哪个更适合做成实体？",
-      options: ["一条评论", "评论的正文长度上限（500 字）"],
+      options: ["一条评论", "评论的正文长度上限（5,000 个字素）"],
       answer: "A",
       explain: "评论有生命周期：发表、编辑、删除，随时间变化但始终是它。上限是一个固定的值，不需要身份。"
     },

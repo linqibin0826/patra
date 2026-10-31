@@ -49,15 +49,15 @@ personalEnv: false
   title="一个服务验货之后的几种结局"
   subject="某个服务的一次部署"
   states={[
-    { id: "checking", label: "验货中", sub: "三道检查", col: 1, desc: "新版本刚换上，部署脚本在轮询健康检查、核对版本。" },
-    { id: "good", label: "上线成功", sub: "记 last-good", col: 2, desc: "三道全过。当前版本写进 last-good，下次回滚就回到这里。" },
+    { id: "checking", label: "验货中", sub: "两道检查", col: 1, desc: "新版本刚换上，部署脚本在轮询健康检查、核对版本。" },
+    { id: "good", label: "上线成功", sub: "记 last-good", col: 2, desc: "两道都过。当前版本写进 last-good，下次回滚就回到这里。" },
     { id: "rolling", label: "回滚中", sub: "换回 last-good", col: 2, row: 2, desc: "验货没过。脚本读 last-good，把旧镜像换回去并复检。" },
     { id: "restored", label: "已恢复，整单仍失败", sub: "旧版本在跑", col: 3, row: 2, desc: "旧版本健康了，服务恢复。但这一单仍以失败退出，通知照发：兜住了，不等于上线成功。" },
     { id: "manual", label: "需要人工介入", col: 3, row: 3, desc: "没法自动恢复：没有 last-good 记录，或者复检仍然不健康。日志已留在流水线记录里。" }
   ]}
   start="checking"
   events={[
-    { id: "pass", label: "三道检查全过" },
+    { id: "pass", label: "两道检查都过" },
     { id: "fail", label: "验货失败" },
     { id: "has", label: "有 last-good 且是别的版本" },
     { id: "none", label: "没有记录，或记的就是这个版本" },
@@ -105,7 +105,7 @@ gh workflow run cd.yml -f service=catalog -f image_tag=<旧提交的 SHA>
       label: "自动回滚",
       steps: ["新版本换上，健康检查没过", "脚本读 last-good", "旧镜像换回去并复检", "整单标记失败，通知你"],
       results: [{ label: "谁触发", value: "部署脚本自己", tone: "ok" }, { label: "适合", value: "上线当场就坏了" }],
-      verdict: { tone: "ok", head: "你不用出手。", text: "上线当场就能被三道检查抓到的问题，脚本自己兜住，你只需要事后看日志。" }
+      verdict: { tone: "ok", head: "你不用出手。", text: "上线当场就能被两道检查抓到的问题，脚本自己兜住，你只需要事后看日志。" }
     },
     {
       label: "手动回滚",

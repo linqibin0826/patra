@@ -100,11 +100,11 @@ personalEnv: false
 
 Patra 的公网入口经 Cloudflare：浏览器和 Cloudflare 之间是 https，开着「始终使用 HTTPS」，用 http 打开会被 301 跳到 https。Cloudflare 再经隧道把请求送进 mini，隧道出口到门户那一小段是本机上的普通 http。
 
-<CodeRef at="patra-infra/docker/README.md@26cdec9df840016230344598ab7ff109775c49f9" lines="337-341" />
+<CodeRef at="patra-infra/docker/README.md@53ec4388b912746d0fa15961b512897279bd4ae2" lines="337-341" />
 
 v0.17 做学习站时遇到了这个知识点：Cloudflare 的免费证书只覆盖一级子域。作者本想用 `learn.patra.linqibin.dev`，二级子域就没有证书，所以改成 `learn.linqibin.dev`。这个决策写在版本规格里。
 
-<CodeRef at="docs/patra/release-specs/v0.17-learn.md@26cdec9df840016230344598ab7ff109775c49f9" lines="121-126" />
+<CodeRef at="docs/patra/release-specs/v0.17-learn.md@475f5230e170fc9502a8537895b173cf64f2073a" lines="121-126" />
 
 <Transfer
   prompt="Patra 想再给 API 开一个公网域名，你想用 api.patra.linqibin.dev。会遇到什么问题？你会怎么调整？"

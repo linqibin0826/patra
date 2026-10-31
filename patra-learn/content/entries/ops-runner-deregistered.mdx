@@ -1,6 +1,6 @@
 ---
 title: runner 离线太久被除名
-summary: 项目搁置期间，部署机上的 runner 掉线没人发现。GitHub 对离线满 30 天的自托管 runner 会自动删除它的注册，回来时它连名字都没了，只能重装。
+summary: 项目搁置期间，部署机上的 runner 掉线没人发现。GitHub 对超过 14 天没连上的自托管 runner 会自动删除它的注册，回来时它连名字都没了，只能重装。
 type: pitfall
 difficulty: practice
 tags: [ci-cd, deployment]
@@ -13,13 +13,13 @@ personalEnv: false
   options={["它会自动重连，一切照常", "离线时间太长，GitHub 已经自动删除了它的注册，需要重新安装", "任务还在排队，等它回来"]}
   answer="B"
   ifRight="对。GitHub 对长期离线的自托管 runner 会自动清理注册。回来后它不是「离线」，而是「不存在」。"
-  ifWrong="答案是 B。自托管 runner 离线超过 30 天，GitHub 会自动删除它的注册，所以回来时它已经不在列表里了，需要重新注册。这题考的是 runner 与平台之间靠注册关系维系。"
+  ifWrong="答案是 B。自托管 runner 超过 14 天没有连上 GitHub，GitHub 会自动删除它的注册，所以回来时它已经不在列表里了，需要重新注册。这题考的是 runner 与平台之间靠注册关系维系。"
   suggest="ops-self-hosted-runner"
 />
 
 <Callout kind="lead" label="坑在哪">
 
-自托管 runner 离线超过 30 天，GitHub 会自动删除它的注册。2026 年 8 月，Patra 的部署机在项目搁置期里掉了线，一掉就是两个月，没有任何东西负责发现，回来时 runner 的注册已经被删除。
+自托管 runner 超过 14 天没有连上 GitHub，GitHub 会自动删除它的注册（临时用一次就销毁的 ephemeral runner 只有 1 天）。2026 年 8 月，Patra 的部署机在项目搁置期里掉了线，一掉就是两个月，没有任何东西负责发现，回来时 runner 的注册已经被删除。
 
 </Callout>
 
@@ -33,19 +33,19 @@ personalEnv: false
   states={[
     { id: "online", label: "在线", sub: "正常领任务", col: 1, desc: "和 GitHub 保持着长连接，随时可以被派发任务。" },
     { id: "offline", label: "离线", sub: "注册还在", col: 2, desc: "连接断了，任务会一直排队。这时重启一下就能回来。" },
-    { id: "gone", label: "注册被删除", sub: "需要重装", col: 3, desc: "离线满 30 天，GitHub 自动删除了它的注册。重连不再有用，要重新拿一个注册令牌，重新安装。" }
+    { id: "gone", label: "注册被删除", sub: "需要重装", col: 3, desc: "离线超过 14 天，GitHub 自动删除了它的注册。重连不再有用，要重新拿一个注册令牌，重新安装。" }
   ]}
   start="online"
   events={[
     { id: "drop", label: "掉线（关机、断网）" },
     { id: "back", label: "重新连上" },
-    { id: "wait", label: "离线满 30 天" },
+    { id: "wait", label: "离线超过 14 天" },
     { id: "reinstall", label: "重新注册安装" }
   ]}
   transitions={[
     { from: "online", event: "drop", to: "offline", label: "掉线" },
     { from: "offline", event: "back", to: "online", label: "重连" },
-    { from: "offline", event: "wait", to: "gone", label: "30 天" },
+    { from: "offline", event: "wait", to: "gone", label: "14 天" },
     { from: "gone", event: "reinstall", to: "online", label: "重装" }
   ]}
 />
@@ -54,11 +54,11 @@ personalEnv: false
 
 ## 怎么避开
 
-**每天点名。** 每日巡检的第一步就是问 GitHub：名叫 macmini 的 runner 在线吗？不在线当场红灯。发现窗口从两个月压到一天，远够不着 30 天的红线。详细做法见定时巡检那一篇。
+**每天点名。** 每日巡检的第一步就是问 GitHub：名叫 macmini 的 runner 在线吗？不在线当场红灯。发现窗口从两个月压到一天，远够不着 14 天的红线。详细做法见定时巡检那一篇。
 
 **让安装脚本即运维手册。** 真到了要重装的那一步，操作全部收在一个脚本里：
 
-<CodeRef at="patra-infra/scripts/install-github-runner.sh@20f30c3a3a0b2f6b0bd6716ee66034c499ed6f65" lines="1-22" />
+<CodeRef at="patra-infra/scripts/install-github-runner.sh@53ec4388b912746d0fa15961b512897279bd4ae2" lines="1-22" />
 
 脚本区分了两种情形：
 
@@ -69,7 +69,7 @@ personalEnv: false
 
 注册令牌在仓库设置的 Runners 页面里生成，约一小时有效，用一次就换。脚本里还有一道保护：已注册的 runner 如果又给了令牌，脚本会拒绝并告诉你该怎么做，免得手滑覆盖现有注册。
 
-<CodeRef at="patra-infra/scripts/install-github-runner.sh@20f30c3a3a0b2f6b0bd6716ee66034c499ed6f65" lines="34-41" />
+<CodeRef at="patra-infra/scripts/install-github-runner.sh@53ec4388b912746d0fa15961b512897279bd4ae2" lines="34-41" />
 
 升级前还有一条红线：不要在任务执行的时候重启 runner，会把正在跑的任务杀掉，任务会显示成「已取消」。先用 `gh run list --status in_progress` 确认没有进行中的运行，再动手。
 

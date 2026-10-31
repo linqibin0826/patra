@@ -85,7 +85,7 @@ runner 是 macOS 的 launchd 服务，在后台常驻。这带来一个隐蔽的
 - 一份 `.env` 文件：写入 JAVA_HOME 等变量，runner 启动时读取。
 - 一份 `.path` 文件：补上 docker 所在的目录，否则 runner 连 docker 命令都找不到。
 
-<CodeRef at="patra-infra/scripts/install-github-runner.sh@20f30c3a3a0b2f6b0bd6716ee66034c499ed6f65" lines="88-100" />
+<CodeRef at="patra-infra/scripts/install-github-runner.sh@53ec4388b912746d0fa15961b512897279bd4ae2" lines="88-100" />
 
 另一个有意的选择是注册时加了 `--disableupdate`，关掉 runner 的自动更新。代价是升级要人工做：**闲时不带参数重新跑一次安装脚本**，它会比较版本、只更新程序本体，注册信息不动。
 

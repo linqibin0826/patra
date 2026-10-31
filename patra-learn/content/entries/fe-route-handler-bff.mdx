@@ -171,10 +171,10 @@ export async function PUT(request: Request): Promise<NextResponse> {
 <Quiz
   questions={[
     {
-      question: "别的网站上藏了一段脚本，让访问它的人的浏览器向门户发 `PUT /api/me/notifications/read`。浏览器会带上门户的会话 Cookie 吗？门户靠什么挡住它？",
-      options: ["不会带 Cookie，所以不用挡", "可能会带上 Cookie；门户靠检查 `Origin` 是不是自己挡住", "靠网关的 CORS 设置挡住"],
-      answer: "B",
-      explain: "Cookie 跟着目标地址走，跨站发来的请求也可能带上它（`SameSite=Lax` 挡不住同一站点不同端口的服务）。所以写操作要看 `Origin`：不是门户自己的就回 403。"
+      question: "部署机上另一个服务的页面被注入了一段脚本，这个页面和门户在同一台主机上，只是端口不同。脚本让访问它的人的浏览器向门户发写请求（比如 `PUT /api/me/notifications/read`）。浏览器会带上门户的会话 Cookie 吗？门户靠什么挡住它？",
+      options: ["会带上 Cookie：同一主机不同端口算同一站点；门户靠检查 `Origin` 是不是自己挡住", "不会带 Cookie，所以不用挡", "靠网关的 CORS 设置挡住"],
+      answer: "A",
+      explain: "判断是不是同一站点不看端口，所以同一台主机上别的端口的页面和门户算同一站点，`SameSite=Lax` 照样让 Cookie 跟着请求走。用 `fetch` 发 PUT 时浏览器会先发预检，门户不回 CORS 头就发不出去；但表单提交这类不预检的写请求照样带着 Cookie 送到，门户不把安全押在预检上：每个写操作一开头都查 `Origin`，主机或端口不是门户自己的就回 403。"
     },
     {
       question: "为什么门户不在 `next.config.ts` 里写一条重写规则，把 `/api/*` 原样转发给网关，省掉这些 Route Handler？",

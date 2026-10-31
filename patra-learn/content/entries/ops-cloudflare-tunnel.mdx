@@ -91,7 +91,7 @@ Patra 的门户自 2026 年 10 月 28 日起，经 Cloudflare Tunnel 对公网�
 
 隧道的**令牌**相当于这条隧道的钥匙，谁拿到谁就能冒充这台机器接入。它保存在部署机上仓库之外的 `~/.patra/secrets/` 目录里，权限只允许本人读写，不进 git，也不进 Nacos。泄露后的做法是到 Cloudflare 后台轮换令牌，再覆盖这个文件。
 
-<CodeRef at="patra-infra/docker/README.md@26cdec9df840016230344598ab7ff109775c49f9" lines="337-343" />
+<CodeRef at="patra-infra/docker/README.md@53ec4388b912746d0fa15961b512897279bd4ae2" lines="337-343" />
 
 要暂停对外开放也很干脆：停掉这个常驻进程，隧道断开，外面立即访问不到；恢复时重新加载它。
 
