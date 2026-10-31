@@ -151,7 +151,7 @@ catalog 里的机构（大学、研究所）一个类里两种都有：
     { caption: "findFirst 拿到第一个结果，整条流水线停下。官网 B 从头到尾没被看过一眼。", focus: ["first"], links: ["map>first"], tokens: [{ id: "a", label: "https://…", at: "first" }, { id: "b", label: "官网 B", at: "links", state: "faded" }], notes: [{ at: "first", text: "Optional 里有值", tone: "ok" }] }
   ]}
   guesses={[
-    { before: 5, question: "官网 A 已经走到 map 了。官网 B 会不会也被 filter 检查一遍？", options: ["会，filter 先把三个都检查完，再交给 map", "不会，findFirst 拿到一个就停，后面的元素不再处理"], answer: "B", explain: "Stream 是一个元素一个元素往下走的，不是一道工序全做完再做下一道。findFirst 拿到第一个就叫停，剩下的元素不会被处理。" }
+    { before: 5, question: "官网 A 已经走到 map 了。官网 B 会不会也被 filter 检查一遍？", options: ["不会，findFirst 拿到一个就停", "会，filter 先把三个都检查完，再交给 map"], answer: "A", explain: "Stream 是一个元素一个元素往下走的，不是一道工序全做完再做下一道。findFirst 拿到第一个就叫停，剩下的元素不会被处理。" }
   ]}
 />
 
@@ -173,14 +173,14 @@ catalog 里的机构（大学、研究所）一个类里两种都有：
   questions={[
     {
       question: "一个方法要返回「什么都没有」的列表，按 Patra 的规范该写什么？",
-      options: ["return null;", "return new ArrayList<>();", "return List.of();"],
-      answer: "C",
+      options: ["return null;", "return List.of();", "return new ArrayList<>();"],
+      answer: "B",
       explain: "返回空集合而不是 null，调用方不用判空；用 List.of() 造不能改的空列表，规范里明确禁止 Collections.emptyList()。"
     },
     {
       question: "想把一堆评论的作者 ID 去重。Stream 的最后一步收集成哪种集合最合适？",
-      options: ["List", "Set", "Map"],
-      answer: "B",
+      options: ["Set", "List", "Map"],
+      answer: "A",
       explain: "Set 天然不重复，同一个作者出现多少次都只留一个。"
     }
   ]}

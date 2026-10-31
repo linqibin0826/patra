@@ -10,10 +10,10 @@ personalEnv: false
 
 <Diagnose
   question="用户主页的 `page.tsx` 是一个 `async` 函数，直接 `await` 网关返回的资料；导航栏 TopNav 用 `useEffect` 往 window 上加键盘监听。哪一段必须在浏览器里运行？"
-  options={["页面里 `await` 网关的那段", "导航栏的键盘监听", "两段都必须", "两段都不必"]}
-  answer="B"
+  options={["页面里 `await` 网关的那段", "两段都必须", "两段都不必", "导航栏的键盘监听"]}
+  answer="D"
   ifRight="对。window 和键盘只在浏览器里有，等网关回资料在服务器上就能做。这篇讲 Next.js 怎么把一页拆成这两种组件。"
-  ifWrong="答案是 B。`useEffect` 里的副作用要碰 window，只能在浏览器里跑（前置篇讲过 effect 何时运行）；页面组件的 `async` / `await` 则在服务器上等数据，前一篇路由里出现过。"
+  ifWrong="答案是 D。`useEffect` 里的副作用要碰 window，只能在浏览器里跑（前置篇讲过 effect 何时运行）；页面组件的 `async` / `await` 则在服务器上等数据，前一篇路由里出现过。"
   suggest="fe-react-hooks-and-effects"
 />
 
@@ -129,20 +129,20 @@ export default async function RepliesPage() {
   questions={[
     {
       question: "门户的文献详情页要加一个「复制 DOI」按钮，点一下把 DOI 写进剪贴板。它应该是哪种组件？",
-      options: ["服务端组件", "客户端组件：要响应点击、要用浏览器的剪贴板接口", "都行"],
+      options: ["服务端组件：DOI 在服务器上就有", "客户端组件：点击和剪贴板都在浏览器里", "都行，种类只影响首屏速度"],
       answer: "B",
       explain: "点击事件和剪贴板都只在浏览器里有。按钮单独做成一个小的客户端组件，页面其余部分仍是服务端组件。"
     },
     {
       question: "一个文件写了 `use client`，它引入了一个画期刊卡片的组件，那个组件文件没写 `use client`。期刊卡片组件的代码会进浏览器吗？",
-      options: ["不会，它没写 use client", "会：客户端组件引入的模块都进浏览器的代码包", "只在开发模式下会"],
-      answer: "B",
+      options: ["不会：它自己没写 use client，就留在服务器上", "只在开发模式下会进浏览器", "会：被客户端组件引入，就进浏览器的代码包"],
+      answer: "C",
       explain: "边界在 import 上。想让卡片留在服务器上，就由服务端组件渲染它，再当 `children` 交给客户端组件。"
     },
     {
       question: "打开用户主页时，TopNav 会在服务器上运行吗？",
-      options: ["不会，它是客户端组件", "会：服务器先用它画出 HTML，浏览器再跑一遍", "只有登录用户打开时会"],
-      answer: "B",
+      options: ["会：服务器先用它画出 HTML，浏览器再跑一遍", "不会：它是客户端组件，只在浏览器里跑", "只有登录用户打开时才会"],
+      answer: "A",
       explain: "第一次打开页面时，客户端组件两边都跑。所以它在首次渲染里不能依赖 window 这类浏览器才有的东西，服务器上没有，或者有也不是访客那一份。"
     }
   ]}

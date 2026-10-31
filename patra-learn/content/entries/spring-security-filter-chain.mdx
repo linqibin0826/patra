@@ -14,10 +14,10 @@ personalEnv: false
 
 <Diagnose
   question="浏览器请求 `GET /patra-identity/me`（要登录才能看），但请求里没带会话令牌。这个请求会走到 identity 的 Controller 吗？"
-  options={["会，Controller 发现没登录，自己回 401", "不会，网关在转发之前就回了 401", "会，identity 回 403", "不会，网关直接断开连接"]}
-  answer="B"
+  options={["会，Controller 发现没登录，自己回 401", "会，identity 回 403", "不会，网关直接断开连接", "不会，网关转发之前就回 401"]}
+  answer="D"
   ifRight="对：没登录的请求在网关的过滤器里就被拦下了，后面的服务根本看不到它。这篇讲这串过滤器怎么排、401 和 403 分别在哪一步产生。"
-  ifWrong="答案是 B。「要登录」这件事 Patra 在网关统一检查，没带令牌就是没登录，请求在网关的过滤器里被拦下，回 401。这题考的是会话令牌的作用：服务靠它认出你是谁，没有它就只能当你是匿名。"
+  ifWrong="答案是 D。「要登录」这件事 Patra 在网关统一检查，没带令牌就是没登录，请求在网关的过滤器里被拦下，回 401。这题考的是会话令牌的作用：服务靠它认出你是谁，没有它就只能当你是匿名。"
   suggest="http-cookie-and-session"
 />
 

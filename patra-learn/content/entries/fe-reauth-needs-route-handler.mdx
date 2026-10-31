@@ -15,10 +15,10 @@ personalEnv: false
 
 <Diagnose
   question="Next.js 里，一个 Server Action 在执行时写了一个 Cookie。除了把 Cookie 发给浏览器，Next 还会做什么？"
-  options={["什么也不做", "重新渲染当前页，把新的页面内容一起送回浏览器", "整页刷新浏览器"]}
-  answer="B"
+  options={["什么也不做，只发 Cookie", "让浏览器整页刷新一次", "重新渲染当前页，新内容随响应送回"]}
+  answer="C"
   ifRight="对。Server Action 里改了 Cookie，Next 会认为页面依赖的状态变了，顺带重新渲染当前页。这一篇讲这个顺带的动作怎么坑了注销流程。"
-  ifWrong="答案是 B。Server Action 写了 Cookie，Next 会重新渲染当前路由，把新的服务端组件结果随响应送回。这题考的是 Server Action 的行为：它不只是一次远程调用。"
+  ifWrong="答案是 C。Server Action 写了 Cookie，Next 会重新渲染当前路由，把新的服务端组件结果随响应送回。这题考的是 Server Action 的行为：它不只是一次远程调用。"
   suggest="fe-server-actions"
 />
 

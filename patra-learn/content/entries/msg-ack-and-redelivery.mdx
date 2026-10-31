@@ -10,10 +10,10 @@ personalEnv: false
 
 <Diagnose
   question="通知服务从队列取走一条消息，处理到一半进程崩溃了，还没来得及告诉 RabbitMQ「我处理完了」。这条消息会怎样？"
-  options={["已经被取走，丢了", "RabbitMQ 没等到确认，把它重新投递给消费者", "留在队列里，但再也不会被投递"]}
-  answer="B"
+  options={["已经被取走了，这条消息就此丢失", "仍留在队列里，但不会再被投递给任何消费者", "RabbitMQ 没等到确认，会把它重新投递"]}
+  answer="C"
   ifRight="对。「处理完才算完」靠的是确认。这篇讲确认的规则，以及它带来的一个后果：消息可能被处理不止一次。"
-  ifWrong="答案是 B。RabbitMQ 把消息发给消费者后并不立即删除，要等消费者回一个确认；消费者断开却没确认，它就把消息重新投递。队列里的消息怎么「出队」，上一篇没细讲，这篇补上。"
+  ifWrong="答案是 C。RabbitMQ 把消息发给消费者后并不立即删除，要等消费者回一个确认；消费者断开却没确认，它就把消息重新投递。队列里的消息怎么「出队」，上一篇没细讲，这篇补上。"
   suggest="msg-exchange-queue-binding"
 />
 
@@ -108,14 +108,14 @@ Patra 用的是后者。项目 README 的默认值表这样写：
   questions={[
     {
       question: "Spring 的 acknowledge-mode: auto，意思是 RabbitMQ 一投递就把消息删掉。这句话对吗？",
-      options: ["对", "不对：Spring 是在监听方法成功返回后才发 ack"],
+      options: ["对", "不对"],
       answer: "B",
       explain: "名字里的 auto 指「Spring 自动替你发 ack」，不是 RabbitMQ 的 auto-ack。时机是方法正常返回之后。"
     },
     {
       question: "监听方法抛出异常，重试三次也没成功，而且设置了不放回队列。这条消息最后在哪？",
-      options: ["在原队列队首，一直被重投", "被删掉了", "在死信队列"],
-      answer: "C",
+      options: ["在死信队列", "在原队列队首，一直被重投", "被删掉了"],
+      answer: "A",
       explain: "拒绝且不放回，RabbitMQ 按队列设置把它转进死信队列。否则它会在队首无限转圈，堵住后面的消息。"
     }
   ]}

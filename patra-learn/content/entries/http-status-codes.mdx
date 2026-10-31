@@ -10,10 +10,10 @@ personalEnv: false
 
 <Diagnose
   question="一个接口收到的邮箱格式不对，没法处理。这是调用方的错，还是服务端的错？状态码该属于哪一组？"
-  options={["调用方的错，4xx 组", "服务端的错，5xx 组", "没出错，仍然是 2xx 组"]}
-  answer="A"
+  options={["服务端的错，5xx 组", "没出错，仍然是 2xx 组", "调用方的错，4xx 组"]}
+  answer="C"
   ifRight="对，是调用方送来了不合格的东西，属于 4xx。往下读会讲每一组的分工。"
-  ifWrong="答案是 A：请求本身有问题，服务端没做错什么，所以是 4xx（调用方的错）。5xx 留给服务端自己出了问题的情况。"
+  ifWrong="答案是 C：请求本身有问题，服务端没做错什么，所以是 4xx（调用方的错）。5xx 留给服务端自己出了问题的情况。"
   suggest="http-request-and-response"
 />
 
@@ -49,8 +49,8 @@ personalEnv: false
   questions={[
     {
       question: "新建收藏夹时，名字和你已有的另一个收藏夹重名。该返回？",
-      options: ["409，和现有状态冲突", "422，内容不合规则", "500，服务端出错"],
-      answer: "A",
+      options: ["422，内容不合规则", "409，和现有状态冲突", "500，服务端出错"],
+      answer: "B",
       explain: "名称本身合法，只是当前已被占用，属于与现状冲突。Patra 在这种情况下返回 409，响应的 traits 里带着原因码 COLLECTION_NAME_TAKEN，门户按它给专门的提示。"
     },
     {
@@ -90,7 +90,7 @@ Patra 的后端有一个约定：业务代码里抛的是**有语义的异常**�
     { caption: "响应的状态码是 404，正文里带着错误码 INTERACTION-0404：前缀说是哪个服务回的，后缀和状态码一一对应。要更精确地区分是哪种错误，调用方看正文里的 traits，不看错误码。", focus: ["http"], links: ["engine>http"], tokens: [{ id: "err", label: "404 · INTERACTION-0404", at: "http" }], notes: [{ at: "http", text: "状态码 404", tone: "ok" }] }
   ]}
   guesses={[
-    { before: 3, question: "领域代码里并没有出现数字 404。那么是谁决定这次响应是 404？", options: ["领域代码自己，写在异常里", "错误引擎，按异常的语义查表", "浏览器根据页面猜"], answer: "B", explain: "领域代码只表达语义，不碰 HTTP。把语义翻成状态码是引擎的工作，这样领域层不依赖 Web。" }
+    { before: 3, question: "领域代码里并没有出现数字 404。那么是谁决定这次响应是 404？", options: ["错误引擎，按异常的语义查表", "领域代码自己，写在异常里", "Controller 里逐个 catch，各接口自己决定"], answer: "A", explain: "领域代码只表达语义，不碰 HTTP。把语义翻成状态码是引擎的工作，这样领域层不依赖 Web。" }
   ]}
 />
 

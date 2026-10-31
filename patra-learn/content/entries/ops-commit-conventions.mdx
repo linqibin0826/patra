@@ -10,10 +10,10 @@ personalEnv: false
 
 <Diagnose
   question="Patra 的提交检查只接受 类型(范围): 标题 这种格式，类型必须是小写白名单词，标题末尾不能有英文句号。下面哪条提交信息能通过？"
-  options={["Feat(catalog): 新增期刊检索接口", "feat(catalog): 新增期刊检索接口", "fix: 修好了问题.", "update code"]}
-  answer="B"
-  ifRight="对。A 的类型大写，C 的标题以英文句号结尾，D 根本没有类型。这一篇讲这套规则为什么存在、谁在检查。"
-  ifWrong="答案是 B。A 的类型写成了大写 Feat；C 的标题以英文句号结尾；D 没有类型，不是约定的格式。"
+  options={["Feat(catalog): 新增期刊检索接口", "fix: 修好了问题.", "update code", "feat(catalog): 新增期刊检索接口"]}
+  answer="D"
+  ifRight="对。A 的类型大写，B 的标题以英文句号结尾，C 根本没有类型。这一篇讲这套规则为什么存在、谁在检查。"
+  ifWrong="答案是 D。A 的类型写成了大写 Feat；B 的标题以英文句号结尾；C 没有类型，不是约定的格式。"
   suggest="ops-git-basics"
 />
 
@@ -85,7 +85,7 @@ personalEnv: false
     { caption: "两关都过，快照才真正生成。任何一关失败，这次提交就没有发生，改动还留在你的工作区里。", focus: ["done"], links: ["msg>done"], tokens: [{ id: "c", label: "快照", at: "done" }], notes: [{ at: "done", text: "提交成功", tone: "ok" }] }
   ]}
   guesses={[
-    { before: 3, question: "钩子自动格式化了你的 Java 文件，然后提交失败了。再次提交前，你该做什么？", options: ["什么都不用做，直接再提交一次", "把被格式化改动过的文件重新加入暂存区再提交", "放弃这次改动"], answer: "B", explain: "钩子修改了文件，但新的内容还没有放进这次快照。需要重新 git add，再提交。" }
+    { before: 3, question: "钩子自动格式化了你的 Java 文件，然后提交失败了。再次提交前，你该做什么？", options: ["把格式化改过的文件重新加入暂存区，再提交", "什么都不用做，直接再提交一次", "放弃这次改动，重新来过"], answer: "A", explain: "钩子修改了文件，但新的内容还没有放进这次快照。需要重新 git add，再提交。" }
   ]}
 />
 
@@ -114,13 +114,13 @@ gitleaks 认的是“长得像密钥”，不是“确实是密钥”。测试�
   questions={[
     {
       question: "下面哪个标题能通过检查？",
-      options: ["fix(identity): 修复注销后会话未清理", "fix(identity): Fix session cleanup.", "FIX: 修复会话"],
-      answer: "A",
-      explain: "B 的标题以英文句号结尾，且以大写字母开头；C 的类型是大写。A 类型小写、标题是中文、末尾没有句号。"
+      options: ["fix(identity): Fix session cleanup.", "FIX: 修复会话", "fix(identity): 修复注销后会话未清理"],
+      answer: "C",
+      explain: "A 的标题以英文句号结尾，且以大写字母开头；B 的类型是大写。C 类型小写、标题是中文、末尾没有句号。"
     },
     {
       question: "钩子能否保证仓库里永远不会出现密钥？",
-      options: ["能，所有提交都必须过钩子", "不能，钩子可以被跳过，只是最快的一道关"],
+      options: ["能，所有提交都必须先过钩子，没有例外", "不能，钩子能被跳过，只是最快的一道关"],
       answer: "B",
       explain: "钩子在本地运行，可以被 --no-verify 绕过，所以云端检查和评审工具里还有第二道。"
     }

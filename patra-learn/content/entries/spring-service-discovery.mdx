@@ -10,10 +10,10 @@ personalEnv: false
 
 <Diagnose
   question="catalog 调 registry 的字典接口，配置里写的基础地址是 `lb://patra-registry`。网络上并没有一台叫 patra-registry 的机器，DNS 也查不到这个名字。请求最后是怎么发到 registry 的？"
-  options={["DNS 服务器里其实配了这个名字", "catalog 发请求前问注册中心要 patra-registry 的实例列表，挑一个真实地址发过去", "请求先发给网关，由网关转发", "Spring 在启动时把它替换成了固定 IP"]}
-  answer="B"
+  options={["DNS 服务器里其实配了这个名字", "请求先发给网关，由网关转发", "发请求前问注册中心要实例列表，挑一个真实地址发过去", "Spring 在启动时把它替换成了固定 IP"]}
+  answer="C"
   ifRight="对：`lb://` 后面是服务名，不是主机名。这篇讲名字是谁登记的、在哪一刻被换成真实地址。"
-  ifWrong="答案是 B。`lb://patra-registry` 里的 patra-registry 是服务名，由 Spring Cloud 在每次发请求时向注册中心查出真实地址再替换进去。这题要先懂 HTTP Interface 背后有一个 `RestClient` 在发请求，前置篇讲过。"
+  ifWrong="答案是 C。`lb://patra-registry` 里的 patra-registry 是服务名，由 Spring Cloud 在每次发请求时向注册中心查出真实地址再替换进去。这题要先懂 HTTP Interface 背后有一个 `RestClient` 在发请求，前置篇讲过。"
 />
 
 <Callout kind="lead">
@@ -142,8 +142,8 @@ catalog 这边，基础地址只写服务名：
   questions={[
     {
       question: "catalog 发请求时，Nacos 里 patra-registry 名下一个实例都没有。会怎样？",
-      options: ["请求照样发出去，等超时", "拦截器挑不出实例，请求根本没发出去就抛异常", "Nacos 替 catalog 把请求排队，等 registry 上线"],
-      answer: "B",
+      options: ["拦截器挑不出实例，请求没发出去就抛异常", "请求照样发出去，等超时", "Nacos 替 catalog 把请求排队，等 registry 上线"],
+      answer: "A",
       explain: "没有实例就没有地址可换，拦截器直接失败，不会发出任何 HTTP 请求。网关查会话的代码把「注册中心里没有实例」和「连不上」都当成 identity 暂时不可用。"
     },
     {

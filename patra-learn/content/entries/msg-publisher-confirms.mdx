@@ -10,10 +10,10 @@ personalEnv: false
 
 <Diagnose
   question="发件箱的后台代码调用了发送方法，方法正常返回，没有抛异常。能不能据此把登记行标成已完成？"
-  options={["能，没抛异常就是发成功了", "不能：返回只说明消息交给了网络连接，RabbitMQ 收没收下还要等它的回执", "能，TCP 连接保证了送达"]}
-  answer="B"
+  options={["不能，返回只说明交给了网络，收没收下要等回执", "能，没抛异常就说明 RabbitMQ 已经收下了", "能，TCP 连接本身就保证了消息送达"]}
+  answer="A"
   ifRight="对。这就是为什么要等“发布确认”。这篇讲确认怎么回、什么情况下回得出人意料。"
-  ifWrong="答案是 B。发送方法一般只把消息写进网络缓冲就返回了：对方宕机、磁盘写满、没有队列可投，你都不知道。上一篇的发件箱说“发成功才删登记行”，这个“成功”要有可靠的判断依据。"
+  ifWrong="答案是 A。发送方法一般只把消息写进网络缓冲就返回了：对方宕机、磁盘写满、没有队列可投，你都不知道。上一篇的发件箱说“发成功才删登记行”，这个“成功”要有可靠的判断依据。"
   suggest="msg-transactional-outbox"
 />
 
@@ -70,7 +70,7 @@ Patra 的发送模板正是这样写的：
 
 <Params
   title="动手试试：生产者到底收到了什么"
-  guess={{ question: "有一条消息，没有任何队列绑定它的路由键，发送时带了 mandatory。生产者会依次收到什么？", options: ["只有 ack", "先收到退回，再收到 ack", "只有退回，没有 ack"], answer: "B", explain: "路由不到的消息先被退回，broker 随后照样回 ack。所以要先看退回，再看 ack。" }}
+  guess={{ question: "有一条消息，没有任何队列绑定它的路由键，发送时带了 mandatory。生产者会依次收到什么？", options: ["只收到 ack，没有退回", "只收到退回，没有 ack", "先收到退回，再收到 ack"], answer: "C", explain: "路由不到的消息先被退回，broker 随后照样回 ack。所以要先看退回，再看 ack。" }}
   controls={[
     { type: "switch", id: "bound", label: "有队列绑定了这个路由键", default: false },
     { type: "switch", id: "mandatory", label: "发送时带 `mandatory`", default: true },
@@ -96,7 +96,7 @@ Patra 的发送模板正是这样写的：
   questions={[
     {
       question: "RabbitMQ 重启，发送方等了 5 秒没收到任何回执。登记行该怎么处理？",
-      options: ["标成完成，反正可能已经收到了", "当作失败，登记行留着，等补投", "直接删除"],
+      options: ["标成完成，反正可能已经收到了", "当作失败，登记行留着，等补投", "直接删除登记行，不再处理"],
       answer: "B",
       explain: "没有收到回执就是不知道。宁可补投一次（可能重复），也不能冒着丢消息的风险标成完成。重复由消费端去重来应对。"
     }

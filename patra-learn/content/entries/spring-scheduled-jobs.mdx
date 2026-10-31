@@ -145,7 +145,7 @@ identity 的执行器配置：
     { caption: "子任务抓完，释放锁。下一个小时的兜底任务就能拿到锁，处理新到期的候选。", focus: ["lock"], notes: [{ at: "lock", text: "空闲", tone: "ok" }] }
   ]}
   guesses={[
-    { before: 3, question: "兜底任务拿不到锁，在调度中心的控制台上这一次会显示成什么？", options: ["失败，因为没执行", "成功，统计为 0", "一直显示运行中，等锁释放"], answer: "B", explain: "拿不到锁说明有人正在做这件事，这一次没什么可做，不算失败。Handler 返回空统计，入口照常 handleSuccess；不等锁，所以不会堆积。" }
+    { before: 3, question: "兜底任务拿不到锁，在调度中心的控制台上这一次会显示成什么？", options: ["失败，因为没执行", "一直显示运行中，等锁释放", "成功，统计为 0"], answer: "C", explain: "拿不到锁说明有人正在做这件事，这一次没什么可做，不算失败。Handler 返回空统计，入口照常 handleSuccess；不等锁，所以不会堆积。" }
   ]}
 />
 

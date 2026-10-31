@@ -109,8 +109,8 @@ Patra 的做法是在查询里写 `JOIN FETCH`：告诉 Hibernate 这次查作�
   questions={[
     {
       question: "有人把 `findByOrcidIn` 改回 `findAllById(ids)`，然后照样循环调用 `toAggregate`。会怎样？",
-      options: ["结果一样，只是慢一点", "结果一样，SQL 回到 1 + 2N 条", "直接报错，集合读不出来"],
-      answer: "B",
+      options: ["结果一样，只是慢一点", "直接报错，集合读不出来", "结果一样，SQL 回到 1 + 2N 条"],
+      answer: "C",
       explain: "结果还是对的，懒加载会把数据补齐；变的只有 SQL 条数。这正是 N+1 难发现的原因：功能测试全绿。"
     },
     {

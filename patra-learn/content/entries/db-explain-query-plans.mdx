@@ -9,10 +9,10 @@ prerequisites: [db-indexes]
 
 <Diagnose
   question="你给 name_value 列建了普通的 B 树索引。查询写成 WHERE lower(name_value) = 'abc'，把列套了一层 lower() 函数。数据库会用这个索引吗？"
-  options={["会，索引建在 name_value 上，套不套函数都一样", "通常不会，索引里存的是 name_value 本身，不是 lower(name_value) 的结果", "会，数据库会自动改写查询"]}
-  answer="B"
+  options={["通常不会，索引里存的是列原值，不是 lower() 的结果", "会，索引建在 name_value 上，套不套函数都一样", "会，数据库会自动改写查询让索引能用"]}
+  answer="A"
   ifRight="对。索引按列原来的值排好序，函数把值变了，数据库就没法在有序的索引里定位。怎么才能确定数据库到底有没有用索引？不靠猜，让它自己说，这就是 EXPLAIN。"
-  ifWrong="答案是 B。索引里排的是 name_value 的原始值。查询问的是 lower(name_value)，这个值索引里没有，数据库只能逐行计算再比较。凭猜容易猜错，这一篇讲怎么让数据库自己说出它的打算。"
+  ifWrong="答案是 A。索引里排的是 name_value 的原始值。查询问的是 lower(name_value)，这个值索引里没有，数据库只能逐行计算再比较。凭猜容易猜错，这一篇讲怎么让数据库自己说出它的打算。"
   suggest="db-indexes"
 />
 
@@ -77,7 +77,7 @@ Bitmap Heap Scan on cat_organization_name
 
 <Params
   title="动手试试：这条查询会走索引吗"
-  guess={{ question: "别名表 cat_organization_alias 只有 600 多行，alias 列上有一个索引，查询里也有匹配条件。规划器会选索引扫描吗？", options: ["一定会，有索引就用", "不一定，表这么小，直接顺序扫描整张表更便宜", "一定不会，小表不能建索引"], answer: "B", explain: "整张表只有几页，一次顺序读完比先查索引再回表来回跳还快。Patra 实测这张表规划器选了顺序扫描，只要 0.18 毫秒，规划器是对的。" }}
+  guess={{ question: "别名表 cat_organization_alias 只有 600 多行，alias 列上有一个索引，查询里也有匹配条件。规划器会选索引扫描吗？", options: ["一定会，规划器看到有索引就一定用", "一定不会，小表上的索引不起作用", "不一定，表很小时顺序扫描整张表更便宜"], answer: "C", explain: "整张表只有几页，一次顺序读完比先查索引再回表来回跳还快。Patra 实测这张表规划器选了顺序扫描，只要 0.18 毫秒，规划器是对的。" }}
   controls={[
     { type: "switch", id: "hasindex", label: "查询的列上有索引", default: true },
     { type: "switch", id: "wrapped", label: "查询把列套了函数，比如 lower(列)", default: false },
@@ -118,13 +118,13 @@ Patra 的机构联想正好撞上了第 2 条：为了让两个汉字的短查�
   questions={[
     {
       question: "EXPLAIN 输出里 Filter 一行写着条件，但没有 Index Cond。这说明什么？",
-      options: ["索引用得很好", "这个条件没法靠索引定位，是取出行之后逐行过滤的", "查询语句有语法错误"],
-      answer: "B",
+      options: ["条件没法靠索引定位，是取出行后逐行过滤的", "索引用得很好，条件已被索引定位过", "查询语句有语法错误，条件被数据库忽略了"],
+      answer: "A",
       explain: "能靠索引定位的条件会出现在 Index Cond 里。只出现在 Filter 里，说明是扫出行之后再丢掉不符合的。"
     },
     {
       question: "想知道一条 DELETE 实际会删多少行、花多久，同时又不想真的删掉。该怎么做？",
-      options: ["直接 EXPLAIN ANALYZE DELETE ...", "BEGIN; EXPLAIN ANALYZE DELETE ...; ROLLBACK;", "EXPLAIN DELETE ... 就够了，它会告诉你实际行数"],
+      options: ["直接 EXPLAIN ANALYZE DELETE ...，再手动把数据补回去", "BEGIN; EXPLAIN ANALYZE DELETE ...; ROLLBACK;", "EXPLAIN DELETE ... 就够了，它会告诉你实际行数"],
       answer: "B",
       explain: "ANALYZE 会真的执行；放进事务再回滚才不留痕迹。不带 ANALYZE 的 EXPLAIN 只有估算，没有实际行数。"
     }

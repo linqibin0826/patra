@@ -10,10 +10,10 @@ personalEnv: false
 
 <Diagnose
   question="一个任务设了 `timeout-minutes: 20`，运行到第 20 分钟还没完成。GitHub 的界面上，这个任务最可能显示成什么？"
-  options={["失败（failure）", "已取消（cancelled）", "超时（timed out）"]}
-  answer="B"
+  options={["已取消（cancelled）", "失败（failure）", "超时（timed out）"]}
+  answer="A"
   ifRight="对。超过时限被平台终止的任务，结论是 cancelled，不是 failure。所以它很容易被误读成「有人点了取消」。"
-  ifWrong="答案是 B。GitHub 把因超时被终止的任务标成「已取消」，不单独有「超时」这一类结论。这题考的是任务结论的几种取值。"
+  ifWrong="答案是 A。GitHub 把因超时被终止的任务标成「已取消」，不单独有「超时」这一类结论。这题考的是任务结论的几种取值。"
   suggest="ops-ci-pipeline"
 />
 
@@ -45,7 +45,7 @@ Patra 早期的部署任务，镜像在云端构建，推到 GHCR，再由部署
     { caption: "第 20 分钟，时限到。平台终止任务，界面显示：已取消。", focus: ["mini"], notes: [{ at: "mini", text: "已取消", tone: "bad" }] }
   ]}
   guesses={[
-    { before: 4, question: "时限一到任务被平台终止。你在 Actions 页面最先看到的结论会是什么？", options: ["failure：因为任务没完成", "cancelled：和手动取消的结论一样", "skipped：任务被跳过"], answer: "B", explain: "平台终止任务的结论一律是 cancelled。手动取消、被新的运行顶掉、超过时限，看上去是同一个标签。" }
+    { before: 4, question: "第 20 分钟到了，镜像已经拉了一大半。平台会让这一步拉完再终止任务吗？", options: ["会，让正在执行的这一步先做完", "会，最多再宽限几分钟", "不会，到点就终止，不管做到哪一步"], answer: "C", explain: "timeout-minutes 是硬时限，到点平台就终止任务，不管手头这一步做到哪。拉到一半的镜像不会等，任务当场收场。" }
   ]}
 />
 
@@ -67,7 +67,7 @@ Patra 早期的部署任务，镜像在云端构建，推到 GHCR，再由部署
   questions={[
     {
       question: "一个部署任务显示「已取消」，你没有点过取消，也没有新的提交。第一件事做什么？",
-      options: ["重新触发一次，当作误触", "看任务页面的提示和日志末尾，确认是不是超过了最长执行时间", "把时限直接调大一倍"],
+      options: ["先重新触发一次，当作误触", "先看页面提示和日志末尾，确认原因", "先把时限调大一倍，免得再超时"],
       answer: "B",
       explain: "先确认原因，再决定怎么办。直接重跑可能再来一次同样的超时，直接调大时限则掩盖了「为什么这么慢」。"
     }

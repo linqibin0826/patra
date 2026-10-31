@@ -10,10 +10,10 @@ personalEnv: false
 
 <Diagnose
   question="你在一个网站登录成功后，点开下一个页面，那是一个全新的 HTTP 请求。HTTP 请求之间互不相识，服务器凭什么还认得你？"
-  options={["凭你的 IP 地址，每个人的都不同", "凭浏览器在每次请求里带上的一小段凭证", "服务器和你的浏览器一直保持着同一条连接"]}
-  answer="B"
+  options={["凭浏览器每次请求带上的一段凭证", "凭你的 IP 地址，每个人的都不同", "服务器和你的浏览器一直保持着同一条连接"]}
+  answer="A"
   ifRight="对，浏览器每次请求都带上登录时拿到的凭证。这段凭证通常存在 Cookie 里，往下读。"
-  ifWrong="答案是 B：HTTP 每个请求都是独立的，服务器只能靠请求里带的凭证认人。IP 会变（换网络、多人共用出口），连接也会断，都不可靠。"
+  ifWrong="答案是 A：HTTP 每个请求都是独立的，服务器只能靠请求里带的凭证认人。IP 会变（换网络、多人共用出口），连接也会断，都不可靠。"
   suggest="http-request-and-response"
 />
 
@@ -80,7 +80,7 @@ personalEnv: false
 
 <Params
   title="Cookie 属性开关"
-  guess={{ question: "如果会话 Cookie 没有设 HttpOnly，页面里被注入的一段恶意脚本能读到它吗？", options: ["读得到，然后就能把令牌发给攻击者", "读不到，浏览器自己保护", "只有换个浏览器才读得到"], answer: "A", explain: "HttpOnly 就是专门禁止脚本读取的开关。不设，脚本里的 document.cookie 就能读出令牌。" }}
+  guess={{ question: "如果会话 Cookie 没有设 HttpOnly，页面里被注入的一段恶意脚本能读到它吗？", options: ["读不到，浏览器默认就保护", "读得到，令牌可能被偷走", "只有换个浏览器才读得到"], answer: "B", explain: "HttpOnly 就是专门禁止脚本读取的开关。不设，脚本里的 document.cookie 就能读出令牌。" }}
   controls={[
     { type: "switch", id: "httponly", label: "HttpOnly", default: true },
     { type: "switch", id: "secure", label: "Secure", default: true },
@@ -104,14 +104,14 @@ personalEnv: false
   questions={[
     {
       question: "用户点了「退出登录」。只让浏览器删掉 Cookie，而不作废服务器上的会话，有什么隐患？",
-      options: ["没有隐患，Cookie 都没了", "如果有人之前拿到过这个令牌，会话在服务器上仍然有效", "浏览器会报错"],
+      options: ["没有隐患，Cookie 都没了", "之前泄露的令牌在服务器上仍然有效", "下次打开网站会自动重新登录"],
       answer: "B",
       explain: "令牌如果已经泄露，删本地 Cookie 没用，要作废服务器上的会话。服务端会话的价值就在这里。"
     },
     {
       question: "Cookie 里存的是什么，最合适？",
-      options: ["用户的全部资料", "一个难以猜测的随机编号，真正的信息放服务器", "用户的密码，省得再登录"],
-      answer: "B",
+      options: ["难以猜测的随机编号，信息放服务器", "用户的全部资料，省得每次查库", "用户的密码，省得再登录"],
+      answer: "A",
       explain: "Cookie 在用户手里，什么都可能被看到、被改。只放编号，信息放自己控制的地方。"
     }
   ]}

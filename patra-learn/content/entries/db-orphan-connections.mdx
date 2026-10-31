@@ -10,10 +10,10 @@ personalEnv: false
 
 <Diagnose
   question="开发库的 max_connections 是 100，所有服务的连接池「最少空闲连接」加起来才三十几条。半夜没人用，库却报 too many clients already。你先查什么？"
-  options={["把 max_connections 调到 500", "看现在这些连接都是谁的、处于什么状态", "把每个服务的连接池调小"]}
-  answer="B"
+  options={["看现在这些连接都是谁的、处于什么状态", "把 max_connections 调到 500", "把每个服务的连接池调小"]}
+  answer="A"
   ifRight="对。闲着的时候不该满，满了说明有连接不该在那儿。先弄清它们是谁，再决定怎么办。"
-  ifWrong="答案是 B。调大上限、调小连接池都是猜。连接池会主动维持一定数量的连接，闲着时总量应该接近它们的最少空闲数之和；远超这个数，就要先看多出来的是什么。这题考的是连接池怎么持有连接，先读连接池那篇。"
+  ifWrong="答案是 A。调大上限、调小连接池都是猜。连接池会主动维持一定数量的连接，闲着时总量应该接近它们的最少空闲数之和；远超这个数，就要先看多出来的是什么。这题考的是连接池怎么持有连接，先读连接池那篇。"
   suggest="db-connection-pool"
 />
 
@@ -59,7 +59,7 @@ PostgreSQL 这边看到的是一条一直空闲、从不说话的连接。它没
 
 <Params
   title="动手：客户端断开后，连接多久才被回收"
-  guess={{ question: "按 Linux 默认的 keepalive 设置，一条孤儿连接断开 1 小时后，还占着槽吗？", options: ["早就回收了", "还占着", "看连接池怎么配"], answer: "B", explain: "默认要空闲约 2 小时才开始探测，1 小时时 PostgreSQL 还以为对方只是闲着。连接池管的是客户端自己那一头，管不到这条已经没有主人的连接。" }}
+  guess={{ question: "按 Linux 默认的 keepalive 设置，一条孤儿连接断开 1 小时后，还占着槽吗？", options: ["早就回收了", "看连接池怎么配", "还占着"], answer: "C", explain: "默认要空闲约 2 小时才开始探测，1 小时时 PostgreSQL 还以为对方只是闲着。连接池管的是客户端自己那一头，管不到这条已经没有主人的连接。" }}
   controls={[
     { type: "switch", id: "tuned", label: "设了 tcp_keepalives_idle=900、interval=60、count=10", default: false },
     { type: "slider", id: "minutes", label: "客户端异常断开后过了", min: 0, max: 180, step: 5, default: 60, unit: " 分钟" }

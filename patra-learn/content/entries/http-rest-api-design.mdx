@@ -10,10 +10,10 @@ personalEnv: false
 
 <Diagnose
   question="网络不稳，客户端把同一个「把收藏夹改名为『我的综述』」的请求发了两次。一个设计得好的接口，两次之后收藏夹应该是什么状态？"
-  options={["名字是「我的综述」，和只发一次一样", "第二次请求要报错，因为已经改过了", "名字被改了两次，变成「我的综述我的综述」"]}
-  answer="A"
+  options={["第二次请求要报错，因为已经改过了", "名字是「我的综述」，和只发一次一样", "名字被改了两次，变成「我的综述我的综述」"]}
+  answer="B"
   ifRight="对，改名这个动作重发应该无害。往下读会讲怎样的设计才能做到。"
-  ifWrong="答案是 A：把名字设成某个值，设两次还是那个值。这种性质叫幂等，选对方法就能得到它。"
+  ifWrong="答案是 B：把名字设成某个值，设两次还是那个值。这种性质叫幂等，选对方法就能得到它。"
   suggest="http-status-codes"
 />
 
@@ -97,14 +97,14 @@ Patra 的收藏夹改名接口用 PUT，请求里名称和简介两个字段都�
   questions={[
     {
       question: "「设置收藏夹为公开」设计成 PUT /me/collections/42/visibility，请求体是 {\"visibility\": \"PUBLIC\"}。重发两次的结果？",
-      options: ["收藏夹会被设置两次，出错", "还是公开，结果和一次相同", "第二次变回私有"],
-      answer: "B",
+      options: ["还是公开，结果和一次相同", "收藏夹会被设置两次，出错", "第二次变回私有"],
+      answer: "A",
       explain: "它是「把可见性设为某个值」，不是「切换一下」。设值是幂等的，切换不是。设计接口时尽量用设值。"
     },
     {
       question: "下面哪个路径更符合 REST 的分工？",
-      options: ["POST /me/collections/42/delete", "DELETE /me/collections/42", "GET /me/collections/42/remove"],
-      answer: "B",
+      options: ["POST /me/collections/42/delete", "GET /me/collections/42/remove", "DELETE /me/collections/42"],
+      answer: "C",
       explain: "路径只写资源，动作交给方法。用 GET 做删除更糟，浏览器预取链接就可能触发它。"
     }
   ]}

@@ -15,10 +15,10 @@ personalEnv: false
 
 <Diagnose
   question="application.yml 里写 spring.http.clients.redirects: dont-follow，对应的枚举常量叫 DONT_FOLLOW。服务正常启动、运行都没问题。配置中心推一次变更触发刷新时，这个值还读得出来吗？"
-  options={["读得出来，启动时能读，刷新时一样", "不一定：刷新时有的代码用的转换规则更严格，只认 DONT_FOLLOW", "读不出来时会回退到默认值，不影响刷新"]}
-  answer="B"
+  options={["不一定：刷新时有的代码转换更严格，只认 DONT_FOLLOW", "读得出来，启动时能读，刷新时一样", "读不出来时会回退到默认值，不影响刷新"]}
+  answer="A"
   ifRight="对。启动和刷新不是同一套环境，转换规则也可能不同。这个坑就出在这里。"
-  ifWrong="答案是 B。启动时 Spring Boot 用宽松的转换规则，横线小写能对上枚举；刷新时有的后处理器在一个新建的环境上用默认转换，只认常量原名。这题考的是配置刷新时 Spring 做了什么，先读配置刷新那篇。"
+  ifWrong="答案是 A。启动时 Spring Boot 用宽松的转换规则，横线小写能对上枚举；刷新时有的后处理器在一个新建的环境上用默认转换，只认常量原名。这题考的是配置刷新时 Spring 做了什么，先读配置刷新那篇。"
   suggest="spring-nacos-config-and-refresh"
 />
 

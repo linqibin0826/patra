@@ -10,10 +10,10 @@ personalEnv: false
 
 <Diagnose
   question="workflow_dispatch 有一个文本输入 service，让人手动填服务名。脚本里写成 echo ${{ github.event.inputs.service }}。有人在输入框里填 a; echo 已被注入，会发生什么？"
-  options={["当成一个普通的服务名 a; echo 已被注入 打印出来", "分号后面的 echo 也被当成命令执行了", "GitHub 会自动把特殊字符转义"]}
-  answer="B"
+  options={["当成一个普通的服务名 a; echo 已被注入 打印出来", "GitHub 会自动把特殊字符转义", "分号后面的 echo 也被当成命令执行了"]}
+  answer="C"
   ifRight="对。GitHub 先把输入文字原样替换进脚本，shell 再去读这份脚本，于是分号把一条命令变成了两条。"
-  ifWrong="答案是 B。${{ … }} 是在脚本被交给 shell 之前就做的文本替换，没有任何转义。分号之后的内容会被当作新的命令。"
+  ifWrong="答案是 C。${{ … }} 是在脚本被交给 shell 之前就做的文本替换，没有任何转义。分号之后的内容会被当作新的命令。"
   suggest="ops-ci-pipeline"
 />
 
@@ -84,13 +84,13 @@ Patra 的 cd.yml 就是第二种写法，并且注释里写明了原因：
   questions={[
     {
       question: "下面哪些内容属于“人能控制的输入”，不应该直接拼进 shell？",
-      options: ["github.sha（本次提交号）", "PR 的标题、分支名、手动填的输入框", "runner 的操作系统名称"],
-      answer: "B",
+      options: ["PR 的标题、分支名、手动填的输入框", "github.sha（本次提交号）", "runner 的操作系统名称"],
+      answer: "A",
       explain: "PR 标题、分支名都由提交者决定，可以包含引号、分号、反引号。提交号和系统信息是 GitHub 生成的，字符固定。"
     },
     {
       question: "为什么部署流水线不能订阅 pull_request？",
-      options: ["因为 pull_request 太慢", "公开仓库里陌生人也能提 PR，会让不受信的代码跑在家里的机器上", "因为 PR 里没有提交号"],
+      options: ["因为 pull_request 触发的检查太慢，会拖住部署", "公开仓库里陌生人提的 PR，会让不受信的代码跑在家里的机器上", "因为 PR 里还没有提交号，镜像没法打 tag"],
       answer: "B",
       explain: "自托管的机器连着家里的网络和容器，只能执行已经通过检查、被合并或被有权限的人明确指定的代码。"
     }

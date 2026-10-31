@@ -10,10 +10,10 @@ personalEnv: false
 
 <Diagnose
   question="网关调 identity 的查会话接口，写法是 `sessions.introspect(req)`，像调一个普通 Java 方法。这次 identity 回了 HTTP 503。网关这行代码会怎样？"
-  options={["返回 null", "返回一个 active 为 false 的结果", "抛出一个异常，异常里带着 503 和对方给的错误信息", "一直等，直到 identity 恢复"]}
-  answer="C"
+  options={["返回 null，调用方自己判断", "抛出异常，带着 503 和对方的错误信息", "返回 active 为 false 的结果，当作令牌无效", "一直等，直到 identity 恢复"]}
+  answer="B"
   ifRight="对：方法签名只写了成功时返回什么，失败只能用异常表达。这篇讲这个「方法」背后是谁在发请求，失败又是在哪一处被翻译成异常的。"
-  ifWrong="答案是 C。5xx 表示对方处理失败，方法签名里没有地方放「失败」，只能抛异常。这题考的是 HTTP 状态码的含义：2xx 成功，4xx 调用方的问题，5xx 服务方的问题。"
+  ifWrong="答案是 B。5xx 表示对方处理失败，方法签名里没有地方放「失败」，只能抛异常。这题考的是 HTTP 状态码的含义：2xx 成功，4xx 调用方的问题，5xx 服务方的问题。"
   suggest="http-status-codes"
 />
 
@@ -115,7 +115,7 @@ public interface SessionEndpoint {
     { caption: "identity 回 200 和一段 JSON。`RestClient` 按方法的返回类型把它反序列化成 `SessionIntrospectionResp`，代理把对象还给调用方。", focus: ["caller", "proxy", "client"], links: ["client>identity", "proxy>client", "caller>proxy"], tokens: [{ id: "resp", label: "resp", at: "caller" }], notes: [{ at: "caller", text: "拿到 resp", tone: "ok" }] }
   ]}
   guesses={[
-    { before: 4, question: "如果 identity 这次回的不是 200，而是 503，第 4 步会变成什么？", options: ["照样反序列化，字段全是空的", "某个错误处理器读响应体，抛出异常给调用方", "代理自动重试，直到成功"], answer: "B", explain: "状态码是 4xx / 5xx 时，`RestClient` 不走正常的反序列化，而是交给注册好的错误处理器。Patra 的错误处理器把它翻译成 `RemoteCallException`，下一节讲它在哪。" }
+    { before: 4, question: "identity 回了 200 和一段 JSON。`RestClient` 怎么知道要把它变成哪个类的对象？", options: ["JSON 里带着类名，按类名造对象", "返回一个通用的 Map，由调用方自己转", "按代理方法声明的返回类型 `SessionIntrospectionResp`"], answer: "C", explain: "代理把方法的返回类型交给 `RestClient`，它按这个类型把 JSON 反序列化。接口方法的返回类型，就是调用方和 identity 之间约定好的形状。" }
   ]}
 />
 
@@ -180,8 +180,8 @@ Patra 的服务出错时回 RFC 7807 的 ProblemDetail（`application/problem+js
   questions={[
     {
       question: "identity 回了 200，body 里 `active` 是 `false`（令牌已过期）。网关这行调用会怎样？",
-      options: ["抛 RemoteCallException", "正常返回一个 active 为 false 的对象", "抛 ResourceAccessException"],
-      answer: "B",
+      options: ["正常返回一个 active 为 false 的对象", "抛 RemoteCallException", "抛 ResourceAccessException"],
+      answer: "A",
       explain: "「令牌无效」是查询的正常结果，不是调用失败。identity 用 200 回答它，错误处理器根本不会被调用。"
     },
     {

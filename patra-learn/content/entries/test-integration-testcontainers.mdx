@@ -9,7 +9,7 @@ prerequisites: [test-kinds-and-pyramid, db-transactions]
 
 <Diagnose
   question="要测一条用了 PostgreSQL 专有功能的 SQL，有人建议：测试里换成内存数据库 H2，启动快、不用装东西。最大的风险是什么？"
-  options={["内存数据库太慢，会拖垮整个测试", "内存数据库和真实 PostgreSQL 的功能、行为不完全一样，测试绿了不代表线上也对", "内存数据库不能被 Java 访问"]}
+  options={["H2 的 SQL 解析比 PostgreSQL 慢，测试会变慢", "H2 与 PostgreSQL 行为不完全一样，测试绿了线上不一定对", "H2 需要额外装驱动和客户端，维护成本更高"]}
   answer="B"
   ifRight="对。测试能证明的，只是「在被测的那个数据库上是对的」。如果测试用的库和线上不是同一种，这个证明就打了折扣。往下读会看到 Patra 里一个很具体的例子。"
   ifWrong="答案是 B。内存库是另一种数据库：它不支持的功能，测试连跑都跑不起来；它行为略有不同的地方，测试会绿，线上却可能是错的。下面用 Patra 里一条真实的 SQL 来说明。"
@@ -76,7 +76,7 @@ Patra 的集成测试约定里写明：用 TestContainers 模拟真实中间件�
     { caption: "测试进程结束，容器被清理。下一次从全新的数据库开始。", focus: ["test", "pg"], tokens: [{ id: "url", label: "已清理", at: "pg", state: "faded" }] }
   ]}
   guesses={[
-    { before: 3, question: "为什么不能把数据库地址写死成 localhost:5432，而要等容器起来之后「注入」？", options: ["因为 Docker 不允许使用 5432", "因为容器的端口是随机映射的，只有起来之后才知道", "因为 Spring 不支持写死地址"], answer: "B", explain: "随机端口让多个测试进程、多个项目同时跑也不会撞端口。代价是地址要在容器起来之后才知道，所以要动态注入。" }
+    { before: 3, question: "为什么不能把数据库地址写死成 localhost:5432，而要等容器起来之后「注入」？", options: ["因为 Docker 不允许使用 5432", "因为 Spring 不支持写死地址", "因为容器的端口是随机映射的，起来之后才知道"], answer: "C", explain: "随机端口让多个测试进程、多个项目同时跑也不会撞端口。代价是地址要在容器起来之后才知道，所以要动态注入。" }
   ]}
 />
 
@@ -134,13 +134,13 @@ CI 还会提前把 PostgreSQL、Redis、RabbitMQ 的镜像并行拉好，免得�
   questions={[
     {
       question: "一个 @DataJpaTest 测试已经指定了 PostgreSQL 容器的初始化器，但忘了写 @AutoConfigureTestDatabase(replace = NONE)。会发生什么？",
-      options: ["没有影响", "Spring 可能把数据源换成内存数据库，测试没有真的连到容器", "测试会报语法错误无法编译"],
-      answer: "B",
+      options: ["数据源可能被换成内存库，测试没连上容器", "没有影响，初始化器已经指定了容器", "容器起不来，测试因连接超时而失败"],
+      answer: "A",
       explain: "@DataJpaTest 默认替换数据源为内存库。replace = NONE 才是告诉它别替换。"
     },
     {
       question: "为什么 Patra 的 PostgreSQL 初始化器要保证「一个 JVM 里只启动一次」？",
-      options: ["因为 Docker 一次只能启动一个容器", "因为容器首次启动要十来秒，所有测试共用一个就不必反复付这个代价", "因为 PostgreSQL 不能有两个库"],
+      options: ["同时起多个 PostgreSQL 容器会互相抢端口", "容器首次启动要十来秒，共用一个就不用反复付这笔代价", "每多一个容器，测试数据就多一份，清理起来更麻烦"],
       answer: "B",
       explain: "启动是主要成本。共用一个容器，用清场来保证测试之间互不影响。"
     }

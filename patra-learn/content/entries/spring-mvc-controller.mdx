@@ -10,10 +10,10 @@ personalEnv: false
 
 <Diagnose
   question="门户发来一个请求：`DELETE /me/sessions/7001`，意思是「踢掉 ID 为 7001 的那台设备」。在 Spring 里，这个请求要变成对某个 Java 方法的调用。你觉得需要告诉 Spring 哪两件事？"
-  options={["只要告诉它类名，它会自己猜", "「DELETE 加这个路径」对应哪个方法，以及路径里的 7001 交给方法的哪个参数", "要先把请求存进数据库，再由方法去读"]}
-  answer="B"
+  options={["哪个方法管「DELETE 加这个路径」，以及 7001 交给哪个参数", "只要告诉它类名，它会自己猜方法和参数", "要先把请求存进数据库，再由方法去读"]}
+  answer="A"
   ifRight="对。这两件事分别叫路由映射和参数绑定，再加上「返回值怎么变成 JSON」，就是一个接口的全部骨架。"
-  ifWrong="答案是 B：一是「哪种请求方法加哪个路径」交给哪个方法，二是请求里的值交给哪个参数。请求方法（GET、DELETE）和路径怎么设计，是 REST 接口设计那篇的内容，先读它会顺很多。"
+  ifWrong="答案是 A：一是「哪种请求方法加哪个路径」交给哪个方法，二是请求里的值交给哪个参数。请求方法（GET、DELETE）和路径怎么设计，是 REST 接口设计那篇的内容，先读它会顺很多。"
   suggest="http-rest-api-design"
 />
 
@@ -85,13 +85,13 @@ public class MeSessionController {
   questions={[
     {
       question: "`DELETE /me/sessions/others` 既能匹配 `/others`，看起来也能匹配 `/{id}`（把 `others` 当成 id）。Spring 会交给谁？",
-      options: ["`revoke`，然后因为 `others` 不是数字报错", "`revokeOthers`：写死的路径比带占位的更具体，优先", "两个都匹配，启动时就报错"],
+      options: ["`revoke`，然后因为 `others` 不是数字报错", "`revokeOthers`：写死的路径更具体，优先", "两个都匹配，启动时就报错"],
       answer: "B",
       explain: "几个路由都能匹配时，Spring 选最具体的那个。`/others` 一个字都没留空，比 `/{id}` 具体。"
     },
     {
       question: "门户发来 `GET /me/sessions/7001`。会怎样？",
-      options: ["交给 `revoke(7001)`", "交给 `list()`，忽略后面的 7001", "没有方法匹配「GET 加这个路径」，请求被拒"],
+      options: ["交给 `revoke(7001)`", "交给 `list()`，忽略后面的 7001", "没有方法匹配这个 GET，请求被拒"],
       answer: "C",
       explain: "`/{id}` 只登记了 DELETE，`list()` 只登记了不带后缀的 GET。请求方法和路径要一起对上才算匹配。"
     }

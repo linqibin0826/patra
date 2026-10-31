@@ -176,15 +176,15 @@ public record UserCard(
   questions={[
     {
       question: "想把一个已有的 CollectionName 改成新名字，应该怎么做？",
-      options: ["调用 name.setValue(新名字)", "用 CollectionName.parse(新名字) 造一个新的，替换掉旧的", "直接给 name.value 赋值"],
-      answer: "B",
+      options: ["调用 name.setValue(新名字)", "直接给 name.value 赋值", "用 CollectionName.parse(新名字) 造个新的替换掉旧的"],
+      answer: "C",
       explain: "record 没有 setter，字段是 final 的，赋值也编译不过。要变，就造一个新的。"
     },
     {
       question: "一个 record 的组件是 List<String> tags，紧凑构造器里什么都没写。下面哪句是对的？",
-      options: ["tags 不能指向别的列表，但列表里的内容仍可能被外面改掉", "record 是不可变的，列表内容也一定改不了", "record 的组件不能是 List"],
-      answer: "A",
-      explain: "record 只保证字段本身不重新赋值。列表若是外面传进来的可修改列表，外面还能往里加东西，所以要 List.copyOf。"
+      options: ["record 是不可变的，列表内容也一定改不了", "tags 不会指向别的列表，但内容可能被外面改", "record 的组件不能是 List 这类可变类型"],
+      answer: "B",
+      explain: "tags 这个字段不能重新指向别的列表，但列表里的内容仍可能被外面改掉。record 只保证字段本身不重新赋值。列表若是外面传进来的可修改列表，外面还能往里加东西，所以要 List.copyOf。"
     }
   ]}
 />

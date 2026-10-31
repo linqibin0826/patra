@@ -10,10 +10,10 @@ personalEnv: false
 
 <Diagnose
   question="仓库里的 ci.yml 只写了 pull_request、push 到 main、定时和手动这几种触发方式。你把代码推送到自己的 feat/xxx 分支，但没有开 PR。这份 CI 会开工吗？"
-  options={["会，每次 push 都会触发", "不会，它只在被列出的那几种时刻开工", "只在深夜开工"]}
-  answer="B"
+  options={["会，每次 push 都会触发", "只在每晚的定时时刻开工，推送从不触发", "不会，它只在被列出的那几种时刻开工"]}
+  answer="C"
   ifRight="对。workflow 只在触发条件满足时才开工，推送到 feature 分支本身不在其中。"
-  ifWrong="答案是 B。workflow 开工与否只看触发条件。ci.yml 没有把“推送到任意分支”列进去，所以只推 feature 分支不会触发它，开了 PR 才会。"
+  ifWrong="答案是 C。workflow 开工与否只看触发条件。ci.yml 没有把“推送到任意分支”列进去，所以只推 feature 分支不会触发它，开了 PR 才会。"
   suggest="ops-pull-requests"
 />
 
@@ -99,8 +99,8 @@ detect-changes 是最简单的一个 job，通过它能认出一个 job 的所�
   questions={[
     {
       question: "你给同一个 PR 连续推送了两次。第一次触发的检查还没跑完，会怎样？",
-      options: ["两次检查都跑完", "旧的那次被取消，只跑最新的", "新的那次排队等旧的跑完"],
-      answer: "B",
+      options: ["旧的那次被取消，只跑最新的", "两次检查都跑完", "新的那次排队等旧的跑完"],
+      answer: "A",
       explain: "ci.yml 设了 cancel-in-progress，PR 上的旧检查在新提交到来时被取消。"
     },
     {

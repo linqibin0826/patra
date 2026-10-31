@@ -13,7 +13,7 @@ personalEnv: false
 
 <Diagnose
   question="项目用 Next 15。一个终端里 `pnpm dev` 正开着，你在另一个终端里跑 `pnpm build` 想确认能不能构建过。构建成功后，刷新开发页面，会看到什么？"
-  options={["一切正常，build 和 dev 互不相干", "页面没了样式和交互，控制台一片 `_next/static` 404", "dev 服务器自动重启"]}
+  options={["一切正常，build 和 dev 各用各的，互不相干", "页面没了样式和交互，控制台一片 `_next/static` 404", "dev 服务器发现文件变了，自动重启后恢复正常"]}
   answer="B"
   ifRight="对。两者写的是同一个 `.next` 目录，build 把 dev 正在用的文件换掉了。往下读为什么、哪个版本起不再这样。"
   ifWrong="答案是 B。Next 15 及以前，dev 和 build 的输出都放在 `.next`，build 会覆盖 dev 正在用的文件，页面引用的脚本和样式找不到了。这题要先知道 Next 把页面编译成 `.next` 里的文件再交给浏览器，先读 Next.js 路由那篇。"

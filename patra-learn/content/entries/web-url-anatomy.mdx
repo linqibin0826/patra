@@ -63,14 +63,14 @@ personalEnv: false
   questions={[
     {
       question: "在一个文献列表页的网址里，「第 3 页、按发表时间排序」最适合放在哪儿？",
-      options: ["路径，比如 /papers/page3/by-date", "查询参数，比如 ?page=3&sort=published", "片段，比如 #page3"],
-      answer: "B",
+      options: ["查询参数，比如 ?page=3&sort=published", "路径，比如 /papers/page3/by-date", "片段，比如 #page=3&sort=published"],
+      answer: "A",
       explain: "翻页和排序只是换个看法，列表还是那个列表，适合放查询参数。片段不会发给服务器，服务器就没法按它翻页。"
     },
     {
       question: "两个网址只差在 # 后面（#intro 和 #usage），服务器会把它们当成两个不同的请求吗？",
-      options: ["会，路径不同", "不会，服务器收到的是同一个请求", "取决于浏览器版本"],
-      answer: "B",
+      options: ["会，网址不同，服务器就会当成两个请求", "取决于浏览器的版本和设置", "不会，服务器收到的请求完全一样"],
+      answer: "C",
       explain: "片段不发给服务器，所以服务器收到的是完全一样的请求。"
     }
   ]}

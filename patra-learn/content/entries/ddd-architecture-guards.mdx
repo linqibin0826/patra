@@ -10,10 +10,10 @@ personalEnv: false
 
 <Diagnose
   question="团队约定「领域层不许依赖 Spring」。三个月后一个新人为了方便，在 domain 里用了 Spring 的注解。靠什么最可能发现？"
-  options={["代码评审时有人碰巧看到", "构建里的检查直接失败，根本合不进去", "上线后出问题"]}
-  answer="B"
+  options={["代码评审时有人碰巧看到", "上线后跑出问题才发现", "构建检查直接失败，合不进去"]}
+  answer="C"
   ifRight="对。写在文档里的约定，人会忘；写成会失败的检查，机器不会忘。Patra 走的就是这条路。"
-  ifWrong="答案是 B。评审靠人，人会疏忽，也不会天天盯着每个 import。Patra 把约定写成构建检查，违反了 check 就红，合不进去。这篇看这些检查是怎么写的。上一篇讲的模块依赖是第一道，这篇是后面几道。"
+  ifWrong="答案是 C。评审靠人，人会疏忽，也不会天天盯着每个 import。Patra 把约定写成构建检查，违反了 check 就红，合不进去。这篇看这些检查是怎么写的。上一篇讲的模块依赖是第一道，这篇是后面几道。"
   suggest="ddd-patra-six-modules"
 />
 
@@ -64,7 +64,7 @@ R3 管的是：domain 模块的编译类路径只许出现白名单上的构件�
     { caption: "spring-context 不在名单里。任务抛出构建异常，报告 R3 违规：compileClasspath 含 org.springframework:spring-context。", focus: ["result"], links: ["white>result"], tokens: [{ id: "d", label: "R3 违规", at: "result" }], notes: [{ at: "result", text: "构建失败，合不进去", tone: "bad" }] }
   ]}
   guesses={[
-    { before: 4, question: "spring-context 在白名单里吗？", options: ["在，Spring 是通用框架", "不在，领域层要保持纯净", "要看具体哪个模块"], answer: "B", explain: "白名单只有 Patra 工具核心库、Lombok、Jackson、Hutool、MapStruct。领域层的目标是纯业务逻辑，所以不给任何应用框架留位置。" }
+    { before: 4, question: "spring-context 在白名单里吗？", options: ["不在，领域层要保持纯净", "在，Spring 是通用框架", "要看具体哪个模块"], answer: "A", explain: "白名单只有 Patra 工具核心库、Lombok、Jackson、Hutool、MapStruct。领域层的目标是纯业务逻辑，所以不给任何应用框架留位置。" }
   ]}
 />
 
@@ -128,8 +128,8 @@ R6 很有意思，它守的是数据归属，而不是代码分层：用户名�
     },
     {
       question: "有人在 interaction 的 domain 层顺手建了一个 domain.common 包放杂项。哪道关会拦住它？",
-      options: ["R3 构建规则", "子域 ArchUnit 规则：层下面只能是已声明的子域", "没人拦"],
-      answer: "B",
+      options: ["R3 构建规则", "没人拦", "ArchUnit 的子域规则"],
+      answer: "C",
       explain: "分包规范规定层下面只能是已声明的子域，不放 common 之类的共享包，由 SubdomainArchitectureRules 检查。"
     }
   ]}

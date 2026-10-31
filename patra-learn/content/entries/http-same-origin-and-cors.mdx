@@ -10,10 +10,10 @@ personalEnv: false
 
 <Diagnose
   question="https://patra.linqibin.dev 和 https://learn.linqibin.dev 。浏览器认为这两个地址是「同源」的吗？"
-  options={["是，它们都在 linqibin.dev 下面", "不是，主机名不同就是不同的源", "取决于它们是不是同一台服务器"]}
-  answer="B"
+  options={["不是，主机名不同就是不同的源", "是，它们都在 linqibin.dev 下面", "取决于它们是不是同一台服务器"]}
+  answer="A"
   ifRight="对，同源要求协议、主机名、端口三样都一样，主机名差一个字都不算。往下读。"
-  ifWrong="答案是 B：同源看的是协议、主机名、端口，三样全相同才算。patra 和 learn 主机名不同，就是两个不同的源，哪怕它们的服务器其实是同一台。"
+  ifWrong="答案是 A：同源看的是协议、主机名、端口，三样全相同才算。patra 和 learn 主机名不同，就是两个不同的源，哪怕它们的服务器其实是同一台。"
   suggest="http-cookie-and-session"
 />
 

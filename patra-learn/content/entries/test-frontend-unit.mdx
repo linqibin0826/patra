@@ -9,7 +9,7 @@ prerequisites: [test-unit-tests, fe-react-components-and-state]
 
 <Diagnose
   question="要测一个「有帮助」按钮：点一下之后，它应该变成「已点」状态。下面哪种断言，在你以后重构组件内部（改变量名、换状态管理方式）时，最不容易无故变红？"
-  options={["断言按钮的 CSS 类名是 btn-active", "断言屏幕上有一个叫「有帮助」的按钮，并且它的 aria-pressed 是 true", "断言组件内部的变量 isHelpful 等于 true"]}
+  options={["断言按钮的 CSS 类名变成 btn-active", "断言「有帮助」按钮的 aria-pressed 是 true", "断言组件里的变量 isHelpful 变成 true"]}
   answer="B"
   ifRight="对。B 检查的是用户（以及读屏软件）真正能感知到的东西，内部怎么实现它不管。这篇的主线就是：前端测试看的是「用户看到什么」。"
   ifWrong="答案是 B。A 和 C 检查的是实现细节：换个类名、换个变量名，行为没变，测试却红了。B 检查用户能感知到的结果，所以最稳。这正是这篇要讲的原则。如果还不熟悉组件和状态是什么，可以先读前置的 React 那一篇。"
@@ -132,14 +132,14 @@ jsdom 没有真实的页面布局：它不知道一个元素有多宽、会不�
   questions={[
     {
       question: "要在测试里找「提交」按钮，哪种写法最符合 Testing Library 的主张？",
-      options: ["按角色和名字找：getByRole 找名字叫提交的按钮", "按 CSS 类名找：querySelector 找 btn-primary", "按层级找：它在第三个 div 里，一路往下数"],
-      answer: "A",
+      options: ["按 CSS 类名找：querySelector 找 btn-primary", "按层级找：它在第三个 div 里，一路往下数", "按角色和名字找：getByRole 找名字叫提交的按钮"],
+      answer: "C",
       explain: "按角色加名字找，和用户（含读屏软件）找按钮的方式一致；类名、层级一变就找不到了。"
     },
     {
       question: "某个路由处理器只读请求、调后端、返回 JSON，不渲染任何界面。它的测试应该用什么环境？",
-      options: ["jsdom：所有前端测试都要", "node：不需要浏览器环境", "必须开真浏览器"],
-      answer: "B",
+      options: ["node：不需要浏览器环境", "jsdom：前端测试一律用它", "browser 模式：路由也要跑在真浏览器里"],
+      answer: "A",
       explain: "没有界面就不需要 DOM。文件头写 @vitest-environment node 即可，更快也更贴近真实运行环境。"
     }
   ]}

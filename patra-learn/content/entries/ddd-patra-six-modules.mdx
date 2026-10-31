@@ -10,7 +10,7 @@ personalEnv: false
 
 <Diagnose
   question="在 app 模块的某个 Handler 里，直接 import 了 infra 模块里的 CollectionRepositoryAdapter 这个类。你觉得这会发生什么？"
-  options={["能编译，只是不太好", "编译就失败：app 模块根本没有声明依赖 infra", "运行时才报错"]}
+  options={["能编译，只是代码评审会被打回", "编译就失败：app 没声明依赖 infra", "运行时才报错，类找不到"]}
   answer="B"
   ifRight="对。Patra 把依赖方向写进了构建文件。app 模块没声明依赖 infra，类路径上就没有它，编译直接过不了。"
   ifWrong="答案是 B。如果所有代码在一个模块里，import 什么都行，靠自觉。Patra 把层拆成独立模块，模块的依赖在构建文件里声明，没声明就看不见。这正是这篇要看的。"
@@ -112,14 +112,14 @@ app 依赖 domain，adapter 依赖 app，infra 依赖 domain，boot 最后把 ad
   questions={[
     {
       question: "domain 模块里想用 Spring 的某个工具类，该怎么办？",
-      options: ["在 domain 的 build.gradle.kts 里加 Spring 依赖", "不能加。领域层要保持纯净，把依赖框架的部分挪到 app 或 infra", "在代码里用反射"],
-      answer: "B",
+      options: ["在 domain 的 build.gradle.kts 里加 Spring 依赖", "把 Spring 的那个类复制一份进 domain 里", "不能加，把用框架的部分挪到 app 或 infra"],
+      answer: "C",
       explain: "领域层的编译类路径有白名单，加了名单外的依赖，构建检查会失败。下一个相关篇目讲这条检查怎么做。"
     },
     {
       question: "通知服务想知道 interaction 发了什么评论事件，应该依赖 interaction 的哪个模块？",
-      options: ["domain", "api", "infra"],
-      answer: "B",
+      options: ["api", "domain", "infra"],
+      answer: "A",
       explain: "api 模块是专门给别的服务看的契约，里面有集成事件 record。domain 是 interaction 的内部事务，别的服务不该依赖。"
     }
   ]}

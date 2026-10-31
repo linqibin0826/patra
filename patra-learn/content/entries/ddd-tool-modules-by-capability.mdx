@@ -18,10 +18,10 @@ personalEnv: false
 
 <Diagnose
   question="工具模块 jpa 想在「项目里也有 Web 时」顺带注册一个错误映射，要用到工具模块 web 里的类。按 Patra 的规则，jpa 该怎么依赖 web？"
-  options={["api：直接传递给所有使用方", "implementation：自己用，不传递", "compileOnly，加上 @ConditionalOnClass：类路径上有 web 才生效", "完全不许依赖"]}
-  answer="C"
+  options={["api：直接传递给所有使用方", "implementation：自己用，不传递给别人", "不许依赖，jpa 里自己再写一份映射", "compileOnly + 条件注解，有 web 才生效"]}
+  answer="D"
   ifRight="对。工具之间的硬依赖只允许指向 core，其余协作一律「编译时可见、运行时看有没有」。下面讲这条规则是怎么来的。"
-  ifWrong="答案是 C。用 compileOnly 编译，再用 @ConditionalOnClass 让这段自动配置只在类路径上有 web 时才生效，jpa 就不会把 web 强塞给不用 Web 的服务。这题考的是自动配置的条件注解。"
+  ifWrong="答案是 D。用 compileOnly 编译，再用 @ConditionalOnClass 让这段自动配置只在类路径上有 web 时才生效，jpa 就不会把 web 强塞给不用 Web 的服务。这题考的是自动配置的条件注解。"
 />
 
 ## 背景：共享区成了杂物间
@@ -89,7 +89,7 @@ fun r2Violations(project: String, declared: List<Declared>): List<String> {
   questions={[
     {
       question: "R5 原计划用一个现成的依赖分析插件。试跑后它报了「未使用 575 条、未声明 2207 条」。最后怎么处理的？",
-      options: ["照单全收，逐条修", "按预案退回自写检查：只查「声明的模块依赖必须被 import」", "放弃 R5"],
+      options: ["照单全收，花时间逐条修", "按预案换成自写检查：只查声明了的依赖有没有被 import", "放弃 R5，不再检查死依赖"],
       answer: "B",
       explain: "噪音太大压不下来，按计划里写好的预案换成自写的 checkDeclaredDependencies，全仓扫出 8 条死依赖并清掉。"
     }

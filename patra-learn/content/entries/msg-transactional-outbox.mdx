@@ -15,7 +15,7 @@ personalEnv: false
 
 <Diagnose
   question="评论已经提交成功，要通知别人的消息也登记在了同一个数据库里。这时 RabbitMQ 恰好停着，发不出去。用户发表评论的请求会怎样？"
-  options={["评论发表失败，事务回滚", "评论发表成功，要发的消息留在数据库里，等 RabbitMQ 恢复后补发", "评论发表成功，但消息永久丢失"]}
+  options={["评论发表失败，整个事务回滚", "评论发表成功，消息留在数据库里等补发", "评论发表成功，但消息永久丢失"]}
   answer="B"
   ifRight="对。发表评论成不成功，只取决于数据库；消息发不发得出去，是后台的事。这篇讲这个“登记”是怎么做的。"
   ifWrong="答案是 B。消息已经和评论一起提交进数据库了，发不出去只是让它停在表里，没有丢，也不影响用户。上一篇讲了先存后发会丢消息，这里的做法正是为了解决那一个问题。"
@@ -99,8 +99,8 @@ personalEnv: false
     { caption: "通知服务从队列取走消息，给被回复的人写一条提醒。从发表到送达，中间 RabbitMQ 停过，但没有丢任何东西。", focus: ["mq", "notify"], links: ["mq>notify"], tokens: [{ id: "evt", label: "事件 #7f3a", at: "notify" }], notes: [{ at: "notify", text: "提醒 1 条", tone: "ok" }] }
   ]}
   guesses={[
-    { before: 3, question: "评论已经提交，这时 RabbitMQ 停着。用户那次“发表评论”的请求会怎样？", options: ["成功：评论已提交，消息留在登记表等补发", "失败，评论回滚", "成功，但消息永久丢失"], answer: "A", explain: "发表成不成功，只由数据库事务决定。发消息是提交之后的事，失败了只是登记行留着。" },
-    { before: 4, question: "RabbitMQ 恢复后，是谁把停在表里的消息补发出去？", options: ["通知服务主动来拉", "补投任务：按时扫登记表，把没完成的重新外送", "interaction 重启时才会补发"], answer: "B", explain: "Patra 的 XXL-Job 任务每分钟把发布时间早于 1 分钟、还没完成的登记行重新外送一遍。" }
+    { before: 3, question: "评论已经提交，后台去发登记行，这时 RabbitMQ 停着，发送失败了。那一行登记会怎样？", options: ["标成 FAILED，留在表里等补投", "和评论一起回滚，评论也被撤销", "被删掉，因为已经尝试过一次了"], answer: "A", explain: "发送失败只是让登记行留在表里（状态 FAILED），评论和消息都没动，后面的补投靠的就是它。" },
+    { before: 4, question: "RabbitMQ 恢复后，是谁把停在表里的消息补发出去？", options: ["通知服务隔一阵子来表里拉", "interaction 重启时重新发送", "后台补投任务扫表重新外送"], answer: "C", explain: "Patra 的 XXL-Job 任务每分钟把发布时间早于 1 分钟、还没完成的登记行重新外送一遍。" }
   ]}
 />
 
@@ -122,8 +122,8 @@ personalEnv: false
   questions={[
     {
       question: "事务因为别的错误回滚了，之前 publishEvent 登记的那一行会怎样？",
-      options: ["留在表里，之后被补投", "和业务数据一起回滚，不存在了"],
-      answer: "B",
+      options: ["一起回滚，不存在了", "留在表里，之后被补投"],
+      answer: "A",
       explain: "登记行是在同一个数据库事务里写的，和业务数据同成同败。所以不会出现消息描述的是一件没发生的事。"
     }
   ]}

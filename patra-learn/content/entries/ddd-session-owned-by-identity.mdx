@@ -15,10 +15,10 @@ personalEnv: false
 
 <Diagnose
   question="网关和 identity 引用同一个会话模块（jar），两边都直接读写 Redis 里的会话。现在要把「60 秒内不重复续期」改成 120 秒，至少要重新部署哪些服务？"
-  options={["只部署 identity", "identity 和网关都要部署", "只部署网关"]}
-  answer="B"
+  options={["只部署 identity", "只部署网关", "identity 和网关都要部署"]}
+  answer="C"
   ifRight="对。规则写在两个服务共用的库里，改一处就得两边一起发版。这正是这次要拆掉的耦合。"
-  ifWrong="答案是 B。续期规则写在共用的 jar 里，网关和 identity 各打包了一份，只部署一边，两边的规则就不一致。这题考的是限界上下文：一份规则被两个服务各自执行，边界就是模糊的。"
+  ifWrong="答案是 C。续期规则写在共用的 jar 里，网关和 identity 各打包了一份，只部署一边，两边的规则就不一致。这题考的是限界上下文：一份规则被两个服务各自执行，边界就是模糊的。"
 />
 
 ## 背景：两个服务共用一份会话规则
@@ -91,7 +91,7 @@ public interface SessionEndpoint {
   questions={[
     {
       question: "identity 整个停了。这时一个没登录的访客打开文献详情页（请求不带令牌），会怎样？",
-      options: ["一样返回 503，网关查不了会话", "正常返回，网关只对带令牌的请求调 identity", "网关退回去直接读 Redis"],
+      options: ["一样返回 503，网关查不了会话", "正常返回，不带令牌就不会去调 identity", "网关退回去直接读 Redis，所以不受影响"],
       answer: "B",
       explain: "不带令牌的请求按匿名处理，网关根本不调 identity，所以不受它可用性的影响。带令牌的请求才会因为查不了会话变成 503。"
     }

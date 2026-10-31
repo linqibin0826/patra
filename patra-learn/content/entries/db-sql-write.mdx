@@ -9,10 +9,10 @@ prerequisites: [db-sql-select]
 
 <Diagnose
   question="有人想把用户表里 id 为 7 的那位的昵称改成 abc，写了 UPDATE users SET nickname = 'abc'，忘了写 WHERE。执行后会怎样？"
-  options={["只改了表里最后一行", "表里每一位用户的昵称都变成了 abc", "数据库发现没有 WHERE，报错并拒绝执行"]}
-  answer="B"
+  options={["只改了表里最后一行", "数据库发现没有 WHERE，报错并拒绝执行", "表里每一位用户的昵称都变成了 abc"]}
+  answer="C"
   ifRight="对。数据库不会替你猜「你大概想改谁」。WHERE 是唯一的筛子，没有它就是整张表。"
-  ifWrong="答案是 B。数据库只照字面执行：没有 WHERE 就是「所有行」，不会报错也不会问你。这是写入语句里最经典的事故。"
+  ifWrong="答案是 C。数据库只照字面执行：没有 WHERE 就是「所有行」，不会报错也不会问你。这是写入语句里最经典的事故。"
   suggest="db-sql-select"
 />
 

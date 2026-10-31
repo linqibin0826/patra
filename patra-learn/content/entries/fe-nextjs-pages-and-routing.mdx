@@ -10,10 +10,10 @@ personalEnv: false
 
 <Diagnose
   question="门户里只有一个文件 `src/app/u/[username]/page.tsx`。浏览器分别打开 `/u/alice` 和 `/u/bob`，用的是哪个文件？"
-  options={["要各有一个文件，否则打不开", "都是这一个文件：方括号那一段从网址里取值，传给页面组件", "只有名字叫 username 的用户能打开"]}
-  answer="B"
+  options={["要各有一个文件，`alice` 一个、`bob` 一个，否则打不开", "只有名字叫 username 的用户能打开，其他用户 404", "都是这一个文件，方括号那一段从网址里取值传给组件"]}
+  answer="C"
   ifRight="对。一个文件就是一类网址，网址里变的那一段当参数传进来。这篇讲文件和网址怎么对应，以及外壳、加载、出错各放在哪个文件里。"
-  ifWrong="答案是 B。`page.tsx` 导出的就是一个 React 组件，`[username]` 这一段的值作为它的 props 传进来，同一个组件按不同的值画出不同的主页。组件和 props 是前置篇的内容。"
+  ifWrong="答案是 C。`page.tsx` 导出的就是一个 React 组件，`[username]` 这一段的值作为它的 props 传进来，同一个组件按不同的值画出不同的主页。组件和 props 是前置篇的内容。"
   suggest="fe-react-components-and-state"
 />
 
@@ -144,8 +144,8 @@ export default function Loading() {
   questions={[
     {
       question: "如果给公开收藏夹页加上 `loading.tsx`，访客打开一个私有收藏夹，浏览器收到的 HTTP 状态码会是什么？",
-      options: ["404，和现在一样", "200：骨架先发出去了，状态码跟着第一批内容一起发出，之后才发现不存在，已经改不了", "500"],
-      answer: "B",
+      options: ["200：状态码随骨架一起发出，之后改不了", "404，和现在一样，`notFound()` 照常生效", "500，骨架和 `notFound()` 冲突报错"],
+      answer: "A",
       explain: "有了骨架，Next.js 会先把骨架连同 200 状态码发给浏览器，再接着送页面内容。等页面里调用 `notFound()` 时，状态码早已发出。屏幕上照样显示「没有找到」，但搜索引擎看到的是 200。所以这一页宁可不要骨架，也要先判断再回应。"
     },
     {

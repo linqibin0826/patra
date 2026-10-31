@@ -10,7 +10,7 @@ personalEnv: false
 
 <Diagnose
   question="部署机在家里，没有公网地址，GitHub 访问不到它。GitHub 的部署任务是怎么交到这台机器手上的？"
-  options={["GitHub 通过公网连进家里的网络，把任务推给它", "部署机上的 runner 主动向 GitHub 发起连接，问有没有活", "靠人工把任务复制到机器上"]}
+  options={["GitHub 通过公网连进家里的网络，把任务直接推给部署机", "部署机上的 runner 主动向 GitHub 发起连接，问有没有活", "GitHub 经一条预先搭好的 VPN 隧道回连部署机，推送任务"]}
   answer="B"
   ifRight="对。连接永远由家里的机器向外发起，所以不需要公网地址，也不需要在路由器上开任何洞。"
   ifWrong="答案是 B。GitHub 连不进家里的网络，也不需要连：runner 主动向外长轮询问有没有活，任务沿着这条已经建立的连接递回来。"
@@ -98,13 +98,13 @@ runner 是 macOS 的 launchd 服务，在后台常驻。这带来一个隐蔽的
   questions={[
     {
       question: "runner 上的 job 声明了 runs-on: [self-hosted, macmini]。一台只带 self-hosted 标签、没有 macmini 标签的 runner 能接这个任务吗？",
-      options: ["能，self-hosted 就够了", "不能，两个标签都要匹配"],
-      answer: "B",
+      options: ["不能，标签要全部匹配", "能，有 self-hosted 就够了"],
+      answer: "A",
       explain: "runs-on 里列出的标签是“全部都要有”。"
     },
     {
       question: "你在终端里 export 了 JAVA_HOME，然后期望 runner 构建时能用到它。可靠吗？",
-      options: ["可靠，runner 继承终端环境", "不可靠，launchd 服务不继承终端环境，要写进 runner 自己的 .env"],
+      options: ["可靠，runner 会继承你当前终端里的环境变量", "不可靠，launchd 服务有独立环境，要写进 .env"],
       answer: "B",
       explain: "后台常驻服务有自己独立的环境，只认安装时固化进去的那份。"
     }

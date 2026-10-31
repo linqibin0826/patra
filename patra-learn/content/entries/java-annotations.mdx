@@ -168,14 +168,14 @@ dependencies {
   questions={[
     {
       question: "一个类贴了 @Component，但它放在 Spring 扫描不到的包里。服务启动后会怎样？",
-      options: ["Spring 照样会创建它，注解贴上就生效", "Spring 不会创建它，这个注解等于没写", "编译报错"],
-      answer: "B",
+      options: ["Spring 照样会创建它，注解贴上就生效", "编译报错", "Spring 不会创建它，这个注解等于没写"],
+      answer: "C",
       explain: "@Component 只是一个标签。Spring 只扫描启动类所在包及其下的包，扫不到就读不到标签，也就不会创建对象。"
     },
     {
       question: "DictionaryResolverAdapter 的源码里没有构造器，Spring 是怎么创建它的？",
-      options: ["Spring 用反射直接给 final 字段赋值", "Lombok 在编译时按 @RequiredArgsConstructor 生成了构造器，Spring 运行时调用它", "Java 会给每个类自动生成带参数的构造器"],
-      answer: "B",
+      options: ["Lombok 编译时生成了构造器，Spring 运行时调用它", "Spring 用反射绕过构造器，直接给 final 字段赋值", "Java 编译器给每个类自动生成带参数的构造器"],
+      answer: "A",
       explain: "两个读者接力：Lombok 在编译时写出构造器，Spring 在启动时调用这个构造器把依赖交进去。"
     }
   ]}

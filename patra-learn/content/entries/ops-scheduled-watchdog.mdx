@@ -10,10 +10,10 @@ personalEnv: false
 
 <Diagnose
   question="一个 GitHub Actions 定时任务写着 `cron: '0 23 * * *'`，没有设置时区。它会在北京时间几点运行？"
-  options={["每天 23:00", "每天次日早上 07:00", "每天 15:00"]}
-  answer="B"
+  options={["每天早上 07:00", "每天 15:00", "每天 23:00"]}
+  answer="A"
   ifRight="对。GitHub 按 UTC 解释 cron，UTC 23:00 加 8 小时是北京时间次日 07:00。这篇的巡检就定在这个点。"
-  ifWrong="答案是 B。GitHub 的定时任务没有配置时区时按 UTC 解释，北京时间是 UTC+8，23:00 加 8 小时是次日 07:00。这题考的是 cron 与时区。"
+  ifWrong="答案是 A。GitHub 的定时任务没有配置时区时按 UTC 解释，北京时间是 UTC+8，23:00 加 8 小时是次日 07:00。这题考的是 cron 与时区。"
   suggest="ops-self-hosted-runner"
 />
 
@@ -47,8 +47,8 @@ cron 的五个位置从左到右是「分 时 日 月 星期」。`0 23 * * *` �
   questions={[
     {
       question: "想让一个任务在北京时间每天 06:30 运行，cron 应该怎么写？",
-      options: ["`30 6 * * *`", "`30 22 * * *`", "`30 14 * * *`"],
-      answer: "B",
+      options: ["`30 6 * * *`", "`30 14 * * *`", "`30 22 * * *`"],
+      answer: "C",
       explain: "北京时间 06:30 减 8 小时是前一天 UTC 22:30，分钟写 30、小时写 22。"
     }
   ]}

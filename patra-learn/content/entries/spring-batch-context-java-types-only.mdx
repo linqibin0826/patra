@@ -14,10 +14,10 @@ personalEnv: false
 
 <Diagnose
   question="一个 Spring Batch 任务在 Step 结束时，把一个领域 record（文件处理计数：新建几条、更新几条……）放进 Job 的 ExecutionContext，给后面的 Step 用。这样做会怎样？"
-  options={["没问题，ExecutionContext 就是一个 Map，放什么都行", "可能写不进去，或者写进去了读不回来", "只要 record 实现了 Serializable 就一定没问题"]}
-  answer="B"
+  options={["没问题，ExecutionContext 就是一个 Map，放什么都行", "只要 record 实现了 Serializable 就一定没问题", "可能写不进去，或者写进去了读不回来"]}
+  answer="C"
   ifRight="对。ExecutionContext 要随 Job 的执行记录一起存进数据库，也要能读回来，它对能放什么类型有限制。"
-  ifWrong="答案是 B。ExecutionContext 每次提交都会序列化进 Batch 的元数据表，断点续跑时再读回来。默认的序列化器读回时只放行 java.* 与 Spring Batch 自己的类型。这题考的是 Batch 怎么保存执行进度，先读 Spring Batch 那篇。"
+  ifWrong="答案是 C。ExecutionContext 每次提交都会序列化进 Batch 的元数据表，断点续跑时再读回来。默认的序列化器读回时只放行 java.* 与 Spring Batch 自己的类型。这题考的是 Batch 怎么保存执行进度，先读 Spring Batch 那篇。"
   suggest="spring-batch-jobs"
 />
 
@@ -35,8 +35,8 @@ Spring Batch 6 的 `ExecutionContext` 默认用 `DefaultExecutionContextSerializ
   questions={[
     {
       question: "给计数 record 加上 implements Serializable，放进 Job 上下文。任务第一次跑完没报错。哪一刻会出问题？",
-      options: ["永远不会，已经能序列化了", "需要从数据库读回上下文的时候，比如任务失败后断点续跑", "下一次部署的时候"],
-      answer: "B",
+      options: ["要把上下文从数据库读回来的时候", "永远不会，Serializable 已经够了", "下一次部署新版本的时候"],
+      answer: "A",
       explain: "写入只检查 Serializable，读回才检查类型白名单。一路跑通的时候不需要读回，所以看不出问题；等到失败重启、要从数据库恢复上下文，才被拒绝。"
     }
   ]}

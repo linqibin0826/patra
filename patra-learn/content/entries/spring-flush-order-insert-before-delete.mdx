@@ -15,10 +15,10 @@ personalEnv: false
 
 <Diagnose
   question="表上有唯一约束 (user_id, position)。一个事务里，代码先调 Spring Data 派生的 deleteByUserId(7)，再 saveAll 写入 user_id = 7 的新一组行（position 还是 1、2、3）。事务提交时会怎样？"
-  options={["顺利提交：先删了旧行，再插新行", "报唯一约束冲突", "新行被当成更新，覆盖旧行"]}
-  answer="B"
+  options={["报唯一约束冲突", "顺利提交：先删了旧行，再插新行", "新行被当成更新，覆盖旧行"]}
+  answer="A"
   ifRight="对。代码里的调用顺序不等于数据库里 SQL 的执行顺序。这篇讲 Hibernate 在 flush 时怎么排序。"
-  ifWrong="答案是 B。JPA 先把改动攒在持久化上下文里，flush 时才发 SQL，而且按自己的顺序：插入排在删除前面。旧行还在，新行就撞上了唯一约束。这题考的是 JPA 什么时候真正写库，先读 JPA 基础那篇。"
+  ifWrong="答案是 A。JPA 先把改动攒在持久化上下文里，flush 时才发 SQL，而且按自己的顺序：插入排在删除前面。旧行还在，新行就撞上了唯一约束。这题考的是 JPA 什么时候真正写库，先读 JPA 基础那篇。"
   suggest="spring-jpa-basics"
 />
 

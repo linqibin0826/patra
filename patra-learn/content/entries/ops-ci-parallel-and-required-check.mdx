@@ -10,10 +10,10 @@ personalEnv: false
 
 <Diagnose
   question="一个 PR 只改了文档，CI 里的后端、前端、学习站检查任务，因为 job 上的 `if` 条件不满足，全被跳过（skipped）。如果分支保护要求这些任务都成功，合并按钮会怎样？"
-  options={["亮着，被跳过的任务算通过", "是灰的，因为这些任务没有成功过", "一直卡在等待，等这些任务出结果"]}
-  answer="A"
+  options={["是灰的，因为这些任务没有成功过", "亮着，被跳过的任务算通过", "一直卡在等待，等这些任务出结果"]}
+  answer="B"
   ifRight="对。任务因为 `if` 条件被跳过时，GitHub 报给它的状态是成功，分支保护把它当通过。这很方便，但也藏着坑：汇总任务自己被跳过时，同样会被当成通过。所以 Patra 的汇总任务写了 `if: always()`，并用一份许可名单明确规定哪些任务可以被跳过。"
-  ifWrong="答案是 A。任务因为 `if` 条件被跳过时，GitHub 报给它的状态是成功，分支保护把它当通过，不会挡住合并。这题考的是「跳过」在 GitHub 眼里算什么：下文的汇总任务正是因为「跳过算通过」，才要写 `if: always()`，自己来判断结论。"
+  ifWrong="答案是 B。任务因为 `if` 条件被跳过时，GitHub 报给它的状态是成功，分支保护把它当通过，不会挡住合并。这题考的是「跳过」在 GitHub 眼里算什么：下文的汇总任务正是因为「跳过算通过」，才要写 `if: always()`，自己来判断结论。"
   suggest="ops-ci-changed-only"
 />
 
@@ -98,7 +98,7 @@ backend 这一步值得细看。它用 **matrix（矩阵）** 把一个 job 展�
 
 <Params
   title="动手试试：汇总任务不写 always() 会怎样"
-  guess={{ question: "某个后端单元的测试失败了。汇总任务没写 if: always()。合并按钮会怎样？", options: ["是灰的，失败的任务会让汇总也失败", "汇总任务因为依赖失败而被跳过，被当成通过，按钮亮了", "汇总任务会等失败的任务重试成功"], answer: "B", explain: "GitHub 把“被跳过的必过检查”当作通过。依赖的任务失败，汇总任务默认就被跳过，于是坏代码溜了进去。所以汇总任务必须 always() 地运行，自己来判断结论。" }}
+  guess={{ question: "某个后端单元的测试失败了。汇总任务没写 if: always()。合并按钮会怎样？", options: ["是灰的，失败的任务会让汇总也跟着失败", "一直卡在等待，汇总任务等失败的任务重试成功", "汇总任务因依赖失败被跳过，算通过，按钮亮了"], answer: "C", explain: "GitHub 把“被跳过的必过检查”当作通过。依赖的任务失败，汇总任务默认就被跳过，于是坏代码溜了进去。所以汇总任务必须 always() 地运行，自己来判断结论。" }}
   controls={[
     { type: "switch", id: "fail", label: "后端某个单元的测试失败了", default: true },
     { type: "switch", id: "always", label: "汇总任务写了 if: always()", default: false }
@@ -123,14 +123,14 @@ backend 这一步值得细看。它用 **matrix（矩阵）** 把一个 job 展�
   questions={[
     {
       question: "给 CI 新增了 docs-lint 任务，只在 docs 目录有改动时才跑。要让它能拦住坏 PR、又不影响别的 PR，需要？",
-      options: ["只加进 needs 就够了", "加进 needs，也加进 allowed-skips", "只加进 allowed-skips"],
-      answer: "B",
+      options: ["加进 needs，也加进 allowed-skips", "只加进 needs，汇总就能看到它的结果", "只加进 allowed-skips，被跳过也算数"],
+      answer: "A",
       explain: "不加 needs，汇总看不到它的结果；不加 allowed-skips，没改 docs 的 PR 会因为它被跳过而失败。"
     },
     {
       question: "detect-changes 任务失败了。汇总任务会怎样？",
-      options: ["因为它不在 allowed-skips 里，汇总失败", "无所谓，汇总照样通过"],
-      answer: "A",
+      options: ["汇总照样通过，它只是个检测任务", "因为它不在 allowed-skips 里，汇总失败"],
+      answer: "B",
       explain: "它没有被跳过，是失败；而且它不在许可名单里，汇总必须失败。"
     }
   ]}

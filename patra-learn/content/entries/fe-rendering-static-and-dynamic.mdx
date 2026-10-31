@@ -67,7 +67,7 @@ Next.js 判断动态的办法，是在静态生成的过程中让这些 API 抛�
 
 <Params
   title="这一页会在什么时候生成 HTML"
-  guess={{ question: "一页只读了查询参数 `?sort=`，没读 Cookie，也没调网关。它是静态还是动态？", options: ["静态：没读 Cookie 就是静态", "动态：查询参数也只有请求到了才知道", "看构建时网络通不通"], answer: "B", explain: "查询参数每个请求都可能不同，构建时不知道是什么，所以只能请求时渲染。" }}
+  guess={{ question: "一页只读了查询参数 `?sort=`，没读 Cookie，也没调网关。它是静态还是动态？", options: ["静态：没读 Cookie 就是静态", "动态：查询参数也只有请求到了才知道", "看有没有调网关：没调就是静态"], answer: "B", explain: "查询参数每个请求都可能不同，构建时不知道是什么，所以只能请求时渲染。" }}
   controls={[
     { type: "switch", id: "cookies", label: "读 Cookie 或请求头", default: true },
     { type: "switch", id: "search", label: "读 `searchParams`", default: false },

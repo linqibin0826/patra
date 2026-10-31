@@ -17,7 +17,7 @@ personalEnv: false
 
 <Diagnose
   question="网关收到一个请求，头里写着 X-Forwarded-For: 203.0.113.9。能把 203.0.113.9 记成用户的真实 IP 吗？"
-  options={["能，这个头就是用来传真实 IP 的", "要看这条连接是谁发起的：只有自己信任的代理加的才算", "不能，X-Forwarded-For 永远不可信"]}
+  options={["能，这个头就是用来传真实 IP 的", "看连接来自谁：只有受信任代理加的才算", "不能，X-Forwarded-For 永远不可信"]}
   answer="B"
   ifRight="对。头本身谁都能写，可信的是「谁连过来的」。这篇讲 Patra 怎么把这条规则落到配置上。"
   ifWrong="答案是 B。任何客户端都能自己带这个头；只有连接来自你认识的代理时，它写的值才有意义。这题考的是反向代理在请求链路上加了什么，先读反向代理那篇。"
@@ -69,7 +69,7 @@ v0.12 用户中心那一版要做登录记录、登录设备列表和「新设�
     { caption: "出站时网关按来源地址重新写一份 X-Forwarded-For 给下游。identity 用 getRemoteAddr() 读到的就是浏览器 IP。", focus: ["identity"], links: ["filter>identity"], tokens: [{ id: "req", label: "XFF: 203.0.113.9", at: "identity" }], notes: [{ at: "identity", text: "记下真实 IP", tone: "ok" }] }
   ]}
   guesses={[
-    { before: 3, question: "Spring Boot 打开 RemoteIpValve 时，默认的受信代理列表是一串私网段（含 10.0.0.0/8、192.168.0.0/16、100.64.0.0/10）。在 Patra 的部署环境里直接用默认值，会怎样？", options: ["没问题，私网里都是自己人", "内网里任何机器、任何经端口转发进来的连接都会被当成代理，等于谁都信", "阀门不会生效"], answer: "B", explain: "部署机上的连接大多来自私网地址：VPN 网段、容器网桥、端口转发。默认值会让它们全都成了「受信代理」。Patra 把默认值改成空串（谁都不信），只填门户的固定地址。" }
+    { before: 3, question: "Spring Boot 打开 RemoteIpValve 时，默认的受信代理列表是一串私网段（含 10.0.0.0/8、192.168.0.0/16、100.64.0.0/10）。在 Patra 的部署环境里直接用默认值，会怎样？", options: ["内网里的连接都会被当成代理，等于谁都信", "没问题，私网里都是自己人，默认值就够用", "阀门不会生效，要显式配置受信代理才起作用"], answer: "A", explain: "部署机上的连接大多来自私网地址：VPN 网段、容器网桥、端口转发。默认值会让它们全都成了「受信代理」。Patra 把默认值改成空串（谁都不信），只填门户的固定地址。" }
   ]}
 />
 
@@ -83,7 +83,7 @@ v0.12 用户中心那一版要做登录记录、登录设备列表和「新设�
 
 <Params
   title="网关最后记下的是谁的 IP"
-  guess={{ question: "连接来自门户，可门户偷懒，把浏览器带来的 X-Forwarded-For 原样转了过来。网关会记下什么？", options: ["门户的地址", "浏览器自己写的那个值", "请求被拒绝"], answer: "B", explain: "门户是受信代理，阀门就采信它转来的值。所以「门户必须丢掉浏览器带来的这个头」是硬性条款，不是可选项。" }}
+  guess={{ question: "连接来自门户，可门户偷懒，把浏览器带来的 X-Forwarded-For 原样转了过来。网关会记下什么？", options: ["门户的地址，因为它是直接连接的一方", "浏览器自己写的那个值", "请求被拒绝，因为头里的值被伪造了"], answer: "B", explain: "门户是受信代理，阀门就采信它转来的值。所以「门户必须丢掉浏览器带来的这个头」是硬性条款，不是可选项。" }}
   controls={[
     { type: "switch", id: "from-portal", label: "连接来自门户（在受信列表里）", default: true },
     { type: "switch", id: "portal-drops", label: "门户丢掉浏览器带来的 X-Forwarded-For", default: true },

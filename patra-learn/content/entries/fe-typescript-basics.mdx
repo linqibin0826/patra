@@ -97,8 +97,8 @@ TS 会跟着 `if` 走：进了 `target.kind === "invalid"` 这个分支，它就
   questions={[
     {
       question: "在两个 if 的外面，直接写 `router.push(target.href)`，会怎样？",
-      options: ["没问题，target 总有 href", "TS 标红：target 可能是 empty 或 invalid，它们没有 href", "TS 不管，运行时才知道"],
-      answer: "B",
+      options: ["没问题，target 总有 href", "TS 不管，运行时才知道", "TS 标红：empty 和 invalid 没有 href"],
+      answer: "C",
       explain: "没判断 kind 之前，target 可能是三种里的任何一种，只有 ok 那一种有 href。这正是联合类型的用处：逼你把每种情况想到。"
     }
   ]}

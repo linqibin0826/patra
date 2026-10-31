@@ -13,10 +13,10 @@ personalEnv: false
 
 <Diagnose
   question="门户的登录表单提交给一个 Server Action，参数是邮箱和密码。你在本机用 next dev 跑门户、登录一次。开发终端里会看到什么？"
-  options={["一行请求日志，不含任何参数", "一行 Server Action 调用日志，参数原样打印，密码也是明文", "什么都没有"]}
-  answer="B"
+  options={["一行 Server Action 调用日志，参数连密码原样打印", "一行请求日志，只有路径和状态码，不含参数", "什么都没有，要自己配置日志才会打印"]}
+  answer="A"
   ifRight="对。开发模式下 Next 默认把 Server Action 的调用连同参数打出来。下面讲在哪关、为什么要关。"
-  ifWrong="答案是 B。Next 16 的开发模式默认记录每次 Server Action 调用和它的参数，登录的参数里就有明文密码。这题考的是 Server Action：它的参数是从浏览器序列化过来的普通数据，框架看得到全部内容。"
+  ifWrong="答案是 A。Next 16 的开发模式默认记录每次 Server Action 调用和它的参数，登录的参数里就有明文密码。这题考的是 Server Action：它的参数是从浏览器序列化过来的普通数据，框架看得到全部内容。"
 />
 
 ## 坑

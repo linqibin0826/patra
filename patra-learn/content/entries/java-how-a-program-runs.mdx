@@ -10,10 +10,10 @@ personalEnv: false
 
 <Diagnose
   question="Patra 的 identity 服务打成了一个 jar 文件。这个 jar 在 Mac 上能跑，现在要放进一个 Linux 容器里跑。需要先在 Linux 上重新编译一遍吗？"
-  options={["需要，换了操作系统就得重新编译", "不需要，只要容器里装了 Java 运行环境", "不需要，容器里什么都不用装"]}
-  answer="B"
+  options={["需要，换了操作系统就得重新编译", "不需要，容器里什么都不用装", "不需要，装了 Java 运行环境就行"]}
+  answer="C"
   ifRight="对。jar 里装的不是某种电脑的机器码，而是字节码，交给哪里的 Java 运行环境都能跑。下面一步步看它是怎么来的、又是怎么跑起来的。"
-  ifWrong="答案是 B：jar 里是字节码，不绑定操作系统，但必须有 Java 运行环境（JVM）来执行它。这篇从头讲这件事。"
+  ifWrong="答案是 C：jar 里是字节码，不绑定操作系统，但必须有 Java 运行环境（JVM）来执行它。这篇从头讲这件事。"
 />
 
 <Callout kind="lead">
@@ -102,7 +102,7 @@ Patra 的六个后端服务各有一个这样的启动类，长得几乎一样�
     { caption: "JVM 读字节码，翻成这台机器的机器码，找到 main 方法开始执行。服务启动了。", focus: ["main"], links: ["jvm>main"], tokens: [{ id: "code", label: "运行中", at: "main" }], notes: [{ at: "main", text: "服务已启动", tone: "ok" }] }
   ]}
   guesses={[
-    { before: 4, question: "jar 要被拿到一台 Linux 容器里去跑。这一步需要对 jar 做什么？", options: ["在 Linux 上重新编译一次源码", "什么都不用做，原样复制过去", "把字节码先转成 Linux 的机器码再复制"], answer: "B", explain: "字节码不绑定操作系统。翻成机器码是 JVM 在运行时做的事，不需要提前做。" }
+    { before: 5, question: "容器里的 JVM 拿到这个 jar。字节码变成这台机器能执行的机器码，是谁、在什么时候做的？", options: ["JVM，在服务运行时翻译", "javac，在编译时就按每种系统各翻一份", "Docker，在构建镜像时统一翻好"], answer: "A", explain: "字节码不绑定操作系统。翻成机器码是 JVM 在运行时做的事，不需要提前做，所以同一个 jar 放到哪里都能跑。" }
   ]}
 />
 
@@ -142,9 +142,9 @@ ENTRYPOINT ["java", "-XX:MaxRAMPercentage=75.0", "-DJM.LOG.PATH=/app/logs/nacos"
     },
     {
       question: "Patra 的服务容器里能编译 Java 源码吗？",
-      options: ["能，Java 都自带编译器", "不能，容器只装了 JRE，有 JVM 没有编译器", "能，Docker 会自动编译"],
-      answer: "B",
-      explain: "底座是 eclipse-temurin:25-jre。JRE 只负责运行，编译在打 jar 之前就做完了。"
+      options: ["能，Java 都自带编译器", "能，Docker 会自动编译", "不能，容器里只有 JRE，没有编译器"],
+      answer: "C",
+      explain: "底座是 eclipse-temurin:25-jre，有 JVM 没有编译器。JRE 只负责运行，编译在打 jar 之前就做完了。"
     }
   ]}
 />

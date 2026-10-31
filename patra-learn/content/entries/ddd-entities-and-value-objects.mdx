@@ -10,10 +10,10 @@ personalEnv: false
 
 <Diagnose
   question="用户甲和用户乙各建了一个收藏夹，名字都叫「读书笔记」。这两个名字相等吗？这两个收藏夹是同一个收藏夹吗？"
-  options={["名字相等，收藏夹也是同一个", "名字相等，但收藏夹不是同一个", "名字不相等，收藏夹也不是同一个"]}
-  answer="B"
+  options={["名字相等，但收藏夹不是同一个", "名字相等，收藏夹也是同一个", "名字不相等，收藏夹也不是同一个"]}
+  answer="A"
   ifRight="对。「读书笔记」四个字一样，名字就相等；但两个收藏夹是两个东西，各有各的身份。这篇把这两种东西分别叫值对象和实体。"
-  ifWrong="答案是 B：名字只看内容，内容一样就相等；收藏夹是一个具体的东西，两个人各有一个，不能算同一个。这里要用到「record 按值判断相等」，不熟的话先读那篇。"
+  ifWrong="答案是 A：名字只看内容，内容一样就相等；收藏夹是一个具体的东西，两个人各有一个，不能算同一个。这里要用到「record 按值判断相等」，不熟的话先读那篇。"
   suggest="java-records-and-immutability"
 />
 
@@ -63,7 +63,7 @@ personalEnv: false
     { caption: "parse 抛出异常，CollectionName 根本没有被造出来。", focus: ["parse"], tokens: [{ id: "u", label: "空串", at: "parse", state: "dropped" }], notes: [{ at: "parse", text: "抛异常", tone: "bad" }] }
   ]}
   guesses={[
-    { before: 6, question: "输入全是空格，规范化后是空串。parse 会怎么处理？", options: ["造出一个名字为空的 CollectionName", "抛异常，不造对象", "返回 null"], answer: "B", explain: "parse 的约定是：要么造出合法的值，要么抛异常。只要大家都走 parse，手里的 CollectionName 就是合法的。" }
+    { before: 6, question: "输入全是空格，规范化后是空串。parse 会怎么处理？", options: ["造出一个名字为空的 CollectionName", "返回 null", "抛异常，不造对象"], answer: "C", explain: "parse 的约定是：要么造出合法的值，要么抛异常。只要大家都走 parse，手里的 CollectionName 就是合法的。" }
   ]}
 />
 
@@ -98,8 +98,8 @@ personalEnv: false
   questions={[
     {
       question: "哪个更适合做成实体？",
-      options: ["一条评论", "评论的正文长度上限（5,000 个字素）"],
-      answer: "A",
+      options: ["评论的正文长度上限（5,000 个字素）", "一条评论"],
+      answer: "B",
       explain: "评论有生命周期：发表、编辑、删除，随时间变化但始终是它。上限是一个固定的值，不需要身份。"
     },
     {

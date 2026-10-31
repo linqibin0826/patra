@@ -9,10 +9,10 @@ prerequisites: [test-integration-testcontainers, spring-mvc-controller]
 
 <Diagnose
   question="你想验证一个 Controller：收到 DELETE 请求后，返回 200 和正确的 JSON，并且把请求转成了正确的命令。这个测试需要连上数据库、Redis 和消息队列吗？"
-  options={["需要，否则 Controller 没法工作", "不需要，只要把 Web 这一层装起来，下游的东西换成假的", "需要数据库，但 Redis 和消息队列可以不要"]}
-  answer="B"
+  options={["需要，否则 Controller 没法工作", "需要数据库，但 Redis 和消息队列可以不要", "不需要，只装 Web 这一层，下游换成假的"]}
+  answer="C"
   ifRight="对。Controller 要验证的是「HTTP 进来、命令出去、响应的形状」，下游的东西与这件事无关。这就是「切片测试」的出发点。"
-  ifWrong="答案是 B。Controller 只负责 HTTP 与命令之间的转换：怎么处理业务是下游的事，在别的测试里验证。所以这里只需要 Web 这一层，下游全换成假的。这种只装配一小块的测试叫切片测试，下面详细讲。"
+  ifWrong="答案是 C。Controller 只负责 HTTP 与命令之间的转换：怎么处理业务是下游的事，在别的测试里验证。所以这里只需要 Web 这一层，下游全换成假的。这种只装配一小块的测试叫切片测试，下面详细讲。"
   suggest="spring-mvc-controller"
 />
 
@@ -119,13 +119,13 @@ No qualifying bean of type 'XxxService' available
   questions={[
     {
       question: "一个 Controller 注入了 MapStruct 生成的 ApiConverter，切片测试报「No qualifying bean of type ApiConverter」。该怎么办？",
-      options: ["用 @MockitoBean 把它换成假的，每个测试都规定它的返回值", "在配置根里 @ComponentScan 扫描到它，或者 @Import 它", "把 @WebMvcTest 改成 @SpringBootTest 启动整个应用"],
+      options: ["用 @MockitoBean 把它换成假的，每个测试都规定它的返回值", "@Import 它，或让配置根 @ComponentScan 到它", "把 @WebMvcTest 改成 @SpringBootTest 启动整个应用"],
       answer: "B",
       explain: "转换器是无副作用的纯映射，用真的更省事，也能让响应形状的检查更真。Mock 掉它，等于什么都没验证；换成 @SpringBootTest 则放弃了切片的好处。"
     },
     {
       question: "同一个 Controller 还注入了一个 SessionQueryService，会去查数据库。切片测试里它该怎么办？",
-      options: ["@MockitoBean：规定它返回什么，核对 Controller 的使用", "@Import 它，并启动数据库容器", "忽略报错"],
+      options: ["@MockitoBean：规定它返回什么", "@Import 它，并启动数据库容器", "@ComponentScan 扫整个 app 包，装进真实的它"],
       answer: "A",
       explain: "它是下游的业务依赖。Controller 测试只关心「拿到数据后响应什么样」，数据本身由别处验证。"
     }

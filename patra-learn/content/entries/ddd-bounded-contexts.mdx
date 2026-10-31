@@ -10,7 +10,7 @@ personalEnv: false
 
 <Diagnose
   question="identity 服务有一个 User 类（含邮箱、状态机、用户名）。interaction 服务只需要显示评论作者的昵称和头像。让 interaction 直接依赖并使用 identity 的 User 类，合适吗？"
-  options={["合适，复用代码，省事", "不合适，interaction 只需要几个字段，直接用 User 会把两个服务绑死", "合适，只要加个缓存"]}
+  options={["合适，复用同一个类，省得再写一遍", "不合适，只需几个字段，直接用 User 会把两个服务绑死", "合适，只要中间加个缓存就解耦了"]}
   answer="B"
   ifRight="对。interaction 关心的是「名片」，不是整个账号。如果直接用 User，identity 改一个内部字段，interaction 也跟着受影响。"
   ifWrong="答案是 B。User 里装着邮箱、状态机这些 interaction 不该碰的东西，而且 identity 一改，interaction 也得跟着改。同一个词「用户」，在两个服务里应该是两个不同的模型。这篇讲的就是这个。"
@@ -147,14 +147,14 @@ Patra 里两者大致对齐：一个服务是一个上下文，服务里再分�
   questions={[
     {
       question: "notification 发提醒邮件时，为什么向 identity 现查收件人的邮箱，而不是自己存一份？",
-      options: ["因为存不下", "邮箱的归属和变更在 identity，存副本就要保证两边同步，现查最不会错", "因为邮箱不重要"],
-      answer: "B",
+      options: ["存一份太占数据库空间", "邮箱不是提醒的核心数据，没必要存", "邮箱归 identity 管，存副本要同步，现查最不会错"],
+      answer: "C",
       explain: "用户的邮箱可能改、可能注销清空。让 identity 当唯一来源，别处现查，就没有同步问题。"
     },
     {
       question: "interaction 里的 SubjectType 有 3 种，notification 里的只有 2 种。这是 bug 吗？",
-      options: ["是 bug，应该统一", "不是，各上下文按自己的需要定义自己的模型", "是，应该删掉一种"],
-      answer: "B",
+      options: ["不是 bug，各上下文按自己的需要定义模型", "是 bug，两边的枚举应该统一成一个", "是 bug，notification 应该补齐成 3 种"],
+      answer: "A",
       explain: "notification 只关心提醒涉及的两种，用自己的枚举，并容忍对方新增种类。统一成一个共享类，反而会把两边绑死。"
     }
   ]}

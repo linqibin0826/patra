@@ -10,10 +10,10 @@ personalEnv: false
 
 <Diagnose
   question="Patra 有好几个后端服务，外加数据库、缓存、消息队列。如果每个都用一条很长的 docker run 命令手动启动，最大的麻烦是什么？"
-  options={["命令太长，每次都得记住镜像、端口、环境变量、依赖顺序，换一台机器就要重敲一遍", "Docker 不允许同时运行多个容器", "容器之间天生就能互相找到，不需要配置，所以没有麻烦"]}
-  answer="A"
+  options={["docker run 启动的容器比较慢，每个都要等很久", "命令太长，镜像、端口、环境变量、依赖顺序都得记，换台机器要重敲", "docker run 不能设置端口和环境变量，只能事后手动改"]}
+  answer="B"
   ifRight="对。启动参数多、容易漏，而且没法复用。compose 把这些写进一个文件，以后一条命令照着文件来。"
-  ifWrong="答案是 A。Docker 当然能同时运行很多容器，麻烦在于每个容器的启动参数一大堆，靠人记很容易漏、也没法重复。"
+  ifWrong="答案是 B。docker run 启动并不慢，端口和环境变量也都能设置，麻烦在于每个容器的启动参数一大堆，靠人记很容易漏、也没法重复。"
   suggest="ops-docker-images-and-containers"
 />
 
@@ -121,7 +121,7 @@ Patra 不是把所有服务塞进一份文件，而是**按职责拆成几份**�
     { caption: "停掉旧容器，按声明创建并启动新容器。其他服务不受影响，因为命令只点了 catalog。", focus: ["new"], tokens: [{ id: "running", label: "catalog:新提交号", at: "new" }], notes: [{ at: "new", text: "健康检查开始计时", tone: "wait" }] }
   ]}
   guesses={[
-    { before: 3, question: "catalog 的声明和现在运行的容器一致（镜像、配置都没变）。再执行 up -d catalog，会发生什么？", options: ["先停掉再重新创建，保证最新", "什么也不做，因为已经符合声明", "报错，因为容器已经存在"], answer: "B", explain: "compose 是声明式的：只有声明和现实不一致才动手。一致就什么都不做，所以重复执行是安全的。" }
+    { before: 3, question: "catalog 的声明和现在运行的容器一致（镜像、配置都没变）。再执行 up -d catalog，会发生什么？", options: ["先停掉再重新创建，保证最新", "报错，因为容器已经存在", "什么也不做，因为已经符合声明"], answer: "C", explain: "compose 是声明式的：只有声明和现实不一致才动手。一致就什么都不做，所以重复执行是安全的。" }
   ]}
 />
 
@@ -131,14 +131,14 @@ Patra 不是把所有服务塞进一份文件，而是**按职责拆成几份**�
   questions={[
     {
       question: "容器在运行，但里面的服务其实已经卡死了。哪个配置能发现这种情况？",
-      options: ["restart: unless-stopped", "healthcheck", "container_name"],
-      answer: "B",
+      options: ["healthcheck", "restart: unless-stopped", "container_name"],
+      answer: "A",
       explain: "restart 只管进程退出时拉起；进程还在却不干活，要靠健康检查定时探测。"
     },
     {
       question: "部署时只更新 catalog，其他服务会被重启吗？",
-      options: ["会，所有服务一起重启", "不会，命令只指定了 catalog"],
-      answer: "B",
+      options: ["不会，命令只指定了 catalog", "会，所有服务一起重启"],
+      answer: "A",
       explain: "up -d 加服务名，只对齐这一个服务。"
     }
   ]}

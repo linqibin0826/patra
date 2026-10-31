@@ -9,7 +9,7 @@ prerequisites: [test-unit-tests]
 
 <Diagnose
   question="测试 A 要启动数据库容器和整个后端应用，再发一个真实的 HTTP 请求。测试 B 只调用一个纯 Java 方法。同样出错时，哪个更容易让你直接看出「问题在哪一行」？"
-  options={["测试 A，因为它更接近真实使用", "测试 B，因为它涉及的东西少，范围小", "没有区别"]}
+  options={["测试 A，因为它更接近真实使用", "测试 B，因为涉及的东西少", "没有区别，失败信息都会指出具体行号"]}
   answer="B"
   ifRight="对。涉及的零件越少，出错时嫌疑人越少。但 A 也有 B 做不到的事：它能发现零件拼在一起才出现的问题。这篇讲怎么在两者之间分工。"
   ifWrong="答案是 B。测试 A 失败，可能是数据库、网络、配置、代码，哪个都有可能；测试 B 失败，嫌疑只在那个方法里。不过 A 能发现零件拼起来才出的问题，这是 B 做不到的，所以两种测试都要有。下面讲怎么分工。"
@@ -111,14 +111,14 @@ CI 把这些任务点名交给 Gradle，示意如下：
   questions={[
     {
       question: "一个测试类叫 CatalogIngestionE2E，它最可能放在哪儿？",
-      options: ["domain 模块的 src/test", "boot 模块的 src/e2eTest", "adapter 模块的 src/integrationTest"],
-      answer: "B",
+      options: ["domain 模块的 src/test", "adapter 模块的 src/integrationTest", "boot 模块的 src/e2eTest"],
+      answer: "C",
       explain: "按命名约定，E2E 结尾的是端到端测试，放在 boot 模块的 src/e2eTest。"
     },
     {
       question: "发现某条 SQL 在真实 PostgreSQL 上的排序不对。这类问题最适合在哪一层发现？",
-      options: ["单元测试：Mock 掉数据库", "集成测试：用真实的 PostgreSQL 容器", "不需要测试，上线后看"],
-      answer: "B",
+      options: ["集成测试：连真实的 PostgreSQL 容器", "单元测试：Mock 掉数据库", "端到端测试：从浏览器点一遍就能发现"],
+      answer: "A",
       explain: "SQL 的行为取决于真实数据库，Mock 会替你「答对」。下一层测试才有真数据库。"
     }
   ]}

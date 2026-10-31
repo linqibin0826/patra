@@ -10,10 +10,10 @@ personalEnv: false
 
 <Diagnose
   question="改邮箱有个「每个账号每天最多申请几次」的限制，现在用 Redis 实现。如果要改成用数据库表实现，理想情况下要改的代码是？"
-  options={["申请改邮箱的 Handler 和限流的实现，两处都要改", "只重写限流的实现类，Handler 一行不动", "整个 identity 服务重写"]}
-  answer="B"
+  options={["只重写限流的实现类，Handler 一行不动", "限流的实现、Handler 和 Controller 三处都要改", "申请改邮箱的 Handler 和限流的实现，两处都要改"]}
+  answer="A"
   ifRight="对。这正是端口与适配器要达到的效果：Handler 只认「限流」这个接口，接口背后是 Redis 还是数据库，它不知道。"
-  ifWrong="答案是 B。如果 Handler 直接写了 Redis 命令，那换实现就要连 Handler 一起改。把限流做成接口，Handler 只调接口，实现可以单独替换。接口和实现靠 Spring 把它们接在一起，这部分不熟的话先读依赖注入那篇。"
+  ifWrong="答案是 A。如果 Handler 直接写了 Redis 命令，那换实现就要连 Handler 一起改。把限流做成接口，Handler 只调接口，实现可以单独替换。接口和实现靠 Spring 把它们接在一起，这部分不熟的话先读依赖注入那篇。"
   suggest="spring-dependency-injection"
 />
 
@@ -137,13 +137,13 @@ personalEnv: false
   questions={[
     {
       question: "下列哪个更适合做端口方法的名字？",
-      options: ["executeLuaScript(userId)", "acquire(userId, now)", "redisIncr(key)"],
-      answer: "B",
+      options: ["executeLuaScript(userId)", "redisIncr(key)", "acquire(userId, now)"],
+      answer: "C",
       explain: "端口描述核心要什么，不描述怎么做。Lua 脚本和 incr 都是 Redis 的细节，应该留在适配器里。"
     },
     {
       question: "EmailChangeThrottlePort 的接口，应该放在哪个模块？",
-      options: ["infra，跟实现放一起", "domain，由核心定义", "boot"],
+      options: ["infra，跟实现放一起", "domain，由核心来定义", "boot，启动时统一注册"],
       answer: "B",
       explain: "端口由核心定义，所以放领域层；适配器在 infra 层，依赖领域层。这样依赖方向才是外面指向核心。"
     }

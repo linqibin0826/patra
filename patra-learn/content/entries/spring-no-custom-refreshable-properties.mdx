@@ -15,10 +15,10 @@ personalEnv: false
 
 <Diagnose
   question="配置类写成 Java record（不可变），字段由构造器绑定。配置中心推了新值，Spring Cloud 触发刷新。这个 record 里的值会变吗？"
-  options={["会，Spring Cloud 会重新构造一个 record", "不会，Spring Cloud 刷新时跳过构造器绑定的配置类", "会，但要加 @RefreshScope 之外的特殊注解"]}
-  answer="B"
+  options={["会，Spring Cloud 会重新构造一个 record", "会，但要加 @RefreshScope 之外的特殊注解", "不会，刷新时跳过构造器绑定的配置类"]}
+  answer="C"
   ifRight="对。Spring Cloud 官方文档写明：构造器绑定（含 record）的配置类无法刷新。这篇讲 Patra 怎么在这个限制下做选择。"
-  ifWrong="答案是 B。Spring Cloud 的原地重新绑定靠调 setter 改字段，record 没有 setter，刷新时被跳过。这题考的是配置刷新的机制，先读配置刷新那篇。"
+  ifWrong="答案是 C。Spring Cloud 的原地重新绑定靠调 setter 改字段，record 没有 setter，刷新时被跳过。这题考的是配置刷新的机制，先读配置刷新那篇。"
   suggest="spring-nacos-config-and-refresh"
 />
 
@@ -51,8 +51,8 @@ Spring Cloud 自带的刷新有三个缺口，都是真实存在的：
   questions={[
     {
       question: "三个缺口都真实存在，自研组件也确实能补上。最后为什么还是没做？",
-      options: ["实现太难，做不出来", "对单人项目、几个互相独立的参数来说，缺口的实际影响都能接受，不值得在共享库里多养一个组件", "Spring Cloud 下个版本会修"],
-      answer: "B",
+      options: ["对几个互相独立的参数，缺口的影响能接受，不值得多养一个组件", "实现太难，Patra 自己做不出来也不敢维护", "Spring Cloud 下个版本就会补上这些缺口，等官方的"],
+      answer: "A",
       explain: "决定性的不是「缺口在不在」，而是「缺口的实际影响有多大，值不值得为它维护一套自家的东西」。"
     }
   ]}

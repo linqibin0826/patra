@@ -10,10 +10,10 @@ personalEnv: false
 
 <Diagnose
   question="Patra 的代码大量用到 Spring 框架，可仓库里找不到一行 Spring 的源码，也没有 Spring 的 jar 文件。编译时，Spring 的代码是从哪来的？"
-  options={["开发者事先手动下载 jar，放在自己电脑上", "构建工具按代码里写的依赖清单，从网上的公共仓库自动下载", "JVM 自带 Spring"]}
-  answer="B"
+  options={["开发者手动下载 jar，放在自己电脑上", "JVM 自带 Spring，直接就能用", "构建工具按依赖清单，从公共仓库自动下载"]}
+  answer="C"
   ifRight="对。这件事是构建工具做的。下面看 Gradle 除了下载依赖，还替你做了哪些事。"
-  ifWrong="答案是 B：项目只写「我要用哪个库的哪个版本」，构建工具负责下载。要明白下载下来的东西用在哪，先读懂源码怎么变成 jar。"
+  ifWrong="答案是 C：项目只写「我要用哪个库的哪个版本」，构建工具负责下载。要明白下载下来的东西用在哪，先读懂源码怎么变成 jar。"
   suggest="java-how-a-program-runs"
 />
 
@@ -173,15 +173,15 @@ tasks.named("check") {
   questions={[
     {
       question: "想给 identity-app 加一个外部库。应该改哪里？",
-      options: ["把那个库的 jar 文件复制进 identity-app 目录", "在 identity-app 的 build.gradle.kts 的 dependencies 里加一行", "改 settings.gradle.kts，加一个 includeAt"],
-      answer: "B",
+      options: ["在 identity-app 的 build.gradle.kts 里加一行依赖", "把那个库的 jar 文件复制进 identity-app 目录", "改根目录的 settings.gradle.kts，加一个 includeAt"],
+      answer: "A",
       explain: "依赖写在用它的那个模块的 dependencies 里，Gradle 负责下载。includeAt 是登记本仓库自己的模块用的。"
     },
     {
       question: "跑 identity-boot 的 bootJar，identity-domain 会被编译吗？",
-      options: ["不会，只编译 boot 模块", "会，boot 间接依赖 domain，Gradle 会先把它编好（没改动时会跳过）", "要手动先跑一遍 domain 的编译"],
+      options: ["不会，只编译 boot 模块", "会，Gradle 顺着依赖先把它编好", "要手动先跑一遍 domain 的编译"],
       answer: "B",
-      explain: "Gradle 顺着依赖往回找，把需要的模块都排进去；上次编过且没改的，会直接标 UP-TO-DATE。"
+      explain: "boot 间接依赖 domain。Gradle 顺着依赖往回找，把需要的模块都排进去；上次编过且没改的，会直接标 UP-TO-DATE 跳过。"
     }
   ]}
 />

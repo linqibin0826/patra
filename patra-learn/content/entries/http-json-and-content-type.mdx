@@ -10,10 +10,10 @@ personalEnv: false
 
 <Diagnose
   question="客户端向服务端发一个 POST，正文是一段 JSON 文本。服务端怎么知道这段正文该当作 JSON 来解析，而不是当作普通文字或文件？"
-  options={["看正文是不是以左花括号开头", "看请求头里的 Content-Type", "看网址是不是以 .json 结尾"]}
-  answer="B"
+  options={["看正文是不是以左花括号开头", "看网址是不是以 .json 结尾", "看请求头里的 Content-Type"]}
+  answer="C"
   ifRight="对，靠头里的 Content-Type 声明。往下读会看到响应一侧也是这样。"
-  ifWrong="答案是 B：正文本身没有标签，对方只能靠请求头 Content-Type 知道它是什么格式。网址的写法和正文的形状都不可靠。"
+  ifWrong="答案是 C：正文本身没有标签，对方只能靠请求头 Content-Type 知道它是什么格式。网址的写法和正文的形状都不可靠。"
   suggest="http-request-and-response"
 />
 
@@ -102,13 +102,13 @@ JSON 里的数字在 JavaScript 里是 64 位浮点数，大整数会丢精度�
   questions={[
     {
       question: "前端想在「收藏夹名称重复」时给用户一个专门提示。最稳的做法是什么？",
-      options: ["检查 detail 里有没有「已存在」三个字", "检查 code 字段是不是某个错误码", "检查 traits 里有没有约定好的原因码"],
-      answer: "C",
+      options: ["检查 traits 里有没有约定好的原因码", "检查 detail 里有没有「已存在」三个字", "检查 code 字段是不是某个错误码"],
+      answer: "A",
       explain: "重名时 code 是 INTERACTION-0409，和「收藏夹数量到上限」这类别的 409 冲突一模一样，靠它分不开。traits 里带着原因码 COLLECTION_NAME_TAKEN，这是稳定的契约，门户就按它给专门提示；detail 的文案随时会改。"
     },
     {
       question: "一个接口出错时返回 200 状态码，正文里写 {\"success\": false}。这样做的问题是？",
-      options: ["没问题，正文里写清楚就行", "监控、网关、浏览器都只看状态码，会以为这次成功了", "JSON 不能表达失败"],
+      options: ["没问题，正文里写清楚就行", "监控和浏览器只看状态码，会当成成功", "JSON 不能表达失败，这样写本身就不合法"],
       answer: "B",
       explain: "错误必须同时体现在状态码上。统一格式只是让错误的内容更好读，不是替代状态码。"
     }

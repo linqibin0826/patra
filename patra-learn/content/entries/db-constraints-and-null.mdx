@@ -9,7 +9,7 @@ prerequisites: [db-sql-write]
 
 <Diagnose
   question="表里有一行 country_code 是 NULL（国家没填）。执行 SELECT ... WHERE country_code <> 'CN'，这一行会出现在结果里吗？"
-  options={["会，因为 NULL 肯定不等于 CN", "不会，数据库既不认为它等于 CN，也不认为它不等于 CN", "会报错，NULL 不能参与比较"]}
+  options={["会，NULL 肯定不等于 CN，所以满足 <>", "不会，它既不算等于 CN，也不算不等于 CN", "会报错，NULL 不能参与比较"]}
   answer="B"
   ifRight="对。NULL 的意思是「不知道」，「不知道是不是 CN」的行，既不能说它是，也不能说它不是。这就是 NULL 反直觉的地方，往下会讲怎么应对。"
   ifWrong="答案是 B。NULL 表示「值未知」。拿未知的东西去比较，结果也是未知，而 WHERE 只放行结果为真的行，所以这一行被筛掉了。不报错，却和很多人的直觉不同。"
@@ -108,14 +108,14 @@ Patra 的"有帮助"明细表里有一条正是这样写的：
   questions={[
     {
       question: "表里有 100 行，其中 30 行的 nlm_id 是 NULL。SELECT count(*) FROM cat_venue WHERE nlm_id <> 'X'（X 在表里有 20 行）会数到多少行？",
-      options: ["80 行", "50 行", "70 行"],
-      answer: "B",
+      options: ["50 行", "70 行", "80 行"],
+      answer: "A",
       explain: "100 行减去 NULL 的 30 行，再减去等于 X 的 20 行，剩 50 行。NULL 的 30 行条件结果是未知，被筛掉了，所以不是 100 减 20 得 80。"
     },
     {
       question: "给 cat_venue.nlm_id 加了 UNIQUE。能同时存在多少行 nlm_id 是 NULL？",
-      options: ["最多 1 行", "任意多行", "0 行，唯一列不能为空"],
-      answer: "B",
+      options: ["最多 1 行", "0 行，唯一列不能为空", "任意多行"],
+      answer: "C",
       explain: "唯一约束只比较有值的格子，多个 NULL 互不冲突。Patra 的 V12 迁移注释里就写着「允许为空（多个 NULL 互不冲突）」。"
     }
   ]}

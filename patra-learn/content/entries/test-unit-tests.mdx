@@ -9,7 +9,7 @@ prerequisites: [test-why-write-tests, java-classes-objects-interfaces]
 
 <Diagnose
   question="一个测试方法里连写了三个断言，分别检查三件不同的事。如果第 2 个断言失败了，第 3 个断言会被检查到吗？"
-  options={["会，三个断言每次都会全部检查", "不会，测试在第一个失败的断言处就停了", "看运气，有时会有时不会"]}
+  options={["会，JUnit 会把失败收集起来，最后一起报告", "不会，测试在第一个失败的断言处就结束了", "会，三个断言每次都会全部检查"]}
   answer="B"
   ifRight="对。断言一旦失败，这个测试方法就当场结束。这个细节决定了「一个测试该写几个断言」，下面会用到。"
   ifWrong="答案是 B：断言失败会让测试方法立刻结束，后面的断言不会执行。所以后面藏着的问题，要等你修好前一个才看得到。这个细节在「断言」一节会用到；如果「测试是什么」还不清楚，可以先读前置的那篇。"
@@ -147,14 +147,14 @@ Patra 对测试方法的命名有明确约定，写在 `.claude/rules/testing/co
   questions={[
     {
       question: "下面哪个测试名最符合 Patra 的约定？",
-      options: ["testClock", "should_advance_clock_by_given_duration", "测试时钟能不能往前拨"],
-      answer: "B",
+      options: ["testClock", "测试时钟能不能往前拨", "should_advance_clock_by_given_duration"],
+      answer: "C",
       explain: "snake_case，以 should_ 开头，说出期望的行为。中文说明放进 @DisplayName。"
     },
     {
       question: "单元测试为什么通常又快又稳？",
-      options: ["因为它测的代码特别少", "因为它不碰数据库、网络这些外部的东西，输入固定则输出固定", "因为它不写断言"],
-      answer: "B",
+      options: ["因为它不碰数据库、网络，输入固定则输出固定", "因为它测的代码特别少", "因为它用的是更快的测试框架"],
+      answer: "A",
       explain: "快和稳都来自「不碰外面的世界」。一旦要连数据库或网络，速度和稳定性都会下降，那就是后面几篇讲的集成测试了。"
     }
   ]}

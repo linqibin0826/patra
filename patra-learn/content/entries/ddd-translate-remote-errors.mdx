@@ -10,10 +10,10 @@ personalEnv: false
 
 <Diagnose
   question="用户打开讨论页，interaction 要向 identity 批量取评论作者的名片，但 identity 暂时宕机，调用超时了。用户最好看到什么？"
-  options={["一个未知的 500 错误", "一句明确的「用户信息暂时无法获取，请稍后再试」，状态码是 503", "把 identity 返回的原始报错原样给用户"]}
-  answer="B"
+  options={["一个笼统的 500 错误，让用户自己去重试", "把 identity 返回的原始报错原样展示给用户", "一句「用户信息暂时无法获取，请稍后再试」，状态码 503"]}
+  answer="C"
   ifRight="对。出问题的是「依赖暂时不可用」，用户应当看到这个含义，而不是模糊的 500，更不是别的服务的内部报错。"
-  ifWrong="答案是 B。500 说明不了什么，原样转发对方的报错又会把另一个服务的内部细节暴露给用户。要在 interaction 这边把「identity 不可用」翻译成它自己的话。这里需要知道 Patra 怎么经 HTTP 调别的服务，不熟先读那篇。"
+  ifWrong="答案是 C。500 说明不了什么，原样转发对方的报错又会把另一个服务的内部细节暴露给用户。要在 interaction 这边把「identity 不可用」翻译成它自己的话。这里需要知道 Patra 怎么经 HTTP 调别的服务，不熟先读那篇。"
   suggest="spring-http-interface-clients"
 />
 
@@ -154,14 +154,14 @@ try {
   questions={[
     {
       question: "项目规则为什么禁止直接 catch RestClientException？",
-      options: ["因为这个类不存在", "它是底层 HTTP 客户端的异常，应统一由 RemoteCallException 表达，业务层不该认识底层客户端", "因为会很慢"],
-      answer: "B",
+      options: ["它是底层客户端的异常，应统一用 RemoteCallException", "catch 它会让事务回滚失效，数据会不一致", "它携带的信息太少，拿不到状态码和响应体"],
+      answer: "A",
       explain: "统一入口 RemoteCallException，适配器才能在一处翻译；到处 catch 底层异常，翻译就散落各处。"
     },
     {
       question: "适配器里的 try 为什么只包住一次代理调用？",
-      options: ["为了好看", "避免把本服务自己的 bug 也当成对方故障吞掉", "try 太大会编译失败"],
-      answer: "B",
+      options: ["小的 try 执行更快，大的 try 会拖慢调用", "调用多了会超过 try 的嵌套层数限制", "避免把本服务自己的 bug 也当成对方故障吞掉"],
+      answer: "C",
       explain: "try 范围越大，越容易把本地代码的异常误当成远程失败翻译掉，掩盖真正的 bug。"
     }
   ]}

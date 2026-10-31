@@ -10,10 +10,10 @@ personalEnv: false
 
 <Diagnose
   question="一个组件在函数体里直接写了一句「往 window 上加一个键盘监听」，从不去掉。用户操作了一会儿，这个组件重新渲染了 10 次。现在按一下键盘，监听函数会被调用几次？"
-  options={["1 次", "10 次左右：每渲染一次就多加了一个", "0 次：重新渲染会把旧的去掉"]}
-  answer="B"
+  options={["10 次左右：每渲染一次多加一个", "1 次：监听加在 window 上，只有一个", "0 次：重新渲染会把旧的去掉"]}
+  answer="A"
   ifRight="对。组件函数每次渲染都会从头跑一遍，写在里面的事也跟着做一遍。这篇讲这类事该放在哪、怎么收拾。"
-  ifWrong="答案是 B。状态一变，React 就把组件函数重新跑一遍，函数体里的每一句都会再执行。这题考的是「状态变了就重新渲染」，是前置篇的内容。"
+  ifWrong="答案是 A。状态一变，React 就把组件函数重新跑一遍，函数体里的每一句都会再执行。这题考的是「状态变了就重新渲染」，是前置篇的内容。"
   suggest="fe-react-components-and-state"
 />
 
@@ -75,8 +75,8 @@ function useDebounced<T>(value: T, delay: number): T {
     { caption: "用户停手。200 毫秒后定时器 3 到点，`setSettled` 把结果改成 wan，查询这才发出去。", focus: ["timer", "query"], links: ["timer>query"], tokens: [{ id: "t3", label: "wan", at: "query" }], notes: [{ at: "query", text: "请求 · 1 次", tone: "ok" }] }
   ]}
   guesses={[
-    { before: 2, question: "查询词从 w 变成 wa，effect 要再跑。React 先做什么？", options: ["直接开新定时器，定时器 1 照样到点", "先调用上一次返回的清理函数，取消定时器 1", "等定时器 1 到点后再开新的"], answer: "B", explain: "依赖变了，先清理再重跑。清理函数里的 `clearTimeout` 让还没到点的定时器作废。" },
-    { before: 5, question: "用户在 200 毫秒内连打了 w、a、n 三个字。最后一共请求了几次网关？", options: ["3 次", "1 次", "0 次"], answer: "B", explain: "前两个定时器都在到点前被清理掉了，只有停手后的最后一个到点，所以只查一次。" }
+    { before: 2, question: "查询词从 w 变成 wa，effect 要再跑。React 先做什么？", options: ["直接开新定时器，定时器 1 照样到点", "等定时器 1 到点后再开新的", "先调用上一次返回的清理函数，取消定时器 1"], answer: "C", explain: "依赖变了，先清理再重跑。清理函数里的 `clearTimeout` 让还没到点的定时器作废。" },
+    { before: 5, question: "用户在 200 毫秒内连打了 w、a、n 三个字。最后一共请求了几次网关？", options: ["0 次", "1 次", "3 次"], answer: "B", explain: "前两个定时器都在到点前被清理掉了，只有停手后的最后一个到点，所以只查一次。" }
   ]}
 />
 
@@ -124,14 +124,14 @@ function useDebounced<T>(value: T, delay: number): T {
   questions={[
     {
       question: "`useDebounced` 的依赖数组如果写成 `[]`，会怎样？",
-      options: ["一样能用", "只在第一次跑：`settled` 永远停在最初的值，后来打的字都查不到", "每次渲染都跑"],
-      answer: "B",
-      explain: "依赖数组说的是「这些变了才再跑」。写 `[]` 等于告诉 React 永远不用再跑。"
+      options: ["只在第一次跑，`settled` 永远停在最初的值", "一样能用，查询词变了照样会重新运行", "每次渲染都跑，和不写依赖数组一样"],
+      answer: "A",
+      explain: "后来打的字都查不到。依赖数组说的是「这些变了才再跑」。写 `[]` 等于告诉 React 永远不用再跑。"
     },
     {
       question: "下面哪件事适合放进 `useEffect`？",
-      options: ["根据 `open` 算出按钮上显示的文字", "给 window 加一个滚动监听", "把两个 props 拼成一个字符串"],
-      answer: "B",
+      options: ["根据 `open` 算出按钮上显示的文字", "把两个 props 拼成一个字符串", "给 window 加一个滚动监听"],
+      answer: "C",
       explain: "能在渲染时直接算出来的，就直接算。只有要碰组件外面（window、定时器、网络）的事才是副作用。"
     }
   ]}

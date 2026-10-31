@@ -10,10 +10,10 @@ personalEnv: false
 
 <Diagnose
   question="你把一个 Java 程序打成 jar 发给同事，他电脑上的 Java 版本更低，跑不起来。怎样才能让它在哪台机器上都能照原样跑？"
-  options={["要求每个人都升级到同一个 Java 版本", "把 jar 连同 Java 运行环境和需要的系统库，一起打成一个整体来分发", "把源码发过去，让对方自己编译"]}
-  answer="B"
+  options={["要求每个人都升级到同一个 Java 版本", "把源码发过去，让对方自己编译", "把 jar 连同 Java 运行环境和系统库，一起打成整体分发"]}
+  answer="C"
   ifRight="对。把运行环境一起打进去，就不再依赖对方机器上装了什么。这个整体就叫镜像。"
-  ifWrong="答案是 B。要求别人改环境既麻烦又不可靠。更好的办法是把运行环境也一起带上，这个整体就是镜像。"
+  ifWrong="答案是 C。要求别人改环境既麻烦又不可靠。更好的办法是把运行环境也一起带上，这个整体就是镜像。"
   suggest="ops-code-to-production"
 />
 
@@ -52,7 +52,7 @@ Dockerfile 里每条指令（`COPY`、`RUN`）会生成一层。Docker 会把每
 
 <Params
   title="动手试试：改了什么，要重新传多少"
-  guess={{ question: "你只改了一行业务代码，没有动依赖。重新打镜像时，哪些层需要重新构建？", options: ["全部层都要重新构建", "只有 application 这一层", "一层都不用，直接复用旧镜像"], answer: "B", explain: "依赖层的输入没变，直接命中缓存；只有放在最后的 application 层变了。这就是把它放在最后的原因。" }}
+  guess={{ question: "你只改了一行业务代码，没有动依赖。重新打镜像时，哪些层需要重新构建？", options: ["只有 application 这一层", "全部层都要重新构建", "一层都不用，直接复用旧镜像"], answer: "A", explain: "依赖层的输入没变，直接命中缓存；只有放在最后的 application 层变了。这就是把它放在最后的原因。" }}
   controls={[
     { type: "switch", id: "deps", label: "改了依赖（比如升级了第三方库）", default: false },
     { type: "switch", id: "code", label: "改了业务代码", default: true }
@@ -119,8 +119,8 @@ ghcr.io/linqibin0826/patra-learn:<提交号>
     },
     {
       question: "Dockerfile 里为什么要把“拷依赖”放在“拷业务代码”之前？",
-      options: ["只是习惯", "依赖不常变，放前面可以命中缓存，业务代码变了也不用重做依赖"],
-      answer: "B",
+      options: ["依赖不常变，放前面能命中缓存", "拷依赖的步骤更快，先做能省构建时间"],
+      answer: "A",
       explain: "越不常变的放越前面，缓存命中率最高。"
     }
   ]}

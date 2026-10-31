@@ -10,10 +10,10 @@ personalEnv: false
 
 <Diagnose
   question="用户换了一张新头像，但头像接口的地址没变，浏览器因为缓存还在显示旧图。要让所有人立刻看到新头像，最稳妥的做法是？"
-  options={["让用户自己清一下浏览器缓存", "让新头像的网址和旧的不一样", "把缓存时间设成 1 秒"]}
-  answer="B"
+  options={["让用户自己清一下浏览器缓存", "把缓存时间设成 1 秒", "让新头像的网址和旧的不一样"]}
+  answer="C"
   ifRight="对，网址变了，缓存里的旧图就对不上号了。这正是 Patra 头像接口的做法，往下读。"
-  ifWrong="答案是 B：缓存是按网址存的。换了网址，浏览器就当它是一份新东西。让用户清缓存做不到；把缓存设很短又失去了缓存的意义。"
+  ifWrong="答案是 C：缓存是按网址存的。换了网址，浏览器就当它是一份新东西。让用户清缓存做不到；把缓存设很短又失去了缓存的意义。"
   suggest="http-request-and-response"
 />
 
@@ -56,7 +56,7 @@ personalEnv: false
     { caption: "服务器比对后回 304：没变。不传图片，只传几个字节。浏览器继续用缓存里的，并刷新有效期。", focus: ["server", "cache"], links: ["browser>cache"], tokens: [{ id: "ask", label: "304", at: "browser" }], notes: [{ at: "cache", text: "有效期已刷新", tone: "ok" }] }
   ]}
   guesses={[
-    { before: 3, question: "图片在缓存的有效期内，页面再次需要它。浏览器会向服务器发请求吗？", options: ["会，每次都先问一下", "不会，直接用缓存", "只发一个很小的请求"], answer: "B", explain: "有效期内是「新鲜」的，不必打扰服务器。只有过期了或者 no-cache，才需要先问一句。" }
+    { before: 3, question: "图片在缓存的有效期内，页面再次需要它。浏览器会向服务器发请求吗？", options: ["不会，直接用缓存", "会，每次都先问一下", "只发一个很小的请求"], answer: "A", explain: "有效期内是「新鲜」的，不必打扰服务器。只有过期了或者 no-cache，才需要先问一句。" }
   ]}
 />
 
@@ -101,8 +101,8 @@ Patra 的头像接口就是这样做的：
   questions={[
     {
       question: "「我的未读提醒数」这个接口，Cache-Control 最适合？",
-      options: ["public, max-age=86400", "private 或 no-store，必要时配合 ETag", "immutable"],
-      answer: "B",
+      options: ["public, max-age=86400", "immutable", "private 或 no-store"],
+      answer: "C",
       explain: "数据是个人专属并且会变，不能给公共缓存，也不能缓存一天。需要省流量时可以配合 ETag，没变就回 304。"
     }
   ]}

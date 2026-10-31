@@ -14,10 +14,10 @@ personalEnv: false
 
 <Diagnose
   question="同一套代码给两个服务各建一个 RestClient，地址都写 lb://patra-identity。服务 A 调得通，服务 B 报 Invalid scheme [lb]。你最先怀疑什么？"
-  options={["服务 B 的注册中心里没有 identity", "两个服务底下实际用的 HTTP 客户端不一样", "lb:// 写错了，应该写 http://"]}
-  answer="B"
+  options={["服务 B 的注册中心里没有 identity", "lb:// 写错了，应该写 http://", "两个服务底下实际用的 HTTP 客户端不一样"]}
+  answer="C"
   ifRight="对。lb:// 本来要在发请求前被换成真实地址；没换干净时，宽松的客户端照样能连，严格的直接拒绝。"
-  ifWrong="答案是 B。注册中心里没有实例会报「找不到实例」，不是协议错误。lb:// 是负载均衡的写法，发请求前要换成 http://主机:端口，这题考的是服务发现怎么改写地址，先读服务发现那篇。"
+  ifWrong="答案是 C。注册中心里没有实例会报「找不到实例」，不是协议错误。lb:// 是负载均衡的写法，发请求前要换成 http://主机:端口，这题考的是服务发现怎么改写地址，先读服务发现那篇。"
   suggest="spring-service-discovery"
 />
 
@@ -51,8 +51,8 @@ personalEnv: false
   questions={[
     {
       question: "工厂里有两步：A 设分组的请求工厂，B 依次跑容器里的所有 RestClientCustomizer。两步都会设请求工厂。想让分组配置说了算，顺序应该是？",
-      options: ["先 A 后 B", "先 B 后 A", "顺序无所谓，Builder 会合并两个工厂"],
-      answer: "B",
+      options: ["先 B 后 A", "先 A 后 B", "顺序无所谓，Builder 会合并两个工厂"],
+      answer: "A",
       explain: "Builder 上的 requestFactory 只有一个，后设的覆盖先设的。分组配置要说了算，就得最后设。"
     }
   ]}

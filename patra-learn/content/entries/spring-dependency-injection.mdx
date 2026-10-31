@@ -10,10 +10,10 @@ personalEnv: false
 
 <Diagnose
   question="Patra 的登出处理类 `LogoutUserHandler` 要用到「会话存储」`SessionStorePort`，它是一个接口，真正干活的是 `SessionStoreAdapter`。`LogoutUserHandler` 里有 `new SessionStoreAdapter(...)` 这样一行吗？"
-  options={["有，用到什么就得 new 什么", "没有，它只在构造器参数里声明要一个 `SessionStorePort`，由 Spring 造好递进来", "没有，它每次用的时候去全局变量里取"]}
-  answer="B"
+  options={["有，用到什么就得自己 new 什么，实现类的名字要写在代码里", "没有，用到时去一个全局的静态变量里取现成的", "没有，只在构造器里声明要一个 `SessionStorePort`，由 Spring 递进来"]}
+  answer="C"
   ifRight="对。它连 `SessionStoreAdapter` 这个名字都不知道。这篇讲 Spring 怎么替它找到并递进来，以及这样做好在哪。"
-  ifWrong="答案是 B：`LogoutUserHandler` 只声明「我要一个 `SessionStorePort`」，由 Spring 容器把实现递进来。这件事靠 `@Component` 这类注解告诉 Spring，读懂注解「本身什么都不做、框架读它才生效」是这篇的前提。"
+  ifWrong="答案是 C：`LogoutUserHandler` 只声明「我要一个 `SessionStorePort`」，由 Spring 容器把实现递进来。这件事靠 `@Component` 这类注解告诉 Spring，读懂注解「本身什么都不做、框架读它才生效」是这篇的前提。"
 />
 
 <Callout kind="lead">
@@ -135,7 +135,7 @@ public LogoutUserHandler(
     { caption: "五个参数都找齐，调用构造器造出 `LogoutUserHandler`，放进仓库。以后谁要它，递的都是这同一个对象。", focus: ["handler"], links: ["container>handler"], notes: [{ at: "handler", text: "已造好", tone: "ok" }] }
   ]}
   guesses={[
-    { before: 3, question: "构造器要的是接口 `SessionStorePort`，可接口不能 new。容器会怎么办？", options: ["启动报错：接口造不出来", "在仓库里找实现了这个接口的 Bean，递进去", "自动生成一个什么都不做的空实现"], answer: "B", explain: "容器按类型找：谁实现了 `SessionStorePort`，谁就符合。Patra 里只有 `SessionStoreAdapter` 一个。" }
+    { before: 3, question: "构造器要的是接口 `SessionStorePort`，可接口不能 new。容器会怎么办？", options: ["在仓库里找实现了这个接口的 Bean，递进去", "启动报错：接口造不出来", "自动生成一个什么都不做的空实现"], answer: "A", explain: "容器按类型找：谁实现了 `SessionStorePort`，谁就符合。Patra 里只有 `SessionStoreAdapter` 一个。" }
   ]}
 />
 
@@ -172,14 +172,14 @@ public LogoutUserHandler(
   questions={[
     {
       question: "有人把 `LogoutUserHandler` 里的 `private final Clock clock;` 删了，改成用到时直接写 `Instant.now()`。程序照样能跑，坏处在哪？",
-      options: ["没有坏处，还少了一个参数", "测试里没法让「现在」固定，断言登出时间会时好时坏", "Spring 启动会报错"],
+      options: ["没有坏处，还少了一个参数，代码更短", "测试里固定不了「现在」，登出时间的断言时好时坏", "Spring 启动会报错，找不到 `Clock`"],
       answer: "B",
       explain: "`Instant.now()` 读的是真实的系统时间，测试换不掉。把时钟当依赖递进来，测试才能递一只停住的表。"
     },
     {
       question: "以后会话存储从 Redis 换成别的存储，写了一个新的 `SessionStorePort` 实现，删掉了 `SessionStoreAdapter`。`LogoutUserHandler` 要改吗？",
-      options: ["要改，构造器参数类型变了", "不用改，它只认 `SessionStorePort` 这个接口", "要改，得把 new 的类名换掉"],
-      answer: "B",
+      options: ["要改，构造器参数类型变了", "要改，得把 new 的类名换掉", "不用改，它只认 `SessionStorePort` 这个接口"],
+      answer: "C",
       explain: "它的构造器要的是接口。容器里换成哪个实现，它都不知道，也不需要知道。"
     }
   ]}

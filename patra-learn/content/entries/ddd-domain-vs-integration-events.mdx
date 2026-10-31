@@ -10,7 +10,7 @@ personalEnv: false
 
 <Diagnose
   question="interaction 要把「评论已发表」告诉 notification。领域层有一个 CommentPublishedEvent（里面用了 SubjectId、SubjectOwner 等领域类型）。能不能直接把它序列化成 JSON 发给 notification？"
-  options={["能，省一个类", "不太好：领域事件的类型是 interaction 的内部模型，直接发出去就把内部结构公开成了契约", "必须能，否则没法传"]}
+  options={["能，序列化成 JSON 就行，还省一个类", "不太好：直接发出去，内部类型就成了对外契约", "能，只要消费方也引入 interaction 的领域类"]}
   answer="B"
   ifRight="对。一旦别的服务按这个 JSON 结构解析，interaction 就不能再随意改领域类型了。更稳妥的做法是另外定义一个专门对外的事件。"
   ifWrong="答案是 B。直接发出去，等于别的服务从此依赖 interaction 的内部类型。interaction 想重构领域模型时，会发现动哪个字段都可能弄坏消费方。更稳妥的做法是另外定义一个专门对外的事件，这就是这篇的内容。进程内事件怎么发、怎么收，前置篇讲过。"
@@ -111,15 +111,15 @@ personalEnv: false
   questions={[
     {
       question: "interaction 想把领域类 SubjectOwner 拆成两个类。会影响 notification 吗？",
-      options: ["会，notification 要跟着改", "不会，只需改映射类，集成事件的字段不变", "会，因为要重启"],
-      answer: "B",
+      options: ["不会，只需改映射类，集成事件的字段不变", "会，notification 里用到的类型要跟着改", "会，所有消费方都要重新部署"],
+      answer: "A",
       explain: "集成事件是契约，字段不变，消费方就无感。领域类型的变化被映射隔离在 interaction 内部。"
     },
     {
       question: "映射类 IntegrationEventMapper 为什么不允许查数据库？",
-      options: ["查库太慢", "映射在每次外送包括补投时都会执行，查库会让补投的结果随时间变化，出错还会让事件永远发不出去", "没有这个限制"],
-      answer: "B",
-      explain: "映射必须是纯函数式的拷贝，同样的领域事件任何时候映射出的集成事件都一样。"
+      options: ["查库太慢，会拖长事务提交", "查库要开新事务，和发布事件的事务冲突", "每次外送、补投都会再映射，查库会让结果随时间变"],
+      answer: "C",
+      explain: "映射必须是纯函数式的拷贝，同样的领域事件任何时候映射出的集成事件都一样；查库一旦出错，事件还会一直发不出去。"
     }
   ]}
 />

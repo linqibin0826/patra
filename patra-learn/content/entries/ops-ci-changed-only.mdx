@@ -10,10 +10,10 @@ personalEnv: false
 
 <Diagnose
   question="catalog-api 模块里有一个接口，identity 和 interaction 两个服务都依赖它。你只改了这个接口里的一行，CI 的后端测试会跑哪些服务？"
-  options={["只跑 catalog，因为改动在它的目录里", "跑 catalog、identity、interaction：改动会波及依赖它的服务", "六个服务全跑"]}
-  answer="B"
+  options={["只跑 catalog，改动就在它自己的目录里", "六个服务全跑，保险起见全部测一遍", "跑 catalog、identity、interaction 这三个"]}
+  answer="C"
   ifRight="对。改一个被别人依赖的模块，所有依赖它的服务都可能受影响，所以都要测。这份“谁依赖谁”的地图就是这一篇的主角。"
-  ifWrong="答案是 B。只测 catalog 会漏掉依赖它的服务；六个全测又浪费。正确的是顺着依赖关系找出受影响的那几个：catalog、identity、interaction。"
+  ifWrong="答案是 C。只测 catalog 会漏掉依赖它的服务；六个全测又浪费。正确的是顺着依赖关系找出受影响的那几个：catalog、identity、interaction。"
   suggest="ops-ci-pipeline"
 />
 
@@ -124,13 +124,13 @@ echo "README.md" | bash patra-infra/cd/detect-changes.sh classify
   questions={[
     {
       question: "你把学习站的一篇条目从 .mdx 改成了 .md 文件名。对路由有什么影响？",
-      options: ["没有影响", "会被当成纯文档，跳过学习站检查，线上也不会再部署它", "会导致后端全量测试"],
-      answer: "B",
+      options: ["被当成纯文档，跳过学习站检查，也不再部署", "没有影响，路由只看目录不看后缀", "触发后端全量测试，因为后缀不认识"],
+      answer: "A",
       explain: "纯文档的判断看后缀，.md 被当作文档。这条规则对学习站要小心：条目必须保持 .mdx，才会进入检查与部署。"
     },
     {
       question: "一个 PR 里既改了 README，也改了 catalog 里的 Java 代码。脚本会怎么判断？",
-      options: ["因为有文档，所以整个 PR 免考", "文档文件被忽略，Java 文件决定了要测 catalog"],
+      options: ["整个 PR 免考，因为里面有文档", "文档文件被忽略，Java 文件决定要测 catalog"],
       answer: "B",
       explain: "文档只是不贡献任何受影响的单元，不会抵消别的文件带来的影响。"
     }

@@ -10,10 +10,10 @@ personalEnv: false
 
 <Diagnose
   question="你在自己电脑上执行了 git commit，改动已经被保存。这时，GitHub 上能看到这次提交吗？"
-  options={["能，commit 会自动同步到 GitHub", "不能，commit 只保存在你电脑上，还要 push 才会同步", "要看 GitHub 有没有开自动同步"]}
-  answer="B"
+  options={["能，commit 会自动同步到 GitHub", "要看 GitHub 有没有开自动同步", "不能，commit 只保存在本地，要 push 才同步"]}
+  answer="C"
   ifRight="对。commit 只发生在本地，push 才把它送到远端。这一篇把提交、分支、推送这三个动作拆开讲。"
-  ifWrong="答案是 B。git commit 只在你电脑上记一笔，GitHub 完全不知道。把它送过去的动作叫 push。"
+  ifWrong="答案是 C。git commit 只在你电脑上记一笔，GitHub 完全不知道。把它送过去的动作叫 push。"
   suggest="ops-code-to-production"
 />
 
@@ -65,7 +65,7 @@ Git 是一个记录文件变化的工具。你改了一些文件，执行一次*
     { caption: "你在 GitHub 上把 PR 合并后，GitHub 的 main 变成了 B。但你电脑上的 main 不会自动跟上，仍停在 A，要 git pull 才会更新。", focus: ["main", "origin"], tokens: [{ id: "a-main", label: "A", at: "main" }, { id: "b-feat", label: "B", at: "feat" }, { id: "b-origin", label: "B", at: "origin" }], notes: [{ at: "main", text: "停在 A，落后了", tone: "wait" }, { at: "origin", text: "main 已是 B", tone: "ok" }] }
   ]}
   guesses={[
-    { before: 3, question: "你马上要在 feat 上提交快照 B。提交之后，本地 main 上能看到 B 的改动吗？", options: ["能，提交是整个项目共享的", "不能，main 的指针没动，还指着 A", "只能看到一半"], answer: "B", explain: "每个分支各管各的指针。B 只被 feat 指着，main 还指着 A，所以看不到。" },
+    { before: 3, question: "你马上要在 feat 上提交快照 B。提交之后，本地 main 上能看到 B 的改动吗？", options: ["能，提交是整个项目共享的", "不能，main 的指针没动，还指着 A", "能，不过要先 fetch 一下才会刷新"], answer: "B", explain: "每个分支各管各的指针。B 只被 feat 指着，main 还指着 A，所以看不到。" },
     { before: 5, question: "GitHub 上的 PR 合并之后，你电脑上的 main 会自动变成 B 吗？", options: ["会，Git 会自动同步", "不会，要自己 git pull"], answer: "B", explain: "本地和远端是两份独立的记录，从不自动同步。要拿到远端的新快照，必须自己 pull。" }
   ]}
 />
@@ -105,14 +105,14 @@ git push -u origin feat/journal-search           # 推到 GitHub，-u 记住对�
   questions={[
     {
       question: "新建一个分支，Git 做了什么？",
-      options: ["把整个项目完整复制了一份", "新增一根指向当前快照的指针", "把当前改动立刻上传到 GitHub"],
-      answer: "B",
+      options: ["把整个项目完整复制了一份", "把当前改动立刻上传到 GitHub", "新增一根指向当前快照的指针"],
+      answer: "C",
       explain: "分支是廉价的：只是一根指针。所以随时开、随时丢，不用心疼。"
     },
     {
       question: "你在 feat 分支提交了三次，却还没有 push。电脑坏了，这三次提交还在吗？",
-      options: ["还在，提交已经保存到云端", "不在，它们只存在你电脑上"],
-      answer: "B",
+      options: ["不在，它们只存在你电脑上", "还在，提交已经保存到云端"],
+      answer: "A",
       explain: "没有 push 的提交只在本地。养成习惯：做完一段就 push，哪怕只是为了备份。"
     }
   ]}

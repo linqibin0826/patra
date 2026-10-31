@@ -10,10 +10,10 @@ personalEnv: false
 
 <Diagnose
   question="门户的页面开在门户的地址上，网关在另一个端口。门户页面里的脚本直接 `fetch` 网关的接口并读响应，默认会怎样？"
-  options={["和请求门户自己一样，正常读到", "浏览器不让脚本读这个响应，除非网关明确允许门户这个来源", "浏览器把请求自动改发到门户"]}
-  answer="B"
+  options={["和请求门户自己一样，正常读到", "浏览器把请求自动改发到门户", "浏览器不让脚本读这个响应，除非网关放行"]}
+  answer="C"
   ifRight="对。端口不同就是不同源，浏览器默认不让脚本读跨源响应。往下看门户怎么干脆绕开这个问题：浏览器只请求门户自己。"
-  ifWrong="答案是 B：协议、主机、端口任何一个不同就算跨源，浏览器不让脚本读跨源响应，除非对方用 CORS 响应头放行。这题考的是同源策略，是读懂这篇的前提。"
+  ifWrong="答案是 C：协议、主机、端口任何一个不同就算跨源，浏览器不让脚本读跨源响应，除非对方用 CORS 响应头放行。这题考的是同源策略，是读懂这篇的前提。"
   suggest="http-same-origin-and-cors"
 />
 
@@ -172,13 +172,13 @@ export async function PUT(request: Request): Promise<NextResponse> {
   questions={[
     {
       question: "部署机上另一个服务的页面被注入了一段脚本，这个页面和门户在同一台主机上，只是端口不同。脚本让访问它的人的浏览器向门户发写请求（比如 `PUT /api/me/notifications/read`）。浏览器会带上门户的会话 Cookie 吗？门户靠什么挡住它？",
-      options: ["会带上 Cookie：同一主机不同端口算同一站点；门户靠检查 `Origin` 是不是自己挡住", "不会带 Cookie，所以不用挡", "靠网关的 CORS 设置挡住"],
+      options: ["会带 Cookie：不看端口，算同一站点；门户检查 `Origin` 来挡", "不会带 Cookie：不同端口算不同站点，所以不用挡", "会带 Cookie，但网关的 CORS 设置会把请求挡住"],
       answer: "A",
       explain: "判断是不是同一站点不看端口，所以同一台主机上别的端口的页面和门户算同一站点，`SameSite=Lax` 照样让 Cookie 跟着请求走。用 `fetch` 发 PUT 时浏览器会先发预检，门户不回 CORS 头就发不出去；但表单提交这类不预检的写请求照样带着 Cookie 送到，门户不把安全押在预检上：每个写操作一开头都查 `Origin`，主机或端口不是门户自己的就回 403。"
     },
     {
       question: "为什么门户不在 `next.config.ts` 里写一条重写规则，把 `/api/*` 原样转发给网关，省掉这些 Route Handler？",
-      options: ["Next 不支持重写", "原样转发没法在中途读 Cookie、换成 Bearer 头，也没法查参数和整理状态码", "重写更慢"],
+      options: ["重写规则只能转到同源地址，转不到网关", "原样转发没法中途读 Cookie、换成 Bearer 头、整理状态码", "重写规则比 Route Handler 慢，延迟吃不消"],
       answer: "B",
       explain: "BFF 的价值就在中间那几步：把会话换成令牌、挡掉错误请求、把后端的回答翻译成前端好用的样子。"
     }

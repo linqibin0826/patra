@@ -9,10 +9,10 @@ prerequisites: [db-constraints-and-null]
 
 <Diagnose
   question="期刊有一块「出版概况」：出版历史、主要语言、宿主机构、被哪些库收录……不同数据来源给的字段还不一样，而且常常增减。你更倾向怎么存？"
-  options={["每个字段建一个独立的列，字段变了就改表结构", "整块存进一个 jsonb 列，字段增减不用改表结构", "存成一段普通文本，需要时再自己解析"]}
-  answer="B"
+  options={["每个字段建一个独立的列，字段变了就改表结构", "存成一段普通文本，需要时再自己解析", "整块存进一个 jsonb 列，字段增减不用改表结构"]}
+  answer="C"
   ifRight="对。形状多变、整体读写的数据，jsonb 很合适。但「什么都往里塞」会有代价，这篇会把边界划清。"
-  ifWrong="答案是 B。字段多变时每次都改表很笨重；存成普通文本数据库就看不懂它的内部结构了。jsonb 既灵活，数据库又认得里面的键和值。"
+  ifWrong="答案是 C。字段多变时每次都改表很笨重；存成普通文本数据库就看不懂它的内部结构了。jsonb 既灵活，数据库又认得里面的键和值。"
   suggest="db-constraints-and-null"
 />
 
@@ -180,13 +180,13 @@ jsonb 的代价：数据库不替你检查内部结构（键拼错了、类型�
   questions={[
     {
       question: "用户个人页要支持「按职业筛选用户列表」。职业信息放 jsonb 还是独立的列？",
-      options: ["jsonb，灵活", "独立的列（可以建索引、加 CHECK）", "两种都一样"],
+      options: ["jsonb，字段灵活，不用改表结构", "独立的列（可以建索引、加 CHECK）", "两种都一样，筛选时没区别"],
       answer: "B",
       explain: "要拿来过滤的字段就该是独立的列。Patra 的资料表里职业就是单独的 occupation 列，而且有 CHECK 限定取值。"
     },
     {
       question: "一个 jsonb 列声明了 NOT NULL，往里写 JSON 文本 null（四个字符 n-u-l-l）会怎样？",
-      options: ["被拒绝，因为是空", "能写进去，因为它不是数据库的 NULL，而是一个有值的 JSON null", "自动变成 {}"],
+      options: ["被拒绝，因为 null 就是空，NOT NULL 会拦住", "能写进去，它是一个有值的 JSON null", "自动变成 {}，因为列不允许为空"],
       answer: "B",
       explain: "NOT NULL 只拦数据库层面的 NULL。JSON 的 null 是一个合法的 JSON 值，数据库认为这一格有值。"
     }

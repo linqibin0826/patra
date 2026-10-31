@@ -14,10 +14,10 @@ personalEnv: false
 
 <Diagnose
   question="interaction 服务里有「讨论」和「收藏夹」两个子域。收藏夹的代码想拿某条评论的数据，按 Patra 的规则，能直接调讨论子域的 CommentRepository 吗？"
-  options={["能，同一个服务里随便用", "不能，只能经讨论子域公开的读端口、读模型或事件", "能，只要在同一个事务里"]}
-  answer="B"
+  options={["不能，只能经对方公开的读端口、读模型或事件", "能，同一个服务里的类随便互相用", "能，只要调用时在同一个事务里"]}
+  answer="A"
   ifRight="对。子域是服务内部的业务边界，跨子域只能走对方公开的那几个包。下面讲这条边界怎么落到包结构上、又怎么被构建守住。"
-  ifWrong="答案是 B。子域之间也有边界：对方的仓储、实体、用例都是内部实现，只能经它在领域层公开的读端口（port.read）、读模型（model.read）和事件（event）交互。这题考的是子域的概念。"
+  ifWrong="答案是 A。子域之间也有边界：对方的仓储、实体、用例都是内部实现，只能经它在领域层公开的读端口（port.read）、读模型（model.read）和事件（event）交互。这题考的是子域的概念。"
 />
 
 ## 背景：六个服务六种写法
@@ -70,7 +70,7 @@ personalEnv: false
   questions={[
     {
       question: "identity 有 account（账号）和 session（会话，底座）两个子域。`IpAddressScope`（判断 IP 属于公网还是内网）原来放在 account 里，可 session 的查询也要用它。迁移时它该放哪？",
-      options: ["留在 account，session 声明一条依赖 account 的边", "挪进 session 底座，因为两个子域都用", "复制一份到 session"],
+      options: ["留在 account，session 声明一条依赖 account 的边", "挪进 session 底座，两个子域都要用", "复制一份到 session，各用各的"],
       answer: "B",
       explain: "底座不能依赖普通子域，而「被两个以上子域共用」正是进底座的条件。identity 迁移时，一批这样放错位置的公共件全部归进了 session。"
     }

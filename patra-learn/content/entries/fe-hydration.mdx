@@ -10,7 +10,7 @@ personalEnv: false
 
 <Diagnose
   question="第一次打开门户主页，导航栏的「快速检索」按钮已经显示出来了，但页面的 JavaScript 还在下载。这时点它会怎样？"
-  options={["正常打开检索框", "没有反应：按钮只是 HTML，点击处理还没挂上", "页面报错"]}
+  options={["正常打开检索框，和脚本有没有下载完无关", "没有反应，点击处理还没挂上", "页面报错，提示脚本还没加载完"]}
   answer="B"
   ifRight="对。看得见不等于能用。这篇讲 HTML 是怎么从「能看」变成「能点」的，以及中间最容易出错的那一步。"
   ifWrong="答案是 B。客户端组件第一次打开时先在服务器上画成 HTML，浏览器马上能显示；点击、状态这些要等它的 JavaScript 到了、在浏览器里再跑一遍才有。「客户端组件两边都跑」是前置篇的内容。"
@@ -69,8 +69,8 @@ personalEnv: false
     { caption: "水合完成后 effect 才跑：发现不是苹果设备，`setShortcut` 改成 Ctrl K，组件照常重新渲染一次。", focus: ["react", "html"], links: ["react>html"], tokens: [{ id: "label", label: "Ctrl K", at: "html" }], notes: [{ at: "html", text: "已水合 · Ctrl K", tone: "ok" }] }
   ]}
   guesses={[
-    { before: 3, question: "如果 TopNav 第一次渲染时就直接读 navigator，在 Windows 上算出 Ctrl K，会怎样？", options: ["没区别，反正最后都显示 Ctrl K", "和 HTML 里服务器画的 ⌘K 对不上，React 报水合错误", "服务器上也会算出 Ctrl K"], answer: "B", explain: "服务器不知道访客用的是什么系统，它画的是 ⌘K。浏览器第一次渲染要是画成 Ctrl K，对照时就对不上。" },
-    { before: 5, question: "effect 里把 ⌘K 改成 Ctrl K，这一次会报水合错误吗？", options: ["会，内容和 HTML 不一样了", "不会：effect 在水合之后才跑，这是一次普通的重新渲染", "要看浏览器"], answer: "B", explain: "要求一致的只有水合那一次渲染。水合结束后，状态怎么变都是正常更新。" }
+    { before: 3, question: "如果 TopNav 第一次渲染时就直接读 navigator，在 Windows 上算出 Ctrl K，会怎样？", options: ["没区别，反正最后都显示 Ctrl K", "服务器上也会算出 Ctrl K，两边一致", "和服务器画的 ⌘K 对不上，水合报错"], answer: "C", explain: "服务器不知道访客用的是什么系统，它画的是 ⌘K。浏览器第一次渲染要是画成 Ctrl K，对照时就对不上。" },
+    { before: 5, question: "effect 里把 ⌘K 改成 Ctrl K，这一次会报水合错误吗？", options: ["不会，effect 在水合之后才跑，是普通更新", "会，内容和 HTML 里的 ⌘K 不一样了", "要看浏览器，有的浏览器对不一致更严格"], answer: "A", explain: "要求一致的只有水合那一次渲染。水合结束后，状态怎么变都是正常更新。" }
   ]}
 />
 

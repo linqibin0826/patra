@@ -49,7 +49,7 @@ graphemeCount(family);                // 1
 
 <Params
   title="动手试试：昵称全用「一家四口」表情"
-  guess={{ question: "昵称里放 5 个「一家四口」表情：5 个字素，125 字节。只按字素计数的前端会怎么显示？提交后呢？", options: ["前端显示合法，提交成功", "前端显示 5/30 合法，提交后被后端拒", "前端直接提示超长"], answer: "B", explain: "5 个字素远低于 30，计数器显示合法；但 125 字节超过了 120 字节的上限，后端拒绝。" }}
+  guess={{ question: "昵称里放 5 个「一家四口」表情：5 个字素，125 字节。只按字素计数的前端会怎么显示？提交后呢？", options: ["前端显示 5/30 合法，提交后被后端拒", "前端显示 5/30 合法，提交后也成功", "前端按 length 算出 55，直接提示超长"], answer: "A", explain: "5 个字素远低于 30，计数器显示合法；但 125 字节超过了 120 字节的上限，后端拒绝。" }}
   controls={[
     { type: "slider", id: "n", label: "表情个数", min: 1, max: 30, step: 1, default: 3, unit: "个" },
     { type: "switch", id: "bytes", label: "前端也检查字节上限", default: false }

@@ -15,10 +15,10 @@ personalEnv: false
 
 <Diagnose
   question="用户点了「退出登录」，会话已经删掉。网关为了省事，把「这个令牌是谁」的查询结果缓存 5 分钟。接下来 5 分钟里，这个令牌再发请求会怎样？"
-  options={["立刻被当成未登录", "还可能被当成已登录，最长 5 分钟", "永远被当成已登录"]}
-  answer="B"
+  options={["还可能被当成已登录，最长 5 分钟", "立刻被当成未登录，会话已经删了", "永远被当成已登录，除非重启网关"]}
+  answer="A"
   ifRight="对。缓存多久，登出和封号就晚多久生效。这篇讲 Patra 为什么干脆不缓存。"
-  ifWrong="答案是 B：网关看的是自己缓存里的旧结果，缓存过期前它不会再去问。这题考的是会话保存在服务端、令牌只是一把钥匙，先读会话那篇。"
+  ifWrong="答案是 A：网关看的是自己缓存里的旧结果，缓存过期前它不会再去问。这题考的是会话保存在服务端、令牌只是一把钥匙，先读会话那篇。"
   suggest="http-cookie-and-session"
 />
 
@@ -77,8 +77,8 @@ Patra 一开始（v0.8 账号那一版）用的是第三类：网关直接读 Re
   questions={[
     {
       question: "网关调 identity 时，为什么不把令牌也放进 Authorization 头？",
-      options: ["请求体比请求头快", "identity 的过滤器链会把 Authorization: Bearer 当成身份断言验签，会话令牌放进去会被拒成 401", "HTTP Interface 不支持自定义请求头"],
-      answer: "B",
+      options: ["请求头有长度限制，放不下会话令牌，所以只能放请求体", "HTTP Interface 不支持自定义请求头，只能放进请求体", "identity 会把 Authorization 当断言验签，令牌会被拒成 401"],
+      answer: "C",
       explain: "在 Patra 里，下游服务看到的 Authorization 只可能是网关签的断言。会话令牌换个位置放，既不会被误验，也不会进访问日志。"
     }
   ]}

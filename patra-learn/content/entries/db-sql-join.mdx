@@ -112,8 +112,8 @@ Patra 读评论时用的就是它：
   questions={[
     {
       question: "要列出所有用户，并带上每个人的资料（有些用户还没填资料）。该用哪个？",
-      options: ["用户 JOIN 资料", "用户 LEFT JOIN 资料", "资料 JOIN 用户"],
-      answer: "B",
+      options: ["用户 LEFT JOIN 资料", "用户 INNER JOIN 资料", "资料 INNER JOIN 用户"],
+      answer: "A",
       explain: "用户是主体，一个都不能丢，所以用户放左边用 LEFT JOIN；没填资料的用户，资料那几列是 NULL。"
     },
     {

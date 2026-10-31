@@ -10,10 +10,10 @@ personalEnv: false
 
 <Diagnose
   question="门户向后端要一篇文献，后端回了状态码 404。这说明什么？"
-  options={["网络没通，请求没送到后端", "请求送到了，后端回答：没有这篇", "后端程序崩了"]}
-  answer="B"
+  options={["后端收到了请求，回答没有这篇", "网络没通，请求没送到后端", "后端程序出了故障，没能处理请求"]}
+  answer="A"
   ifRight="对。404 是后端给的一个正常回答，只是内容是「没有」。记住这一点，后面讲 fetch 怎么区分「没拿到回答」和「拿到了一个坏消息」时会用到。"
-  ifWrong="答案是 B：状态码是后端写在响应里的，能收到 404，说明请求送到了、后端也回话了，只是说「没有这一篇」。网络不通时根本收不到任何状态码。这题考的是 HTTP 请求与响应的基本结构。"
+  ifWrong="答案是 A：状态码是后端写在响应里的，能收到 404，说明请求送到了、后端也回话了，只是说「没有这一篇」。网络不通时根本收不到任何状态码。这题考的是 HTTP 请求与响应的基本结构。"
   suggest="http-request-and-response"
 />
 
@@ -65,7 +65,7 @@ export async function fetchFeed(tab: FeedTab, page = 1, pageSize = 14): Promise<
   questions={[
     {
       question: "网关回了 404，`const res = await gatewayFetch(…)` 这一行会怎样？",
-      options: ["抛出异常，下面的代码不再执行", "正常往下走，res.status 是 404，res.ok 是 false", "一直卡在这里，等网关回 200"],
+      options: ["抛出异常，跳到最近的 catch，下面的代码不再执行", "照常往下走，res.status 是 404", "卡在这里重试，直到网关回 200 才往下走"],
       answer: "B",
       explain: "对 fetch 来说，拿到了响应就算兑现，不管状态码是几。只有根本没拿到响应（网络断了、连不上、超时被掐断）它才拒绝。所以状态码要你自己查。"
     }

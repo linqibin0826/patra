@@ -14,10 +14,10 @@ personalEnv: false
 
 <Diagnose
   question="评论发表的事务里，代码写了评论，然后发布一个事件，订阅者用 @TransactionalEventListener（提交后执行）。随后事务因为别的错误回滚了。订阅者会被调用吗？"
-  options={["会，事件发布时就已经触发了", "不会，回滚的事务不会触发提交后的监听器", "会，但监听器能看到事务已经回滚"]}
-  answer="B"
+  options={["不会，事务回滚了就不执行", "会，事件发布时就已经触发了", "会，但监听器能看到事务已经回滚"]}
+  answer="A"
   ifRight="对。提交后的监听器只在真的提交了才执行。这篇讲它的用处、代价，以及什么时候不该用它。"
-  ifWrong="答案是 B。@TransactionalEventListener 默认绑定在「提交之后」这个时机，事务回滚时 Spring 根本不调用它。上一篇的同步 @EventListener 则是发布时立即执行，与此不同。"
+  ifWrong="答案是 A。@TransactionalEventListener 默认绑定在「提交之后」这个时机，事务回滚时 Spring 根本不调用它。上一篇的同步 @EventListener 则是发布时立即执行，与此不同。"
   suggest="msg-in-process-events"
 />
 

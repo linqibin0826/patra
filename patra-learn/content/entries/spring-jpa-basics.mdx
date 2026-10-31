@@ -10,10 +10,10 @@ personalEnv: false
 
 <Diagnose
   question="catalog 里一个作者可以有好几个 ORCID（研究者的全球唯一编号），作者存在 `cat_author` 表，ORCID 存在 `cat_author_orcid` 表。表示「这个 ORCID 属于哪个作者」的外键列，应该放在哪张表里？"
-  options={["`cat_author` 里放一个 `orcid_id` 列", "`cat_author_orcid` 里放一个 `author_id` 列", "两张表各放一个，互相指着"]}
-  answer="B"
+  options={["`cat_author` 里放一个 `orcid_id` 列", "两张表各放一个，互相指着", "`cat_author_orcid` 里放一个 `author_id` 列"]}
+  answer="C"
   ifRight="对。一对多的外键放在「多」的那一边。等下看 JPA 的注解时，你会发现它们正是照这个关系写的。"
-  ifWrong="答案是 B：一个作者对多个 ORCID，外键放在「多」的那张表里，每行 ORCID 记着自己属于哪个作者。主键、外键和一对多关系是表设计那篇的内容，这篇默认你已经会看。"
+  ifWrong="答案是 C：一个作者对多个 ORCID，外键放在「多」的那张表里，每行 ORCID 记着自己属于哪个作者。主键、外键和一对多关系是表设计那篇的内容，这篇默认你已经会看。"
   suggest="db-keys-and-relations"
 />
 
@@ -208,7 +208,7 @@ catalog 批量导入作者时，更新已有作者正是这样做的：
     { caption: "之后加入新的子实体，`saveAll`，分块事务提交前再 flush 一次，最后提交。", focus: ["db"], notes: [{ at: "db", text: "提交", tone: "ok" }] }
   ]}
   guesses={[
-    { before: 3, question: "第 2 步只调了 setter，没调 `save`。如果代码到这里就结束、事务正常提交，作者表里的这一行会变吗？", options: ["不会，没调 save 就不写库", "会：对象是被管着的，提交前 Hibernate 发现字段变了，自动发 UPDATE", "会，但要等下一次读它时才写"], answer: "B", explain: "这叫脏检查：被管着的对象，Hibernate 在 flush 时拿它和读出来时的样子比，变了就生成 UPDATE。" }
+    { before: 3, question: "第 2 步只调了 setter，没调 `save`。如果代码到这里就结束、事务正常提交，作者表里的这一行会变吗？", options: ["会：提交前 Hibernate 发现字段变了，自动发 UPDATE", "不会，没调 save 就不写库", "会，但要等下一次读它时才写"], answer: "A", explain: "这叫脏检查：被管着的对象，Hibernate 在 flush 时拿它和读出来时的样子比，变了就生成 UPDATE。" }
   ]}
 />
 
@@ -218,14 +218,14 @@ catalog 批量导入作者时，更新已有作者正是这样做的：
   questions={[
     {
       question: "在一个事务里用 `findById` 读出一个作者，改了 `displayName`，然后抛出异常、事务回滚。数据库里的 `display_name` 会怎样？",
-      options: ["变了：改字段就是写库", "没变：UPDATE 要么还没发，要么发了也随事务回滚", "变了一半"],
+      options: ["变了：改字段就是写库", "没变：UPDATE 没发，或发了也随事务回滚", "变了：flush 时 UPDATE 已经发出去，回滚撤不掉"],
       answer: "B",
       explain: "改字段只改了内存里的对象。就算已经 flush，SQL 也还在事务里，回滚就一起撤销。"
     },
     {
       question: "在事务外面（比如没有事务的普通方法里）调 `authorDao.findById` 读出一个作者，改了字段，不调 `save`。会写库吗？",
-      options: ["会，和事务里一样", "不会：没有事务就没有提交，也就没有提交前的那次脏检查", "会，在下次启动时"],
-      answer: "B",
+      options: ["会，和事务里一样", "会，等连接关闭时统一写库", "不会：没有事务，就没有提交前那次脏检查"],
+      answer: "C",
       explain: "脏检查发生在事务提交前的 flush 里。外面没有事务，改了字段也没人把它变成 SQL，而且不报错。"
     }
   ]}

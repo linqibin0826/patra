@@ -14,10 +14,10 @@ personalEnv: false
 
 <Diagnose
   question="表上有约束 CHECK (natural_key = 'post:' || source_id)。插入一行，source_id 是 NULL，natural_key 是 'post:11'。这一行能插进去吗？"
-  options={["插不进去：'post:11' 不等于 'post:' 拼 NULL", "能插进去", "报语法错误"]}
-  answer="B"
+  options={["插不进去：'post:11' 不等于 'post:' 拼 NULL", "报语法错误", "能插进去"]}
+  answer="C"
   ifRight="对。'post:' || NULL 是 NULL，比较结果也是 NULL，CHECK 只拦 false。"
-  ifWrong="答案是 B。任何值和 NULL 拼接、比较，结果都是 NULL（未知），而 CHECK 只在结果为 false 时拒绝。这题考的是 SQL 的三值逻辑，先读约束与 NULL 那篇。"
+  ifWrong="答案是 C。任何值和 NULL 拼接、比较，结果都是 NULL（未知），而 CHECK 只在结果为 false 时拒绝。这题考的是 SQL 的三值逻辑，先读约束与 NULL 那篇。"
   suggest="db-constraints-and-null"
 />
 
@@ -39,7 +39,7 @@ CHECK (target_type <> 3 OR natural_key = 'post:' || source_id)
 
 <Params
   title="动手：这一行会不会被拦住"
-  guess={{ question: "插入一个帖子（target_type = 3），source_id 为 NULL，用最初那条约束。结果是？", options: ["被拦住", "放行", "取决于 natural_key 写的是什么"], answer: "B", explain: "target_type <> 3 是 false；'post:' || NULL 是 NULL，和 natural_key 比较还是 NULL。false OR NULL = NULL，CHECK 放行。" }}
+  guess={{ question: "插入一个帖子（target_type = 3），source_id 为 NULL，用最初那条约束。结果是？", options: ["放行", "被拦住", "取决于 natural_key 写的是什么"], answer: "A", explain: "target_type <> 3 是 false；'post:' || NULL 是 NULL，和 natural_key 比较还是 NULL。false OR NULL = NULL，CHECK 放行。" }}
   controls={[
     { type: "switch", id: "is-post", label: "这一行是帖子（target_type = 3）", default: true },
     { type: "switch", id: "source-null", label: "source_id 是 NULL", default: true },

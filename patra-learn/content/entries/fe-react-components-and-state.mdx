@@ -10,10 +10,10 @@ personalEnv: false
 
 <Diagnose
   question="一个组件的参数类型写着 `{ value: string; onChange: (value: string) => void }`。其中 `onChange` 是什么？"
-  options={["一个字符串", "一个函数：接收一个字符串，不返回值", "一个事件对象", "一个布尔开关"]}
-  answer="B"
+  options={["一个字符串", "一个事件对象", "一个布尔开关", "一个函数：接收一个字符串，不返回值"]}
+  answer="D"
   ifRight="对。读得懂这种类型，就看得懂一个组件要别人给它什么。这篇讲组件为什么要收这样一个函数：数据往下传，事件往上报。"
-  ifWrong="答案是 B：`(value: string) => void` 是函数类型。这题考的是 TypeScript 的类型标注；React 组件收什么参数全靠它说明，先读前置会轻松很多。"
+  ifWrong="答案是 D：`(value: string) => void` 是函数类型。这题考的是 TypeScript 的类型标注；React 组件收什么参数全靠它说明，先读前置会轻松很多。"
   suggest="fe-typescript-basics"
 />
 
@@ -127,7 +127,7 @@ export function QuickSearch({ open, onOpenChange }: QuickSearchProps) {
     { caption: "这一轮渲染里，TopNav 把 `open = false` 传下去，对话框关上。", focus: ["quick"], tokens: [{ id: "prop", label: "open = false", at: "quick" }], notes: [{ at: "topnav", text: "searchOpen · false", tone: "ok" }] }
   ]}
   guesses={[
-    { before: 3, question: "按下 Esc 之后，QuickSearch 下一步会怎么做？", options: ["直接把自己收到的 `open` 改成 false", "调用父组件传来的 `onOpenChange(false)`", "刷新整个页面"], answer: "B", explain: "props 对子组件只读。`open` 归 TopNav 管，QuickSearch 只能用 TopNav 给它的函数提出请求。" }
+    { before: 3, question: "按下 Esc 之后，QuickSearch 下一步会怎么做？", options: ["调用父组件传来的 `onOpenChange(false)`", "直接把自己收到的 `open` 改成 false", "自己另存一份 `open`，先关上再说"], answer: "A", explain: "props 对子组件只读。`open` 归 TopNav 管，QuickSearch 只能用 TopNav 给它的函数提出请求。" }
   ]}
 />
 
@@ -153,13 +153,13 @@ export function QuickSearch({ open, onOpenChange }: QuickSearchProps) {
   questions={[
     {
       question: "把 DisclosureSection 里的 `useState` 换成普通变量 `let open = false`，点击时把它改成 true。内容区会展开吗？",
-      options: ["会展开", "不会：改普通变量 React 不知道，也不会重新渲染；就算重新渲染，函数从头跑，`open` 又是 false", "会报错"],
-      answer: "B",
-      explain: "只有经 `setOpen` 改，React 才知道要重画，并且在下一次运行函数时给出新值。普通变量每次运行都重新初始化。"
+      options: ["会展开：值已经变成 true", "会报错：组件里不能用 `let` 声明变量", "不会：React 不知道普通变量变了，不会重新渲染"],
+      answer: "C",
+      explain: "就算重新渲染，函数也从头跑，`open` 又是 false。只有经 `setOpen` 改，React 才知道要重画，并且在下一次运行函数时给出新值。普通变量每次运行都重新初始化。"
     },
     {
       question: "SortToggle 自己没有状态。点了某一项之后，它显示的选中项是怎么变的？",
-      options: ["它自己改了 `value`", "它调用 `onChange`，父组件改了状态，再把新的 `value` 传下来", "浏览器自动高亮被点的按钮"],
+      options: ["它在内部改自己的 `value`，下次渲染就生效", "它调用 `onChange` 报上去，父组件改状态后传下新的 `value`", "浏览器自动高亮被点的那个按钮"],
       answer: "B",
       explain: "选中项由父组件的状态决定。SortToggle 只负责画出来、把点击报上去。"
     }

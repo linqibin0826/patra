@@ -13,10 +13,10 @@ personalEnv: false
 
 <Diagnose
   question="开发机开着代理，系统设置里的「不走代理」列表写了 192.168.0.0/16。终端里 curl 一台局域网机器上的服务，200；本机起的 Java 服务调同一个地址，拿到 503，响应头里有 Proxy-Connection。问题更可能出在哪？"
-  options={["那台局域网机器上的服务坏了", "Java 这边的请求被送进了代理", "Java 的 HTTP 客户端不支持 HTTP/1.1"]}
-  answer="B"
+  options={["那台局域网机器上的服务坏了", "Java 的 HTTP 客户端不支持 HTTP/1.1", "Java 这边的请求被送进了代理"]}
+  answer="C"
   ifRight="对。目标服务对 curl 是好的；`Proxy-Connection` 这个头只有代理才会回。往下读：为什么同一份例外列表，curl 认、Java 不认。"
-  ifWrong="答案是 B。同一个地址 curl 能通，说明目标服务没坏；响应里带 `Proxy-Connection`，说明 Java 的请求根本没到目标，到的是代理。这题考的是正向代理站在客户端和目标之间这件事。"
+  ifWrong="答案是 C。同一个地址 curl 能通，说明目标服务没坏；响应里带 `Proxy-Connection`，说明 Java 的请求根本没到目标，到的是代理。这题考的是正向代理站在客户端和目标之间这件事。"
   suggest="web-reverse-proxy-and-gateway"
 />
 
@@ -61,9 +61,9 @@ v0.8 做本机与部署机的对照测试时，本机起的服务要连部署机
     },
     {
       question: "curl 通、Java 不通，为什么 curl 没被这个坑影响？",
-      options: ["curl 不支持代理", "curl 读的是环境变量 `http_proxy` / `no_proxy`，新版 curl 的 `no_proxy` 认网段", "curl 默认走 IPv6"],
-      answer: "B",
-      explain: "命令行工具不看系统网络设置，只认环境变量；而 JVM 读的是系统设置。两者走的根本不是同一套配置。"
+      options: ["curl 读环境变量 `no_proxy`，新版认网段", "curl 根本不支持走代理", "curl 默认走 IPv6，不经过代理"],
+      answer: "A",
+      explain: "curl 读的是环境变量 `http_proxy` / `no_proxy`，新版的 `no_proxy` 认网段。命令行工具不看系统网络设置，只认环境变量；而 JVM 读的是系统设置。两者走的根本不是同一套配置。"
     }
   ]}
 />

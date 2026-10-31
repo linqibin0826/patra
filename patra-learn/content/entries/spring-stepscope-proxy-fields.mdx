@@ -14,10 +14,10 @@ personalEnv: false
 
 <Diagnose
   question="一个 @StepScope 的计数器 Bean 被注入到处理器和写入器里。写入器里写的是 counters.created.addAndGet(n)（直接访问字段），处理器里写的是 counters.addCreated(n)（调方法）。哪一边会出问题？"
-  options={["都没问题，注入的是同一个 Bean", "直接访问字段的那一边", "调方法的那一边"]}
-  answer="B"
+  options={["都没问题，注入的是同一个 Bean", "调方法的那一边", "直接访问字段的那一边"]}
+  answer="C"
   ifRight="对。注入进来的是代理，方法调用会被转给真实对象，字段访问不会。"
-  ifWrong="答案是 B。@StepScope 注入的不是计数器本身，而是一个代理；代理只拦截方法调用。这题考的是 Spring 代理怎么工作，先读代理与 @Transactional 那篇。"
+  ifWrong="答案是 C。@StepScope 注入的不是计数器本身，而是一个代理；代理只拦截方法调用。这题考的是 Spring 代理怎么工作，先读代理与 @Transactional 那篇。"
   suggest="spring-proxies-and-transactional"
 />
 
@@ -46,7 +46,7 @@ Spring 的办法是先注入一个 **CGLIB 代理**：它是计数器类的一�
     { caption: "写入器又直接读字段 counters.created。字段访问是 JVM 直接取对象里的值，代理拦不住：读到的是代理自己那份。", focus: ["writer", "proxy"], links: ["writer>proxy"], tokens: [{ id: "field", label: "读 created", at: "proxy" }], notes: [{ at: "proxy", text: "created = null", tone: "bad" }, { at: "real", text: "created = 5", tone: "ok" }] }
   ]}
   guesses={[
-    { before: 3, question: "真实计数器里 created 已经是 5。写入器直接读 counters.created，会读到什么？", options: ["5", "代理自己那份字段：从没初始化，是 null（换成基本类型就是 0）", "抛异常，代理不允许读字段"], answer: "B", explain: "代理是计数器的子类实例，构造时不会跑你写的字段初始化；字段访问不经过代理的拦截逻辑，读到的就是它自己的那份。计数字段是 AtomicInteger 时，直接读会是 null，一调用就空指针。" }
+    { before: 3, question: "真实计数器里 created 已经是 5。写入器直接读 counters.created，会读到什么？", options: ["null：代理自己那份字段，从没初始化（换成基本类型就是 0）", "5", "抛异常，代理不允许读字段"], answer: "A", explain: "代理是计数器的子类实例，构造时不会跑你写的字段初始化；字段访问不经过代理的拦截逻辑，读到的就是它自己的那份。计数字段是 AtomicInteger 时，直接读会是 null，一调用就空指针。" }
   ]}
 />
 

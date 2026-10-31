@@ -21,10 +21,10 @@ personalEnv: false
 
 <Diagnose
   question="门户的会话令牌存在一个 HttpOnly Cookie 里。导航栏是客户端组件，要显示「你好，某某」。它怎么知道当前用户是谁？"
-  options={["用 `document.cookie` 读出令牌，自己解出用户名", "请求门户的 `/api/auth/me`，由门户在服务端读 Cookie、问网关", "令牌就是用户名，直接显示"]}
-  answer="B"
+  options={["用 `document.cookie` 读出令牌，在浏览器里自己解出用户名", "令牌本身就是用户名，客户端组件拿到后原样显示", "请求门户的 `/api/auth/me`，由门户服务端读 Cookie 去问网关"]}
+  answer="C"
   ifRight="对。HttpOnly 的 Cookie 脚本读不到，浏览器只会在请求时自动带上它。往下看门户里还有哪些地方在读它，各自读了做什么。"
-  ifWrong="答案是 B：Cookie 设了 HttpOnly，浏览器里的脚本读不到，只能在发请求时由浏览器自动带上，交给服务端去读。这题考的是 Cookie 的属性和会话的基本做法。"
+  ifWrong="答案是 C：Cookie 设了 HttpOnly，浏览器里的脚本读不到，只能在发请求时由浏览器自动带上，交给服务端去读。这题考的是 Cookie 的属性和会话的基本做法。"
   suggest="http-cookie-and-session"
 />
 
@@ -154,13 +154,13 @@ proxy 和 `requireUser` 都是「读 Cookie、问网关我是谁」，平时看�
   questions={[
     {
       question: "一个没登录的人在地址栏直接打开 `/settings/profile`。是谁把他送去登录页的？",
-      options: ["proxy.ts", "设置页里的 `requireUser`", "网关"],
-      answer: "B",
+      options: ["设置页自己调用的 `requireUser`", "`proxy.ts` 在请求进来时统一拦下，转去登录页", "网关发现没带令牌，就把浏览器重定向到登录页"],
+      answer: "A",
       explain: "在登录态上，proxy 只管已登录离开登录页、冷静期账号这两件事。没登录不许看，是页面自己调 `requireUser` 判断的。"
     },
     {
       question: "导航栏请求 `/api/auth/me`，网关说这个令牌无效（401）。门户这时做了什么？",
-      options: ["什么都不做，返回 401", "清掉会话 Cookie，回 `user: null`，导航栏显示「登录」", "跳转到登录页"],
+      options: ["原样返回 401，会话 Cookie 保持不动", "清掉会话 Cookie，回 `user: null`", "直接重定向到登录页，让用户重新登录"],
       answer: "B",
       explain: "令牌已经没用了，留着只会让每个请求都白问一次网关。所以这里清掉 Cookie，告诉导航栏你是未登录状态。"
     }

@@ -10,10 +10,10 @@ personalEnv: false
 
 <Diagnose
   question="Java 程序是跨平台的。那么在云端 Intel 机器上打好的 Java 服务镜像，直接拿到 Apple 芯片的 Mac mini 上运行，一定没问题吗？"
-  options={["一定没问题，Java 本来就跨平台", "不一定：镜像里还有按芯片编译的运行时和系统库，要看镜像的架构是否匹配", "一定不行，两种芯片完全不能互通"]}
-  answer="B"
+  options={["一定没问题，Java 本来就跨平台", "一定不行，两种芯片完全不能互通", "不一定：镜像里有按芯片编译的运行时，要看架构匹配不匹配"]}
+  answer="C"
   ifRight="对。Java 字节码跨平台，但镜像里装的 Java 运行时、系统库、curl 等是按芯片编译好的原生程序，架构不对就会出问题。"
-  ifWrong="答案是 B。跨平台的只是你的 jar。镜像里还装着 Java 运行时和系统库，它们都是按特定芯片编译的原生程序。"
+  ifWrong="答案是 C。跨平台的只是你的 jar。镜像里还装着 Java 运行时和系统库，它们都是按特定芯片编译的原生程序。"
   suggest="ops-docker-images-and-containers"
 />
 
@@ -96,13 +96,13 @@ docker image inspect --format '{{.Architecture}}' <镜像>
   questions={[
     {
       question: "下面哪种说法是对的？",
-      options: ["jar 文件跨平台，所以 Java 服务的镜像也跨平台", "镜像里的运行时和系统库是按芯片编译的，镜像本身有架构"],
-      answer: "B",
+      options: ["镜像里的运行时和系统库按芯片编译，所以镜像有架构", "jar 文件跨平台，所以 Java 服务的镜像也跨平台"],
+      answer: "A",
       explain: "跨平台的只是字节码。镜像包含整套运行环境，它们是原生程序，所以镜像有架构。"
     },
     {
       question: "在 Apple 芯片的 Mac 上运行一个 amd64 镜像，最可能的结果是？",
-      options: ["一定会立刻报错", "可能靠转译层悄悄跑起来，更慢但没有报错", "自动重新编译成 arm64"],
+      options: ["一定会立刻报错，提示架构不匹配", "可能靠转译层悄悄跑起来，更慢但没有报错", "自动重新编译成 arm64，所以能正常跑"],
       answer: "B",
       explain: "转译层能让它跑，但这种不匹配很难被发现。"
     }

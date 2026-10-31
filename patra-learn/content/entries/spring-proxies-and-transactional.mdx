@@ -10,10 +10,10 @@ personalEnv: false
 
 <Diagnose
   question="一个方法贴了 `@Transactional`，里面往数据库写了两行，写完第二行之后抛出一个 `RuntimeException`。方法结束后数据库里会留下几行？"
-  options={["2 行，写进去了就是写进去了", "1 行，只回滚最后那一行", "0 行，事务回滚，两行都撤销"]}
-  answer="C"
+  options={["2 行，写进去了就是写进去了", "0 行，事务回滚，两行都撤销", "1 行，只回滚最后那一行"]}
+  answer="B"
   ifRight="对，前提是 `@Transactional` 真的生效了。这篇讲它在什么情况下会悄悄不生效，那时写库就没有事务包着，后果取决于每次写库怎么执行：可能第一次就报错，也可能各自提交、留下 2 行。"
-  ifWrong="答案是 C：事务里的写入要么一起提交、要么一起撤销，抛异常就整体回滚。事务本身是什么、回滚意味着什么，在数据库事务那篇讲，这篇建立在它上面。"
+  ifWrong="答案是 B：事务里的写入要么一起提交、要么一起撤销，抛异常就整体回滚。事务本身是什么、回滚意味着什么，在数据库事务那篇讲，这篇建立在它上面。"
   suggest="db-transactions"
 />
 
@@ -108,8 +108,8 @@ Spring 发现一个 Bean 的方法上有 `@Transactional`，就不把原对象�
     { caption: "`recordParsed` 开始写库，这时没有事务。第一次写库 `saveBody` 走的是 `EntityManager` 的 `executeUpdate`，Hibernate 执行前发现没有进行中的事务，直接抛 `TransactionRequiredException`。一行也没写进去，异常一路抛出 `run()`。", focus: ["target", "db"], links: ["target>db"], tokens: [{ id: "call", label: "saveBody()", at: "db", state: "dropped" }], notes: [{ at: "db", text: "拒绝执行 · 0 行", tone: "bad" }, { at: "target", text: "TransactionRequiredException", tone: "bad" }] }
   ]}
   guesses={[
-    { before: 3, question: "`recordParsed` 上明明贴着 `@Transactional(REQUIRES_NEW)`。原对象用 `this` 调它，会开一个新事务吗？", options: ["会，注解贴在方法上就会生效", "不会：读注解、开事务的是代理，`this` 调用不经过代理", "会，但要等方法结束才开"], answer: "B", explain: "事务是代理开的。`this` 指向原对象，调用直接落在原对象上，代理没机会插手。" },
-    { before: 4, question: "没有事务，`recordParsed` 开始写库。第一步 `saveBody` 用的是 `EntityManager` 的 `executeUpdate`。会怎样？", options: ["三次各自提交，顺利的话和有事务时一样", "数据库自动把三次合成一个事务", "第一次写库就抛 `TransactionRequiredException`，什么也没写进去"], answer: "C", explain: "Hibernate 执行 `executeUpdate` 前要求有进行中的事务（开关 `hibernate.allow_update_outside_transaction` 默认关，Patra 没开），没有就抛异常。所以在这份代码里，事务丢了反而一跑就报错。" }
+    { before: 3, question: "`recordParsed` 上明明贴着 `@Transactional(REQUIRES_NEW)`。原对象用 `this` 调它，会开一个新事务吗？", options: ["会，注解贴在方法上就会生效", "会，但要等方法结束才开", "不会：开事务的是代理，`this` 调用不经过代理"], answer: "C", explain: "事务是代理开的。`this` 指向原对象，调用直接落在原对象上，代理没机会插手。" },
+    { before: 4, question: "没有事务，`recordParsed` 开始写库。第一步 `saveBody` 用的是 `EntityManager` 的 `executeUpdate`。会怎样？", options: ["第一次写库就抛 `TransactionRequiredException`", "三次各自提交，顺利的话和有事务时一样", "数据库自动把三次合成一个事务"], answer: "A", explain: "Hibernate 执行 `executeUpdate` 前要求有进行中的事务（开关 `hibernate.allow_update_outside_transaction` 默认关，Patra 没开），没有就抛异常。所以在这份代码里，事务丢了反而一跑就报错。" }
   ]}
 />
 
@@ -210,14 +210,14 @@ Patra 里真这样拆过不止一处。catalog 的 LetPub 富化在类注释里�
   questions={[
     {
       question: "有人把 `@Transactional` 贴在一个 `private` 方法上，从同类的 public 方法里调它。会有事务吗？",
-      options: ["有，private 方法也能被拦截", "没有：既是自调用，代理也管不到 private 方法", "要看传播方式"],
+      options: ["有，private 方法也能被拦截", "没有：自调用，而且代理管不到 private 方法", "要看传播方式"],
       answer: "B",
       explain: "两条理由各自都够：代理只能替外面能调到的方法开事务，而这次调用又是 `this` 调用。Patra 的规范要求注解只加在 public 方法上。"
     },
     {
       question: "Runner 调 `persister.recordParsed(...)`，`persister` 是构造器注入进来的。这次调用经过代理吗？",
-      options: ["经过：注入进来的是代理", "不经过：调的是另一个类的普通方法", "只有第一次经过"],
-      answer: "A",
+      options: ["不经过：调的是另一个类的普通方法", "只有第一次经过", "经过：注入进来的是代理"],
+      answer: "C",
       explain: "容器给所有依赖它的 Bean 递的都是代理。只要是通过注入的引用去调，就经过代理。"
     }
   ]}

@@ -12,10 +12,10 @@ personalEnv: false
 
 <Diagnose
   question="identity 服务的 `LogoutUserHandler` 构造器要一个 `Clock`。identity 自己的代码里没有任何地方造 `Clock`，启动类也只扫描 `dev.patra.identity` 这个包；`Clock` 是工具模块 `patra-tool-launch` 提供的，它的包是 `dev.patra.tool.launch`。这个 `Clock` 是怎么进到 identity 的容器里的？"
-  options={["组件扫描扫到的：扫描会顺带扫所有依赖的 jar", "`patra-tool-launch` 的 jar 里有一份清单，Spring Boot 启动时读清单，把上面的配置类装进来", "进不来，启动会报缺少 `Clock`"]}
-  answer="B"
+  options={["jar 里有一份清单，Spring Boot 启动时读它，把配置类装进来", "组件扫描扫到的：扫描会顺带扫所有依赖 jar 里的包", "进不来，启动时会报缺少 `Clock` 的 Bean"]}
+  answer="A"
   ifRight="对。扫描只管服务自己的包，工具模块的 Bean 走的是另一条路：自动配置。这篇讲那份清单，以及「什么时候装、什么时候不装」。"
-  ifWrong="答案是 B：扫描只扫启动类所在的包，工具模块的 Bean 靠 jar 里的清单文件进来。读懂这篇要先知道「Bean 是容器造好、按类型递给构造器的」，这是依赖注入那篇讲的。"
+  ifWrong="答案是 A：扫描只扫启动类所在的包，工具模块的 Bean 靠 jar 里的清单文件进来。读懂这篇要先知道「Bean 是容器造好、按类型递给构造器的」，这是依赖注入那篇讲的。"
   suggest="spring-dependency-injection"
 />
 
@@ -148,7 +148,7 @@ public final class LaunchAutoConfiguration {
     { caption: "满足条件的配置类，它的 `@Bean` 方法被调用，返回值放进容器；不满足的整类跳过，一个 Bean 都不留。", focus: ["container"], links: ["boot>container"], tokens: [{ id: "list", label: "Bean", at: "container" }], notes: [{ at: "container", text: "多了事件收发的 Bean", tone: "ok" }] }
   ]}
   guesses={[
-    { before: 4, question: "一个服务没有引入 RabbitMQ，`EventsRabbitAutoConfiguration` 的条件不满足。它会怎样？", options: ["启动报错：缺少 RabbitMQ", "整类跳过，服务照常启动", "装进来，用到时再报错"], answer: "B", explain: "条件不满足就是安静地跳过。这正是「引了才生效、不引不打扰」的意思。" }
+    { before: 4, question: "一个服务没有引入 RabbitMQ，`EventsRabbitAutoConfiguration` 的条件不满足。它会怎样？", options: ["启动报错：缺少 RabbitMQ", "装进来，用到时再报错", "整类跳过，服务照常启动"], answer: "C", explain: "条件不满足就是安静地跳过。这正是「引了才生效、不引不打扰」的意思。" }
   ]}
 />
 

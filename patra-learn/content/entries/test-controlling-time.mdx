@@ -9,10 +9,10 @@ prerequisites: [test-doubles-and-mocks]
 
 <Diagnose
   question="一个测试今天跑是绿的，明天跑变红了。代码和测试一行都没改，机器也没问题。最可能的原因是什么？"
-  options={["测试里或被测代码里用到了「当前时间」，结果随日期变了", "Java 每天都会随机出一点 bug", "测试跑得太多次，用坏了"]}
-  answer="A"
+  options={["测试库里的数据越积越多，影响了断言结果", "依赖库悄悄自动升级了版本", "测试依赖了「当前时间」，结果随日期变了"]}
+  answer="C"
   ifRight="对。只要结果依赖「现在是几点」，测试就会随时间变。这篇讲怎么把「现在」变成一个测试能控制的东西。"
-  ifWrong="答案是 A：测试一旦依赖当前时间，今天对、明天错就是常事。后面会讲怎么让「现在」变得可控。这和前面讲的测试替身思路一脉相承：把不可控的外部东西，换成测试能控制的替身。"
+  ifWrong="答案是 C：测试一旦依赖当前时间，今天对、明天错就是常事。后面会讲怎么让「现在」变得可控。这和前面讲的测试替身思路一脉相承：把不可控的外部东西，换成测试能控制的替身。"
   suggest="test-doubles-and-mocks"
 />
 
@@ -122,7 +122,7 @@ Patra 的测试工具模块里有一个现成的假时钟：
     { caption: "业务代码要 Clock，拿到的是 MutableClock。测试里持有同一个对象，想拨就拨。", focus: ["container", "code"], links: ["container>code"], tokens: [{ id: "fake", label: "MutableClock", at: "code" }], notes: [{ at: "code", text: "与测试共用同一个时钟", tone: "ok" }] }
   ]}
   guesses={[
-    { before: 3, question: "测试配置里声明了一个 Clock。启动器自己的系统时钟会怎样？", options: ["两个都在，业务代码随机拿到一个", "启动器因为 @ConditionalOnMissingBean 而不提供自己的", "启动失败，报重复定义"], answer: "B", explain: "@ConditionalOnMissingBean 的意思就是「已有同类型的就退场」。这是 Spring Boot 自动配置的通用约定：给使用者留一个替换的口子。" }
+    { before: 3, question: "测试配置里声明了一个 Clock。启动器自己的系统时钟会怎样？", options: ["启动器的那个因为 @ConditionalOnMissingBean 而不再提供", "两个都登记了，业务代码拿到哪个不确定", "启动失败，报 NoUniqueBeanDefinitionException"], answer: "A", explain: "@ConditionalOnMissingBean 的意思就是「已有同类型的就退场」。这是 Spring Boot 自动配置的通用约定：给使用者留一个替换的口子。" }
   ]}
 />
 
@@ -173,8 +173,8 @@ assertThat(back.status()).as(back.body()).isEqualTo(200);
   questions={[
     {
       question: "业务类里有一行 LocalDate.now()，直接取当天日期。按 Patra 的约定，应该怎么改？",
-      options: ["保持原样，测试时修改系统时间", "注入 Clock，改成 LocalDate.now(clock)", "改成静态变量保存启动时间"],
-      answer: "B",
+      options: ["保持原样，测试时修改系统时间", "改成静态变量保存启动时间", "注入 Clock，改成 LocalDate.now(clock)"],
+      answer: "C",
       explain: "注入 Clock 是约定的做法。这样测试可以传入固定或可拨动的时钟。"
     }
   ]}

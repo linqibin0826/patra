@@ -12,10 +12,10 @@ personalEnv: false
 
 <Diagnose
   question="identity 的登录失败限制里，「连续输错几次就锁定」在配置类的字段上写着默认值 `5`。现在在 Nacos 的 `patra-identity.yaml` 里加一行 `max-failures: 8`（放在 `patra.identity.login-throttle` 下面），重启后生效的是几？"
-  options={["5：代码里写的才算数", "8：配置文件里写了，就盖过字段上的默认值", "启动报错：代码里叫 `maxFailures`，配置里叫 `max-failures`，对不上"]}
-  answer="B"
+  options={["8：配置里写了就盖过字段上的默认值", "5：代码里写的才算数", "启动报错：代码里叫 `maxFailures`，配置里叫 `max-failures`，对不上"]}
+  answer="A"
   ifRight="对。字段上的值只是「谁都没说时」的兜底。这篇讲配置怎么绑到对象上，以及同一个键写在好几处时听谁的。"
-  ifWrong="答案是 B：配置里写了的键会盖过字段默认值，`max-failures` 和 `maxFailures` 也能对上。这些都发生在启动时 Spring Boot 装配容器的过程里，上一篇讲过它怎么从清单把配置类装进来。"
+  ifWrong="答案是 A：配置里写了的键会盖过字段默认值，`max-failures` 和 `maxFailures` 也能对上。这些都发生在启动时 Spring Boot 装配容器的过程里，上一篇讲过它怎么从清单把配置类装进来。"
 />
 
 <Callout kind="lead">

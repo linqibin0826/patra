@@ -13,7 +13,7 @@ personalEnv: false
 
 <Diagnose
   question="开发模式报水合不一致，差异是 html 标签上多了一个属性 data-xxx-page-theme，项目代码里搜不到这个名字。它最可能是从哪来的？"
-  options={["Next 自己在服务端加的", "浏览器扩展在 React 接管之前往页面里写的", "React 19 的新默认属性"]}
+  options={["Next 在服务端渲染 HTML 时自己加上的", "浏览器扩展在 React 接管前往页面里写的", "React 19 为水合新增的默认属性"]}
   answer="B"
   ifRight="对。代码里搜不到、只出现在浏览器里的属性，多半是扩展加的。下面讲怎么一步确诊。"
   ifWrong="答案是 B。水合时 React 比对的是「服务端给的 HTML」和「浏览器里此刻的 DOM」；扩展在中间改了 DOM，就会对不上。这题考的是水合在比对什么。"

@@ -14,10 +14,10 @@ personalEnv: false
 
 <Diagnose
   question="snapshot 列是 jsonb NOT NULL。代码执行 jsonMapper.writeValueAsString(snapshot)，此时 snapshot 恰好是 null，再用 CAST(:snapshot AS jsonb) 插入。会怎样？"
-  options={["违反 NOT NULL，插入失败", "插入成功，列里存的是 JSON 的 null", "Jackson 抛异常，到不了数据库"]}
-  answer="B"
+  options={["违反 NOT NULL，插入失败", "Jackson 抛异常，到不了数据库", "插入成功，列里存的是 JSON 的 null"]}
+  answer="C"
   ifRight="对。Jackson 把 null 写成四个字母的字符串 null，PostgreSQL 把它解析成 JSON 值 null，对 SQL 来说这一列不是空的。"
-  ifWrong="答案是 B。SQL 的 NULL 是「这一格没有值」，JSON 的 null 是「有值，值是 null」。NOT NULL 只认前者。这题考的是 jsonb 列存的是什么，先读 jsonb 那篇。"
+  ifWrong="答案是 C。SQL 的 NULL 是「这一格没有值」，JSON 的 null 是「有值，值是 null」。NOT NULL 只认前者。这题考的是 jsonb 列存的是什么，先读 jsonb 那篇。"
   suggest="db-jsonb-columns"
 />
 

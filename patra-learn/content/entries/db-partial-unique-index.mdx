@@ -9,10 +9,10 @@ prerequisites: [db-indexes, db-constraints-and-null]
 
 <Diagnose
   question="用户表用 deleted_at 做软删除（删除时填上时间，行还在）。业务希望：活着的用户邮箱不能重复，但已注销用户的邮箱可以被新用户重新注册。只给 email 加普通的 UNIQUE，能做到吗？"
-  options={["能，唯一约束会自动忽略已软删除的行", "不能，已软删除的行还在表里，仍然占着那个邮箱，新用户注册会撞上唯一约束", "能，但要把 deleted_at 也设成唯一"]}
-  answer="B"
+  options={["不能，已软删除的行还占着那个邮箱", "能，唯一约束会自动忽略已软删除的行", "能，但要把 deleted_at 也设成唯一"]}
+  answer="A"
   ifRight="对。唯一约束看的是表里所有的行，它不知道哪些行「算删了」。要让它只管活着的行，就是这一篇的主题。"
-  ifWrong="答案是 B。软删除只是给行打了个标记，行本身还在，邮箱那一格也还在。普通的唯一约束一视同仁地检查所有行，所以新用户用同样的邮箱注册会失败。"
+  ifWrong="答案是 A。软删除只是给行打了个标记，行本身还在，邮箱那一格也还在。普通的唯一约束一视同仁地检查所有行，所以新用户用同样的邮箱注册会失败。"
   suggest="db-constraints-and-null"
 />
 
@@ -59,7 +59,7 @@ CREATE UNIQUE INDEX uk_org_alias_zh_label
 
 <Params
   title="动手试试：往别名表里再插一行，会被挡住吗"
-  guess={{ question: "某机构 A 已经有一条 LABEL、lang=zh 的行。再给 A 插一条 ALIAS、lang=zh 的行（别名文字不同），能插入吗？", options: ["不能，A 已经有中文名了", "能，这条不是 LABEL，不在 uk_org_alias_zh_label 的约束范围内", "能，但会把原来的 LABEL 改成 ALIAS"], answer: "B", explain: "局部唯一索引只管 alias_type = 'LABEL' 且 lang = 'zh' 的行。新行是 ALIAS，根本不进这个索引，也就不参与唯一检查。" }}
+  guess={{ question: "某机构 A 已经有一条 LABEL、lang=zh 的行。再给 A 插一条 ALIAS、lang=zh 的行（别名文字不同），能插入吗？", options: ["不能，同一机构同一语言只能有一条中文名", "能，新行是 ALIAS，不在这个唯一索引的范围内", "能，但插入时会把原来的 LABEL 改成 ALIAS"], answer: "B", explain: "局部唯一索引只管 alias_type = 'LABEL' 且 lang = 'zh' 的行。新行是 ALIAS，根本不进这个索引，也就不参与唯一检查。" }}
   controls={[
     { type: "switch", id: "label", label: "新行的类型是 LABEL（关 = ALIAS）", default: false },
     { type: "switch", id: "zh", label: "新行的语言是 zh（关 = 其他语言）", default: true }
@@ -122,14 +122,14 @@ CREATE UNIQUE INDEX uk_pub_author ON cat_publication_author (publication_id, aut
   questions={[
     {
       question: "uk_org_alias_zh_label 是局部唯一索引，条件是 alias_type = 'LABEL' AND lang = 'zh'。下面哪两行可以同时存在于同一家机构？",
-      options: ["两条 lang=zh 的 LABEL", "一条 lang=zh 的 LABEL 和一条 lang=en 的 LABEL", "两条 lang=zh 的 LABEL，只要别名文字不同"],
-      answer: "B",
+      options: ["lang=zh 和 lang=en 各一条 LABEL", "两条 lang=zh 的 LABEL，别名文字相同", "两条 lang=zh 的 LABEL，只要别名文字不同"],
+      answer: "A",
       explain: "英文的 LABEL 不满足 lang = 'zh'，不进这个索引。两条中文 LABEL 无论文字是否相同，都会在索引里撞上同一个 ror_id。"
     },
     {
       question: "给一张表加局部唯一索引 WHERE status = 'ACTIVE'。把某行的 status 从 ACTIVE 改成 ARCHIVED 之后，再插入一条同样键值、status = ACTIVE 的新行，会怎样？",
-      options: ["失败，旧行还在表里", "成功，旧行已经不满足条件，不在索引里了", "取决于旧行是否被删除"],
-      answer: "B",
+      options: ["失败，旧行还在表里，键值冲突", "取决于旧行有没有被物理删除", "成功，旧行已不满足条件，不在索引里"],
+      answer: "C",
       explain: "索引只收满足 WHERE 的行。旧行改成 ARCHIVED 后被移出索引，新行进来时没有冲突对象。"
     }
   ]}

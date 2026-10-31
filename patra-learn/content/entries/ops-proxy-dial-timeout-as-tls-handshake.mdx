@@ -12,10 +12,10 @@ personalEnv: false
 
 <Diagnose
   question="Java 程序经一个 HTTP 代理访问 HTTPS 站点。代理收到 CONNECT 后先回了「200 连接已建立」，然后才去连目标站，5 秒没连上就把连接关了。Java 这边会报什么？"
-  options={["连接超时（connect timed out）", "TLS 握手被对方断开", "代理认证失败（407）"]}
-  answer="B"
+  options={["连接超时（connect timed out）", "代理认证失败（407）", "TLS 握手被对方断开"]}
+  answer="C"
   ifRight="对。对 Java 来说，连接早在收到 200 时就「建立」了，接下来该握手；握手进行到一半连接被关，只能报握手失败。往下读这个错误怎么把排查带偏。"
-  ifWrong="答案是 B。代理先回了 200，Java 认为隧道已通、开始 TLS 握手；这时代理因为连不上目标把连接关了，Java 读到的是「握手中途对方断了」。这题考的是 HTTPS 先建连接、再握手这两步，先读 HTTPS 那篇。"
+  ifWrong="答案是 C。代理先回了 200，Java 认为隧道已通、开始 TLS 握手；这时代理因为连不上目标把连接关了，Java 读到的是「握手中途对方断了」。这题考的是 HTTPS 先建连接、再握手这两步，先读 HTTPS 那篇。"
   suggest="http-https-and-certificates"
 />
 

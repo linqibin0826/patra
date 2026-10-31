@@ -10,10 +10,10 @@ personalEnv: false
 
 <Diagnose
   question={"一个脚本在 macOS 自带的 bash 3.2 下运行，语言环境是常见的 UTF-8，开头有 `set -u`（引用未定义的变量就报错）。其中一行是 `echo \"版本过期（当前 $CURRENT，最新 $LATEST）\"`，`$CURRENT` 后面紧跟着一个全角逗号。会发生什么？"}
-  options={["正常输出，逗号原样显示", "报 unbound variable，脚本在这一行退出", "只是少显示一个逗号"]}
-  answer="B"
+  options={["正常输出，逗号原样显示在变量值后面", "输出时丢掉那个逗号，其余正常", "报 unbound variable，脚本在这一行退出"]}
+  answer="C"
   ifRight="对。在 UTF-8 语言环境下，变量名后面那个全角逗号的头一个字节被当成了变量名的一部分，bash 去找一个名字奇怪的变量，找不到，在 `set -u` 下直接报错退出。"
-  ifWrong="答案是 B。在 UTF-8 语言环境下，bash 3.2 会把全角逗号的字节并进变量名，bash 去找一个不存在的变量，`set -u` 让它直接报 unbound variable。这题考的是变量名的边界在哪里。"
+  ifWrong="答案是 C。在 UTF-8 语言环境下，bash 3.2 会把全角逗号的字节并进变量名，bash 去找一个不存在的变量，`set -u` 让它直接报 unbound variable。这题考的是变量名的边界在哪里。"
   suggest="ops-scheduled-watchdog"
 />
 

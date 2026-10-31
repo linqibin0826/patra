@@ -12,10 +12,10 @@ personalEnv: false
 
 <Diagnose
   question="你在咖啡店连公共 WiFi，用 http:// 开头的网站登录，输入了密码。同一个 WiFi 里的另一个人，有没有可能看到你的密码？"
-  options={["不可能，网站只有你和它自己知道", "有可能，请求在网络上是明文传输的，沿途的设备都能看到", "只有对方是黑客高手才可能"]}
-  answer="B"
+  options={["不可能，网站只有你和它自己知道", "只有技术很高的黑客才可能看到", "有可能，请求是明文，沿途设备都能看到"]}
+  answer="C"
   ifRight="对，明文传输意味着沿途都能读。HTTPS 就是为解决这件事。"
-  ifWrong="答案是 B：http 不加密，请求是明文走过 WiFi、路由器、运营商。读到它不需要高超的技术，只要抓包。HTTPS 在这之上加了一层加密。"
+  ifWrong="答案是 C：http 不加密，请求是明文走过 WiFi、路由器、运营商。读到它不需要高超的技术，只要抓包。HTTPS 在这之上加了一层加密。"
   suggest="web-what-happens-opening-a-page"
 />
 
@@ -68,7 +68,7 @@ personalEnv: false
     { caption: "之后所有请求和响应都用这把临时密钥加密。中间的人只能看到一堆乱码。", focus: ["browser", "server"], links: ["browser>server"], tokens: [{ id: "data", label: "密文", at: "server" }] }
   ]}
   guesses={[
-    { before: 4, question: "证书是公开的，任何人都能拿到一份拷贝。那么拿到拷贝的人为什么没法冒充这个网站？", options: ["证书上有防复制的水印", "证书里只有公钥；证明身份还需要私钥，而私钥只在真服务器手里", "浏览器会记住每个人的地址，一旦发现不一致就拒绝"], answer: "B", explain: "证书可以公开，是因为它只含公钥。冒充者没有对应的私钥，过不了「证明我是主人」这一步。" }
+    { before: 4, question: "证书是公开的，任何人都能拿到一份拷贝。那么拿到拷贝的人为什么没法冒充这个网站？", options: ["证书上有防复制的水印，复制件会失效", "证书里只有公钥，私钥只在真服务器手里", "浏览器会记住每个人的地址，发现不一致就拒绝"], answer: "B", explain: "证书可以公开，是因为它只含公钥。冒充者没有对应的私钥，过不了「证明我是主人」这一步。" }
   ]}
 />
 
@@ -89,8 +89,8 @@ personalEnv: false
   questions={[
     {
       question: "一张通配符证书 *.linqibin.dev。浏览器访问 learn.patra.linqibin.dev 会怎样？",
-      options: ["正常，通配符覆盖所有子域", "报证书域名不匹配，因为星号只代表一层", "只提示一下，页面仍然正常"],
-      answer: "B",
+      options: ["报域名不匹配，星号只代表一层", "正常，通配符覆盖所有层级的子域", "只提示一下，页面仍然正常"],
+      answer: "A",
       explain: "星号只匹配一段，learn.patra 是两段。要覆盖更深的层级，要另外的证书或单独申请。"
     }
   ]}

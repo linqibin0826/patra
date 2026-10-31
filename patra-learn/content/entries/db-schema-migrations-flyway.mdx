@@ -9,10 +9,10 @@ prerequisites: [db-constraints-and-null, db-indexes]
 
 <Diagnose
   question="你在自己电脑的数据库里给 cat_venue 加了一个新列，代码也用上了它。同事、测试环境、线上的数据库都还没有这一列。怎样做才能保证所有环境的表结构一致，且不靠人手工同步？"
-  options={["在每个环境里手工执行同一句 ALTER TABLE，并在群里约定谁来做", "把这次改动写成带版本号的脚本放进代码仓库，服务启动时自动执行还没执行过的脚本", "让数据库每次启动时对照代码自动改表"]}
-  answer="B"
+  options={["在每个环境里手工执行同一句 ALTER TABLE，并在群里约定谁来做", "让数据库每次启动时对照代码，自动把表结构改成一致", "把改动写成带版本号的脚本进仓库，服务启动时自动执行没跑过的"]}
+  answer="C"
   ifRight="对。表结构的变更和代码一样要进版本库、自动执行、可追溯。Flyway 就是做这件事的工具。"
-  ifWrong="答案是 B。手工同步迟早会漏；让数据库对照代码自动改表又太危险，一次误判就可能删列删数据。可靠的做法是把每次变更写成脚本，进仓库，由工具按顺序、只执行一次。"
+  ifWrong="答案是 C。手工同步迟早会漏；让数据库对照代码自动改表又太危险，一次误判就可能删列删数据。可靠的做法是把每次变更写成脚本，进仓库，由工具按顺序、只执行一次。"
   suggest="db-constraints-and-null"
 />
 
@@ -107,7 +107,7 @@ CREATE UNIQUE INDEX uk_venue_identifier_nlm
     { caption: "对不上。Flyway 报「Migration checksum mismatch」，服务启动失败。", focus: ["flyway"], tokens: [{ id: "sumb", label: "B 不等于 A", at: "flyway", state: "dropped" }], notes: [{ at: "flyway", text: "拒绝启动", tone: "bad" }] }
   ]}
   guesses={[
-    { before: 4, question: "改动的只是一行注释，对表结构没有任何影响。Flyway 还会让服务正常启动吗？", options: ["会，因为实际执行效果一样", "不会，校验和只看文件内容，不看效果", "会，但会在日志里警告"], answer: "B", explain: "Flyway 不去理解 SQL 的效果，只比较文件内容的指纹。一个空格、一行注释都会让校验和变化。" }
+    { before: 4, question: "改动的只是一行注释，对表结构没有任何影响。Flyway 还会让服务正常启动吗？", options: ["不会，校验只比文件内容，不看效果", "会，因为注释不影响实际执行效果", "会，但会在日志里打一条警告"], answer: "A", explain: "Flyway 不去理解 SQL 的效果，只比较文件内容的指纹。一个空格、一行注释都会让校验和变化。" }
   ]}
 />
 
@@ -151,14 +151,14 @@ Patra 里能看到两种版本号风格：
   questions={[
     {
       question: "V5 脚本在线上执行过了。后来发现它建的索引名拼错了一个字母。正确的修法是？",
-      options: ["直接改 V5 文件里的名字", "新增一个脚本，用 ALTER INDEX ... RENAME 改名", "在数据库里手工改，不动脚本"],
+      options: ["直接改 V5 文件里的名字，重新部署一次", "新增一个脚本，用 ALTER INDEX 改名", "在数据库里手工改名，脚本不动"],
       answer: "B",
       explain: "已执行的脚本不改。新增脚本把差异补上，历史和现状都清楚。手工改库会让环境之间不一致，又是 Flyway 要避免的事。"
     },
     {
       question: "给一张已有 100 万行的表新增一个 NOT NULL 列，脚本里必须注意什么？",
-      options: ["没什么要注意的", "给这一列一个默认值，或者先加可空列、回填数据、再改成 NOT NULL", "先清空这张表"],
-      answer: "B",
+      options: ["加默认值，或先加可空列、回填再改 NOT NULL", "没什么要注意的，数据库会自动给旧行补上空值", "先清空这张表，加完列再把数据重新导回来"],
+      answer: "A",
       explain: "已有的行在新列上没有值，直接加 NOT NULL 会失败。要么给默认值，要么分步回填。"
     }
   ]}

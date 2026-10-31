@@ -16,7 +16,7 @@ personalEnv: false
 
 <Diagnose
   question="下游服务回了一个只带 ETag、没写 Cache-Control 的响应，经过一个启用了 Spring Security 默认配置的网关转给浏览器。浏览器收到的响应头里会多出什么？"
-  options={["什么都不会多，网关原样转发", "Cache-Control: no-cache, no-store 等一组安全头", "网关会把 ETag 删掉"]}
+  options={["什么都不会多，网关只管转发不碰响应头", "Cache-Control: no-store 等一组安全头", "网关会把下游的 ETag 删掉，让浏览器每次重新取"]}
   answer="B"
   ifRight="对。Spring Security 不区分「网关自己的响应」和「转发的响应」，缺什么补什么。"
   ifWrong="答案是 B。Spring Security 默认带一个响应头写出器，会给缺少这些头的响应补上禁止缓存等安全头。这题考的是 Cache-Control 怎么决定浏览器能不能缓存，先读 HTTP 缓存那篇。"

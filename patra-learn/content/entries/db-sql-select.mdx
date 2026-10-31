@@ -9,10 +9,10 @@ prerequisites: [db-keys-and-relations]
 
 <Diagnose
   question="表 cat_venue 有 200 万行。页面要展示 20 本期刊的标题。下面哪种做法最合理？"
-  options={["程序把整张表查出来，在代码里挑出期刊、取前 20 个标题", "让数据库只返回期刊类型的前 20 行，并且只带标题这一列", "两种一样，反正最后都是 20 个标题"]}
-  answer="B"
+  options={["让数据库只返回期刊类型的前 20 行，并且只带标题这一列", "程序把整张表查出来，在代码里挑出期刊、取前 20 个标题", "两种一样，反正最后都是 20 个标题"]}
+  answer="A"
   ifRight="对。能让数据库做的筛选就别搬到程序里做：数据库有索引，网络上也少传几百万行。这一篇就是教你怎么对数据库说这句话。"
-  ifWrong="答案是 B。把 200 万行都通过网络搬回程序再丢掉，既慢又占内存。筛选、排序、取一页，数据库本来就会做，你只需要把条件写进 SQL。"
+  ifWrong="答案是 A。把 200 万行都通过网络搬回程序再丢掉，既慢又占内存。筛选、排序、取一页，数据库本来就会做，你只需要把条件写进 SQL。"
   suggest="db-keys-and-relations"
 />
 
@@ -114,14 +114,14 @@ LIMIT 20;
   questions={[
     {
       question: "想查出「没有被软删除」的期刊，deleted_at 列没删除时是空的。WHERE 该怎么写？",
-      options: ["WHERE deleted_at = NULL", "WHERE deleted_at IS NULL", "WHERE deleted_at = ''"],
-      answer: "B",
+      options: ["WHERE deleted_at IS NULL", "WHERE deleted_at = NULL", "WHERE deleted_at = ''"],
+      answer: "A",
       explain: "NULL 表示「没有值」，不能用等号比较，要写 IS NULL。"
     },
     {
       question: "查询 SELECT id FROM cat_venue ORDER BY title LIMIT 20 OFFSET 40，取到的是第几到第几条（按排序后从 1 数）？",
-      options: ["第 21 到 40 条", "第 41 到 60 条", "第 40 到 59 条"],
-      answer: "B",
+      options: ["第 21 到 40 条", "第 40 到 59 条", "第 41 到 60 条"],
+      answer: "C",
       explain: "OFFSET 40 是跳过前 40 条，LIMIT 20 是再取 20 条，所以是第 41 到 60 条。"
     }
   ]}

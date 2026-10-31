@@ -94,14 +94,14 @@ public Map<String, Object> create(@RequestBody Map<String, String> body, HttpSes
   questions={[
     {
       question: "产品说：文献库每人最多 20000 条，改成 30000 条。按 Patra 的分层，你该去改哪一层？",
-      options: ["adapter：Controller 里", "domain：放业务数字的 CollectionLimits", "infra：SQL 里"],
+      options: ["adapter：Controller 里", "domain：CollectionLimits 里", "infra：SQL 里"],
       answer: "B",
       explain: "数量上限是业务规则，放在 domain 的 CollectionLimits 里。其他层只引用它，不自己写数字。"
     },
     {
       question: "团队决定把收藏夹从 PostgreSQL 换到另一种数据库。理想情况下要重写哪些地方？",
-      options: ["只重写 infra 里实现仓库的那部分", "四层都要重写", "只改 Controller"],
-      answer: "A",
+      options: ["infra 和 app 两层，事务边界要跟着改", "四层都要重写", "只重写 infra 里实现仓库的那部分"],
+      answer: "C",
       explain: "存储细节只出现在 infra。domain 里只有仓库接口，app 只调接口，所以它们都不用动。"
     }
   ]}

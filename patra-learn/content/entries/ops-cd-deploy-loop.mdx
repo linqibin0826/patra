@@ -10,10 +10,10 @@ personalEnv: false
 
 <Diagnose
   question="gateway 每个请求都要先找 identity 查会话。这两个服务这次要一起更新。部署时应该先换哪个？"
-  options={["先换 gateway，它是入口", "先换 identity，被依赖的先上线", "顺序无所谓，一起换就行"]}
-  answer="B"
+  options={["先换 identity，被依赖的先上线", "先换 gateway，入口先换新才能接到新请求", "顺序无所谓，两个一起换就行"]}
+  answer="A"
   ifRight="对。被依赖的先换新，依赖它的后换，这样入口上线时它要找的服务已经是新版本且就绪了。Patra 的部署顺序就是按这个思路排的。"
-  ifWrong="答案是 B。如果先换 gateway，它新版本启动后去找的 identity 还是旧的甚至正在重启，请求就会失败。被依赖的服务先上。"
+  ifWrong="答案是 A。如果先换 gateway，它新版本启动后去找的 identity 还是旧的甚至正在重启，请求就会失败。被依赖的服务先上。"
   suggest="ops-docker-compose"
 />
 
@@ -41,7 +41,7 @@ CD（持续部署）接在 CI 之后。检查通过、代码合并进 main，`cd
     { caption: "第四步交给 deploy.sh：校验入参，确认镜像就位并且是 arm64，再按顺序一个一个换新、验货、记账。", focus: ["deploy"], links: ["build>deploy"], tokens: [{ id: "img", label: "镜像:提交号", at: "deploy" }], notes: [{ at: "deploy", text: "逐个服务闭环", tone: "ok" }] }
   ]}
   guesses={[
-    { before: 3, question: "配置推送到一半失败了（比如配置检查没过）。后面的打包和部署还会继续吗？", options: ["会继续，配置和代码是两回事", "不会，推送失败就不部署", "只部署不依赖配置的服务"], answer: "B", explain: "新代码可能依赖新配置。配置没就位就部署，服务很可能启动失败，所以推送失败时整个部署中止。推送被跳过则不影响。" }
+    { before: 3, question: "配置推送到一半失败了（比如配置检查没过）。后面的打包和部署还会继续吗？", options: ["会继续，配置和代码是两回事", "只部署不依赖配置的服务", "不会，推送失败就整个部署中止"], answer: "C", explain: "新代码可能依赖新配置。配置没就位就部署，服务很可能启动失败，所以推送失败时整个部署中止。推送被跳过则不影响。" }
   ]}
 />
 
@@ -100,7 +100,7 @@ cd.yml 里决定“要不要部署”的那个条件，写得很细：
     { caption: "验货通过，立刻把这个提交号记成这个服务的“上一个好版本”。每个服务一份记录，通过一个记一个，不等整批。", focus: ["note"], tokens: [{ id: "svc", label: "identity", at: "note" }], notes: [{ at: "note", text: "为回滚备好底气", tone: "ok" }] }
   ]}
   guesses={[
-    { before: 5, question: "名单里有三个服务，第二个验货失败了。第三个还会被部署吗？", options: ["不会，一个失败就整体停止", "会，脚本继续处理名单里剩下的服务，最后整体以失败退出"], answer: "B", explain: "脚本逐个服务处理，一个失败只影响它自己（并触发它自己的回滚），其余照常，最后汇总成失败，让你知道有服务出了问题。" }
+    { before: 5, question: "名单里有三个服务，第二个验货失败了。第三个还会被部署吗？", options: ["不会，一个失败就整体停止，剩下的不再部署", "会，剩下的照常处理，最后整体报失败"], answer: "B", explain: "脚本逐个服务处理，一个失败只影响它自己（并触发它自己的回滚），其余照常，最后汇总成失败，让你知道有服务出了问题。" }
   ]}
 />
 
@@ -122,8 +122,8 @@ cd.yml 里决定“要不要部署”的那个条件，写得很细：
   questions={[
     {
       question: "services.json 里条目的顺序有什么作用？",
-      options: ["只是方便阅读", "就是 deploy.sh 的部署顺序"],
-      answer: "B",
+      options: ["就是 deploy.sh 的部署顺序", "只是方便阅读"],
+      answer: "A",
       explain: "脚本直接按这个顺序遍历，被依赖的服务排在前面。"
     },
     {

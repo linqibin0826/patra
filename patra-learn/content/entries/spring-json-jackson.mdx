@@ -157,14 +157,14 @@ public record SessionResponse(
   questions={[
     {
       question: "有人写了一个新的响应 record，字段是 `long authorId`（小写 long），值是一个雪花 ID。门户拿到的是什么？",
-      options: ["字符串，Patra 统一转了", "数字，而且后几位已经错了", "启动时报错，不让写原始类型"],
-      answer: "B",
+      options: ["字符串，Patra 统一转了", "启动时报错，不让写原始类型", "数字，而且后几位已经错了"],
+      answer: "C",
       explain: "定制器只给包装类型 `Long` 注册了序列化器。ID 字段要写成 `Long`，否则就掉回坑里。"
     },
     {
       question: "假设 identity 发给 RabbitMQ 的一条事件里有个 `Long userId`。消息里的 userId 是什么？",
-      options: ["字符串", "数字", "要看消费方是谁"],
-      answer: "B",
+      options: ["数字", "字符串", "要看消费方是谁"],
+      answer: "A",
       explain: "发消息用的是容器里的 `JsonMapper`，它没有 Long → 字符串的规则。只有 MVC 的 HTTP 响应才转。"
     }
   ]}

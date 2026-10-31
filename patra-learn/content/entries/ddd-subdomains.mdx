@@ -10,10 +10,10 @@ personalEnv: false
 
 <Diagnose
   question="interaction 服务里同时有收藏夹、讨论、有帮助三块业务，都在同一个服务、同一套代码里。讨论的代码可以随便 import 有帮助里的任何类吗？"
-  options={["可以，反正在同一个服务里", "不可以，只能经对方公开的入口，而且这条依赖要事先声明", "不可以，必须先拆成三个服务"]}
-  answer="B"
+  options={["可以，反正在同一个服务里", "不可以，必须先拆成三个服务", "不可以，只能经对方公开的入口，依赖要事先声明"]}
+  answer="C"
   ifRight="对。同一个服务不等于可以随便互相引用。Patra 在服务内部再画边界，让每块业务只通过公开的入口接触别人。"
-  ifWrong="答案是 B。同一个服务里也要画边界，否则时间一长各块互相缠绕，想拆也拆不开；但也不必一上来就拆成三个服务。这篇讲的子域就是服务内部的这层边界。"
+  ifWrong="答案是 C。同一个服务里也要画边界，否则时间一长各块互相缠绕，想拆也拆不开；但也不必一上来就拆成三个服务。这篇讲的子域就是服务内部的这层边界。"
   suggest="ddd-patra-six-modules"
 />
 
@@ -137,14 +137,14 @@ DDD 的原著把子域按「对业务有多重要」分成三类：
   questions={[
     {
       question: "有人想把「用户名片」这个类放进 subject 底座，因为 collection 和 discussion 都要用。合适吗？",
-      options: ["合适，底座就是放被两个以上子域共用的东西", "不合适，应该每个子域各抄一份", "不合适，应该放进 collection"],
-      answer: "A",
+      options: ["不合适，应该每个子域各抄一份", "合适，底座放的就是被多个子域共用的东西", "不合适，应该放进 collection"],
+      answer: "B",
       explain: "底座的准入条件是被两个以上子域共用。Patra 里用户名片端口和 UserCard 就放在 subject 底座。"
     },
     {
       question: "reaction 子域想读 discussion 里评论的作者，应该用哪种方式？",
-      options: ["直接调用 CommentRepository", "经 discussion 公开的读端口，并在架构测试里声明依赖", "把 discussion 的表复制一份到 reaction"],
-      answer: "B",
+      options: ["经 discussion 公开的读端口，并声明依赖", "直接调用 discussion 的 CommentRepository", "把 discussion 的评论表复制一份到 reaction 里"],
+      answer: "A",
       explain: "仓库不是公开包。公开的是 port.read、model.read、event，并且依赖边要事先声明。"
     }
   ]}

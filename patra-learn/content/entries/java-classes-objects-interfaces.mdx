@@ -10,7 +10,7 @@ personalEnv: false
 
 <Diagnose
   question="Patra 的登录代码 LoginUserHandler 里有一行 private final LoginThrottlePort loginThrottle;，它的类型写的是 LoginThrottlePort（一个接口），不是 LoginThrottleAdapter（用 Redis 记失败次数的那个类）。哪天改成用数据库记失败次数，LoginUserHandler 要改吗？"
-  options={["要改，用到 Redis 的地方都得跟着改", "不用改，换一个同样实现了 LoginThrottlePort 的类就行", "不用改，Java 会自动找到新的存储方式"]}
+  options={["要改，凡是用到 Redis 的地方都得跟着改", "不用改，换个实现了该接口的类就行", "不用改，Java 会自动换成新的存储方式"]}
   answer="B"
   ifRight="对。LoginUserHandler 只认「接口约定了哪些方法」，不管背后是谁在做。下面从类和对象讲起，讲到接口为什么能做到这一点。"
   ifWrong="答案是 B：LoginUserHandler 只依赖接口，换实现时它不用动。要看懂这一点，先得分清类、对象和接口，这篇从头讲。"
@@ -172,9 +172,9 @@ public interface LoginThrottlePort {
   questions={[
     {
       question: "在 LoginThrottlePort 里加一个新方法，但不改 LoginThrottleAdapter。会怎样？",
-      options: ["没影响，新方法用不到就不管", "编译报错：LoginThrottleAdapter 说自己实现了这个接口，却少了一个方法", "运行到那个方法时才报错"],
-      answer: "B",
-      explain: "implements 是一个承诺，编译器会逐条核对。少兑现一条，编译就不过。"
+      options: ["没影响，没用到新方法就不会出事", "编译能过，调用到那个方法时才报错", "编译报错：LoginThrottleAdapter 少了一个方法"],
+      answer: "C",
+      explain: "LoginThrottleAdapter 说自己实现了这个接口，就是一个承诺，编译器会逐条核对。少兑现一条，编译就不过。"
     },
     {
       question: "代码里写 new LoginThrottlePort()，能编译吗？",

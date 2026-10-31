@@ -31,7 +31,7 @@ Spring Batch 是专门跑「大量数据从一处搬到另一处」的框架。�
 
 <Params
   title="动手试试：块大小怎么选"
-  guess={{ question: "块从 5000 调到 500，导入 2100 万条，提交次数会怎样？", options: ["不变", "变成原来的 10 倍", "变成原来的十分之一"], answer: "B", explain: "提交次数 = 总条数 ÷ 块大小。块小了 10 倍，提交就多了 10 倍。" }}
+  guess={{ question: "块从 5000 调到 500，导入 2100 万条，提交次数会怎样？", options: ["变成原来的十分之一", "不变", "变成原来的 10 倍"], answer: "C", explain: "提交次数 = 总条数 ÷ 块大小。块小了 10 倍，提交就多了 10 倍。" }}
   controls={[
     { type: "slider", id: "chunk", label: "块大小", min: 500, max: 10000, step: 500, default: 5000, unit: "条" }
   ]}
@@ -119,7 +119,7 @@ MeSH 主题词导入（`MeshDescriptorJobConfig`）是同一个结构：一个�
     { caption: "Step 调 Reader 的 `update()`，Reader 把 15000 放进 ExecutionContext；Step 把它和这一块的数据在同一个事务里提交。", focus: ["reader", "repo", "db"], links: ["reader>repo"], notes: [{ at: "db", text: "15000 条", tone: "ok" }, { at: "repo", text: "进度 15000", tone: "ok" }] }
   ]}
   guesses={[
-    { before: 4, question: "如果进程刚好崩在第 3 步之后、提交之前，重跑时会从哪开始？", options: ["从第 15001 条开始", "从第 10001 条开始，第 3 块重做", "从头开始"], answer: "B", explain: "第 3 块的数据和进度 15000 都没提交，一起回滚了。元数据表里还是 10000，重跑就从第 10001 条接着读。" }
+    { before: 4, question: "如果进程刚好崩在第 3 步之后、提交之前，重跑时会从哪开始？", options: ["从第 10001 条开始", "从第 15001 条开始", "从头开始"], answer: "A", explain: "第 3 块的数据和进度 15000 都没提交，一起回滚了。元数据表里还是 10000，重跑就从第 10001 条接着读。" }
   ]}
 />
 
@@ -152,14 +152,14 @@ MeSH 主题词导入（`MeshDescriptorJobConfig`）是同一个结构：一个�
   questions={[
     {
       question: "作者导入上次已经成功跑完。有人用同样的参数又触发了一次，会怎样？",
-      options: ["从头再导一遍", "Spring Batch 认出这个实例已经完成，拒绝再跑", "从最后一条之后接着读，读不到东西就结束"],
+      options: ["从头再导一遍", "认出实例已经完成，拒绝再跑", "从最后一条之后接着读"],
       answer: "B",
       explain: "同参数就是同一个 Job 实例，它已经是完成状态。`addTimestamp=false` 换来了续跑，也意味着同一份数据只导一次。"
     },
     {
       question: "如果 `launch` 的第三个参数改成 `true`（每次加一个时间戳参数），上次失败后重新触发会怎样？",
-      options: ["照样从断点接着跑", "成了一个新实例，从第 1 条开始", "启动失败"],
-      answer: "B",
+      options: ["照样从断点接着跑", "报错，参数重复了", "新实例，从第 1 条开始"],
+      answer: "C",
       explain: "时间戳是标识性参数，每次都不一样，每次都是新实例，新实例的 ExecutionContext 是空的。"
     }
   ]}

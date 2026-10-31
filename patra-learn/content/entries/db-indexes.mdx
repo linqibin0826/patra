@@ -9,10 +9,10 @@ prerequisites: [db-sql-select]
 
 <Diagnose
   question="表 cat_venue 有 200 万行，nlm_id 这一列没有任何索引。现在按 nlm_id 查一本期刊，数据库会怎么找？"
-  options={["直接跳到那一行，因为数据库知道它在哪", "从第一行开始逐行检查，直到把整张表看完", "随机挑几行碰运气"]}
-  answer="B"
+  options={["从第一行开始逐行检查，直到把整张表看完", "直接跳到那一行，因为数据库知道它在哪", "随机挑几行碰运气"]}
+  answer="A"
   ifRight="对。没有索引时，数据库没有任何线索，只能整张表扫一遍。索引就是给它一条线索。"
-  ifWrong="答案是 B。数据库并不会因为你是它的使用者就知道某个值在哪一行。没有索引，只能一行行看过去，200 万行就要看 200 万次。索引的作用，就是让它少看几行。"
+  ifWrong="答案是 A。数据库并不会因为你是它的使用者就知道某个值在哪一行。没有索引，只能一行行看过去，200 万行就要看 200 万次。索引的作用，就是让它少看几行。"
   suggest="db-sql-select"
 />
 
@@ -44,7 +44,7 @@ PostgreSQL 默认建的索引叫 **B 树**。你不用记它的细节，只要�
     { caption: "按位置去表里取出那一行。一共只翻了三四页，没有看其余的几百万行。", focus: ["row"], links: ["leaf>row"], tokens: [{ id: "q", label: "取到这一行", at: "row" }], notes: [{ at: "row", text: "只读 1 行", tone: "ok" }] }
   ]}
   guesses={[
-    { before: 2, question: "表从 200 万行涨到 2 亿行（涨 100 倍）。用索引查一行，要翻的页大约会怎样？", options: ["涨 100 倍", "只多一层，几乎不变", "不变，一层都不多"], answer: "B", explain: "每一层能把范围缩小几十到几百倍，所以数据涨 100 倍通常只多一层。这就是索引的威力：表再大，查一行也只翻几页。" }
+    { before: 2, question: "表从 200 万行涨到 2 亿行（涨 100 倍）。用索引查一行，要翻的页大约会怎样？", options: ["涨 100 倍", "不变，一层都不多", "只多一层，几乎不变"], answer: "C", explain: "每一层能把范围缩小几十到几百倍，所以数据涨 100 倍通常只多一层。这就是索引的威力：表再大，查一行也只翻几页。" }
   ]}
 />
 
@@ -86,7 +86,7 @@ CREATE INDEX idx_type_value ON cat_venue_identifier (identifier_type, identifier
 
 <Params
   title="动手试试：这个查询能用上联合索引吗"
-  guess={{ question: "索引是 (venue_id, volume, issue)。查询只写了 WHERE volume = '12'，没有 venue_id。索引能高效用上吗？", options: ["能，volume 就是索引里的列", "不能高效用，因为最左边的 venue_id 没有给", "能，只是要多花一点时间"], answer: "B", explain: "联合索引按最左边的列先排。不给最左列，数据库没法在有序的索引里跳着找，通常只能整张表扫。" }}
+  guess={{ question: "索引是 (venue_id, volume, issue)。查询只写了 WHERE volume = '12'，没有 venue_id。索引能高效用上吗？", options: ["能，volume 就是索引里的列，直接可用", "不能高效用，最左边的 venue_id 没有给", "能，只是比带 venue_id 时多花一点时间"], answer: "B", explain: "联合索引按最左边的列先排。不给最左列，数据库没法在有序的索引里跳着找，通常只能整张表扫。" }}
   controls={[
     { type: "switch", id: "venue", label: "WHERE 里有 venue_id", default: true },
     { type: "switch", id: "volume", label: "WHERE 里有 volume", default: false },
@@ -118,14 +118,14 @@ CREATE INDEX idx_library_item_collected ON collection.library_item (user_id, col
   questions={[
     {
       question: "一张表有 5 个索引。往里批量导入 1000 万行，比没有这 5 个索引时：",
-      options: ["一样快，索引只影响读", "更慢，因为每行要写进表，还要写进 5 个索引", "更快，因为有索引"],
+      options: ["一样快，因为索引只影响读不影响写", "更慢，每行除了写表还要写 5 个索引", "更快，因为有索引能更快定位插入位置"],
       answer: "B",
       explain: "每个索引都要为每一行新增一条记录并保持有序。批量导入前先删索引、导完再建，是常见的提速办法。"
     },
     {
       question: "给「性别」这种只有两三种取值的列建索引，通常划算吗？",
-      options: ["划算，建得越多越好", "通常不划算，因为一个值就匹配一大半的行", "只要是 WHERE 里的列都划算"],
-      answer: "B",
+      options: ["划算，索引建得越多查得越快", "只要是 WHERE 里的列都划算", "通常不划算，因为一个值就匹配一大半的行"],
+      answer: "C",
       explain: "索引适合「挑出少数几行」。一个值匹配一半的行时，数据库通常宁愿直接扫整张表。"
     }
   ]}

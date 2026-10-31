@@ -104,14 +104,14 @@ personalEnv: false
   questions={[
     {
       question: "项目规则里，评论的仓库接口和它的实现应该叫什么？",
-      options: ["CommentPort 和 CommentPortImpl", "CommentRepository 和 CommentRepositoryAdapter", "CommentDao 和 CommentService"],
-      answer: "B",
+      options: ["CommentPort 和 CommentPortImpl", "CommentDao 和 CommentService", "CommentRepository 和 CommentRepositoryAdapter"],
+      answer: "C",
       explain: "Repository 接口加 RepositoryAdapter 实现。规则明确禁止把仓库叫 Port。"
     },
     {
       question: "有人想在 CommentAggregate 里直接 import JPA 的 EntityManager，自己保存自己。问题在哪？",
-      options: ["没问题，更直接", "领域层就依赖了持久化框架，纯业务代码测不了、也换不了存储", "只是代码风格问题"],
-      answer: "B",
+      options: ["领域层依赖了持久化框架，测不了、换不了存储", "没问题，聚合自己存自己更直接", "只是代码风格问题，功能上没区别"],
+      answer: "A",
       explain: "领域层要保持纯净。构建里有检查禁止领域层引入框架依赖（后面的篇目会讲）。保存的事交给基础设施层的适配器。"
     }
   ]}
