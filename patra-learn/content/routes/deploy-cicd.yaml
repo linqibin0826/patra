@@ -33,3 +33,4 @@ entries:
   - ops-ssh-controlmaster-forward-exits
   - ops-precommit-stashes-unstaged
   - ops-zsh-is-not-bash
+  - ops-public-learning-site-boundary
