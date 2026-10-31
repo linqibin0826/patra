@@ -270,4 +270,13 @@ describe("NotificationRow", () => {
       );
     });
   });
+
+  it("推送来的新条目：浅陶土底淡出（类名 anim-fresh，减弱动效时 CSS 不生效）", () => {
+    const { rerender } = render(
+      <NotificationRow notification={makeNotification()} now={NOW} onOpen={vi.fn()} fresh />,
+    );
+    expect(screen.getByRole("link")).toHaveClass("anim-fresh");
+    rerender(<NotificationRow notification={makeNotification()} now={NOW} onOpen={vi.fn()} />);
+    expect(screen.getByRole("link")).not.toHaveClass("anim-fresh");
+  });
 });

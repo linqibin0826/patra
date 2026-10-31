@@ -32,6 +32,8 @@ interface NotificationRowProps {
   now: number;
   /// 点开这一行：标为已读（不阻止跳转）
   onOpen: (notification: Notification) => void;
+  /// 推送来的新条目：浅陶土底 2 秒淡出（减弱动效时没有，v0.16 简报 §3.4）
+  fresh?: boolean;
 }
 
 /// 提醒列表的一行（spec 2026-10-28-notification-inbox-redesign 4.3，画布 `DirA` / `DirA-M`）：头像 · 三层（谁做了什么 ·
@@ -39,15 +41,22 @@ interface NotificationRowProps {
 /// 2 人起右下角压 `+N−1`；正文是你自己那条内容，颜色不随未读加深。未读在行左侧页边距里一个圆点、名字加粗，不铺浅底；已读整行降一级。
 /// 整行是链接，去评论永久链接；对象 key 为空时是按钮（没有去处，点了只标已读）。中键（新标签页打开）也算打开；
 /// 指针移入、聚焦只会让 Link 预取，不算
-export function NotificationRow({ notification, now, onOpen }: NotificationRowProps) {
+export function NotificationRow({
+  notification,
+  now,
+  onOpen,
+  fresh = false,
+}: NotificationRowProps) {
   const view = actorOf(notification);
   const body = bodyOf(notification);
   const more = helpfulMore(notification);
   const context = contextLabel(notification.subject);
   const href = notificationHref(notification);
   const unread = !notification.read;
-  const className =
-    "relative grid grid-cols-[32px_minmax(0,1fr)] items-start gap-x-3 border-border-subtle border-b py-4 transition-colors hover:bg-bg-sunken max-[880px]:gap-x-2.5 max-[880px]:py-3.5";
+  const className = cn(
+    "relative grid grid-cols-[32px_minmax(0,1fr)] items-start gap-x-3 border-border-subtle border-b py-4 transition-colors hover:bg-bg-sunken max-[880px]:gap-x-2.5 max-[880px]:py-3.5",
+    fresh && "anim-fresh",
+  );
   const content = (
     <>
       {unread && (

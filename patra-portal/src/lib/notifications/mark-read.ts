@@ -61,8 +61,8 @@ function minusOne(counts: UnreadCounts, n: Notification): UnreadCounts {
 }
 
 /// 点一行时的单条已读：未读才发；立即在界面上标为已读、未读数减 1，同时请求（`keepalive`：跳转、新标签页打开都不打断），
-/// 不等它就跳转。成功后用返回的计数覆盖；404（已清理或不是自己的）与其他失败都不回滚——人已经跳走了，未读数让下一次
-/// 轮询纠正
+/// 不等它就跳转。成功后用返回的计数覆盖；404（已清理或不是自己的）与其他失败都不回滚——人已经跳走了——只把未读数标为
+/// 过期重取一次：推送连着时没有轮询来纠正（PAP-149）
 export function useMarkRead(): (notification: Notification) => void {
   const client = useQueryClient();
   return useCallback(
@@ -86,9 +86,11 @@ export function useMarkRead(): (notification: Notification) => void {
             const counts = (await res.json()) as UnreadCounts;
             await cancelInFlight(client);
             setCounts(client, counts);
+          } else {
+            void client.invalidateQueries({ queryKey: queryKeys.notificationUnread });
           }
         })
-        .catch(() => {});
+        .catch(() => void client.invalidateQueries({ queryKey: queryKeys.notificationUnread }));
     },
     [client],
   );
@@ -133,6 +135,8 @@ export function useMarkAllRead(): { markAll: () => void; pending: boolean; faile
       for (const [key, data] of snapshot.lists) {
         client.setQueryData(key, data);
       }
+      // 放回的是点之前的数，期间推送可能来过更新的：重取一次
+      void client.invalidateQueries({ queryKey: queryKeys.notificationUnread });
     },
     onSuccess: async (counts) => {
       await cancelInFlight(client);

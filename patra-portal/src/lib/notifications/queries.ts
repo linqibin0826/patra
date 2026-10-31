@@ -11,6 +11,7 @@ import type {
   UnreadCounts,
 } from "@/lib/notification/inbox-schema";
 import { queryKeys } from "@/lib/query-keys";
+import { useNotificationStreamStore } from "@/store/notification-stream";
 
 /// 未读数在缓存里的样子：ETag 跟着数存，下一次轮询带成 `If-None-Match`；为 null 时下一次不带（第一次、刚被已读覆盖过）
 export interface UnreadData {
@@ -27,9 +28,9 @@ export function useNotificationsEnabled(): boolean {
   return state.status === "authenticated" && state.user.status !== "PENDING_DELETION";
 }
 
-/// 取一次未读数。浏览器不插手条件请求（`no-store`），JS 看到的就是门户回的真实状态码；304 时原样返回缓存里的那个对象：
+/// 取一次未读数（轮询与推送断开后的那一次共用）。浏览器不插手条件请求（`no-store`），JS 看到的就是门户回的真实状态码；304 时原样返回缓存里的那个对象：
 /// 同一个引用，读未读数的组件不重新渲染。401 说明会话在页面开着时过期：让当前用户失效，导航栏随之换成「登录」
-async function fetchUnread(client: QueryClient): Promise<UnreadData> {
+export async function fetchUnread(client: QueryClient): Promise<UnreadData> {
   const previous = client.getQueryData<UnreadData>(queryKeys.notificationUnread);
   const res = await fetch(`/api/me/notifications/unread-count`, {
     cache: "no-store",
@@ -48,15 +49,17 @@ async function fetchUnread(client: QueryClient): Promise<UnreadData> {
 }
 
 /// 未读数的轮询：只在 TopNav 里调一次（一个计时器、一路请求）。每 60 秒一次，标签页在后台时停；切回页面立即取一次
-/// （不管是否过期）；出错不重试，显示不可用，下一次轮询自动恢复。`notifyOnChangeProps: []`：一个属性都不读的观察者
-/// TanStack 默认按「任何变化都通知」处理，不写这一项 TopNav 每次轮询都会重渲染
+/// （不管是否过期）；出错不重试，显示不可用，下一次轮询自动恢复。实时推送连着时（PAP-149）不按间隔轮询，断开后恢复；
+/// 切回页面照旧取一次（隐藏时推送已经断开，这一次与重连并行，推送的值后到时以推送为准）。`notifyOnChangeProps: []`：一个属性都不读的观察者 TanStack 默认按
+/// 「任何变化都通知」处理，不写这一项 TopNav 每次轮询都会重渲染
 export function useUnreadCountsPolling(): void {
   const client = useQueryClient();
+  const live = useNotificationStreamStore((state) => state.live);
   useQuery({
     queryKey: queryKeys.notificationUnread,
     queryFn: () => fetchUnread(client),
     enabled: useNotificationsEnabled(),
-    refetchInterval: POLL_INTERVAL_MS,
+    refetchInterval: live ? false : POLL_INTERVAL_MS,
     refetchOnWindowFocus: "always",
     retry: false,
     notifyOnChangeProps: [],

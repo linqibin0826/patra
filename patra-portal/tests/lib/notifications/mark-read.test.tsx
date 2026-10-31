@@ -176,6 +176,15 @@ describe("单条已读", () => {
     focusManager.setFocused(undefined);
   });
 
+  it("请求失败或 404：未读数标为过期（推送连着时没有轮询来纠正乐观的减 1）", async () => {
+    fetchMock.mockResolvedValue(Response.json({ reason: "not-found" }, { status: 404 }));
+    const { client } = renderNotifications(<MarkOne notification={REPLY} />, { seed });
+    await userEvent.click(screen.getByRole("button", { name: "标一条" }));
+    await vi.waitFor(() =>
+      expect(client.getQueryState(queryKeys.notificationUnread)?.isInvalidated).toBe(true),
+    );
+  });
+
   it("404 忽略：不报错，乐观结果留着；已读的再点不发请求", async () => {
     fetchMock.mockResolvedValue(Response.json({ reason: "not-found" }, { status: 404 }));
     const { client } = renderNotifications(<MarkOne notification={REPLY} />, { seed });
@@ -223,5 +232,6 @@ describe("全部已读", () => {
       etag: '"1-1"',
     });
     expect(toast.success).not.toHaveBeenCalled();
+    expect(client.getQueryState(queryKeys.notificationUnread)?.isInvalidated).toBe(true);
   });
 });

@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import "@testing-library/jest-dom/vitest";
 import { useUnreadCounts, useUnreadCountsPolling } from "@/lib/notifications/queries";
 import { queryKeys } from "@/lib/query-keys";
+import { useNotificationStreamStore } from "@/store/notification-stream";
 
 const fetchMock = vi.fn<typeof fetch>();
 let renders = 0;
@@ -32,6 +33,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  useNotificationStreamStore.setState({ live: false });
   vi.useRealTimers();
   vi.unstubAllGlobals();
   fetchMock.mockReset();
@@ -39,6 +41,20 @@ afterEach(() => {
 });
 
 describe("未读数轮询", () => {
+  it("推送连着时不轮询；断开后恢复 60 秒一次", async () => {
+    fetchMock.mockImplementation(async () =>
+      unreadResponse({ total: 3, replies: 2, mentions: 1, helpful: 0 }, '"2-1-0"'),
+    );
+    renderNotifications(<Nav />);
+    await fetchCalls(fetchMock, 1);
+    act(() => useNotificationStreamStore.setState({ live: true }));
+    await act(() => vi.advanceTimersByTimeAsync(180_000));
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    act(() => useNotificationStreamStore.setState({ live: false }));
+    await act(() => vi.advanceTimersByTimeAsync(60_000));
+    await fetchCalls(fetchMock, 2);
+  });
+
   it("第一次不带 If-None-Match、不走浏览器缓存；之后带上一次的 ETag", async () => {
     fetchMock.mockResolvedValueOnce(
       unreadResponse({ total: 3, replies: 2, mentions: 1, helpful: 0 }, '"2-1"'),

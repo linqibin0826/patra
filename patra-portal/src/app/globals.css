@@ -294,6 +294,15 @@
     scale: 0.4;
   }
 }
+/* 推送来的新提醒：浅陶土底淡出到透明（v0.16 简报 §3.4） */
+@keyframes patra-fresh {
+  from {
+    background-color: var(--clay-50);
+  }
+  to {
+    background-color: transparent;
+  }
+}
 /* 回弹：未读数变化时放大到 1.15 倍再回来 */
 @keyframes patra-bounce {
   50% {
@@ -421,6 +430,10 @@
     /* 弹出：图标状态切换（如复制成功的对勾） */
     .anim-pop {
       animation: patra-pop 360ms var(--ease-out-expo) both;
+    }
+    /* 新提醒的浅底：2 秒淡出；不保留最终态，结束后悬停底色照常 */
+    .anim-fresh {
+      animation: patra-fresh 2s var(--ease-out-quart);
     }
     /* 回弹：未读数徽标的数字变化 */
     .anim-bounce {

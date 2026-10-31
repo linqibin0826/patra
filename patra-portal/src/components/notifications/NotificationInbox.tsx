@@ -20,6 +20,7 @@ import { useNotificationList, useUnreadCounts } from "@/lib/notifications/querie
 import { btnSecondary } from "@/lib/portal-ui";
 import { queryKeys } from "@/lib/query-keys";
 import { cn } from "@/lib/utils";
+import { useFreshNotifications } from "@/store/fresh-notifications";
 
 /// 标签样式同主页标签栏（`ProfileTabs`）
 const TAB =
@@ -52,6 +53,7 @@ export function NotificationInbox({ tab }: { tab: NotificationTab }) {
   const markRead = useMarkRead();
   const { markAll, pending, failed } = useMarkAllRead();
   const now = useNow(Date.now());
+  const fresh = useFreshNotifications((state) => state.ids);
   const items = list.data ? flattenPages(list.data.pages) : [];
   const anyUnread = counts ? counts.replies + counts.mentions + counts.helpful > 0 : false;
   return (
@@ -122,7 +124,12 @@ export function NotificationInbox({ tab }: { tab: NotificationTab }) {
                   <ol className="flex flex-col">
                     {group.items.map((notification) => (
                       <li key={notification.notificationId}>
-                        <NotificationRow notification={notification} now={now} onOpen={markRead} />
+                        <NotificationRow
+                          notification={notification}
+                          now={now}
+                          onOpen={markRead}
+                          fresh={fresh.has(notification.notificationId)}
+                        />
                       </li>
                     ))}
                   </ol>
