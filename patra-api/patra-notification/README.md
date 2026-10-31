@@ -22,7 +22,7 @@
 
 普通子域的公开包是 `domain.{子域}.port.read`、`domain.{子域}.model.read`、`domain.{子域}.event`；底座的一切都公开。规则由 `NotificationArchitectureTest`（`patra-tool-test` 的 `SubdomainArchitectureRules`）守住，分包模板见 `.claude/rules/tech/package-layout.md`。
 
-**计划中的子域依赖**（无环，由引入依赖的 Issue 在架构测试里用 `allowingDependency` 声明）：
+**子域依赖**（无环，在架构测试里用 `allowingDependency` 声明；mail 的两条由 PAP-146 声明，realtime → inbox 由 PAP-145 加）：
 
 | 边 | 用途 |
 |---|---|
@@ -46,7 +46,7 @@ inbox 不依赖 preference：偏好只管邮件，站内提醒照常。
 - 有帮助（PAP-144）：按「被点的内容 × 北京时间一天」合成 `inbox.notification` 的一行（`category = HELPFUL`，类型 `COMMENT_HELPFUL` / `POST_HELPFUL`），那一天由事件里的点击时刻 `markedAt` 换算，不看处理时刻。点过的人与各自第一次点的时刻在附表 `inbox.helpful_actor`（级联外键随信箱行删除）：人数 = 附表行数，最近一位 = 第一次点得最晚的人，新的人让条目重新未读；同一个人取消后再点不算又有人点，结果与消息到达顺序无关。点评论的摘录走评论快照（没有快照时用事件正文补一行版本 0），点经验的存在条目行的 `post_plain_text`（事件时刻最晚者为准）。不进铃铛、不发邮件、不发「提醒生成」。
 - 收件人规则 `RecipientRules`（搬自 interaction）：先被回复的人、再经验作者（只对经验下的根评论）、最后 @ 到的人，同一人取第一次出现的类型，去掉作者本人；编辑只给第一次 @ 到的人发，并去掉发表负责的那两类人，结果与到达顺序无关。
 - 读时组合：列表的对象信息（链接 key、标题、期刊、是否还在、经验结果）调 interaction 现查，挂了降级为不带对象信息；名片调 identity，挂了 503。
-- 给别的子域的：读端口 `InboxReadPort`（列表、三个未读数），领域事件 `UnreadCountsChangedEvent`（实时推送提交后订阅）、`NotificationsCreatedEvent`（提醒邮件同事务订阅）。
+- 给别的子域的：读端口 `InboxReadPort`（列表、三个未读数；提醒邮件的 `findUnread` 按 ID 复查、`unreadBetween` 按写入时刻取汇总窗口），领域事件 `UnreadCountsChangedEvent`（实时推送提交后订阅）、`NotificationsCreatedEvent`（提醒邮件同事务订阅）。
 
 ### realtime：实时推送
 
@@ -76,9 +76,9 @@ inbox 不依赖 preference：偏好只管邮件，站内提醒照常。
 | 实例数 | 一个（release spec 第 3 节 C：SSE 连接挂在实例内存里） |
 | 网关前缀 | `/patra-notification/**`（`/actuator/**` 经网关一律 403） |
 | 错误码前缀 | `NOTIFICATION`（如 `NOTIFICATION-0404`） |
-| 配置 | jar 里的 `application.yml` 放随代码变的默认值；库地址与 RabbitMQ 密码引用在 Nacos `patra-notification.yaml`，库账号、RabbitMQ 坐标与 xxl-job 管理端地址在 `patra-common.yaml` |
+| 配置 | jar 里的 `application.yml` 放随代码变的默认值；库地址、RabbitMQ 密码引用与门户地址 `patra.notification.mail.links.base-url`（取 `PATRA_PORTAL_BASE_URL`）在 Nacos `patra-notification.yaml`，库账号、RabbitMQ 坐标与 xxl-job 管理端地址在 `patra-common.yaml` |
 | 密钥 | `~/.patra/secrets/nacos.env`、`rabbitmq.env`（都必需） |
-| 定时任务 | 执行器 `patra-notification`：注销清理 `deletedUserCleanupJob`（PAP-142，每天 06:30，含偏好、信箱、在站记录）；信箱保留期 `inboxRetentionJob`（PAP-143，每天 06:45，北京时间 5 个自然月）；已处理事件清理 `processedEventPurgeJob`（事件模块提供，每天 07:00，删 30 天前的去重记录）；离站邮件、每日汇总随各 Issue 加 |
+| 定时任务 | 执行器 `patra-notification`：注销清理 `deletedUserCleanupJob`（PAP-142，每天 06:30，含偏好、信箱、在站记录）；信箱保留期 `inboxRetentionJob`（PAP-143，每天 06:45，北京时间 5 个自然月）；已处理事件清理 `processedEventPurgeJob`（事件模块提供，每天 07:00，删 30 天前的去重记录）；提醒邮件 `reminderMailJob`（PAP-146，每分钟）与每日汇总建名单 `dailyDigestJob`（PAP-146，8 点那一小时每 10 分钟） |
 | 调用的服务 | identity 内部接口 `POST /_internal/users/recipients`（收件信息）与 `POST /_internal/users/summaries`（注销清理取账号状态、列表取名片），`lb://patra-identity`；interaction 内部接口 `POST /_internal/subjects/views`（对象视图）与 `POST /_internal/posts/outlines`（经验结果），`lb://patra-interaction`；都是连接 1 秒、读 2 秒 |
 | 消费的事件 | interaction 的 `interaction.events`（队列 `notification.inbox`） |
 | 上线 | `docs/patra/runbooks/v0.16-notification-go-live-runbook.md` |
@@ -93,4 +93,9 @@ inbox 不依赖 preference：偏好只管邮件，站内提醒照常。
 - **幂等键**：每封带 `Resend-Idempotency-Key`（投递 ID），`Message-ID` 也按投递 ID 固定。同一个投递 ID 必须渲染出同一份内容，正文里不放随发送时刻变的东西（有效期写成绝对时刻）。
 - **发送记录** `mail.mail_delivery`：投递 ID、模板名、结果、时刻；不存正文、链接、收件地址与用户 ID。
 - **配置**：SMTP 是 Nacos 里的 `spring.mail.*`（默认 Mailpit，mini 由 `~/.patra/secrets/mail.env` 覆盖成 Resend）；发件人 `patra.notification.mail.from`；显示时区 `patra.notification.mail.zone`（jar，`Asia/Shanghai`）。邮件健康检查关掉。
-- **提醒邮件（PAP-146）复用**：`MailDeliveryPort` + `OutgoingMail`（退订头放 `headers`）；投递 ID 要由「这封信是什么」确定地算出来；发送记录各管各的（spec 第 11 节）。
+- **提醒邮件（PAP-146）**：工程设计 `docs/patra/specs/2026-10-31-notification-reminder-mail-design.md`。
+  - 离站逐条：信箱写入提醒时同步 `@EventListener` 同事务入队 `mail.reminder_queue`（写入时刻加 10 分钟到点）；`reminderMailJob` 每分钟按收件人处理到点的行（丢弃已读与出现之后上过站的，到点那一类连同还在等的合成一条投递，Jira 式窗口），再发出到点的投递。
+  - 每日汇总：`dailyDigestJob` 在 8 点那一小时里给设为汇总的人各建一条投递（收件人 × 窗口唯一），窗口按提醒写入信箱的时刻算；手动验收参数 `users=用户ID,…`。
+  - 投递记录 `mail.reminder_delivery`：投递 UUID 是幂等键与 Message-ID；每次尝试从头装配（未读、在站、档位、收件人、令牌、对象视图、名片），先记第一次发送时刻再调 `MailDeliveryPort`；`ALREADY_ACCEPTED` 记已发、`REJECTED` 跳过、`TRANSIENT` 与 identity / interaction 不可用退避重试（1、2、4…30 分钟）；调用过端口满 24 小时仍失败记 `EXPIRED`。只存 ID，不存地址与正文；结束后留 7 天。
+  - 只给 `ACTIVE`、邮箱已验证的人发；两个退订头与底部链接照 PAP-142 第 7 节，门户地址只来自配置。
+  - 模板 `notification-{single,batch,digest}`（HTML + 纯文本），共用骨架 `layout.html` 的三个可选变量 `preheader`、`footnote`、`asideLinks`；内容字段不以 `set` 开头命名（OGNL 读属性时跳过 `set` 开头的方法）。

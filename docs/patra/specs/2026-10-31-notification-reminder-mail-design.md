@@ -584,3 +584,31 @@ AC 写的是「Mailpit 集成测试」。仓库惯例（PAP-105 同）是用 Gre
 13. 邮件头集成测试用 GreenMail，Mailpit 留给手测（11）。
 14. 先查收件人、再调 `subscriptionOf` 取令牌；之前用 preference 新加的不建行读法 `findSubscription` 判断档位（5.3）。
 15. 用户把逐条改成汇总时，已经逐条发过、仍未读的提醒会再出现在汇总里，接受（5.3）。
+
+---
+
+## 16. 实施记录（2026-10-31）
+
+### 16.1 与本设计、计划的偏离
+
+1. **内容字段 `settingsUrl` 改名 `preferencesUrl`**：PAP-105 的渲染器用 Thymeleaf 标准方言（OGNL 3.3.4），OGNL 读属性时跳过以 `set` 开头的方法（实测：record 的 `settingsUrl()`、`settings()` 都读不到，其余字段正常）。模板读不到这个字段，所以改名，并在字段注释里写明原因。
+2. **门户地址用独立的属性类** `PortalLinkProperties`（`patra.notification.mail.links.base-url`），没有并进 PAP-105 的 `MailDeliveryProperties`：
+   - 不改 PAP-105 的类和它的测试；
+   - 时区复用 `MailDeliveryProperties.zone`；
+   - 地址缺失，或者不是绝对的 http(s) 地址时，启动失败。
+3. **摘录分段直接用底座的 `SegmentedExcerpt.Segment`**，没有另建 `ExcerptPart`：同一个概念只留一个类型。
+4. **列表里的一条抽成片段** `html/fragments/reminder-item.html`，多条合一与每日汇总共用，上下内边距作为参数（18px / 16px，同画布）。
+5. **模板变量在 app 层组装**：`ReminderMailModel` 与 `AsideLink` 放在 `app.mail.service`。模型里有：
+   - `mail`：`ReminderMailContent`；
+   - 三个顶层变量 `preheader`、`footnote`、`asideLinks`；
+   - 不用渲染器保留的 `subject`、`siteName`、`notice` 三个键。
+6. **投递记录的写回不包 `TransactionOperations`**：每次都是一条 `UPDATE`，自动提交本身就是短事务，调用发信端口天然在事务外。
+7. **失败分类照 PAP-105 的实际契约**：发信端口正常返回就是已接受；失败抛 `MailDeliveryFailedException`，由 `failure()` 区分 `ALREADY_ACCEPTED` / `REJECTED` / `TRANSIENT`。按 PAP-105 的约定，交给 SMTP 之前就失败的（模板不存在、地址不合法）也算 `REJECTED`。
+8. **`InboxEntry` 加了 `createdAt`**（PAP-143 的读模型，只增不改）。`NotificationType` 已由 PAP-143 挪到 `domain.inbox.model.read`。
+
+### 16.2 自查
+
+三封邮件的 HTML，用 portal 的 Playwright（Chromium，禁网）在 760px 与 375px 两种宽度下截图，和画布 `Mail.dc.html`、`Digest.dc.html` 对照：
+
+- 版式与画布一致：引用块、`@名字` 强调、分节、超过 10 条的说明、版权页、卡片外的两个链接；
+- 窄屏下按钮占满一行。
