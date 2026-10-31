@@ -89,7 +89,7 @@ v0.16 之前，identity 自己发 13 类安全邮件（验证邮箱、找回密�
 | 编排会话拍板 3（本 Issue 改判） | 当时约定「门户地址配置由 PAP-105 先加、PAP-146 复用」，前提是安全邮件的 `securityUrl` 要用它。PAP-104 的契约把 `securitySettingsUrl` 放进了用到它的三个事件，notification 侧不再需要门户地址，本 Issue 不加；PAP-146 拼回复链接、退订链接时自己加（PAP-142 spec 第 7 节本来就这样写）。10/31 已告知编排会话 |
 | 事件模块约定 | `ProcessedEventPort.markProcessed` 在业务事务里调；`EventQueue` 声明队列与死信对；AUTO 确认、重试 3 次（1/2/4 秒）、prefetch 10；按类型头分发时写 `trusted-packages` |
 
-**PAP-104 的 record 还没进集成分支**：本分支按契约先写一份同形状的 13 个 record 与 `SecurityMailEvent`、`OperationContext`，放在**单独一个提交**（`4f2626237`，`patra-identity-api` 的 `dev.patra.identity.api.account.event`）里，字段名与类型以这个提交为准（`linkExpiresAt` 与 `deletionDueAt` 是 `Instant`，`daysLeft` 是 `long`）。PAP-104 合入后整体丢弃、以它的为准。主代码只用 accessor，测试里构造 record 的地方届时按真实签名微调。
+**PAP-104 的 record**：开发期 PAP-104 还没进集成分支，本分支先按契约写了一份同形状的副本放在单独的提交里；10/31 PAP-104 汇入集成分支（`e9a79c369`）后，本分支变基过去、丢掉副本，直接用正式的 `dev.patra.identity.api.account.event`（字段与 `of()` / `@Builder` 的选择与副本一致，代码不用改）。
 
 ## 5. 一封安全邮件的流程
 

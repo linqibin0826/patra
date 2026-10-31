@@ -41,7 +41,7 @@ patra:
       zone: Asia/Shanghai
   events:
     consumer:
-      # 监听方法的参数是 sealed 接口时，按消息头 __TypeId__ 反序列化，只认这些包（按包名精确匹配、不含子包）
+      # 监听收原始消息、按消息头 __TypeId__ 还原时只认这些包（按包名精确匹配、不含子包；java.lang / java.util 总是信任）
       trusted-packages:
         # identity 的安全邮件事件（PAP-104）
         - dev.patra.identity.api.account.event
