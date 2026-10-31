@@ -69,7 +69,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **runner 看门狗**：`runner-watchdog.yml` 每日 API 查在线 + mini canary（docker/磁盘/unhealthy 容器）。防「离线 30 天被 GitHub 注销」（2026-08 实际发生）。需 secrets `RUNNER_ADMIN_TOKEN`（fine-grained PAT，仅本仓库 Administration:Read）。
 - **运维红线**：派发任务期间严禁重启 runner（杀 Worker）；runner 自更新已禁用（`--disableupdate`），升级=闲时不带参数重跑 `install-github-runner.sh`（已注册时跳过 config.sh，registration 不动）。
 - **容器经宿主机网关访问基础设施**：应用容器加 `extra_hosts: linqibins-mac-mini:host-gateway`，PG、Redis、Nacos（含 gRPC 9848）、MinIO、xxl admin 都走映射端口，不经 tailscale。新增连基础设施的容器要同样加。
-- **环境文件，密钥在仓库外**：`env_file` 顺序叠加 `.env.common`（本地变量 `PATRA_INFRA_HOST`、`PATRA_LOG_DIR`；6 个后端服务的其余配置都在 Nacos，源文件在 `nacos/dev/`）→ `${HOME}/.patra/secrets/` 下的密钥文件（`redis.env` 给 catalog/identity、`rabbitmq.env` 给 interaction/identity/notification、`gateway.env` 给 gateway、`nacos.env` 给 6 个后端服务，都是必需；`<svc>.env` 可选；后者覆盖同名）。**Redis 密码、网关私钥、外部数据源 API key（Scopus / 青果 proxy 等）一律只进 `~/.patra/secrets/`**，committed 文件只放内网 dev 默认值和公钥，Nacos 配置里只写 `${变量}`。必需文件缺一个，compose 对整个 apps 项目的命令都会失败（portal 也部署不了）。
+- **环境文件，密钥在仓库外**：`env_file` 顺序叠加 `.env.common`（本地变量 `PATRA_INFRA_HOST`、`PATRA_LOG_DIR`、门户公网地址 `PATRA_PORTAL_BASE_URL`；6 个后端服务的其余配置都在 Nacos，源文件在 `nacos/dev/`）→ `${HOME}/.patra/secrets/` 下的密钥文件（`redis.env` 给 catalog/identity、`rabbitmq.env` 给 interaction/identity/notification、`gateway.env` 给 gateway、`nacos.env` 给 6 个后端服务，都是必需；`<svc>.env` 可选；后者覆盖同名）。**Redis 密码、网关私钥、外部数据源 API key（Scopus / 青果 proxy 等）一律只进 `~/.patra/secrets/`**，committed 文件只放内网 dev 默认值和公钥，Nacos 配置里只写 `${变量}`。必需文件缺一个，compose 对整个 apps 项目的命令都会失败（portal 也部署不了）。
 
 ## scripts 一览
 
