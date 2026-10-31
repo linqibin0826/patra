@@ -1,0 +1,136 @@
+---
+title: 聚合与聚合根
+summary: 聚合是一组必须一起保持一致的对象，聚合根是它唯一的入口。外面的代码只能通过聚合根改里面的东西，这样规则才不会被绕过。
+type: concept
+difficulty: basic
+tags: [ddd, backend, java]
+prerequisites: [ddd-entities-and-value-objects]
+personalEnv: false
+---
+
+<Diagnose
+  question="评论有两个字段：状态（正常 / 已删除）和正文。规定：正常的评论必须有正文，已删除的不能有正文。如果项目里任何一个类都能随手调用 setState 和 setBody，这条规定能被保证吗？"
+  options={["能，大家会自觉遵守", "不能，总有某处会改一个字段、忘了改另一个", "能，只要数据库加个约束"]}
+  answer="B"
+  ifRight="对。规定只存在于人的脑子里，代码拦不住任何人。聚合要做的，就是让规定变成代码里绕不过去的东西。"
+  ifWrong="答案是 B。靠自觉不可靠，改字段的地方一多就会漏。数据库约束能兜底，但出错时已经晚了，而且不是所有规则都能写成约束。聚合是在代码里先挡住。上一篇讲的实体和值对象是这篇的基础。"
+  suggest="ddd-entities-and-value-objects"
+/>
+
+## 一组必须一起保持一致的对象
+
+先回答：什么东西必须「一起」？
+
+<Callout kind="analogy">
+
+一张订单和它的几行明细：订单总额必须等于各行金额之和。如果任何人都能单独改某一行的金额，总额就会和明细对不上。所以订单和明细要放在一起管，改明细必须经过订单。
+
+</Callout>
+
+这样一组东西就是**聚合**。聚合有一个对外的入口，叫**聚合根**。规矩只有两条：
+
+1. 外面的代码只能拿着聚合根，不直接拿里面的零件。
+2. 要改里面的东西，调聚合根的方法，由聚合根保证规则不被破坏。
+
+## Patra 的评论：规则写在构造器里
+
+`CommentAggregate` 是讨论子域里的一条评论。它有三条始终成立的规则，在构造器里检查：
+
+<CodeRef at="patra-api/patra-interaction/patra-interaction-domain/src/main/java/dev/patra/interaction/domain/discussion/model/aggregate/CommentAggregate.java@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="59-93" />
+
+| 规则 | 违反时 |
+|---|---|
+| 正文版本从 1 起 | 抛 `IllegalStateException` |
+| 正常评论必须有正文，占位（已删除）不能有正文 | 抛 `IllegalStateException` |
+| 根评论没有父评论，且根就是它自己；回复反之 | 抛 `IllegalStateException` |
+
+构造器是它造出来的唯一方式，所以世界上不存在一个违反这三条的 `CommentAggregate`。
+
+## 外面怎么改它
+
+`CommentAggregate` 的字段全是 `final`，没有 setter。要编辑正文，调 `edit`，它返回一个**新的**聚合：
+
+<CodeRef at="patra-api/patra-interaction/patra-interaction-domain/src/main/java/dev/patra/interaction/domain/discussion/model/aggregate/CommentAggregate.java@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="129-153" />
+
+`edit` 里先检查是不是作者本人、是不是已经删了，再算出新正文、新版本，最后用 `toBuilder()` 造一个新对象，造的时候又走一遍构造器的检查。外面想绕过规则，没有路。
+
+<Quiz
+  title="想一想"
+  questions={[
+    {
+      question: "有人想给 CommentAggregate 加一个 setBody 方法，方便测试时改正文。这样做的最大问题是什么？",
+      options: ["代码变长了", "任何地方都能改正文，不经过状态和版本的检查，规则会被绕过", "违反 Java 命名规范"],
+      answer: "B",
+      explain: "没有 setter 是有意为之：正文怎么变、版本怎么加，只能通过 edit 这一个入口。测试需要特定状态时，用构造器造出合法的对象。"
+    },
+    {
+      question: "一条根评论下面有 200 条回复。这 200 条回复应该装进根评论的聚合里吗？",
+      options: ["应该，它们属于同一楼", "不应该，每条评论是自己的聚合，回复只用 rootId、parentId 指向根评论"],
+      answer: "B",
+      explain: "聚合只放必须在同一个事务里保持一致的东西。回复各自独立，发表、删除互不牵连；塞进一个聚合，每次改都要读写 200 条。Patra 里每条评论就是一个 CommentAggregate。"
+    }
+  ]}
+/>
+
+## 第二种写法：继承 AggregateRoot 的聚合
+
+Patra 里聚合有两种写法。catalog 服务的聚合继承工具库里的基类 `AggregateRoot`，它有 ID、乐观锁版本，还能暂存领域事件：
+
+<CodeRef at="patra-tool/patra-tool-core/src/main/java/dev/patra/tool/core/domain/AggregateRoot.java@b6e01875bb5692356021c8a19562f557f319fc54" lines="8-30" />
+
+`AuthorAggregate`（作者）是个典型：它里面带着名字变体和 ORCID 两个集合。
+
+<CodeRef at="patra-api/patra-catalog/patra-catalog-domain/src/main/java/dev/patra/catalog/domain/author/model/aggregate/AuthorAggregate.java@5073ab1358404ecd989e722373cd9f7edafe238b" lines="51-52" />
+
+<Structure
+  title="作者聚合：外面只能走聚合根"
+  nodes={[
+    { id: "outside", label: "调用方", sub: "导入任务等", col: 1, desc: "要往作者上加名字变体的代码，比如批量导入 PubMed 作者的任务。" },
+    { id: "root", label: "AuthorAggregate", sub: "聚合根", code: true, col: 2, desc: "唯一入口。加名字变体要调它的 addNameVariant，由它决定怎么改、顺带更新什么。" },
+    { id: "variants", label: "nameVariants", sub: "名字变体集合", code: true, col: 3, row: 1, desc: "同一个作者在不同文献里出现的各种写法。外面拿不到可修改的列表，getNameVariants 返回只读视图。" },
+    { id: "orcids", label: "orcids", sub: "ORCID 集合", code: true, col: 3, row: 2, desc: "作者的 ORCID 标识。同样只能通过聚合根的方法增加。" }
+  ]}
+  edges={[
+    { from: "outside", to: "root", label: "只能走这里", desc: "调用方只拿着聚合根，所有修改都经过它的方法。" },
+    { from: "root", to: "variants" },
+    { from: "root", to: "orcids" }
+  ]}
+  traces={[
+    {
+      button: "加一个名字变体",
+      packet: "新变体",
+      hops: [
+        { at: "outside", caption: "调用方有了一个新的名字写法。" },
+        { at: "root", caption: "调用 addNameVariant。聚合根接手，检查参数非空。" },
+        { at: "variants", caption: "变体加入集合。如果它是第一个变体，聚合根顺手把展示名称也更新了。" }
+      ]
+    },
+    {
+      button: "想直接改集合",
+      packet: "直接 add",
+      hops: [
+        { at: "outside", caption: "调用方想拿到集合，自己 add 一个。" },
+        { at: "root", caption: "getNameVariants 返回只读视图，往里 add 会抛异常。", drop: true }
+      ]
+    }
+  ]}
+/>
+
+看 `addNameVariant`：加第一个变体时，聚合根自己顺手更新了 `displayName`。「展示名称要和第一个变体一致」这条规则也只有聚合根知道。如果外面能直接改集合，这条规则就会被漏掉。
+
+<CodeRef at="patra-api/patra-catalog/patra-catalog-domain/src/main/java/dev/patra/catalog/domain/author/model/aggregate/AuthorAggregate.java@5073ab1358404ecd989e722373cd9f7edafe238b" lines="193-206" />
+
+<Callout kind="warn">
+
+两种写法不要混在一起讲。interaction 里的 `CommentAggregate` 不继承 `AggregateRoot`，字段不可变，靠 `edit` 返回新对象；catalog 里的 `AuthorAggregate` 继承 `AggregateRoot`，对象可变，靠方法修改内部集合。两种都遵守「外面只能走聚合根」。
+
+</Callout>
+
+<Transfer
+  prompt="Patra 的收藏夹里有几千个条目，每个条目是「用户收藏了哪篇文献」。如果让你设计，会把所有条目装进「收藏夹聚合」的一个 List 里吗？为什么？提示：Patra 的 collection 子域并没有收藏夹聚合，它的仓库接口里是 addMembers、removeMembers 这类按行操作的方法。"
+  points={[
+    { label: "不装", text: "收藏夹最多 5000 个条目，每次加一个条目都要读出、写回整个集合，代价太大。" },
+    { label: "一致性靠别的办法", text: "需要保持一致的只有「条目数」「不超上限」这类东西，用事务、用户行锁和 item_count 计数列就够，不必把所有条目装进一个对象。" },
+    { label: "聚合不是越大越好", text: "聚合只放必须同事务一致的东西。引用别的对象用 ID（CommentAggregate 里的 subjectId），不是把对方整个装进来。" }
+  ]}
+/>

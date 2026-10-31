@@ -1,0 +1,135 @@
+---
+title: 读写分开：查询走另一条路
+summary: 改数据要经过聚合和事务，把规则守住；看数据只需要把结果按页面要的样子读出来。Patra 让写走聚合和仓库，读走读端口和查询服务，两条路各自长成合适的样子。
+type: concept
+difficulty: advanced
+tags: [ddd, backend, database]
+prerequisites: [ddd-application-layer]
+personalEnv: false
+---
+
+<Diagnose
+  question="讨论页要显示每条评论的「有帮助数」，这个数存在另一个子域的表里。你会让只管评论规则的 CommentAggregate 加一个 helpfulCount 字段吗？"
+  options={["会，聚合应该带齐页面要的所有字段", "不会，聚合只管需要守规则的东西，页面要的数据另找路径读", "会，用 setter 随时塞进去"]}
+  answer="B"
+  ifRight="对。页面要什么字段，和聚合要守什么规则，是两回事。把它们拆开，各管各的，就是读写分开。"
+  ifWrong="答案是 B。聚合的职责是守住写入时的规则，字段多了它就变胖，还会去依赖别的子域。页面要的数据可以走另一条只读的路径。这个思路是应用层的延伸，先复习那篇会更顺。"
+  suggest="ddd-application-layer"
+/>
+
+## 写和读要的东西不一样
+
+对同一条评论：
+
+- **写的时候**，要守规则：只有作者能改、已删除不能再改、改正文要加版本。这些都在聚合里，所以写入要先把完整的聚合读出来、锁住、检查、再写回。
+- **读的时候**，要的是一个页面能直接用的结果：评论本身，加上被回复者是谁、有没有回复、有帮助数是多少，可能还要分页、排序。这些字段分散在好几张表里。
+
+用同一个模型兼顾两头，聚合就会变得又胖又乱。所以 Patra 把两条路分开：
+
+<Callout kind="lead">
+
+写走命令：Controller 到命令总线，再到 Handler、聚合、仓库。读走查询：Controller 到查询服务，再到读端口。读不经过聚合，也不经过命令总线。
+
+</Callout>
+
+这个做法叫 **CQRS**（命令查询职责分离）。Patra 里它不意味着两套数据库，而是同一个库、两条代码路径。
+
+## 并排看一次写和一次读
+
+<Compare
+  title="写评论 vs 看评论列表"
+  variants={[
+    {
+      label: "写：编辑一条评论",
+      steps: ["Controller 把请求交给命令总线", "EditCommentHandler：先做事务外的检查与准备", "开事务：用 comments.findForEdit 读出聚合并锁行", "聚合调 edit()，守住作者、版本等规则", "comments.updateBody 写回，并发布领域事件"],
+      results: [
+        { label: "读出什么", value: "完整的 CommentAggregate", tone: "wait" },
+        { label: "事务", value: "有，Handler 用 TransactionOperations 包住", tone: "wait" },
+        { label: "规则谁守", value: "聚合", tone: "ok" }
+      ],
+      verdict: { tone: "ok", head: "重而稳。", text: "每一步都为了不破坏规则，所以步骤多、串行、带锁。" }
+    },
+    {
+      label: "读：看讨论列表",
+      steps: ["Controller 直接调 DiscussionQueryService", "reads.findRoots 一次读出一页根评论的 CommentRecord", "reads.findReplyPreviews 再读每楼前几条回复", "拼成页面要的 View 返回"],
+      results: [
+        { label: "读出什么", value: "CommentRecord：带父评论作者、有无回复、有帮助数的读模型", tone: "ok" },
+        { label: "事务", value: "默认没有", tone: "ok" },
+        { label: "规则谁守", value: "没有要守的规则，只负责读对", tone: "ok" }
+      ],
+      verdict: { tone: "ok", head: "轻而快。", text: "一条 SQL 把页面要的字段一起读出来，不必装配聚合。" }
+    }
+  ]}
+/>
+
+## 读端的三个零件
+
+**读模型**是为读而生的 record，字段按页面需要排。它放在领域层的 `model.read` 包里：
+
+<CodeRef at="patra-api/patra-interaction/patra-interaction-domain/src/main/java/dev/patra/interaction/domain/discussion/model/read/CommentRecord.java@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="11-40" />
+
+注意 `parentAuthorId`、`hasReplies`、`helpfulCount` 这几个字段：它们来自别的表甚至别的子域，聚合里没有，读模型里有。
+
+**读端口**是领域层定义的接口，只管查：
+
+<CodeRef at="patra-api/patra-interaction/patra-interaction-domain/src/main/java/dev/patra/interaction/domain/discussion/port/read/DiscussionReadPort.java@b554d996121f219ca9dc8a6ea08baf4f93648f5a" lines="14-40" />
+
+**读适配器**在基础设施层，名字是 `DiscussionReadAdapter`，直接用 SQL 读，并且可以关联别的子域的表：
+
+<CodeRef at="patra-api/patra-interaction/patra-interaction-infra/src/main/java/dev/patra/interaction/infra/discussion/persistence/DiscussionReadAdapter.java@b554d996121f219ca9dc8a6ea08baf4f93648f5a" lines="20-24" />
+
+第三个零件是应用层的**查询服务**。它没有接口，因为 CQRS 的读端不需要再抽象一层，直接是一个类：
+
+<CodeRef at="patra-api/patra-interaction/patra-interaction-app/src/main/java/dev/patra/interaction/app/discussion/usecase/query/DiscussionQueryService.java@b554d996121f219ca9dc8a6ea08baf4f93648f5a" lines="44-75" />
+
+对照项目规则里的命名表：
+
+| 类型 | 接口位置 | 实现位置 |
+|---|---|---|
+| ReadPort | `domain.{子域}.port.read` | `infra.{子域}.persistence` |
+| QueryService | 无接口 | `app.{子域}.usecase.query` |
+
+## 读端的自由度：可以关联别的子域
+
+「有帮助数」在 reaction 子域的表里。讨论的读适配器直接用 SQL 读 `reaction` 的表，而不是调 reaction 子域的 Java 代码。
+
+<Callout kind="insight">
+
+这是有意为之。如果 discussion 的 Java 代码依赖 reaction，而 reaction 又要读 discussion（取评论），两个子域就成环了。读适配器可以用 SQL 读同一个库里的任何表，但不 import 对方的实体类，这条规则写在分包规范里，是读写分开带来的自由。
+
+</Callout>
+
+## 查询服务不一定经过读端口
+
+再看一个例子，`SessionQueryService`（当前用户的登录设备列表）：
+
+<CodeRef at="patra-api/patra-identity/patra-identity-app/src/main/java/dev/patra/identity/app/session/usecase/query/SessionQueryService.java@5073ab1358404ecd989e722373cd9f7edafe238b" lines="25-60" />
+
+它的注释写得很明白：只读，不经命令总线，没有事务。它的数据来自 Redis 里的会话和数据库里的登录记录，用的是已有的端口，没有再单独写一个读端口。读端的形状取决于数据在哪、要什么，没有统一模板。
+
+<Quiz
+  title="想一想"
+  questions={[
+    {
+      question: "讨论列表要多显示一个「是不是楼主」的标记，该改哪里？",
+      options: ["给 CommentAggregate 加字段，并加 setter", "在 CommentRecord 里加字段，读适配器的 SQL 多读一列，查询服务组装", "改命令总线"],
+      answer: "B",
+      explain: "这是读的需求，只涉及读模型、读适配器和查询服务；聚合要守的规则没变，不用动。"
+    },
+    {
+      question: "为什么查询服务通常不加事务？",
+      options: ["因为读不重要", "读端适配器内映射完再返回，不需要事务；要同一会话多次读 JPA 实体时才加 readOnly", "因为框架不支持"],
+      answer: "B",
+      explain: "事务规范里写明：查询默认不加事务，读完在适配器里映射成读模型再返回。"
+    }
+  ]}
+/>
+
+<Transfer
+  prompt="产品要加一个页面：「本周最有帮助的 20 条评论」榜单。你会走写端（Handler 加聚合）还是读端？列出需要新增或修改的零件，说明哪些零件完全不用动。"
+  points={[
+    { label: "走读端", text: "榜单只读不改，没有要守的规则，不经过聚合，也不需要命令总线。" },
+    { label: "要加的零件", text: "读端口加一个方法（参考现有的按有帮助数排序），读适配器写 SQL，查询服务组装成榜单的 View，Controller 调查询服务。" },
+    { label: "不用动的零件", text: "CommentAggregate、CommentRepository、各个 Handler、领域事件都不用动。" }
+  ]}
+/>

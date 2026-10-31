@@ -1,0 +1,177 @@
+---
+title: 跨服务调用：把对方的错误翻译成自己的话
+summary: 调别的服务失败时，对方的状态码和错误码是对方的语言。适配器要把它们翻译成本服务的领域异常再往上交，业务代码才不被对方的细节污染。这层翻译叫防腐层。
+type: concept
+difficulty: advanced
+tags: [ddd, backend, spring]
+prerequisites: [ddd-bounded-contexts, spring-http-interface-clients]
+personalEnv: false
+---
+
+<Diagnose
+  question="用户打开讨论页，interaction 要向 identity 批量取评论作者的名片，但 identity 暂时宕机，调用超时了。用户最好看到什么？"
+  options={["一个未知的 500 错误", "一句明确的「用户信息暂时无法获取，请稍后再试」，状态码是 503", "把 identity 返回的原始报错原样给用户"]}
+  answer="B"
+  ifRight="对。出问题的是「依赖暂时不可用」，用户应当看到这个含义，而不是模糊的 500，更不是别的服务的内部报错。"
+  ifWrong="答案是 B。500 说明不了什么，原样转发对方的报错又会把另一个服务的内部细节暴露给用户。要在 interaction 这边把「identity 不可用」翻译成它自己的话。这里需要知道 Patra 怎么经 HTTP 调别的服务，不熟先读那篇。"
+  suggest="spring-http-interface-clients"
+/>
+
+## 对方的错误，是对方的语言
+
+interaction 调 identity，靠的是一个 HTTP Interface 客户端（`UserEndpoint`）。调用失败时，客户端抛出的是 `RemoteCallException`，里面装着对方的东西：HTTP 状态码、对方的业务错误码、跟踪 ID，如果对方带了语义特征，还有特征。
+
+<CodeRef at="patra-tool/patra-tool-core/src/main/java/dev/patra/tool/core/error/remote/RemoteCallException.java@cfec9c9f30270dcf03f5cd7b6e54a0cd3b59296b" lines="28-70" />
+
+这些都是 identity 那边的语言。如果让它一路冒泡到 interaction 的业务代码，会出两个问题：
+
+- **业务代码得认识对方的细节**：Handler 为了处理「identity 挂了」，要去判断状态码是不是 503、错误码是不是某个字符串。
+- **含义可能被误导**：identity 回 404，意思是「这个用户不存在」；原样冒泡成 interaction 的 404，前端会以为是「你访问的评论不存在」。
+
+所以项目规则写明：`RemoteCallException` 只在适配器层出现，应用层和领域层只看到本服务的异常。
+
+<CodeRef at=".claude/rules/tech/error-handling.md@cfec9c9f30270dcf03f5cd7b6e54a0cd3b59296b" lines="21-25" />
+
+<Callout kind="lead">
+
+防腐层：在自己和别人之间放一层翻译，对方的概念、错误、状态码走进来之前，先变成自己的。适配器就是这层翻译。
+
+</Callout>
+
+## 真实的翻译：用户名片适配器
+
+interaction 取用户名片的端口是 `UserDirectoryPort`，适配器 `UserDirectoryAdapter` 负责调 identity：
+
+<CodeRef at="patra-api/patra-interaction/patra-interaction-infra/src/main/java/dev/patra/interaction/infra/subject/user/UserDirectoryAdapter.java@5073ab1358404ecd989e722373cd9f7edafe238b" lines="23-60" />
+
+它捕获了三种失败，全部翻译成同一个领域异常：
+
+<CodeRef at="patra-api/patra-interaction/patra-interaction-domain/src/main/java/dev/patra/interaction/domain/subject/exception/UserDirectoryUnavailableException.java@6d96ac9d6c2b8463cddf24d8b3461215b4ff8f4c" lines="1-14" />
+
+下面用一张图看这三种失败怎么走。
+
+<Structure
+  title="适配器里的三条 catch"
+  intro="点「发一次」看各种失败怎么变成本服务的话。"
+  nodes={[
+    { id: "caller", label: "调用方", sub: "Handler", col: 1, desc: "只认识端口 UserDirectoryPort 和本服务的领域异常，不知道 identity 怎么出错。" },
+    { id: "adapter", label: "UserDirectoryAdapter", sub: "infra 适配器", code: true, col: 2, desc: "调远程、捕获失败、翻译。try 只包住一次代理调用。" },
+    { id: "remote", label: "identity", sub: "远程服务", col: 3, desc: "对方的状态码、错误码是对方的语言。" }
+  ]}
+  edges={[
+    { from: "caller", to: "adapter", label: "findCards" },
+    { from: "adapter", to: "remote", label: "HTTP 调用" }
+  ]}
+  traces={[
+    {
+      button: "identity 回了错误响应",
+      packet: "500 / 4xx",
+      hops: [
+        { at: "remote", caption: "identity 回了一个错误响应，客户端把它变成 RemoteCallException（带状态码、错误码）。" },
+        { at: "adapter", caption: "适配器捕获，记 WARN（状态码、错误码），抛出 UserDirectoryUnavailableException。" },
+        { at: "caller", caption: "调用方拿到的是本服务的领域异常，含义是「依赖暂时不可用」，响应 503。" }
+      ]
+    },
+    {
+      button: "连不上或超时",
+      packet: "timeout",
+      hops: [
+        { at: "remote", caption: "连接失败或读超时，客户端抛 ResourceAccessException。" },
+        { at: "adapter", caption: "适配器捕获，记 WARN，同样翻成 UserDirectoryUnavailableException。" },
+        { at: "caller", caption: "调用方看到的还是同一个领域异常，不用分「超时」还是「连不上」。" }
+      ]
+    },
+    {
+      button: "注册中心里没有实例",
+      packet: "no instance",
+      hops: [
+        { at: "adapter", caption: "负载均衡找不到 identity 的任何实例，抛 IllegalStateException。" },
+        { at: "caller", caption: "适配器捕获并翻成同一个领域异常。调用方依然只面对「暂时不可用」。" }
+      ]
+    }
+  ]}
+/>
+
+三种失败，调用方看到的是一个异常。它们对调用方的意义一样：现在拿不到用户信息，请稍后再试。
+
+<Callout kind="insight">
+
+这两个适配器（用户名片、catalog 解析）选择「所有失败都变成不可用」，是有原因的。注释里写：回了错误响应时，4xx 是本服务的程序错误，要在日志里看得出来，对用户而言仍然只是「暂时无法获取」。状态码和错误码只写进日志，不流到业务层。
+
+</Callout>
+
+同样的写法也在 catalog 解析里：
+
+<CodeRef at="patra-api/patra-interaction/patra-interaction-infra/src/main/java/dev/patra/interaction/infra/subject/source/CatalogSourceCalls.java@6d96ac9d6c2b8463cddf24d8b3461215b4ff8f4c" lines="10-49" />
+
+## 什么时候要按含义翻译
+
+「全部变成不可用」只是一种选择。有些场景对方的错误本身有业务含义，要区别对待。`RemoteCallException` 带着对方的语义特征，适配器可以据此翻译。类的注释里给了写法：
+
+```java
+try {
+    return dictionaryEndpoint.resolve(request);
+} catch (RemoteCallException ex) {
+    if (RemoteErrorHelper.isNotFound(ex)) {
+        throw new DictionaryTypeNotFoundException(request.typeCode());
+    }
+    throw ex;
+}
+```
+
+这是注释里的示例：对方说「找不到」，在本服务里翻成本服务的「字典类型不存在」。项目规则规定判断方式优先看特征，其次才看状态码：
+
+1. 捕获 `RemoteCallException`，用 `ex.getErrorTraits()` 基于语义特征判断。
+2. 备选：`RemoteErrorHelper` 工具类基于 HTTP 状态码判断。
+3. 禁止直接捕获 `RestClientException`，统一处理 `RemoteCallException`。
+
+<Compare
+  title="对方说「找不到」，本服务怎么办"
+  variants={[
+    {
+      label: "原样冒泡",
+      steps: ["identity 回 404：没有这个用户", "RemoteCallException 一路穿过 app 层", "Web 层按 404 响应"],
+      results: [
+        { label: "前端看到", value: "404，不知道是评论找不到，还是作者找不到", tone: "bad" },
+        { label: "业务代码", value: "没处理，也没法单独处理", tone: "bad" }
+      ],
+      verdict: { tone: "bad", head: "含义被带偏了。", text: "对方的 404 是对方上下文里的含义，放到本服务的响应里会误导。" }
+    },
+    {
+      label: "适配器翻译",
+      steps: ["identity 回 404：没有这个用户", "适配器捕获 RemoteCallException，按特征判断是 NOT_FOUND", "翻成本服务的领域异常，含义由本服务定"],
+      results: [
+        { label: "前端看到", value: "本服务的错误，含义明确", tone: "ok" },
+        { label: "业务代码", value: "只处理本服务的异常，需要降级时也能单独捕获", tone: "ok" }
+      ],
+      verdict: { tone: "ok", head: "含义由自己说了算。", text: "对方换错误码、换状态码，改的只是适配器里这一处。" }
+    }
+  ]}
+/>
+
+<Quiz
+  title="想一想"
+  questions={[
+    {
+      question: "项目规则为什么禁止直接 catch RestClientException？",
+      options: ["因为这个类不存在", "它是底层 HTTP 客户端的异常，应统一由 RemoteCallException 表达，业务层不该认识底层客户端", "因为会很慢"],
+      answer: "B",
+      explain: "统一入口 RemoteCallException，适配器才能在一处翻译；到处 catch 底层异常，翻译就散落各处。"
+    },
+    {
+      question: "适配器里的 try 为什么只包住一次代理调用？",
+      options: ["为了好看", "避免把本服务自己的 bug 也当成对方故障吞掉", "try 太大会编译失败"],
+      answer: "B",
+      explain: "try 范围越大，越容易把本地代码的异常误当成远程失败翻译掉，掩盖真正的 bug。"
+    }
+  ]}
+/>
+
+<Transfer
+  prompt="notification 调 identity 取收件人时，如果 identity 回「用户不存在」（NOT_FOUND），与回「identity 宕机」（连不上），notification 该怎么区别对待？请说出两种情况各应翻译成什么意思，以及为什么不能都当成一回事。"
+  points={[
+    { label: "用户不存在", text: "是业务事实：这个人不存在，或已被清理。适配器可以返回「没有这个收件人」（空结果），调用方据此跳过这封邮件。" },
+    { label: "宕机", text: "是依赖暂时不可用，应翻成「不可用」类的异常，让调用方知道可以稍后重试，不要当成「用户不存在」而丢掉提醒。" },
+    { label: "不能混", text: "两者含义相反：一个是「不用再发」，一个是「还要再发」。混在一起，要么漏发，要么乱发。" }
+  ]}
+/>

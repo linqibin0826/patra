@@ -1,0 +1,151 @@
+---
+title: 让构建替你守住架构边界
+summary: 分层、依赖方向、子域边界这些约定，Patra 全部写成会失败的检查：构建脚本管模块依赖，ArchUnit 测试管类与包的关系。违反了不是被评审提醒，而是 check 直接红。
+type: concept
+difficulty: advanced
+tags: [ddd, backend, testing]
+prerequisites: [ddd-patra-six-modules]
+personalEnv: false
+---
+
+<Diagnose
+  question="团队约定「领域层不许依赖 Spring」。三个月后一个新人为了方便，在 domain 里用了 Spring 的注解。靠什么最可能发现？"
+  options={["代码评审时有人碰巧看到", "构建里的检查直接失败，根本合不进去", "上线后出问题"]}
+  answer="B"
+  ifRight="对。写在文档里的约定，人会忘；写成会失败的检查，机器不会忘。Patra 走的就是这条路。"
+  ifWrong="答案是 B。评审靠人，人会疏忽，也不会天天盯着每个 import。Patra 把约定写成构建检查，违反了 check 就红，合不进去。这篇看这些检查是怎么写的。上一篇讲的模块依赖是第一道，这篇是后面几道。"
+  suggest="ddd-patra-six-modules"
+/>
+
+## 约定写下来，不如变成会失败的检查
+
+上一篇看到，模块的依赖写在构建文件里，没声明就看不见。这是第一道防线。但还有很多事构建文件管不到：
+
+- 在已经声明的依赖里，domain 能不能引入 Spring？
+- 一个类能不能放进别的子域不公开的包里？
+- 一个命令 Handler 能不能标 `@Transactional`？
+
+这些都有专门的检查，分两种：
+
+| 守卫 | 在哪 | 管什么 | 失败时机 |
+|---|---|---|---|
+| 构建规则（R1～R6） | `build-logic/` 的约定插件 | 模块依赖、域层类路径、迁移脚本 | `./gradlew check` 的构建阶段 |
+| ArchUnit 架构测试 | `patra-tool-test` 的规则 + 各服务 boot 里的测试 | 类与包之间的关系 | `./gradlew check` 的测试阶段 |
+
+## 构建规则：以 R3 为例
+
+R3 管的是：domain 模块的编译类路径只许出现白名单上的构件。
+
+<CodeRef at="build-logic/src/main/kotlin/DomainPurityRules.kt@cfec9c9f30270dcf03f5cd7b6e54a0cd3b59296b" lines="1-16" />
+
+白名单很短：Patra 自己的工具核心库、Lombok、Jackson、Hutool、MapStruct。Spring、JPA、Hibernate 都不在里面。检查任务挂在 `check` 上：
+
+<CodeRef at="build-logic/src/main/kotlin/patra.hexagonal-domain.gradle.kts@cfec9c9f30270dcf03f5cd7b6e54a0cd3b59296b" lines="14-48" />
+
+下面看一次违规是怎么被拦住的。
+
+<Stepper
+  title="有人往 domain 里加了 Spring 依赖"
+  nodes={[
+    { id: "dev", label: "开发者", sub: "改 build.gradle.kts" },
+    { id: "check", label: "./gradlew check", sub: "触发 checkDomainPurity" },
+    { id: "white", label: "白名单", sub: "DomainPurityRules.ALLOWED" },
+    { id: "result", label: "构建结果" }
+  ]}
+  links={[
+    { from: "dev", to: "check" },
+    { from: "check", to: "white" },
+    { from: "white", to: "result" }
+  ]}
+  steps={[
+    { caption: "开发者想在领域类上直接用 Spring 的 @Component，在 domain 的构建文件里加了 spring-context。", focus: ["dev"], tokens: [{ id: "d", label: "+ spring-context", at: "dev" }] },
+    { caption: "提交后跑 check。check 依赖 checkDomainPurity，它读出 domain 编译类路径上所有构件，包括传递依赖。", focus: ["check"], links: ["dev>check"], tokens: [{ id: "d", label: "类路径上有 spring-context", at: "check" }] },
+    { caption: "逐个拿去对白名单。", focus: ["white"], links: ["check>white"], tokens: [{ id: "d", label: "spring-context ?", at: "white" }] },
+    { caption: "spring-context 不在名单里。任务抛出构建异常，报告 R3 违规：compileClasspath 含 org.springframework:spring-context。", focus: ["result"], links: ["white>result"], tokens: [{ id: "d", label: "R3 违规", at: "result" }], notes: [{ at: "result", text: "构建失败，合不进去", tone: "bad" }] }
+  ]}
+  guesses={[
+    { before: 4, question: "spring-context 在白名单里吗？", options: ["在，Spring 是通用框架", "不在，领域层要保持纯净", "要看具体哪个模块"], answer: "B", explain: "白名单只有 Patra 工具核心库、Lombok、Jackson、Hutool、MapStruct。领域层的目标是纯业务逻辑，所以不给任何应用框架留位置。" }
+  ]}
+/>
+
+R 开头的其他几条同样是构建规则：
+
+| 规则 | 管什么 |
+|---|---|
+| R1、R2 | 工具模块不许依赖业务模块；工具模块之间只许依赖核心库 |
+| R3 | 领域层类路径白名单（上面这条） |
+| R4 | 自动配置的写法 |
+| R5 | 声明了的 project 依赖必须真的被 import，不留没用的依赖 |
+| R6 | Flyway 迁移脚本里，用户名列只许出现在 identity 的两张表 |
+
+R6 很有意思，它守的是数据归属，而不是代码分层：用户名只存在 identity 里，别的服务只存用户 ID。这条约定被写成检查，扫描迁移脚本里的建表和改表语句。
+
+<CodeRef at="build-logic/src/main/kotlin/MigrationColumnRules.kt@af8cd13c3ec367ccba78615b72e6ff19535cef90" lines="1-6" />
+
+## ArchUnit：检查类与包的关系
+
+构建规则看的是模块，看不到一个类 import 了谁。这件事交给 ArchUnit，它能把已编译的类读进来，对包和依赖提问。
+
+层依赖规则的核心几行：
+
+<CodeRef at="patra-tool/patra-tool-test/src/main/java/dev/patra/tool/test/archunit/HexagonalArchitectureRules.java@cfec9c9f30270dcf03f5cd7b6e54a0cd3b59296b" lines="120-141" />
+
+这段话的意思是：领域层不能访问任何别的层；应用层只能访问领域层；基础设施层只能访问领域层；适配器层只能访问应用层和领域层。除了层依赖，同一个类里还有事务规则：`@Transactional` 只能出现在 app 层（infra 层只放行 MANDATORY 守卫），命令 Handler 不得标 `@Transactional`。
+
+每个服务在自己的 boot 模块里把这些规则跑一遍：
+
+<CodeRef at="patra-api/patra-interaction/patra-interaction-boot/src/test/java/dev/patra/interaction/architecture/InteractionArchitectureTest.java@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="39-56" />
+
+## 子域边界也是规则
+
+分包规范（子域优先）同样被 ArchUnit 守着，规则在 `SubdomainArchitectureRules`：层下面只能是已声明的子域，跨子域只能用对方的公开包，跨子域的依赖必须事先声明。
+
+<CodeRef at="patra-tool/patra-tool-test/src/main/java/dev/patra/tool/test/archunit/SubdomainArchitectureRules.java@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="1-45" />
+
+上面测试里的这两行就是「事先声明」：
+
+```java
+.allowingDependency("reaction", "discussion")
+.allowingDependency("reaction", "post")
+```
+
+有帮助子域（reaction）要用讨论和投稿经验，就得明明白白写出来。没写的边，规则一跑就红。
+
+<Quiz
+  title="哪道关拦它"
+  questions={[
+    {
+      question: "有人给一个命令 Handler 的 handle 方法加了 @Transactional。哪道关会拦住它？",
+      options: ["R3 构建规则", "ArchUnit 的事务规则", "没人拦"],
+      answer: "B",
+      explain: "这是类与注解的关系，构建规则看不到，由 ArchUnit 的事务规则拦：命令 Handler 不得标 @Transactional。"
+    },
+    {
+      question: "有人在新表的迁移脚本里加了一列 username。哪道关会拦住它？",
+      options: ["R6 构建规则", "代码评审而已", "ArchUnit"],
+      answer: "A",
+      explain: "R6 扫描 Flyway 迁移脚本，用户名列只许出现在 identity 的 idn_user 与 idn_user_former_username 两张表。"
+    },
+    {
+      question: "有人在 interaction 的 domain 层顺手建了一个 domain.common 包放杂项。哪道关会拦住它？",
+      options: ["R3 构建规则", "子域 ArchUnit 规则：层下面只能是已声明的子域", "没人拦"],
+      answer: "B",
+      explain: "分包规范规定层下面只能是已声明的子域，不放 common 之类的共享包，由 SubdomainArchitectureRules 检查。"
+    }
+  ]}
+/>
+
+<Callout kind="cost">
+
+守卫有代价。规则越多，新人写第一行代码时撞墙的次数越多；新增子域、新增跨子域依赖都要先改架构测试。换来的是边界不再依赖有人记得去检查：每次 check 都会把所有规则从头跑一遍。
+
+</Callout>
+
+<Transfer
+  prompt="团队想加一条新约定：任何类都不许直接调用 Instant.now()，必须注入 Clock，这样测试才能用固定时钟。这条约定该用构建规则还是 ArchUnit？先说理由，再说如果仓库里已经有 50 处违规，怎么落地。"
+  points={[
+    { label: "用 ArchUnit", text: "它管的是「哪个类调用了哪个方法」，属于类级别的关系，构建规则只看模块依赖，看不到。" },
+    { label: "先整理再开关", text: "50 处违规一次性让构建变红没法合并。先把现有违规清理掉（或在规则里明确排除）再启用规则，规则启用后新增的违规就拦得住。" },
+    { label: "规则本身要有测", text: "守卫是代码，也会写错：给规则加一个会触发它的小样例，确认它真的会红。" }
+  ]}
+/>

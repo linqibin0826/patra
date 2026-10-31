@@ -1,0 +1,120 @@
+---
+title: 应用层：一个用例怎么编排
+summary: 应用层把一个用例要做的事排好顺序：取当前用户、造值对象、划事务、调仓库。它不写业务规则，规则在领域层；事务只包数据库那一段。
+type: concept
+difficulty: basic
+tags: [ddd, backend, spring]
+prerequisites: [ddd-repositories]
+personalEnv: false
+---
+
+<Diagnose
+  question="登出要做两件事：删掉 Redis 里的会话，再把数据库里的登录记录标成已结束。要不要把这两件事包进同一个数据库事务？"
+  options={["要，这样两件事同成同败", "不要，Redis 不在数据库事务的管辖范围内，事务只该包数据库那一段", "随便"]}
+  answer="B"
+  ifRight="对。数据库事务回滚不了 Redis，把 Redis 操作放进去只会让事务拖得更长、也没有一致性可言。Patra 的规则是：事务里只放数据库操作。"
+  ifWrong="答案是 B。数据库事务只能保证数据库里的写入同成同败，对 Redis 无能为力。把 Redis 操作塞进事务，事务反而更长、占着连接。这篇讲应用层怎么安排这类事。"
+  suggest="ddd-repositories"
+/>
+
+## 应用层回答的问题：先做什么，再做什么
+
+领域层告诉你「规则是什么」，基础设施层告诉你「怎么存」。把它们串成一个完整的用户操作，是应用层的事：**一个用例就是一个 Handler**。
+
+<Callout kind="lead">
+
+应用层管流程，不管规则。它的工作是排顺序：取当前用户、把输入变成值对象、划事务边界、调用仓库和聚合的方法。
+
+</Callout>
+
+## 命令与处理器
+
+Patra 用命令（Command）和处理器（Handler）一对一表达用例：
+
+- `CreateCollectionCommand`：一个只装数据的 record，写明「要做什么、带什么参数」。
+- `CreateCollectionHandler`：实现 `CommandHandler`，真正做事。
+
+Controller 不直接调 Handler，而是交给命令总线：
+
+<CodeRef at="patra-api/patra-interaction/patra-interaction-adapter/src/main/java/dev/patra/interaction/adapter/collection/rest/MyCollectionController.java@3cf6fa5757b3be54c3b030e4cace871f53e2599c" lines="48-53" />
+
+`SimpleCommandBus` 启动时收集所有 Handler，按命令的类型找到对应的那一个。一个命令只能有一个 Handler，重复注册会直接报错。
+
+<CodeRef at="patra-tool/patra-tool-cqrs/src/main/java/dev/patra/tool/cqrs/SimpleCommandBus.java@b6e01875bb5692356021c8a19562f557f319fc54" lines="55-72" />
+
+这样 Controller 和 Handler 互相不认识，中间还能挂拦截器（统一日志等），后面加功能不用改 Controller。
+
+## Handler 里看得到什么
+
+回到新建收藏夹的 Handler，按行读：
+
+<CodeRef at="patra-api/patra-interaction/patra-interaction-app/src/main/java/dev/patra/interaction/app/collection/usecase/collection/CreateCollectionHandler.java@3cf6fa5757b3be54c3b030e4cace871f53e2599c" lines="34-53" />
+
+| 行为 | 属于什么 |
+|---|---|
+| `currentUser.require().userId()` 取当前用户 | 编排：拿到调用者 |
+| `CollectionName.parse(...)` | 编排：调用领域层的值对象，规则在它里面 |
+| `transactions.execute(...)` | 编排：划事务边界 |
+| `library.lockOwner`、`countCollections`、`nameTaken`、`create` | 编排：按顺序调用仓库接口 |
+| `throw new CollectionLimitReachedException()` | 用领域层定义的异常表达拒绝 |
+
+没有出现 SQL，没有出现名称怎么算合法。那些都在别的层。
+
+## 事务边界放在这里
+
+应用层决定事务从哪开始、到哪结束。Patra 的做法有点特别：**不在 `handle()` 上加 `@Transactional`**，而是注入 `TransactionOperations`，只把「锁、复核、写库」那一段包起来。
+
+<CodeRef at="patra-tool/patra-tool-cqrs/src/main/java/dev/patra/tool/cqrs/CommandHandler.java@26ce40c846dc18aec3688e27e3a54caf20b64b26" lines="1-20" />
+
+原因是总原则：事务里只放数据库操作，越短越好。远程调用、发消息、Redis、文件这些都不放进去，因为事务一直开着，数据库连接和行锁就一直占着。这条规则由构建里的架构测试守住：命令 Handler 一旦标了 `@Transactional`，`check` 就失败。
+
+<CodeRef at=".claude/rules/tech/transaction.md@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="1-24" />
+
+## 看一个真实的例子：登出
+
+登出做两件事：删 Redis 会话，结束数据库里的登录记录。
+
+<CodeRef at="patra-api/patra-identity/patra-identity-app/src/main/java/dev/patra/identity/app/session/usecase/logout/LogoutUserHandler.java@5073ab1358404ecd989e722373cd9f7edafe238b" lines="39-72" />
+
+<Sequence
+  title="登出时 Handler 做了什么"
+  actors={[
+    { id: "handler", label: "LogoutUserHandler", sub: "app 层" },
+    { id: "redis", label: "会话存储", sub: "Redis" },
+    { id: "db", label: "登录记录", sub: "PostgreSQL" }
+  ]}
+  messages={[
+    { from: "handler", to: "redis", label: "撤销这个会话", caption: "先删会话，这是登出的实质。这一步在事务外，因为 Redis 不属于数据库事务。" },
+    { from: "redis", to: "handler", label: "已删除 / 本来就不在", caption: "会话本来就不在（过期、被踢）时，直接结束，不再动登录记录：结束原因以先发生的为准。", dashed: true },
+    { from: "handler", to: "db", label: "开事务：找记录，调 end(LOGOUT)，保存", caption: "只有这一段在事务里。「结束一条登录记录」的规则在领域层 UserLoginRecord.end 里，Handler 只调用它。" },
+    { from: "db", to: "handler", label: "提交", caption: "数据库出错也不影响用户已经登出：Handler 只记 WARN，照样正常返回，记录留空。", dashed: true }
+  ]}
+  summary={{ caption: "Redis 在事务外，数据库在事务内；规则（怎么结束记录）在领域层，Handler 只排顺序。" }}
+/>
+
+<Quiz
+  title="想一想"
+  questions={[
+    {
+      question: "登出的 Handler 里，为什么先删 Redis，再改数据库？",
+      options: ["随便排的", "删会话才是登出的实质，记录没改成也不影响用户已登出；反过来，若先改记录再删会话失败，用户就还能继续用", "Redis 比数据库快"],
+      answer: "B",
+      explain: "步骤的先后是应用层的设计。把「必须成功」的放前面，「尽力而为」的放后面，并且后者失败时只记日志。"
+    },
+    {
+      question: "产品要求「登录记录一旦结束，不能再改结束原因」。这条规则应该写在哪？",
+      options: ["LogoutUserHandler 里", "UserLoginRecord.end 里", "Controller 里"],
+      answer: "B",
+      explain: "它是业务规则，属于领域层。UserLoginRecord.end 里已经有：已结束的记录再调用什么也不做。Handler 因此不需要自己判断。"
+    }
+  ]}
+/>
+
+<Transfer
+  prompt="要做「删除收藏夹」：先在数据库里删，再调另一个服务的 HTTP 接口去清它的缓存。请排出 Handler 里的顺序，并说明 HTTP 调用放在事务里还是事务外，为什么。"
+  points={[
+    { label: "事务内", text: "只放数据库：锁用户、删收藏夹和条目。" },
+    { label: "HTTP 在事务外", text: "事务提交之后再调。事务里等网络，数据库连接和行锁会被一直占着；对方慢或挂了，还会拖垮本服务。" },
+    { label: "失败怎么办", text: "清缓存是提交后的副作用，失败只记日志；要求绝不能丢时，该走事件加补投，而不是塞进事务。" }
+  ]}
+/>

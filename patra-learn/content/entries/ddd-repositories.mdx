@@ -1,0 +1,127 @@
+---
+title: 仓库：聚合怎么存、怎么取
+summary: 仓库让业务代码像从一个集合里取放对象一样存取聚合，不必知道数据库。接口定义在领域层，实现放在基础设施层，所以业务不依赖存储。
+type: concept
+difficulty: basic
+tags: [ddd, backend, java]
+prerequisites: [ddd-aggregates]
+personalEnv: false
+---
+
+<Diagnose
+  question="新建收藏夹的 Handler 要查「这个用户现在有几个收藏夹」。Handler 里应该直接写 SQL，还是调用一个接口方法？"
+  options={["直接写 SQL，最省事", "调用一个接口方法，SQL 写在别处", "把数据全读进内存自己数"]}
+  answer="B"
+  ifRight="对。Handler 只关心「有几个」，不关心怎么数出来。接口方法就是它和存储之间的缝，这个接口就是仓库。"
+  ifWrong="答案是 B。直接写 SQL，业务流程就和数据库绑死了：换存法、写单测都要动 Handler。把「有几个」做成接口方法，SQL 放在别处。这个接口叫仓库，上一篇讲的聚合就靠它存取。"
+  suggest="ddd-aggregates"
+/>
+
+## 仓库像一个只管存取的书架
+
+<Callout kind="analogy">
+
+业务代码对仓库的想象，就像对一个书架的想象：把聚合放进去，要用的时候按 ID 拿出来。至于书架是木头的还是铁的，书放在哪一格，它不关心。
+
+</Callout>
+
+仓库有两个特点：
+
+1. 它以**聚合**为单位存取，一次放进去、取出来的是一个完整的聚合，而不是半张表。
+2. 它的接口用业务语言写：「按 ID 找评论」「数这个用户的收藏夹」，不出现 SQL、表名、JPA。
+
+## 接口在领域层，实现在基础设施层
+
+看 Patra 的评论仓库。接口在领域层：
+
+<CodeRef at="patra-api/patra-interaction/patra-interaction-domain/src/main/java/dev/patra/interaction/domain/discussion/port/repository/CommentRepository.java@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="14-25" />
+
+接口里只有业务意思的方法：`find` 取评论，`findForUpdate` 取并锁住，`updateBody` 改正文，`insert` 新增。没有任何 SQL 和 JPA 类型。
+
+接口的实现放在基础设施层，名字固定为「接口名 + Adapter」。命名规矩写在项目规则里：
+
+<CodeRef at=".claude/rules/tech/port-service.md@5073ab1358404ecd989e722373cd9f7edafe238b" lines="1-12" />
+
+<Structure
+  title="谁依赖谁：两边都指向接口"
+  nodes={[
+    { id: "handler", label: "CreateCollectionHandler", sub: "app 层", code: true, col: 1, desc: "要数收藏夹个数、查重名、创建。它只认识接口，不知道有 SQL。" },
+    { id: "repo", label: "CollectionRepository", sub: "domain 层 · 接口", code: true, col: 2, desc: "用业务语言描述存取能力：countCollections、nameTaken、create。定义在领域层。" },
+    { id: "adapter", label: "CollectionRepositoryAdapter", sub: "infra 层 · 实现", code: true, col: 3, desc: "实现接口，里面才有 JdbcClient 和 SQL。换存储只重写这一个类。" }
+  ]}
+  edges={[
+    { from: "handler", to: "repo", label: "调用", desc: "Handler 只依赖领域层的接口。" },
+    { from: "adapter", to: "repo", label: "实现", desc: "适配器反过来依赖领域层的接口，而不是领域层依赖适配器。", dashed: true }
+  ]}
+  traces={[
+    {
+      button: "数一数收藏夹",
+      packet: "count",
+      hops: [
+        { at: "handler", caption: "Handler 调用 collections.countCollections(userId)。" },
+        { at: "repo", caption: "调用走到接口。接口只说「给我这个用户的收藏夹个数」。" },
+        { at: "adapter", caption: "运行时由适配器接手，执行 SELECT count(*)，把整数返回。" }
+      ]
+    }
+  ]}
+/>
+
+读这张图时抓住一点：箭头两头都指向领域层的接口。这叫**依赖倒置**：本来是业务依赖存储，现在是存储实现业务定义的接口。
+
+<CodeRef at="patra-api/patra-interaction/patra-interaction-domain/src/main/java/dev/patra/interaction/domain/collection/port/repository/CollectionRepository.java@3cf6fa5757b3be54c3b030e4cace871f53e2599c" lines="12-22" />
+
+<CodeRef at="patra-api/patra-interaction/patra-interaction-infra/src/main/java/dev/patra/interaction/infra/collection/persistence/CollectionRepositoryAdapter.java@3cf6fa5757b3be54c3b030e4cace871f53e2599c" lines="20-37" />
+
+## 好处：业务可以在没有数据库的地方测
+
+因为 Handler 依赖的是接口，单元测试里可以给它一个假的：
+
+<CodeRef at="patra-api/patra-interaction/patra-interaction-app/src/test/java/dev/patra/interaction/app/collection/usecase/collection/CollectionHandlersTest.java@3cf6fa5757b3be54c3b030e4cace871f53e2599c" lines="48-49" />
+
+<CodeRef at="patra-api/patra-interaction/patra-interaction-app/src/test/java/dev/patra/interaction/app/collection/usecase/collection/CollectionHandlersTest.java@3cf6fa5757b3be54c3b030e4cace871f53e2599c" lines="70-82" />
+
+让假的 `countCollections` 返回 200，就能验证「第 201 个会被拒绝」，不用起 PostgreSQL。
+
+## Patra 里仓库的两种样子
+
+不是所有仓库都在存取「完整聚合」。Patra 里能看到两种：
+
+| 样子 | 例子 | 特点 |
+|---|---|---|
+| 存取完整聚合 | catalog 的 `AuthorRepository` | `save(AuthorAggregate)`、`findById` 进出的是聚合，适配器负责在聚合和 JPA 实体之间转换 |
+| 按行写 | interaction 的 `CollectionRepository` | 没有收藏夹聚合，方法是 `create`、`addMembers`、`nameTaken` 这样的按行操作 |
+
+第二种适合条目很多、不方便整体装进内存的场景。两种共同的是：接口在领域层，实现在基础设施层，业务代码不见 SQL。
+
+<CodeRef at="patra-api/patra-catalog/patra-catalog-domain/src/main/java/dev/patra/catalog/domain/author/port/repository/AuthorRepository.java@5073ab1358404ecd989e722373cd9f7edafe238b" lines="28-48" />
+
+<CodeRef at="patra-api/patra-catalog/patra-catalog-infra/src/main/java/dev/patra/catalog/infra/author/persistence/AuthorRepositoryAdapter.java@5073ab1358404ecd989e722373cd9f7edafe238b" lines="52-73" />
+
+适配器里 `mapper.toEntity(author)` 把聚合转成 JPA 实体再保存。JPA 实体 `AuthorEntity` 只在基础设施层出现，领域层看不到。
+
+<Quiz
+  title="想一想"
+  questions={[
+    {
+      question: "项目规则里，评论的仓库接口和它的实现应该叫什么？",
+      options: ["CommentPort 和 CommentPortImpl", "CommentRepository 和 CommentRepositoryAdapter", "CommentDao 和 CommentService"],
+      answer: "B",
+      explain: "Repository 接口加 RepositoryAdapter 实现。规则明确禁止把仓库叫 Port。"
+    },
+    {
+      question: "有人想在 CommentAggregate 里直接 import JPA 的 EntityManager，自己保存自己。问题在哪？",
+      options: ["没问题，更直接", "领域层就依赖了持久化框架，纯业务代码测不了、也换不了存储", "只是代码风格问题"],
+      answer: "B",
+      explain: "领域层要保持纯净。构建里有检查禁止领域层引入框架依赖（后面的篇目会讲）。保存的事交给基础设施层的适配器。"
+    }
+  ]}
+/>
+
+<Transfer
+  prompt="要给评论加「软删除」：删除时只是把状态改成已删除，不真的删行。你会改领域层的仓库接口、聚合，还是基础设施层的适配器？分别需要改什么，不用改什么？"
+  points={[
+    { label: "聚合", text: "状态变化是业务规则：聚合上要有「已删除」状态和对应的行为（CommentAggregate 里已经是占位状态，不能再有正文）。" },
+    { label: "接口", text: "接口要有一个能表达意思的方法，比如 markDeleted，而不是 setDeleted(true) 一类暴露存储方式的名字。" },
+    { label: "适配器", text: "怎么落库（UPDATE 一个状态列）是适配器的事。业务代码调 markDeleted，不知道是改列还是真删。" }
+  ]}
+/>

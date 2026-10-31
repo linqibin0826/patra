@@ -1,0 +1,160 @@
+---
+title: 端口与适配器（六边形）
+summary: 业务核心只认它自己定义的接口（端口），外部世界通过适配器接进来。Redis、数据库、别的服务都是可替换的适配器，换掉它们不动业务代码。
+type: concept
+difficulty: advanced
+tags: [ddd, backend, java, spring]
+prerequisites: [ddd-application-layer, spring-dependency-injection]
+personalEnv: false
+---
+
+<Diagnose
+  question="改邮箱有个「每个账号每天最多申请几次」的限制，现在用 Redis 实现。如果要改成用数据库表实现，理想情况下要改的代码是？"
+  options={["申请改邮箱的 Handler 和限流的实现，两处都要改", "只重写限流的实现类，Handler 一行不动", "整个 identity 服务重写"]}
+  answer="B"
+  ifRight="对。这正是端口与适配器要达到的效果：Handler 只认「限流」这个接口，接口背后是 Redis 还是数据库，它不知道。"
+  ifWrong="答案是 B。如果 Handler 直接写了 Redis 命令，那换实现就要连 Handler 一起改。把限流做成接口，Handler 只调接口，实现可以单独替换。接口和实现靠 Spring 把它们接在一起，这部分不熟的话先读依赖注入那篇。"
+  suggest="spring-dependency-injection"
+/>
+
+## 六边形这个名字从哪来
+
+画一个多边形代表业务核心，周围一圈是它要打交道的外部世界：浏览器、数据库、Redis、别的服务、定时任务。核心和每个外部对象之间有一个接口，叫**端口**；接口后面接上具体技术的那个类，叫**适配器**。
+
+画成六边形只是为了说明「边有很多条，每条边一个端口」，数字六没有特别含义。
+
+<Callout kind="analogy">
+
+电脑上的 USB 口就是端口：它规定了插头的形状和信号。键盘、U 盘、手机充电线是不同的适配器，插哪个电脑都认。电脑不需要为每种设备改主板。
+
+</Callout>
+
+两件事要记住：
+
+- **端口由核心定义**，写在领域层，用业务语言。
+- **适配器由外面实现**，写在基础设施层（或入站的适配器层），用具体技术。
+
+## 一个真实的端口：改邮箱限流
+
+接口在领域层，只讲业务意思：
+
+<CodeRef at="patra-api/patra-identity/patra-identity-domain/src/main/java/dev/patra/identity/domain/account/port/throttle/EmailChangeThrottlePort.java@5073ab1358404ecd989e722373cd9f7edafe238b" lines="1-20" />
+
+方法叫 `acquire`：申请一次，没超就计数并放行，超了就告诉你还要等多久。注释里写明了契约：放行即已计数，Redis 不可用抛 `TemporarilyUnavailableException`（503）。接口里没有 Redis 的影子。
+
+实现在基础设施层，名字是「功能名 + Adapter」：
+
+<CodeRef at="patra-api/patra-identity/patra-identity-infra/src/main/java/dev/patra/identity/infra/account/throttle/EmailChangeThrottleAdapter.java@5073ab1358404ecd989e722373cd9f7edafe238b" lines="14-55" />
+
+它用 `StringRedisTemplate` 跑一段脚本，每个账号每天一个滑动窗口。Redis 的键名、脚本、窗口这些细节全留在这个类里。
+
+调用它的 Handler 完全不见 Redis：
+
+<CodeRef at="patra-api/patra-identity/patra-identity-app/src/main/java/dev/patra/identity/app/account/usecase/emailchange/RequestEmailChangeHandler.java@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="85-90" />
+
+<Structure
+  title="端口与适配器的位置关系"
+  nodes={[
+    { id: "ctrl", label: "Controller", sub: "入站适配器", col: 1, desc: "接收 HTTP 请求，把它变成命令。它是外部世界走进核心的入口。" },
+    { id: "handler", label: "RequestEmailChangeHandler", sub: "app 层", code: true, col: 2, desc: "编排改邮箱的流程。它只依赖领域层的端口。" },
+    { id: "port", label: "EmailChangeThrottlePort", sub: "domain 层 · 端口", code: true, col: 3, desc: "核心定义的接口，用业务语言说「申请一次改邮箱」。" },
+    { id: "redis", label: "EmailChangeThrottleAdapter", sub: "infra 层 · 适配器", code: true, col: 4, row: 1, desc: "生产环境的实现，用 Redis 做计数窗口。" },
+    { id: "mock", label: "Mockito mock", sub: "测试里的适配器", col: 4, row: 2, desc: "单元测试里临时造的实现，想让它放行就放行，想让它拒绝就拒绝。" }
+  ]}
+  edges={[
+    { from: "ctrl", to: "handler", label: "命令" },
+    { from: "handler", to: "port", label: "调用", desc: "Handler 只认识端口。" },
+    { from: "redis", to: "port", label: "实现", dashed: true, desc: "适配器实现核心定义的接口，依赖方向指向核心。" },
+    { from: "mock", to: "port", label: "实现", dashed: true, desc: "测试里的替身也是一个适配器。" }
+  ]}
+/>
+
+## 换适配器，Handler 不动
+
+看一个端口后面可以接几种东西：
+
+<Compare
+  title="同一个端口，三种实现"
+  variants={[
+    {
+      label: "生产：Redis 适配器",
+      steps: ["Handler 调 acquire(userId, now)", "适配器跑 Redis 脚本，查今天已申请几次", "没超就计数并返回空；超了返回还要等的时长"],
+      results: [
+        { label: "Handler 里的代码", value: "不变", tone: "ok" },
+        { label: "Redis 不可用时", value: "适配器抛 TemporarilyUnavailableException，503", tone: "wait" }
+      ],
+      verdict: { tone: "ok", head: "生产实现。", text: "Redis 的所有细节关在适配器里。" }
+    },
+    {
+      label: "测试：Mockito 替身",
+      steps: ["测试里 mock(EmailChangeThrottlePort.class)", "要测放行：when(acquire).thenReturn(Optional.empty())", "要测被限：thenReturn(Optional.of(Duration.ofHours(6)))"],
+      results: [
+        { label: "Handler 里的代码", value: "不变", tone: "ok" },
+        { label: "需要起 Redis 吗", value: "不需要", tone: "ok" }
+      ],
+      verdict: { tone: "ok", head: "测试就是第二个适配器。", text: "Handler 的测试可以验证「配额用完时返回 429、不签发令牌」，不碰任何真实的 Redis。" }
+    },
+    {
+      label: "假想：改用数据库表",
+      steps: ["新写一个 EmailChangeThrottleDbAdapter 实现同一个端口", "用一张表按天计数", "把 Spring 里注入的那个 bean 换成它"],
+      results: [
+        { label: "Handler 里的代码", value: "不变", tone: "ok" },
+        { label: "要改的地方", value: "只有新适配器和装配", tone: "ok" }
+      ],
+      verdict: { tone: "ok", head: "这是端口带来的自由。", text: "这个实现并不存在，只是说明：只要新实现遵守端口的契约，业务代码根本不知道被换过。" }
+    }
+  ]}
+/>
+
+测试里的做法在 Patra 里是真的：
+
+<CodeRef at="patra-api/patra-identity/patra-identity-app/src/test/java/dev/patra/identity/app/account/usecase/emailchange/RequestEmailChangeHandlerTest.java@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="97" />
+
+<CodeRef at="patra-api/patra-identity/patra-identity-app/src/test/java/dev/patra/identity/app/account/usecase/emailchange/RequestEmailChangeHandlerTest.java@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="248-259" />
+
+## Patra 里端口与适配器的命名
+
+项目规则把每种东西的名字固定下来，看名字就能找到对方：
+
+<CodeRef at=".claude/rules/tech/port-service.md@5073ab1358404ecd989e722373cd9f7edafe238b" lines="1-12" />
+
+| 端口 | 适配器 | 说明 |
+|---|---|---|
+| `{Entity}Repository` | `{Entity}RepositoryAdapter` | 存取聚合 |
+| `{Function}Port` | `{Function}Adapter` | 外部能力：限流、发邮件、调别的服务 |
+| `{Entity}ReadPort` | `{Entity}ReadAdapter` | 只读查询 |
+
+此外还有一种入站的：Controller、定时任务、消息监听器放在 adapter 层，它们是外部请求走进核心的入口，叫入站适配器；infra 层的是核心走向外部的出口，叫出站适配器。方向相反，但同样遵守「核心定义接口、外面实现」。
+
+<Callout kind="warn">
+
+端口的方法名要用业务语言（`acquire`、`nameTaken`），不要泄露实现（`runRedisScript`、`selectCount`）。一旦端口里出现了具体技术的名词，换实现时就得连端口一起改，端口就白设了。
+
+</Callout>
+
+<Quiz
+  title="想一想"
+  questions={[
+    {
+      question: "下列哪个更适合做端口方法的名字？",
+      options: ["executeLuaScript(userId)", "acquire(userId, now)", "redisIncr(key)"],
+      answer: "B",
+      explain: "端口描述核心要什么，不描述怎么做。Lua 脚本和 incr 都是 Redis 的细节，应该留在适配器里。"
+    },
+    {
+      question: "EmailChangeThrottlePort 的接口，应该放在哪个模块？",
+      options: ["infra，跟实现放一起", "domain，由核心定义", "boot"],
+      answer: "B",
+      explain: "端口由核心定义，所以放领域层；适配器在 infra 层，依赖领域层。这样依赖方向才是外面指向核心。"
+    }
+  ]}
+/>
+
+<Transfer
+  prompt="通知服务现在只能发邮件，产品想加「短信」渠道。请说出你会在哪一层加什么，使得发提醒的业务流程基本不用改。再想一想：端口的方法该怎么命名才不泄露邮件或短信的细节？"
+  points={[
+    { label: "端口在核心", text: "在领域层定义一个用业务语言说话的端口，比如「把一条提醒送达给某个收件人」，参数是收件人和内容，不出现 SMTP、短信网关。" },
+    { label: "适配器在 infra", text: "邮件和短信各写一个适配器实现同一个端口，具体协议、签名、重试都留在里面。" },
+    { label: "业务不变", text: "发提醒的用例只调端口，不知道有几个渠道；要新增渠道，只是新增适配器和装配。" }
+  ]}
+/>
