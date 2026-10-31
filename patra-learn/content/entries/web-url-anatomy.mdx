@@ -1,0 +1,86 @@
+---
+title: 一个网址由哪几部分组成
+summary: 协议、域名、端口、路径、查询参数、片段各管什么，以及哪一部分根本不会发给服务器。
+type: concept
+difficulty: intro
+tags: [network, backend]
+prerequisites: [web-what-happens-opening-a-page]
+personalEnv: false
+---
+
+<Diagnose
+  question="浏览器打开 https://patra.linqibin.dev/u/alice?tab=collections#top 。把这个网址发给服务器时，下面哪一段不会被发过去？"
+  options={["/u/alice", "tab=collections", "#top"]}
+  answer="C"
+  ifRight="对，# 后面的片段只留在浏览器里，服务器根本看不到它。往下读会讲为什么。"
+  ifWrong="答案是 C：# 后面的片段只给浏览器自己用（比如滚动到页面的某个位置），不会发给服务器。路径和查询参数都会发。下面逐段拆开。"
+  suggest="web-what-happens-opening-a-page"
+/>
+
+## 把一个网址拆开
+
+网址像一个完整的地址：国家、城市、街道、门牌。每一段有各自的职责，拆开看就不神秘了。点下面每一块，看它管什么。
+
+<Structure
+  title="https://patra.linqibin.dev:443/u/alice?tab=collections#top"
+  intro="点任意一块看它管什么。网址里的端口 443 是 https 的默认值，平时可以不写。"
+  nodes={[
+    { id: "scheme", label: "https", sub: "协议", code: true, col: 1, desc: "说话的规矩。https 是加密的 HTTP，http 是没有加密的。它也决定了默认端口。" },
+    { id: "host", label: "patra.linqibin.dev", sub: "域名", code: true, col: 2, desc: "找到哪台服务器。浏览器拿它去问 DNS，换成地址。" },
+    { id: "port", label: ":443", sub: "端口", code: true, col: 3, desc: "找到服务器上的哪个程序。不写就用协议的默认值。" },
+    { id: "path", label: "/u/alice", sub: "路径", code: true, col: 4, desc: "要这台服务器上的哪一个东西。这里是「用户 alice 的主页」。" },
+    { id: "query", label: "?tab=collections", sub: "查询参数", code: true, col: 5, desc: "给这个东西附加的条件，写成 名字=值，多个用 & 连接。这里是「打开收藏夹标签」。" },
+    { id: "fragment", label: "#top", sub: "片段", code: true, col: 6, desc: "页面内的位置。只给浏览器用，不会发给服务器。" }
+  ]}
+/>
+
+记一个顺口的分界：**前三段决定「找谁」，后三段决定「要什么」**。
+
+## 路径和查询参数怎么分
+
+两者都在说「我要什么」，但分工不同：
+
+- **路径**指向一个具体的东西：`/u/alice` 是 alice 这个人的主页。
+- **查询参数**调整怎么看它：排序、翻页、筛选、打开哪个标签。
+
+一个简单的判断：如果去掉这一段，你要的就不是同一个东西了，它就该放路径里；如果去掉后还是同一个东西、只是看法不同，就放查询参数。
+
+<Callout kind="warn">
+
+整个网址会出现在浏览器历史、服务器日志、你分享出去的链接里。密码、令牌、个人隐私不要放进查询参数。
+
+</Callout>
+
+## 在 Patra 里
+
+门户的用户主页，路径里的 `alice` 是变化的部分。代码里把它写成方括号：`[username]`，意思是「这一段是个变量」。
+
+<CodeRef at="patra-portal/src/app/u/[username]/page.tsx@6ead12db647bcd3e56f651af791d56e418cb79ff" lines="15-17" />
+
+请求 `/u/alice` 时，`username` 就是 `alice`，页面据此去取这个人的公开资料。
+
+<Quiz
+  questions={[
+    {
+      question: "在一个文献列表页的网址里，「第 3 页、按发表时间排序」最适合放在哪儿？",
+      options: ["路径，比如 /papers/page3/by-date", "查询参数，比如 ?page=3&sort=published", "片段，比如 #page3"],
+      answer: "B",
+      explain: "翻页和排序只是换个看法，列表还是那个列表，适合放查询参数。片段不会发给服务器，服务器就没法按它翻页。"
+    },
+    {
+      question: "两个网址只差在 # 后面（#intro 和 #usage），服务器会把它们当成两个不同的请求吗？",
+      options: ["会，路径不同", "不会，服务器收到的是同一个请求", "取决于浏览器版本"],
+      answer: "B",
+      explain: "片段不发给服务器，所以服务器收到的是完全一样的请求。"
+    }
+  ]}
+/>
+
+<Transfer
+  prompt="Patra 有一个接口：读某个收藏夹里的文献，要指定哪个收藏夹，还要能按「加入时间」排序、翻页、每页多少条。请设计这个接口的网址，并说明每一部分放在路径还是查询参数里。"
+  points={[
+    { label: "收藏夹放路径", text: "它决定「是哪一个东西」，比如 /me/collections/42/items，其中 42 是收藏夹的编号。" },
+    { label: "排序翻页放查询", text: "sort、page、size 只是换看法，放查询参数，比如 ?sort=added&page=1&size=50。" },
+    { label: "给默认值", text: "查询参数都可以不写，服务端给出默认值，网址最短的写法也能用。" }
+  ]}
+/>

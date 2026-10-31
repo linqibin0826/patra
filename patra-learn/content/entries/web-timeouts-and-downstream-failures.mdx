@@ -1,0 +1,151 @@
+---
+title: 下游慢了怎么办：超时与失败分类
+summary: 连接超时与读超时是两回事；503 和 504 分别是谁的问题；响应已经发出一半时出错，状态码就改不了了。
+type: concept
+difficulty: advanced
+tags: [network, backend]
+prerequisites: [web-reverse-proxy-and-gateway]
+personalEnv: false
+---
+
+<Diagnose
+  question="网关要把请求转给 catalog。情形一：catalog 进程已经停了，没人监听端口。情形二：catalog 在运行，收下了请求，却一直不回话。Patra 的网关对这两种情形分别回什么状态码？"
+  options={["都回 500", "情形一回 503，情形二回 504", "情形一回 504，情形二回 503"]}
+  answer="B"
+  ifRight="对，「连不上」和「等不到」是两种不同的失败，状态码也不同。往下读为什么要分开。"
+  ifWrong="答案是 B：连不上，下游根本不可用，是 503；连上了、等不到，是等下游超时，是 504。分开是因为调用方的应对不一样，排查的方向也不一样。"
+  suggest="web-reverse-proxy-and-gateway"
+/>
+
+## 下游会以三种方式让你失望
+
+网关转发请求给下游，可能遇到三类事：
+
+1. **连不上**：进程停了、端口没人听、域名解析不出来、注册中心里没有这个服务的实例。
+2. **连上了，但对方不回话**：处理卡住了，或者对方在等别的东西。
+3. **回了一半停了**：响应头发出来了，正文发了一部分，然后没了。
+
+每一类对应的超时、状态码、能不能补救都不同。
+
+## 两个超时：连接超时和读超时
+
+- **连接超时**：建立连接最多等多久。网关里是 5 秒。
+- **读超时**：连上之后，多久收不到对方的任何字节就算对方死了。网关里是 60 秒。
+
+注意：Patra 网关的读超时是**空闲超时**，不是总时长。只要下游每隔一会儿还在发数据，连接就不会断。所以一个很大的文件慢慢下载，只要不停，几个小时都不会被掐断。
+
+<CodeRef at="patra-api/patra-gateway-boot/src/main/resources/application.yml@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="33-44" />
+
+不同的调用目标，超时可以不同。网关每个带令牌的请求都要先向 identity 查一次会话，这一跳对所有请求都在等，所以给得很短：
+
+<CodeRef at="patra-api/patra-gateway-boot/src/main/resources/application.yml@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="152-158" />
+
+连接 1 秒，读 2 秒。identity 一旦卡住，几秒内请求就变成 503，而不是让所有人一起挂着。
+
+## 失败怎么分类：503、504，还有 502
+
+网关里有一个专门的分类器，把代理过程中抛出的异常归类：
+
+<CodeRef at="patra-api/patra-gateway-boot/src/main/java/dev/patra/gateway/error/ProxyFailureClassifier.java@963dcb067625d16e254e5fbc7f1cc6b7e90dba96" lines="29-60" />
+
+规则是：
+
+| 发生了什么 | 状态码 |
+|---|---|
+| 连接被拒、连接超时、域名解析失败、找不到实例 | 503，下游不可用 |
+| 连上了，读或写超过读超时 | 504，等下游超时 |
+| 别的未知异常 | 交给通用的错误引擎，一般是 500 |
+
+还有一个 502（Bad Gateway）：网关收到了下游的响应，但这个响应是坏的、读不懂。Patra 的网关没有单独用它。
+
+<Callout kind="insight">
+
+为什么连接超时算 503 而不是 504？连接阶段连不上，意味着下游「不在」；读超时意味着下游「在，但卡住了」。前者调用方应该等实例恢复，后者要怀疑下游的某个处理变慢了。
+
+</Callout>
+
+<Quiz
+  questions={[
+    {
+      question: "注册中心里 patra-catalog 一个实例都没有（刚好全部在重启）。网关收到发往 catalog 的请求，回什么？",
+      options: ["404，路径没找到", "503，下游不可用", "504，等超时"],
+      answer: "B",
+      explain: "找不到实例就是「下游不可用」。404 是说资源不存在，不要混。"
+    },
+    {
+      question: "catalog 收下了请求，处理一个慢查询，70 秒没有返回任何字节。读超时 60 秒。网关怎么办？",
+      options: ["一直等到它返回", "到 60 秒断开，回 504", "到 60 秒重试一次"],
+      answer: "B",
+      explain: "读超时到了就放弃，回 504。不自动重试：写类请求重试可能重复执行。"
+    }
+  ]}
+/>
+
+## 超时是每一层各算各的
+
+调用链上每一层都有自己的计时。Patra 的门户调用网关时，默认 10 秒超时（慢后端不应该无限阻塞页面渲染）：
+
+<CodeRef at="patra-portal/src/lib/gateway.ts@4a13287485468f2c489027f1aac0bb6174643e8d" lines="1-5" />
+
+<Sequence
+  title="catalog 卡住时，各层的计时"
+  actors={[
+    { id: "portal", label: "门户", sub: "10 秒超时" },
+    { id: "gateway", label: "网关", sub: "60 秒空闲超时" },
+    { id: "catalog", label: "catalog" }
+  ]}
+  messages={[
+    { from: "portal", to: "gateway", label: "请求，门户开始计 10 秒", time: "0 s", caption: "门户向网关发请求，同时给自己设了 10 秒的倒计时。" },
+    { from: "gateway", to: "catalog", label: "转发，网关开始计 60 秒", time: "0 s", caption: "网关把请求转给 catalog，也开始自己的空闲计时。" },
+    { from: "catalog", to: "gateway", label: "卡住，没有任何字节", time: "10 s", dashed: true, caption: "catalog 在处理一个慢操作，什么都没回。" },
+    { from: "portal", to: "gateway", label: "10 秒到，门户放弃", time: "10 s", bad: true, caption: "门户的倒计时先到，它断开连接，页面这边报错。" },
+    { from: "gateway", to: "catalog", label: "网关还在等", time: "60 s", dashed: true, caption: "网关不知道上游已经走了，一直等到自己的 60 秒才放弃；这时已经没人等这份响应了。" }
+  ]}
+  summary={{ caption: "每一层的超时各自独立。调用方的超时通常应该比被调用方短，否则会在下游已经放弃之后才发觉。" }}
+/>
+
+这里有一个设计取舍：门户的 10 秒比网关的 60 秒短，页面渲染不会被慢后端无限拖住，代价是网关和下游可能还在白做工。
+
+## 响应发出一半，出错了怎么办
+
+最特别的是第三类：下游发完响应头和半截正文后停住。
+
+HTTP 响应的状态码在最前面。如果网关已经把状态码（比如 200）发给了调用方，再发现下游出问题，就**改不了状态码了**。能做的只有一件事：中止连接，让调用方知道这不是一份完整的响应。
+
+这个动作由状态决定：
+
+<Params
+  title="下游停住以后，调用方看到什么"
+  guess={{ question: "下游每隔 30 秒发一点数据，一个大文件要发 10 分钟。读超时是 60 秒空闲超时。会被断开吗？", options: ["会，总时长超过 60 秒", "不会，只要不超过 60 秒没数据就行", "只有一开始 60 秒内有效"], answer: "B", explain: "读超时是空闲超时：连续 60 秒收不到任何字节才算数，不是整个传输的总时长。" }}
+  controls={[
+    { type: "slider", id: "gap", label: "下游两次发数据的间隔", min: 5, max: 120, step: 5, default: 30, unit: "秒" },
+    { type: "switch", id: "sent", label: "下游已经发过响应头和一部分正文", default: false },
+    { type: "switch", id: "committed", label: "网关已把状态码发给调用方（响应已提交）", default: false }
+  ]}
+  cases={[
+    { when: { gap: [5, 60] }, results: [{ label: "间隔", value: "{gap}，没超过 60 秒", tone: "ok" }, { label: "结果", value: "一直正常，总时长不限", tone: "ok" }], verdict: { tone: "ok", head: "没有触发读超时。", text: "每收到一点数据就重新计时。" } },
+    { when: { sent: false }, results: [{ label: "下游一直不给响应头", value: "{gap}，超过 60 秒", tone: "bad" }, { label: "调用方收到", value: "504，标准的错误格式", tone: "wait" }], verdict: { tone: "bad", head: "等下游超时。", text: "状态码还没发出去，网关可以老老实实回一份 504。" } },
+    { when: { committed: false }, results: [{ label: "下游停住", value: "已发过一部分，之后 {gap} 没动静", tone: "bad" }, { label: "调用方收到", value: "500，完整的错误格式", tone: "wait" }], verdict: { tone: "bad", head: "响应还没提交，可以整个换掉。", text: "网关把已经写进缓冲的半截正文清掉，回一份完整的错误响应。注意这种情形走的不是 504 分类，而是按 500 处理。" } },
+    { results: [{ label: "调用方收到", value: "连接被中止", tone: "bad" }, { label: "状态码", value: "已发出，改不了", tone: "bad" }], verdict: { tone: "bad", head: "只能中止，不能装作正常。", text: "状态码和一部分正文已经发给调用方。网关把异常抛回容器、断开连接，调用方收不到正常的结束标记，就知道这份响应不完整。" } }
+  ]}
+/>
+
+这些行为在集成测试里都有对应的用例：
+
+<CodeRef at="patra-api/patra-gateway-boot/src/integrationTest/java/dev/patra/gateway/GatewayStalledDownstreamIT.java@3cf6fa5757b3be54c3b030e4cace871f53e2599c" lines="66-110" />
+
+<Callout kind="warn">
+
+调用方永远要把「只收到一半」当成失败。下载文件时，校验长度或哈希；解析 JSON 时，格式不完整就报错。不要因为状态码是 200 就认为内容完整。
+
+</Callout>
+
+<Transfer
+  prompt="门户默认 10 秒超时，网关 60 秒空闲超时。现在有一个导出接口，catalog 要连续 3 分钟持续输出数据。用户直接通过门户下载。会发生什么？该怎么调？"
+  points={[
+    { label: "门户先断", text: "如果门户用默认的 10 秒总超时，下载会在 10 秒时被门户掐断，用户看到失败。" },
+    { label: "按场景调", text: "这类接口需要给门户单独设更长的超时，或者改成空闲超时那种计时，不能套用默认值。" },
+    { label: "网关不会断", text: "网关是空闲超时，只要 catalog 不停地发数据，3 分钟也不会被网关掐断。" },
+    { label: "出错要能识别", text: "万一中途下游出错，连接会被中止；下载端要检查内容是否完整，不要只看状态码。" }
+  ]}
+/>

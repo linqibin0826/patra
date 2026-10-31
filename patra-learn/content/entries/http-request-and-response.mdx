@@ -1,0 +1,112 @@
+---
+title: 请求与响应：方法、头与正文
+summary: 一次 HTTP 交换到底长什么样：请求行、头、正文，以及 GET、POST、PUT、PATCH、DELETE 各自的语义。
+type: concept
+difficulty: basic
+tags: [network, backend]
+prerequisites: [web-client-server-and-ports, web-url-anatomy]
+personalEnv: false
+---
+
+<Diagnose
+  question="你刷新一个页面，浏览器把同一个请求再发一遍。下面哪种方法，被重复发送时最不应该产生副作用（比如多出一条数据）？"
+  options={["GET，用来读取", "POST，用来新建", "三种没区别"]}
+  answer="A"
+  ifRight="对，GET 只读不改，重复发多少次世界都不变。往下读会把每种方法的承诺列清楚。"
+  ifWrong="答案是 A：GET 的约定就是「只读取、不修改」，所以浏览器敢随便重发它；POST 通常表示新建，重发可能建出第二份。下面会把五种方法一起讲清。"
+  suggest="web-url-anatomy"
+/>
+
+## 一次交换：一问一答，格式固定
+
+HTTP 是浏览器和服务器说话的规矩。一次交换分两半：客户端发**请求**，服务器回**响应**。两半的结构很像，都是三块：
+
+1. **第一行**：请求里是「方法 + 路径 + 协议版本」，响应里是「协议版本 + 状态码」。
+2. **头**（header）：一行一个 `名字: 值`，是关于这次交换的说明。
+3. **正文**（body）：真正的内容，可以没有。
+
+Patra 的门户有一个健康检查接口，负责回答「我还活着吗」。它是一个最小的例子：
+
+<CodeRef at="patra-portal/src/app/api/health/route.ts@c8126f521cda1119233b390ac43e27afaf35164e" />
+
+在本机用 `curl -i` 请求它，能看到完整的往返（下面是示意，头的细节会因版本不同）：
+
+```text
+GET /api/health HTTP/1.1
+Host: localhost:4000
+Accept: */*
+
+HTTP/1.1 200 OK
+content-type: application/json
+
+{"status":"ok","version":"0.1.0","timestamp":"2026-10-31T08:00:00.000Z"}
+```
+
+空行以上是头，空行以下是正文。点「下一条」按顺序走一遍。
+
+<Sequence
+  title="curl 请求健康检查"
+  actors={[
+    { id: "curl", label: "curl", sub: "客户端" },
+    { id: "portal", label: "门户", sub: "端口 4000" }
+  ]}
+  messages={[
+    { from: "curl", to: "portal", label: "GET /api/health", caption: "请求行：方法是 GET，路径是 /api/health。意思是「把这个东西读给我」。" },
+    { from: "curl", to: "portal", label: "Host、Accept 等头", dashed: true, caption: "头是附加说明：我在找哪个主机，我能接受什么格式。GET 通常没有正文。" },
+    { from: "portal", to: "curl", label: "200 OK", caption: "响应的第一行：状态码 200，表示成功。" },
+    { from: "portal", to: "curl", label: "content-type: application/json", dashed: true, caption: "响应头告诉对方：后面的正文是 JSON，请按 JSON 来读。" },
+    { from: "portal", to: "curl", label: "正文：status、version、timestamp", caption: "正文是真正的数据：状态、版本号和当前时间。" }
+  ]}
+  summary={{ caption: "一问一答就结束了。服务器不会记得刚才谁来过，下一次请求又从头开始。" }}
+/>
+
+## 五个方法：先看承诺，再看用途
+
+方法是请求里的第一个词，告诉服务器「你想做什么」。关键不在名字，在每个方法**对重复和修改做了什么承诺**。
+
+| 方法 | 用来 | 会修改数据吗 | 重发同一个请求，结果一样吗（幂等） |
+|---|---|---|---|
+| GET | 读取 | 不会 | 一样 |
+| POST | 新建，或触发一个动作 | 会 | 不保证，可能建出第二份 |
+| PUT | 用整份新内容替换 | 会 | 一样：替换两次还是那份 |
+| PATCH | 只改其中几个字段 | 会 | 通常一样，但取决于写法 |
+| DELETE | 删除 | 会 | 一样：删两次，第二次已经没有了 |
+
+「幂等」就是这个词：**同一个请求发一次和发多次，效果相同**。它很重要，因为网络会超时，客户端不知道请求有没有到，就想重发。能安全重发的方法，出错之后就好处理。
+
+<Quiz
+  questions={[
+    {
+      question: "手机网络不稳，「删除收藏夹」的请求发出后一直没有响应，客户端重发了一次。服务器上的收藏夹会怎样？",
+      options: ["被删两次，出错", "只被删一次，第二次发现已经没了", "与方法无关，要看服务器心情"],
+      answer: "B",
+      explain: "DELETE 是幂等的：第二次发现已经没有了，结果相同。Patra 收藏夹的删除接口也特意设计成幂等，再删一次仍然是成功。"
+    },
+    {
+      question: "「提交评论」用 POST。用户手滑快速点了两下提交，会怎样？",
+      options: ["一定只有一条评论", "可能出现两条评论，除非服务端或前端另做防护", "浏览器会自动合并"],
+      answer: "B",
+      explain: "POST 不承诺幂等。要靠前端禁用按钮、服务端判重等办法兜底。"
+    }
+  ]}
+/>
+
+<Callout kind="warn">
+
+方法只是约定，没有人强制。有人把「删除」写成 GET，浏览器预取链接时就可能把数据删掉。按语义选方法，是为了让中间的浏览器、代理、缓存都能做出正确的假设。
+
+</Callout>
+
+## 头和正文：各管什么
+
+- 头里放**关于这次交换的说明**：内容是什么格式（`Content-Type`）、你是谁（`Cookie`、`Authorization`）、能不能缓存（`Cache-Control`）。后面几篇会逐个展开。
+- 正文里放**数据本身**：提交的表单、接口返回的 JSON、一个 PDF 文件。
+
+<Transfer
+  prompt="用户在慢网络下点「提交」，请求发出去很久没回应，于是又点了一次。如果这个接口是 POST，你会从哪些层面避免出现两份重复的数据？"
+  points={[
+    { label: "前端", text: "点击后立刻禁用按钮或显示进行中，减少重复点击。" },
+    { label: "服务端判重", text: "用唯一约束或请求里带的唯一标识识别重复，第二次直接返回第一次的结果。" },
+    { label: "选对方法", text: "能表达成「替换」或「删除」的操作，用 PUT、DELETE 这种天然幂等的方法，重发就是安全的。" }
+  ]}
+/>

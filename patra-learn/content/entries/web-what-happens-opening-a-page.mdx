@@ -1,0 +1,124 @@
+---
+title: 打开一个网页时发生了什么
+summary: 从敲下网址到画出页面：查地址、建连接、发请求、收响应、渲染。先把整条链路走一遍，再看 Patra 的门户首页一路经过谁。
+type: concept
+difficulty: intro
+tags: [network, backend]
+prerequisites: []
+personalEnv: false
+---
+
+<Diagnose
+  question="你在浏览器里输入 patra.linqibin.dev 回车。浏览器手里只有这个名字，要连上服务器，得先知道它的「地址」。谁来告诉它？"
+  options={["门户的服务器自己会告诉浏览器", "一套公共的「名字查地址」服务，叫 DNS", "浏览器出厂时就记着所有网站的地址"]}
+  answer="B"
+  ifRight="对，是 DNS，可以当成一本公共电话簿。往下读，你会看到它排在整条链路的第一步。"
+  ifWrong="答案是 B：有一套公共的查询服务叫 DNS，专门把名字换成地址。这题考的是「名字和地址是两回事」，下面第一节就从这里讲。"
+/>
+
+## 打开网页，其实是一连串问答
+
+你点开一个网页，看起来是一步。实际上是浏览器和服务器之间的一连串问答：浏览器问，服务器答，每一问一答都有固定的格式。
+
+先抓住两个词：
+
+- **浏览器**是发问的一方，叫**客户端**。
+- **服务器**是一直等着被问、问到就回答的程序。它不神秘，就是一个一直开着的程序。
+
+<Callout kind="analogy">
+
+打电话订外卖：你先要有店的电话号码（查地址），拨通（建连接），说「来一份宫保鸡丁」（发请求），店里回「好，二十分钟」（收响应）。网页也是这一套，只是全部在毫秒里发生。
+
+</Callout>
+
+## 先走一遍：五步
+
+点「下一步」往下走。第四步之前我会问你一个问题。
+
+<Stepper
+  title="从敲下网址到看到页面"
+  nodes={[
+    { id: "browser", label: "浏览器", sub: "客户端" },
+    { id: "dns", label: "DNS", sub: "名字查地址" },
+    { id: "server", label: "服务器", sub: "等着被问" }
+  ]}
+  links={[
+    { from: "browser", to: "dns" },
+    { from: "browser", to: "server" }
+  ]}
+  steps={[
+    { caption: "你敲下 patra.linqibin.dev 回车。浏览器手里只有一个名字，没有地址。", focus: ["browser"] },
+    { caption: "浏览器去问 DNS：「patra.linqibin.dev 对应哪个地址？」", focus: ["browser", "dns"], links: ["browser>dns"], tokens: [{ id: "q", label: "名字？", at: "dns" }] },
+    { caption: "DNS 回答一个地址。浏览器现在知道该找谁了。", focus: ["browser", "dns"], links: ["browser>dns"], tokens: [{ id: "q", label: "地址", at: "browser" }] },
+    { caption: "浏览器按地址和服务器建立连接。如果网址是 https 开头，这一步还要顺便谈好怎么加密。", focus: ["browser", "server"], links: ["browser>server"], notes: [{ at: "server", text: "连接已建立", tone: "ok" }] },
+    { caption: "连接建好，浏览器才发出请求：「把首页给我」。服务器回一份响应，里面是页面的 HTML。", focus: ["browser", "server"], links: ["browser>server"], tokens: [{ id: "page", label: "HTML", at: "browser" }], notes: [{ at: "server", text: "已回复", tone: "ok" }] },
+    { caption: "浏览器读 HTML，画出页面。页面里引用的图片、脚本、样式，各自再走一轮请求和响应。", focus: ["browser"], tokens: [{ id: "page", label: "页面", at: "browser" }] }
+  ]}
+  guesses={[
+    { before: 4, question: "浏览器已经拿到了服务器的地址。它能立刻发出「把首页给我」吗？", options: ["能，有地址就能直接发", "不能，要先和服务器建立连接", "不能，要先登录"], answer: "B", explain: "地址只告诉你去哪儿，还要先「拨通电话」，也就是建立连接，然后才能说话。" }
+  ]}
+/>
+
+这五步里，你最常在日常工作中碰到的是中间三步：建连接、发请求、收响应。后面的篇目会一步一步拆开它们。
+
+## 在 Patra 里，一次请求要经过谁
+
+Patra 的门户对公网开放，地址是 patra.linqibin.dev。它运行在作者家里常驻的一台 Mac mini 上（文中叫 mini），互联网上的请求不是直接打到这台机器，而是先到一个中转：Cloudflare 的隧道。
+
+<CodeRef at="patra-infra/docker/README.md@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="337-341" />
+
+隧道之后，门户要展示文献数据，还得问后端：门户把请求交给**网关**，网关再按路径转给具体的服务（比如 catalog）。点一点下面的方块，再按按钮看一条请求怎么走。
+
+<Structure
+  title="门户首页的一次请求"
+  nodes={[
+    { id: "browser", label: "浏览器", sub: "你", col: 1, desc: "发出请求的一方。它只认识一个网址，不知道后面有多少层。" },
+    { id: "cf", label: "Cloudflare", sub: "公网入口", col: 2, desc: "公网上的第一站。请求从这里经隧道送进 mini。只有门户对外开放。" },
+    { id: "portal", label: "门户", sub: "端口 4000", col: 3, desc: "Next.js 写的网站程序。自己能回答的就直接答，要数据就去问网关。" },
+    { id: "gateway", label: "网关", sub: "端口 9528", col: 4, desc: "后端服务的统一入口，按路径把请求转给对应的服务。" },
+    { id: "catalog", label: "catalog", sub: "文献目录服务", col: 5, desc: "真正存着文献和期刊数据的服务。" }
+  ]}
+  edges={[
+    { from: "browser", to: "cf" },
+    { from: "cf", to: "portal", label: "隧道" },
+    { from: "portal", to: "gateway" },
+    { from: "gateway", to: "catalog" }
+  ]}
+  traces={[
+    {
+      button: "发一条要文献数据的请求",
+      packet: "请求",
+      hops: [
+        { at: "browser", caption: "浏览器请求页面。" },
+        { at: "cf", caption: "请求先到 Cloudflare，经隧道送进 mini。" },
+        { at: "portal", caption: "门户收到请求，发现页面需要文献数据。" },
+        { at: "gateway", caption: "门户向网关要数据。网关按路径决定交给谁。" },
+        { at: "catalog", caption: "catalog 查出数据，沿原路返回。" },
+        { at: "portal", caption: "门户拿到数据，拼成页面。" },
+        { at: "browser", caption: "页面回到浏览器。" }
+      ]
+    }
+  ]}
+/>
+
+作者在 2026 年 10 月 28 日实测过：这条链路上首页第一次打开要 5 到 6 秒，连接建好之后每个请求约 1 秒。第一次慢，慢在前面几步，不在页面本身。
+
+<Quiz
+  questions={[
+    {
+      question: "同一个页面，第一次打开 5 秒，随后点链接每次约 1 秒。最合理的解释是？",
+      options: ["服务器第一次要加载代码", "第一次要查地址、建连接，之后可以复用已经建好的连接", "第二次起页面变小了"],
+      answer: "B",
+      explain: "查地址和建连接都发生在发请求之前，建好后后续请求可以复用，所以只有第一次付这笔钱。"
+    }
+  ]}
+/>
+
+<Transfer
+  prompt="朋友说「我打开 patra.linqibin.dev 很慢」。按今天讲的链路，你会怀疑哪几个环节？你会让他做什么来区分？"
+  points={[
+    { label: "分环节", text: "查地址、建连接、门户处理、网关与后端取数据，每一环都可能慢。" },
+    { label: "第一次还是每次", text: "只有第一次慢，多半慢在查地址和建连接；每次都慢，更可能是服务端处理或后端取数据。" },
+    { label: "看数字", text: "让他打开浏览器的开发者工具，看每个请求各花了多久，比凭感觉准。" }
+  ]}
+/>

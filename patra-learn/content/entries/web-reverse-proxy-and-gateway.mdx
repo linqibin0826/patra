@@ -1,0 +1,143 @@
+---
+title: 反向代理与 API 网关
+summary: 对外一个入口，按路径转给后面的多个服务；认证、限流、超时这些共同的事都放在门口做。
+type: concept
+difficulty: advanced
+tags: [network, backend, spring]
+prerequisites: [http-rest-api-design, http-cookie-and-session]
+personalEnv: false
+---
+
+<Diagnose
+  question="Patra 的后端有好几个服务，调用方只知道网关一个地址。调用方请求网关的 /patra-catalog/venues，网关会怎样处理？"
+  options={["网关自己查数据库，返回期刊列表", "网关去掉路径前缀 /patra-catalog，把 /venues 转给 catalog 服务，再把响应带回来", "网关回一个 302，让调用方改去访问 catalog"]}
+  answer="B"
+  ifRight="对，网关自己不产生数据，它按路径前缀把请求转给对的服务。往下读这个动作叫什么、门口还做了哪些事。"
+  ifWrong="答案是 B：网关不存数据也不让调用方改道，它把请求原样转给后面的服务，并把响应转回来。调用方自始至终只和网关说话。"
+  suggest="http-rest-api-design"
+/>
+
+## 代理：替别人跑腿
+
+**代理**是站在中间转发请求的程序。按站的位置分两种：
+
+- **正向代理**站在客户端这边，替客户端去访问外面（科学上网的那类）。服务器不知道真正的客户端是谁。
+- **反向代理**站在服务器这边，替服务器接收外面的请求。客户端不知道后面是哪台服务器。
+
+**API 网关**就是一种反向代理，在转发之外还做一些所有服务共同的事。
+
+<Callout kind="analogy">
+
+公司前台。访客只和前台说话，说「找财务」，前台就把人带到财务部，访客不用知道财务在几楼。前台还顺便核对访客证件、限制每天来的人数，这些事不用每个部门各做一遍。
+
+</Callout>
+
+## 为什么要有网关
+
+<Compare
+  title="调用方直连每个服务，还是经过网关"
+  variants={[
+    {
+      label: "直连每个服务",
+      steps: ["调用方记住 catalog、identity、interaction……每个服务的地址", "每个服务各自实现一遍登录检查", "每个服务各自处理超时与限流", "新增一个服务时，所有调用方都要知道它的新地址"],
+      results: [{ label: "调用方要记的地址数", value: "每个服务一个", tone: "bad" }, { label: "登录检查写几遍", value: "每个服务一遍", tone: "bad" }, { label: "新增服务要改", value: "所有调用方", tone: "bad" }],
+      verdict: { tone: "bad", head: "重复且容易漏。", text: "共同的事分散在每个服务里，哪个漏了，哪个就成了缺口。" }
+    },
+    {
+      label: "经过网关",
+      steps: ["调用方只知道网关的地址", "网关按路径前缀决定转给谁", "登录检查、超时、转发头在网关统一处理", "新增一个服务只需要在网关加一条路由"],
+      results: [{ label: "调用方要记的地址数", value: "1 个", tone: "ok" }, { label: "登录检查写几遍", value: "一遍（在门口）", tone: "ok" }, { label: "新增服务要改", value: "网关加一条路由", tone: "ok" }],
+      verdict: { tone: "ok", head: "共同的事只做一次。", text: "代价是多了一跳，以及网关成为必经之路：它挂了所有请求都受影响。" }
+    }
+  ]}
+/>
+
+## 在 Patra 里：路径前缀就是路由
+
+网关用 Spring Cloud Gateway 实现，路由写在配置里：每条路由有 `Path` 条件（匹配哪些路径）、`uri`（转给谁）和 `filters`（转发前做什么）。
+
+<CodeRef at="patra-api/patra-gateway-boot/src/main/resources/application.yml@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="54-109" />
+
+以 catalog 为例：
+
+- `Path=/patra-catalog/**`：路径以 `/patra-catalog/` 开头的都归它。
+- `StripPrefix=1`：转发时去掉第一段，所以 `/patra-catalog/venues` 到了 catalog 变成 `/venues`。
+- `uri: lb://patra-catalog`：`lb` 表示负载均衡，网关从注册中心查到名叫 patra-catalog 的服务有哪些实例，选一个转过去。服务发现的细节在后面讲。
+
+点方块和连线，再按按钮看一次转发。
+
+<Structure
+  title="网关按路径前缀转发"
+  intro="点一块或一条线看它管什么。"
+  nodes={[
+    { id: "portal", label: "门户", sub: "调用方", col: 1, row: 2, desc: "服务器端的代码向网关发请求，不直接找任何后端服务。" },
+    { id: "gateway", label: "网关", sub: "端口 9528", col: 2, row: 2, desc: "只做三件事：认路径、过门禁（认证、超时等）、转发。它自己没有业务数据。" },
+    { id: "catalog", label: "catalog", sub: "文献目录", col: 3, row: 1, desc: "路径前缀 /patra-catalog。" },
+    { id: "identity", label: "identity", sub: "身份", col: 3, row: 2, desc: "路径前缀 /patra-identity。注册、登录、会话。" },
+    { id: "interaction", label: "interaction", sub: "社区互动", col: 3, row: 3, desc: "路径前缀 /patra-interaction。" },
+    { id: "notification", label: "notification", sub: "通知", col: 3, row: 4, desc: "路径前缀 /patra-notification。其中推送那一条路由单独排在前面，下面会讲。" }
+  ]}
+  edges={[
+    { from: "portal", to: "gateway", label: "所有请求" },
+    { from: "gateway", to: "catalog", label: "/patra-catalog/**", desc: "去掉第一段后转发：/patra-catalog/venues 变成 /venues。" },
+    { from: "gateway", to: "identity", label: "/patra-identity/**", desc: "去掉第一段后转发。" },
+    { from: "gateway", to: "interaction", label: "/patra-interaction/**", desc: "去掉第一段后转发。" },
+    { from: "gateway", to: "notification", label: "/patra-notification/**", desc: "去掉第一段后转发。" }
+  ]}
+  traces={[
+    {
+      button: "请求 /patra-catalog/venues",
+      packet: "GET",
+      hops: [
+        { at: "portal", caption: "门户请求网关：/patra-catalog/venues。" },
+        { at: "gateway", caption: "网关匹配到 patra-catalog 这条路由，去掉第一段，路径变成 /venues。" },
+        { at: "catalog", caption: "catalog 处理 /venues，返回期刊列表。" },
+        { at: "gateway", caption: "网关把响应原样带回。" },
+        { at: "portal", caption: "门户拿到响应。整个过程里它没有见过 catalog。" }
+      ]
+    }
+  ]}
+/>
+
+## 路由的顺序有讲究
+
+配置里的路由**从上往下依次匹配，先匹配到的先用**。Patra 里有一个很能说明问题的例子：通知服务有两条路由。
+
+- 推送路由（长连接事件流）：`Path=/patra-notification/me/notifications/stream`，走专用的连接池。
+- 通用路由：`Path=/patra-notification/**`。
+
+配置文件里的注释特意写明了：推送路由**必须排在通用路由之前**。
+
+<Quiz
+  questions={[
+    {
+      question: "如果把通用的 /patra-notification/** 路由放到推送路由前面，访问推送地址会怎样？",
+      options: ["没影响，两条都能匹配", "请求被通用路由先匹配走，推送路由永远用不上，推送连接和普通请求抢同一个连接池", "网关启动失败"],
+      answer: "B",
+      explain: "推送地址同时满足两条路由，先出现的先生效。排错顺序，专用池就形同虚设。具体范围越窄的规则越要往前放。"
+    }
+  ]}
+/>
+
+## 门口还做什么
+
+路由只是网关的一半。其余共同的事也在门口做：
+
+| 事情 | Patra 的做法 |
+|---|---|
+| 认证 | 带令牌的请求，网关向 identity 查会话，确认是谁，再给下游一份身份断言。网关自己不连 Redis。 |
+| 超时 | 连接下游最多 5 秒，读下游连续 60 秒收不到数据就断开。 |
+| 客户端地址 | 只采信自己人（门户）加的 `X-Forwarded-For`，其他来源带的一律剥掉。 |
+| 推送长连接 | 单独的连接池，上限 500，满了立刻 503，不挤占普通请求。 |
+
+限流、超时与失败分类是后面两篇的主题。
+
+<Transfer
+  prompt="Patra 要新增一个报表服务，路径前缀是 /patra-report，注册在服务发现里。网关这边要做什么？如果这个服务里有一部分接口必须登录才能访问，还要再想想什么？"
+  points={[
+    { label: "加一条路由", text: "Path=/patra-report/**，uri 是 lb://patra-report，filters 里 StripPrefix=1。" },
+    { label: "服务要注册", text: "报表服务启动时注册到服务发现，网关才查得到它的实例。" },
+    { label: "登录规则", text: "哪些路径要登录、哪些公开，是网关安全配置里的事，要把新路径放进去。" },
+    { label: "文档聚合", text: "如果想在网关的接口文档里看到它，把它的接口文档地址加进文档聚合配置。" }
+  ]}
+/>
