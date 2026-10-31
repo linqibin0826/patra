@@ -91,6 +91,7 @@ public final class ReminderMailComposer {
     if (entries.isEmpty()) {
       throw new IllegalArgumentException("逐条邮件至少要有一条提醒");
     }
+    requireMailable(entries);
     List<ReminderFacts> ordered = entries.stream().sorted(OLDEST_FIRST).toList();
     UnsubscribeLinkCategory unsubscribe = UnsubscribeLinkCategory.of(category);
     ReminderMailContent.ReminderMailContentBuilder mail =
@@ -131,6 +132,8 @@ public final class ReminderMailComposer {
     if (total == 0) {
       throw new IllegalArgumentException("每日汇总至少要有一条未读");
     }
+    requireMailable(replies.listable());
+    requireMailable(mentions.listable());
     List<ReminderFacts> replyList = newestFirst(replyIncluded ? replies.listable() : List.of());
     List<ReminderFacts> mentionList =
         newestFirst(mentionIncluded ? mentions.listable() : List.of());
@@ -197,6 +200,7 @@ public final class ReminderMailComposer {
           case COMMENT_REPLY -> actor + " 回复了你的评论";
           case POST_COMMENT -> actor + " 评论了你的投稿经验";
           case MENTION -> actor + " 在评论里 @ 了你";
+          case COMMENT_HELPFUL, POST_HELPFUL -> throw noMail(entry.type());
         };
     String heading = entry.type() == NotificationType.COMMENT_REPLY ? actor + " 回复了你" : subject;
     String link = commentLink(entry);
@@ -405,6 +409,7 @@ public final class ReminderMailComposer {
       case COMMENT_REPLY -> "回复了你";
       case POST_COMMENT -> "评论了你的投稿经验";
       case MENTION -> "@ 了你";
+      case COMMENT_HELPFUL, POST_HELPFUL -> throw noMail(type);
     };
   }
 
@@ -489,6 +494,29 @@ public final class ReminderMailComposer {
   /// @return `回复我的` 或 `@ 我的`
   private static String categoryName(NotificationCategory category) {
     return category == NotificationCategory.MENTION ? "@ 我的" : "回复我的";
+  }
+
+  /// 只有回复与 @ 有提醒邮件：混进别的类型是调用方的错。
+  ///
+  /// @param entries 提醒
+  /// @throws IllegalArgumentException 有没有邮件的类型（有帮助）
+  private static void requireMailable(List<ReminderFacts> entries) {
+    entries.stream()
+        .map(ReminderFacts::type)
+        .filter(type -> !type.category().hasEmail())
+        .findFirst()
+        .ifPresent(
+            type -> {
+              throw noMail(type);
+            });
+  }
+
+  /// 没有邮件的类型。
+  ///
+  /// @param type 类型
+  /// @return 异常
+  private static IllegalArgumentException noMail(NotificationType type) {
+    return new IllegalArgumentException("这类提醒没有邮件: " + type);
   }
 
   /// 新的在前。

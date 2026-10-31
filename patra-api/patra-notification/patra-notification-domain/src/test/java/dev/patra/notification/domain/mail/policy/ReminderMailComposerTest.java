@@ -25,6 +25,8 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 
 /// 提醒邮件的文案、截断、链接与名额（spec 8.2～8.4；示例数据同简报：王立、周敏、林知远，Marik 2017，JAHA）。
 class ReminderMailComposerTest {
@@ -379,6 +381,23 @@ class ReminderMailComposerTest {
         mail.items().getFirst().excerpt().stream().map(Segment::text).collect(Collectors.joining());
     assertThat(text).doesNotContain("\n").startsWith("一 字").endsWith("…");
     assertThat(text.codePointCount(0, text.length())).isEqualTo(140 + 1);
+  }
+
+  /// 有帮助没有提醒邮件：混进来是调用方的错。
+  @ParameterizedTest
+  @EnumSource(
+      value = NotificationType.class,
+      names = {"COMMENT_HELPFUL", "POST_HELPFUL"})
+  void helpful_types_are_rejected(NotificationType type) {
+    assertThatThrownBy(
+            () ->
+                COMPOSER.instant(
+                    NotificationCategory.REPLY,
+                    List.of(facts(1L, type, "王立", AT_1502, "好", PAPER, 7L, false)),
+                    NAMES,
+                    TOKEN,
+                    NOW))
+        .isInstanceOf(IllegalArgumentException.class);
   }
 
   /// 一条都没有是调用方的错。

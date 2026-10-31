@@ -330,6 +330,7 @@ class InboxQueryServiceTest {
         .subjectId(40L)
         .plainText(plainText)
         .occurredAt(AT)
+        .createdAt(AT)
         .build();
   }
 

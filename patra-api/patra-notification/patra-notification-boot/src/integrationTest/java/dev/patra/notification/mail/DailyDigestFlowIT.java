@@ -1,12 +1,17 @@
 package dev.patra.notification.mail;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
 
+import dev.patra.interaction.api.reaction.event.HelpfulMarked;
+import dev.patra.interaction.api.subject.event.InteractionExchange;
+import dev.patra.interaction.api.subject.event.SubjectContext;
 import dev.patra.notification.app.mail.usecase.digest.ScheduleDailyDigestCommand;
 import jakarta.mail.internet.MimeMessage;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Set;
+import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpMethod;
@@ -110,6 +115,48 @@ class DailyDigestFlowIT extends ReminderMailITSupport {
 
     assertThat(mails()[0].getHeader("List-Unsubscribe", null)).endsWith("&category=DIGEST>");
     assertThat(html(mails()[0])).contains("退订每日汇总");
+  }
+
+  /// 有帮助没有邮件：不排进离站逐条的队，也不进每日汇总（两类都设为汇总时，窗口里只有有帮助就不发）。
+  @Test
+  void helpful_notifications_never_reach_mail() {
+    setMode("REPLY", "DIGEST");
+    setMode("MENTION", "DIGEST");
+    rabbit.convertAndSend(
+        InteractionExchange.NAME,
+        HelpfulMarked.ROUTING_KEY,
+        HelpfulMarked.builder()
+            .eventId(UUID.randomUUID())
+            .targetType("COMMENT")
+            .targetId(600L)
+            .targetAuthorId(ME)
+            .targetAnonymous(false)
+            .userId(AUTHOR)
+            .markedAt(clock.instant())
+            .subject(SubjectContext.of(PAPER, "PUBLICATION", null, false))
+            .targetPlainText("我的评论")
+            .build());
+    await()
+        .atMost(Duration.ofSeconds(10))
+        .until(
+            () ->
+                jdbcTemplate.queryForObject(
+                        "SELECT count(*) FROM inbox.notification WHERE category = 'HELPFUL'",
+                        Long.class)
+                    == 1);
+
+    clock.set(EIGHT);
+    commandBus.handle(ScheduleDailyDigestCommand.scheduled());
+    runReminderJob();
+
+    assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM mail.reminder_queue", Long.class))
+        .isZero();
+    assertThat(mails()).isEmpty();
+    assertThat(
+            jdbcTemplate.queryForObject(
+                "SELECT skip_reason FROM mail.reminder_delivery WHERE kind = 'DIGEST'",
+                String.class))
+        .isEqualTo("NOTHING_UNREAD");
   }
 
   /// 把某条评论的提醒标为已读。
