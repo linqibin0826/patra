@@ -50,7 +50,9 @@ class NotificationArchitectureTest {
   /// 子域边界规则。骨架期不声明任何依赖边：计划中的 mail → inbox、mail → preference、realtime → inbox
   /// 由第一次跨子域 import 的 Issue 在这里加。
   private static final SubdomainArchitectureRules subdomainRules =
-      new SubdomainArchitectureRules("dev.patra.notification", FOUNDATION, Set.copyOf(SUBDOMAINS));
+      new SubdomainArchitectureRules("dev.patra.notification", FOUNDATION, Set.copyOf(SUBDOMAINS))
+          // 实时推送订阅未读数变化、按用户读当前未读数（PAP-145）
+          .allowingDependency("realtime", "inbox");
 
   /// 导入 notification 全部模块的主代码。
   @BeforeAll
