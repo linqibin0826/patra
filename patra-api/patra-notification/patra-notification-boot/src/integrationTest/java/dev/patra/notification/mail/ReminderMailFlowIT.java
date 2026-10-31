@@ -93,6 +93,7 @@ class ReminderMailFlowIT extends ReminderMailITSupport {
     assertThat(mails()).hasSize(1);
     assertThat(mails()[0].getSubject()).isEqualTo("2 条新回复：王立");
     assertThat(html(mails()[0])).contains("第一条").contains("第二条");
+    assertThat(queueRows()).isZero();
   }
 
   /// AC：邮箱未验证时不发；封禁、注销冷静期同样不发。

@@ -605,6 +605,11 @@ AC 写的是「Mailpit 集成测试」。仓库惯例（PAP-105 同）是用 Gre
 6. **投递记录的写回不包 `TransactionOperations`**：每次都是一条 `UPDATE`，自动提交本身就是短事务，调用发信端口天然在事务外。
 7. **失败分类照 PAP-105 的实际契约**：发信端口正常返回就是已接受；失败抛 `MailDeliveryFailedException`，由 `failure()` 区分 `ALREADY_ACCEPTED` / `REJECTED` / `TRANSIENT`。按 PAP-105 的约定，交给 SMTP 之前就失败的（模板不存在、地址不合法）也算 `REJECTED`。
 8. **`InboxEntry` 加了 `createdAt`**（PAP-143 的读模型，只增不改）。`NotificationType` 已由 PAP-143 挪到 `domain.inbox.model.read`。
+9. **和 PAP-144（有帮助）汇合**：
+   - `InboxReadAdapter` 里，列表、按 ID 复查、汇总窗口三处查询共用一份列清单，已带上 PAP-144 的 `COALESCE(c.plain_text, n.post_plain_text)` 与 `actor_count` 子查询；
+   - `NotificationType` 多了 `COMMENT_HELPFUL`、`POST_HELPFUL`，拼装规则遇到没有邮件的类型直接拒绝；
+   - 流程测试 `DailyDigestFlowIT.helpful_notifications_never_reach_mail` 证明有帮助条目既不排进离站逐条的队，也不进每日汇总。
+10. **和 PAP-145（实时推送）汇合**：SSE 心跳与拉未读数写的是同一个 `PresenceGateway.markSeen`，离站判断只读 `lastSeen`，代码不用改。流程测试只走了拉未读数这条路径。
 
 ### 16.2 自查
 

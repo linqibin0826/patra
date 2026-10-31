@@ -166,7 +166,7 @@
 **Interfaces:**
 - Consumes: Task 1
 - Produces:
-  - `ReminderQueueRepository`：`void enqueue(List<QueuedReminder> rows)`（`ON CONFLICT (notification_id) DO NOTHING`，`@Transactional(propagation = MANDATORY)`）；`List<Long> recipientsDue(Instant now, long afterRecipientId, int limit)`（升序、去重）；`List<QueuedReminder> findByRecipient(long recipientId)`；`int delete(Collection<Long> notificationIds)`
+  - `ReminderQueueRepository`：`void enqueue(List<QueuedReminder> rows)`（`ON CONFLICT (notification_id) DO NOTHING`，`@Transactional(propagation = MANDATORY)`）；`List<Long> recipientsDue(Instant now, long afterRecipientId, int limit)`（升序、去重）；`List<QueuedReminder> findByRecipient(long recipientId)`；`List<Long> claim(Collection<Long> notificationIds)`（`DELETE … RETURNING`，只返回真删到的 ID；评审后由 `delete` 改来，见 spec 16.3）
   - `ReminderDeliveryRepository`：`void insert(ReminderDelivery d)`；`boolean insertDigestIfAbsent(ReminderDelivery d)`（`ON CONFLICT DO NOTHING`，返回是否插入）；`List<ReminderDelivery> findDue(Instant now, int limit)`（PENDING、`next_attempt_at ≤ now`、按 `next_attempt_at`、`created_at` 升序）；`void update(ReminderDelivery d)`（写 `status`、`skip_reason`、`attempts`、`next_attempt_at`、`first_sent_at`、`finished_at`）；`int deleteFinishedBefore(Instant cutoff)`
   - 实现用 JdbcClient 原生 SQL；`notification_ids` 以 `Long[]` 读写；时间 `atOffset(UTC)`
   - 坑：部分唯一索引只能 `CREATE UNIQUE INDEX … WHERE kind = 'DIGEST'`，不能写成 `CONSTRAINT`；`ON CONFLICT` 要重复谓词：`ON CONFLICT (recipient_id, window_end) WHERE kind = 'DIGEST' DO NOTHING`
@@ -249,7 +249,7 @@
   - `@Builder record ReminderItem(String actorName, String action, String time, List<ExcerptPart> excerpt, ReminderPlace place, String link)`
   - `record DigestSection(String title, List<ReminderItem> items)`（`of`）
   - `enum` 嵌在内容里：`ReminderMailContent.Layout { SINGLE, BATCH, DIGEST }`
-  - `@Builder record ReminderMailContent(Layout layout, String subject, String preheader, String eyebrow, String heading, String lead, ReminderItem single, List<ReminderItem> items, List<DigestSection> sections, String overflow, String buttonLabel, String buttonUrl, String why, String unsubscribeLabel, String unsubscribeUrl, String settingsUrl, String oneClickUrl)`
+  - `@Builder record ReminderMailContent(Layout layout, String subject, String preheader, String eyebrow, String heading, String lead, ReminderItem single, List<ReminderItem> items, List<DigestSection> sections, String overflow, String buttonLabel, String buttonUrl, String why, String unsubscribeLabel, String unsubscribeUrl, String preferencesUrl, String oneClickUrl)`（`preferencesUrl` 原名 `settingsUrl`，见 spec 16.1）
   - `@Builder record ReminderFacts(long notificationId, NotificationType type, String actorName, Instant occurredAt, String plainText, SubjectView subject, long commentId, boolean mine)`
   - `record DigestSectionFacts(int total, List<ReminderFacts> listable)`（`of`）
   - `final class ReminderMailComposer`：构造器 `(ReminderLinks links, ReminderTimeText time)`；
@@ -319,7 +319,7 @@
 - Consumes: Task 2 `ReminderWindowPolicy.plan`；Task 4 两个仓储；`InboxReadPort.findUnread`；`PresenceGateway.lastSeen`
 - Produces:
   - `record FlushDueRemindersCommand()`（`static of()`）；`record FlushResult(int recipients, int dropped, int deliveries)`（`of`）
-  - `CommandHandler<FlushDueRemindersCommand, FlushResult>`：按 100 人一页取 `recipientsDue(now, cursor, 100)`，每人一个 `TransactionOperations` 事务：读行 → `findUnread` → `lastSeen` → `plan` → `insert` 每个 batch 为 `ReminderDelivery.instant(UUID.randomUUID(), …)` → `delete(plan.consumed())`；单人抛意外异常时记 ERROR、回滚这一人、继续下一人
+  - `CommandHandler<FlushDueRemindersCommand, FlushResult>`：按 100 人一页取 `recipientsDue(now, cursor, 100)`，每人一个 `TransactionOperations` 事务：读行 → `findUnread` → `lastSeen` → `plan` → `claim(plan.consumed())` 认领 → 只给认领到的 ID 按 batch `insert` `ReminderDelivery.instant(UUID.randomUUID(), …)`；单人抛意外异常时记 ERROR、回滚这一人、继续下一人
 
 - [ ] **Step 1: 写测试**（Mockito；`TransactionOperations` 用直接执行回调的桩）
 
@@ -348,7 +348,7 @@
   - `ReminderDeliveryAssembler.assemble(ReminderDelivery d, Instant now)` → `AssembledReminder`；只处理 PENDING；顺序照 spec 7.3：`findUnread` → `lastSeen`（逐条去掉 `createdAt ≤ lastSeen`；汇总不看）→ `findSubscription` → `RecipientPort.find` → `subscriptionOf`（取令牌）→ `findViews` → `findCards`；跳过原因照 5.3；抛 `IdentityUnavailableException` / `InteractionUnavailableException`
   - `record SendPendingDeliveriesCommand()`（`of`）、`record SendResult(int sent, int skipped, int deferred, boolean stoppedEarly)`（`of`）
   - Handler：每次 `findDue(now, 50)` 直到取空；每条 `assemble` → Skip：`skip` + `update`；Ready：先 `recordSendAttempt(now)` + `update`（短事务），再在事务外 `deliver(OutgoingMail.builder().deliveryId(d.getDeliveryId()).to(to).template(模板名).subject(content.subject()).model(ReminderMailModel.of(content)).headers(Map.of("List-Unsubscribe", "<" + content.oneClickUrl() + ">", "List-Unsubscribe-Post", "List-Unsubscribe=One-Click")).build())`：正常返回或 `ALREADY_ACCEPTED` → `markSent`；`REJECTED` → `skip(REJECTED)`、继续；`TRANSIENT`、identity / interaction 不可用 → `defer`（可能变 EXPIRED）、停止本轮；其他 `RuntimeException` → `defer`、记 ERROR、继续。模板名：SINGLE `notification-single`、BATCH `notification-batch`、DIGEST `notification-digest`
-  - `final class ReminderMailModel { static Map<String, Object> of(ReminderMailContent c) }`（`app/mail/service/`）：`mail` → `c`、`preheader` → `c.preheader()`、`footnote` → `此邮件由 Patra 系统自动发出，直接回复不会出现在讨论里。`、`asideLinks` → `[{label: c.unsubscribeLabel(), url: c.unsubscribeUrl()}, {label: "通知设置", url: c.settingsUrl()}]`（`record AsideLink(String label, String url)`）；值为 null 的键不放；不用 `subject`、`siteName`、`notice` 三个键（PAP-105 渲染器保留）
+  - `final class ReminderMailModel { static Map<String, Object> of(ReminderMailContent c) }`（`app/mail/service/`）：`mail` → `c`、`preheader` → `c.preheader()`、`footnote` → `此邮件由 Patra 系统自动发出，直接回复不会出现在讨论里。`、`asideLinks` → `[{label: c.unsubscribeLabel(), url: c.unsubscribeUrl()}, {label: "通知设置", url: c.preferencesUrl()}]`（`record AsideLink(String label, String url)`）；值为 null 的键不放；不用 `subject`、`siteName`、`notice` 三个键（PAP-105 渲染器保留）
 
 - [ ] **Step 1: 写测试**
 

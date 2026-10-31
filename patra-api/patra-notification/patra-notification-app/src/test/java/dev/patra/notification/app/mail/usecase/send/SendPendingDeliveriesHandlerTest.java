@@ -231,6 +231,28 @@ class SendPendingDeliveriesHandlerTest {
     assertThat(result.sent()).isZero();
   }
 
+  /// 从没调用过发信端口：identity 挂了 30 天也只推迟、不过期、不丢（AC「identity 不可用时推迟重试，恢复后补发」）。
+  @Test
+  void never_sent_delivery_survives_long_identity_outage() {
+    ReminderDelivery delivery =
+        ReminderDelivery.instant(
+            UUID.randomUUID(),
+            7L,
+            NotificationCategory.REPLY,
+            List.of(1L),
+            NOW.minus(Duration.ofDays(30)));
+    page(delivery);
+    when(assembler.assemble(delivery, NOW))
+        .thenThrow(new IdentityUnavailableException(new RuntimeException("503")));
+
+    SendResult result = handler.handle(SendPendingDeliveriesCommand.of());
+
+    assertThat(delivery.getStatus()).isEqualTo(DeliveryStatus.PENDING);
+    assertThat(delivery.getFirstSentAt()).isNull();
+    verify(mail, never()).deliver(any());
+    assertThat(result.stoppedEarly()).isTrue();
+  }
+
   /// 写回本身失败、一直取到同一条：一轮里每条只处理一次，不死循环。
   @Test
   void same_delivery_is_processed_once_per_run() {
