@@ -49,11 +49,6 @@ const byLatest = (a: EntryCard, b: EntryCard) => {
   return a.latestVersion ? -1 : b.latestVersion ? 1 : a.slug.localeCompare(b.slug);
 };
 
-/// 侧栏路线窗口：当前篇（从 1 数）前后各 radius 篇
-export function routeWindow(total: number, position: number, radius = 2) {
-  return { start: Math.max(1, position - radius), end: Math.min(total, position + radius) };
-}
-
 // ---------- 路线 ----------
 
 export interface RouteCard {

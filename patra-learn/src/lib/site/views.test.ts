@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { catalog, entry, route, topic } from "@/lib/content/testing/factory";
 import type { Entry } from "@/lib/content/types";
+import { routeWindow } from "./today";
 import {
   entryPage,
   homeView,
   PERSONAL_TAG,
   routePage,
-  routeWindow,
   tagList,
   tagPage,
   topicList,

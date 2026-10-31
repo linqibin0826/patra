@@ -96,3 +96,8 @@ export function continueReading(routes: RouteLike[], progress: Progress) {
   }
   return undefined;
 }
+
+/// 侧栏路线窗口：当前篇（从 1 数）前后各 radius 篇
+export function routeWindow(total: number, position: number, radius = 2) {
+  return { start: Math.max(1, position - radius), end: Math.min(total, position + radius) };
+}

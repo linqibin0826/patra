@@ -10,6 +10,7 @@
   --color-surface: #ffffff; /* 卡片 */
   --color-surface-soft: #fafbf8; /* 次要卡片、组件操作栏 */
   --color-moss: #e7efe6; /* 「打个比方」「顺带想通的」等温和面板 */
+  --color-moss-line: #d3dfd1; /* 首页进度卡、难度说明卡的描边 */
   --color-line: #dce2d8; /* 卡片描边 */
   --color-line-soft: #eef2ec; /* 行线、行内代码底 */
 
@@ -28,6 +29,8 @@
   --color-teal-wash: #eef5f3; /* 「你猜会怎样」底 */
   --color-teal-soft: #5db5c2; /* 掌握度：理解中、已走过的步骤 */
   --color-teal-pale: #c6dcd9; /* 掌握度：刚接触 */
+  --color-link-line: #9fcfd6; /* 正文链接下划线 */
+  --color-mark: #fbe7b5; /* 搜索命中高亮 */
 
   /* 语义：判对判错、悬而未决（同排查类型色）、决策类型色 */
   --color-correct: #2f6b3a;
@@ -37,6 +40,11 @@
   --color-amber: #8f5500;
   --color-amber-bg: #f6efdf;
   --color-decision: #3d6b2e;
+
+  /* 代码块（深色，与花园底拉开；底色用 ink） */
+  --color-code-ink: #e3ece6;
+  --color-code-dim: #a9b8af;
+  --color-code-link: #7fd3de;
 
   /* 字体（决策 G）：中文全用系统字体（标题宋体、正文黑体），西文与数字 Source Serif 4，控件用系统 UI 字体 */
   --font-display:
@@ -51,6 +59,11 @@
   --font-mono: "JetBrains Mono Variable", ui-monospace, Menlo, Consolas, monospace;
 
   /* 字号 */
+  --text-display: 38px; /* 条目标题 */
+  --text-h1: 32px; /* 页面标题 */
+  --text-h2: 22px; /* 节标题 */
+  --text-h3: 18px; /* 卡片标题 */
+  --text-lead: 19px; /* 一句话、回顾题题干 */
   --text-ui: 14.5px; /* 控件、卡片说明 */
   --text-meta: 13px; /* 元信息 */
   --text-tiny: 12px; /* 徽章 */
@@ -60,6 +73,12 @@
   --radius-inner: 10px;
   --radius-chip: 6px;
   --shadow-card: 0 1px 2px rgba(31, 42, 36, 0.05);
+  --shadow-lift: 0 10px 28px rgba(31, 42, 36, 0.12); /* 卡片悬停浮起 */
+
+  /* 版心：页面、正文列、侧栏 */
+  --container-page: 1200px;
+  --container-article: 680px;
+  --container-aside: 280px;
 
   /* CSS 过渡用的缓动，与 GSAP 的 power3.out / back.out(1.6) 对应（power2.inOut 只在 GSAP 里用） */
   --ease-out: cubic-bezier(0.22, 0.8, 0.24, 1);
@@ -71,5 +90,20 @@
 @media (hover: hover) and (pointer: fine) and (not (any-pointer: coarse)) {
   html {
     overscroll-behavior-y: none;
+  }
+}
+
+/* 链接默认水青、无下划线（画板 .l-root a）；正文里的链接在 prose 组件里另加下划线 */
+@layer base {
+  a {
+    color: var(--color-teal);
+    text-decoration: none;
+  }
+  a:hover {
+    color: var(--color-teal-deep);
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-teal-mark);
+    outline-offset: 2px;
   }
 }
