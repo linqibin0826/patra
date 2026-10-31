@@ -26,6 +26,9 @@ import org.springframework.test.context.TestPropertySource;
 ///
 /// 每个用例前清空两张表与队列；本地重试间隔压到 100 毫秒（次数仍是事件模块的 3 次），死信测试不用等 7 秒。
 /// 收信的子类再挂 GreenMail 初始化器。
+///
+/// 测试 profile 默认不起 RabbitMQ 监听（`application-test.yml`：没起 RabbitMQ 容器的上下文别去连），起了容器的
+/// 测试要自己打开，同 `NotificationFlowITSupport`；不打开时安全邮件队列没人消费，用例全部超时。
 @SpringBootTest
 @ContextConfiguration(
     initializers = {
@@ -35,6 +38,7 @@ import org.springframework.test.context.TestPropertySource;
 @ActiveProfiles("test")
 @TestPropertySource(
     properties = {
+      "spring.rabbitmq.listener.simple.auto-startup=true",
       "spring.rabbitmq.listener.simple.retry.initial-interval=100ms",
       "spring.rabbitmq.listener.simple.retry.max-interval=400ms"
     })
