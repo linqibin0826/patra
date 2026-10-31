@@ -1,0 +1,147 @@
+---
+title: 只考改过的：按改动路由
+summary: 先算出这次改动影响哪些模块，再只测受影响的部分。改文档几乎不用等，改公共模块才会全员重测。
+type: concept
+difficulty: advanced
+tags: [ci-cd]
+prerequisites: [ops-ci-pipeline]
+personalEnv: false
+---
+
+<Diagnose
+  question="catalog-api 模块里有一个接口，identity 和 interaction 两个服务都依赖它。你只改了这个接口里的一行，CI 的后端测试会跑哪些服务？"
+  options={["只跑 catalog，因为改动在它的目录里", "跑 catalog、identity、interaction：改动会波及依赖它的服务", "六个服务全跑"]}
+  answer="B"
+  ifRight="对。改一个被别人依赖的模块，所有依赖它的服务都可能受影响，所以都要测。这份“谁依赖谁”的地图就是这一篇的主角。"
+  ifWrong="答案是 B。只测 catalog 会漏掉依赖它的服务；六个全测又浪费。正确的是顺着依赖关系找出受影响的那几个：catalog、identity、interaction。"
+  suggest="ops-ci-pipeline"
+/>
+
+## 不要每次全员重考
+
+最省事的 CI 是：每个 PR 都把所有服务全部编译、全部测一遍。结果正确，但慢——改一行文档也要等上几十分钟。
+
+Patra 多做了一步：**开考之前，先算这次到底改了什么，只考受影响的科目。**
+
+- 改 catalog 的内部代码，只测 catalog。
+- 改被别人依赖的公共模块，测所有依赖它的单元。
+- 改构建脚本这类地基，全员重测。
+- 只改文档，后端和前端都不测。
+
+负责“算”的是一个 shell 脚本：`patra-infra/cd/detect-changes.sh`。它是 CI 开工后的第一个 job，输出一个 JSON，告诉后面的 job 该干什么。
+
+## 它读什么、吐什么
+
+脚本有几种运行模式，对应不同的触发场景：
+
+| 模式 | 什么时候用 | 怎么得到改动清单 |
+|---|---|---|
+| `pr` | 开了 PR | 你的分支相对 main 分叉点之后改了哪些文件 |
+| `push` | 代码合并进 main | 这次推送前后两个提交之间的差异 |
+| `schedule` | 每晚的定时检查 | 不看改动，直接全量 |
+| `dispatch` | 手动触发（回滚用） | 指定了服务名就只处理它，不指定就全量 |
+| `classify` | 本地调试 | 从标准输入读一份文件清单 |
+
+输出的 JSON 里最重要的几个字段：
+
+- `backend_units`：要测的后端单元列表（registry、catalog、identity、interaction、notification、gateway，外加一个 foundation 单元，代表底层公共模块）。
+- `portal_changed` 与 `learn_changed`：前端门户、学习站要不要测。
+- `docs_only`：是不是只改了文档。
+- `coverage_mode`：要不要聚合覆盖率，全量时才做。
+- `nacos_changed`：配置中心的文件有没有改。
+
+自己在本地试一下，就是把改动文件名喂给它：
+
+```bash
+echo "README.md" | bash patra-infra/cd/detect-changes.sh classify
+```
+
+## 同样的脚本，四种改动
+
+下面是真的把四种文件名喂进脚本得到的结果。先看每种情形的路由，再读结论。
+
+<Compare
+  title="改了不同的东西，要测什么"
+  variants={[
+    {
+      label: "只改 README",
+      steps: ["改动的文件：README.md", "脚本判断：文档类文件，不进应用构建", "结果：没有任何单元受影响"],
+      results: [{ label: "backend_units", value: "空", tone: "ok" }, { label: "docs_only", value: "true", tone: "ok" }],
+      verdict: { tone: "ok", head: "免考。", text: "后端和前端测试全部跳过，几十秒就能出结果。" }
+    },
+    {
+      label: "改 catalog-api 里的代码",
+      steps: ["改动的文件：catalog-api 模块里的 Java 文件", "脚本按文件路径找到所属模块", "再查模块图：谁依赖这个模块"],
+      results: [{ label: "backend_units", value: "catalog、identity、interaction", tone: "wait" }, { label: "portal_changed", value: "false", tone: "ok" }],
+      verdict: { tone: "ok", head: "顺着依赖测。", text: "只测三个受影响的单元，其余三个服务不测。" }
+    },
+    {
+      label: "改 Gradle 构建脚本",
+      steps: ["改动的文件：build-logic 下的构建文件", "脚本认出这是全局影响的地基", "放大成全量"],
+      results: [{ label: "backend_units", value: "全部 7 个单元", tone: "bad" }, { label: "full_run", value: "true", tone: "bad" }],
+      verdict: { tone: "bad", head: "全员重考。", text: "构建脚本决定每个服务怎么编译、怎么打包，动了它不能只测一个房间。" }
+    },
+    {
+      label: "改学习站的条目",
+      steps: ["改动的文件：patra-learn 里的 .mdx 条目", "脚本归类为学习站", "没有任何后端单元受影响"],
+      results: [{ label: "backend_units", value: "空", tone: "ok" }, { label: "learn_changed", value: "true", tone: "wait" }],
+      verdict: { tone: "ok", head: "只考学习站。", text: "后端测试跳过，只跑学习站自己的检查。注意 .mdx 不是 .md，不会被当成纯文档。" }
+    }
+  ]}
+/>
+
+最后一格值得记住：判断“是不是文档”看的是文件后缀。学习站的条目是 `.mdx`，会改变线上网站，所以不能当文档放过。
+
+## 模块图：谁依赖谁
+
+“改了一个文件，哪些单元受影响”靠的是 `module-graph.json`。它是从 Gradle 的依赖关系自动导出的一张地图，每个模块一条记录：
+
+<CodeRef at="patra-infra/cd/module-graph.json@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="24-40" />
+
+- `dir`：这个模块在仓库里的目录。文件按**最长路径前缀**匹配到它。
+- `impacts`：这个模块改了，会波及哪些单元。
+- `tasks`：测这个模块要跑哪些 Gradle 任务。
+
+地图是导出来的，不是手写的，所以不会因为有人忘了改而陈旧。还有一道保险：CI 里有个 job 重新导出一次，和仓库里提交的对比，不一致就失败，提醒你重新生成并提交。
+
+## 几条规则，都往“更严格”的方向倒
+
+<Callout kind="lead">
+
+拿不准的时候，宁可多测，不能漏测。错误只允许往更严格的方向发生。
+
+</Callout>
+
+- **流水线自己的文件变了，全量重测**，连前端和学习站也一起测。改考试规则的 PR，必须用新规则把整场考试完整跑一遍。
+- **构建脚本、共享 Dockerfile、部署脚本所在目录变了，全量重测。**
+- **认不出所属模块的文件，当全量处理。** 地图里查不到，说明地图不完整，保守一点。
+- **只和基础设施有关的路径**（监控、数据库初始化脚本之类），不进应用镜像，也不触发任何后端单元。
+- 脚本自己有一份单元测试：判卷逻辑改错了，会先被测试抓住。
+
+这一份脚本同时给 CI 和部署用。部署用的是“被改动的服务”这个子集，所以“只测改过的”和“只发改过的”口径永远一致。
+
+<Quiz
+  questions={[
+    {
+      question: "你把学习站的一篇条目从 .mdx 改成了 .md 文件名。对路由有什么影响？",
+      options: ["没有影响", "会被当成纯文档，跳过学习站检查，线上也不会再部署它", "会导致后端全量测试"],
+      answer: "B",
+      explain: "纯文档的判断看后缀，.md 被当作文档。这条规则对学习站要小心：条目必须保持 .mdx，才会进入检查与部署。"
+    },
+    {
+      question: "一个 PR 里既改了 README，也改了 catalog 里的 Java 代码。脚本会怎么判断？",
+      options: ["因为有文档，所以整个 PR 免考", "文档文件被忽略，Java 文件决定了要测 catalog"],
+      answer: "B",
+      explain: "文档只是不贡献任何受影响的单元，不会抵消别的文件带来的影响。"
+    }
+  ]}
+/>
+
+<Transfer
+  prompt="你只改了监控配置（Prometheus 的一个文件），没有动任何应用代码。按脚本的规则，会发生什么？为什么这样设计？"
+  points={[
+    { label: "结果", text: "脚本把它归为纯基础设施路径：没有任何后端单元被触发，也不算文档。" },
+    { label: "为什么", text: "这类配置不进应用镜像，也不影响应用容器，测应用服务没有意义。" },
+    { label: "怎么生效", text: "它由部署机上的运维脚本手动应用，不走自动部署。" }
+  ]}
+/>

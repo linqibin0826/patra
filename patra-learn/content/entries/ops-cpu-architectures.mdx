@@ -1,0 +1,119 @@
+---
+title: 芯片架构：amd64 与 arm64
+summary: 镜像和 CPU 的指令集绑定。云端常见的是 amd64，Apple 芯片的 Mac 是 arm64；在一种机器上打另一种机器的包，要么装不上，要么靠转译硬撑。
+type: concept
+difficulty: basic
+tags: [docker, deployment]
+prerequisites: [ops-docker-images-and-containers]
+personalEnv: false
+---
+
+<Diagnose
+  question="Java 程序是跨平台的。那么在云端 Intel 机器上打好的 Java 服务镜像，直接拿到 Apple 芯片的 Mac mini 上运行，一定没问题吗？"
+  options={["一定没问题，Java 本来就跨平台", "不一定：镜像里还有按芯片编译的运行时和系统库，要看镜像的架构是否匹配", "一定不行，两种芯片完全不能互通"]}
+  answer="B"
+  ifRight="对。Java 字节码跨平台，但镜像里装的 Java 运行时、系统库、curl 等是按芯片编译好的原生程序，架构不对就会出问题。"
+  ifWrong="答案是 B。跨平台的只是你的 jar。镜像里还装着 Java 运行时和系统库，它们都是按特定芯片编译的原生程序。"
+  suggest="ops-docker-images-and-containers"
+/>
+
+## CPU 说的不是同一种“语言”
+
+CPU 只认自己那套指令。目前最常见的两种是：
+
+- **amd64**（也叫 x86_64）：Intel 和 AMD 的芯片，云上的普通 Linux 机器几乎都是它。
+- **arm64**（也叫 aarch64）：Apple Silicon 的 Mac，以及很多手机和云上的省电机型。
+
+编译出来的原生程序是按其中一种指令集生成的，换一种芯片就读不懂。Java 的 jar 之所以能跨平台，是因为里面是字节码，由 Java 运行时翻译执行；但 **Java 运行时本身是原生程序**，镜像里的操作系统文件、工具也都是。所以：
+
+<Callout kind="lead">
+
+镜像和芯片架构绑定在一起。打包的机器是什么架构，镜像就是什么架构。
+
+</Callout>
+
+## 不匹配的时候会怎样
+
+三种可能：
+
+1. **直接报错**：Docker 提示镜像平台和本机不一致，容器起不来。
+2. **靠转译硬跑**：Mac 上有 Rosetta 之类的转译层，能把另一种指令翻译着执行。它能跑，但是更慢、更耗资源，而且**没有任何报错**，你甚至不知道它正在转译。
+3. **一个 tag 对应多种架构**：镜像仓库支持“多架构镜像”，同一个名字下放着几份，Docker 按机器自动选。这需要构建时专门准备。
+
+第二种最危险：它不会出声。
+
+## 在哪台机器上打包
+
+要部署到 Mac mini（arm64），有三条路。读一下每一条会遇到什么：
+
+<Compare
+  title="三种打包路线"
+  variants={[
+    {
+      label: "云端机器直接打",
+      steps: ["GitHub 的云端 ubuntu 机器编译并打镜像", "产出的镜像是 amd64", "推到镜像仓库，再拉到 Mac mini 上运行"],
+      results: [{ label: "镜像架构", value: "amd64", tone: "bad" }, { label: "在 arm64 的 Mac mini 上", value: "靠转译硬跑，或者装不上", tone: "bad" }],
+      verdict: { tone: "bad", head: "架构对不上。", text: "最快，但产出的包和目标机器不匹配。" }
+    },
+    {
+      label: "云端模拟 arm64",
+      steps: ["云端 ubuntu 机器用 QEMU 模拟出 arm64", "在模拟环境里交叉编译并打镜像", "推到镜像仓库，再拉到 Mac mini 上运行"],
+      results: [{ label: "镜像架构", value: "arm64", tone: "ok" }, { label: "打包速度", value: "很慢，模拟出来的 CPU 效率低", tone: "wait" }, { label: "还要经镜像仓库拉回", value: "多一段不稳定的网络", tone: "wait" }],
+      verdict: { tone: "ok", head: "格式对了，但又慢又绕。", text: "要靠模拟，构建时间长；产物还得绕一圈镜像仓库再拉回来。" }
+    },
+    {
+      label: "在 Mac mini 上原生打",
+      steps: ["Mac mini 本机编译并打镜像", "产出的镜像天然是 arm64", "就在本机直接部署，不用经过镜像仓库"],
+      results: [{ label: "镜像架构", value: "arm64", tone: "ok" }, { label: "打包速度", value: "原生速度", tone: "ok" }, { label: "是否经镜像仓库", value: "不用", tone: "ok" }],
+      verdict: { tone: "ok", head: "格式不可能错。", text: "打包的机器就是运行的机器，架构天然一致。" }
+    }
+  ]}
+/>
+
+Patra 最后选了第三条，把构建搬到 Mac mini 本机（这个决策的取舍，在后面的篇目里专门讲）。选它之后，架构不匹配这个问题从结构上就不会出现。
+
+## 部署脚本里的最后一道防线
+
+不过 Patra 没有只靠“不会出错”。部署脚本在换新之前，仍然会**断言镜像的架构必须是 arm64**：
+
+```bash
+docker image inspect --format '{{.Architecture}}' <镜像>
+```
+
+这条命令会打印镜像的架构，部署脚本拿它和 `arm64` 比较，不一致就拒绝部署。
+
+<CodeRef at="patra-infra/cd/deploy.sh@2197850b5a624ed4dbaa97df71e144c343e28baa" lines="56-59" />
+
+为什么还要多这一道？因为镜像仓库里可能还留着以前不同架构的旧镜像，回滚时要是拉回来一个，同样的问题就悄悄回来了。
+
+<Callout kind="warn">
+
+“能跑”不等于“对”。转译不会报错，所以架构问题往往是靠检查发现的，不是靠错误信息。检查要写成会失败的断言，而不是依赖人去留意。
+
+</Callout>
+
+<Quiz
+  questions={[
+    {
+      question: "下面哪种说法是对的？",
+      options: ["jar 文件跨平台，所以 Java 服务的镜像也跨平台", "镜像里的运行时和系统库是按芯片编译的，镜像本身有架构"],
+      answer: "B",
+      explain: "跨平台的只是字节码。镜像包含整套运行环境，它们是原生程序，所以镜像有架构。"
+    },
+    {
+      question: "在 Apple 芯片的 Mac 上运行一个 amd64 镜像，最可能的结果是？",
+      options: ["一定会立刻报错", "可能靠转译层悄悄跑起来，更慢但没有报错", "自动重新编译成 arm64"],
+      answer: "B",
+      explain: "转译层能让它跑，但这种不匹配很难被发现。"
+    }
+  ]}
+/>
+
+<Transfer
+  prompt="你在一台 Intel 笔记本上 docker build 了一个镜像，推到仓库，再让一台 Apple 芯片的机器去拉取运行。会发生什么？有哪些办法让两种机器都能用同一个镜像名？"
+  points={[
+    { label: "会发生什么", text: "拉到的是 amd64 镜像。Apple 芯片机器要么报平台不匹配，要么靠转译层硬跑，慢而且难发现。" },
+    { label: "办法一：多架构镜像", text: "构建时用 buildx 同时产出 amd64 和 arm64，放在同一个 tag 下，各机器按自己的架构拉对应的那份。" },
+    { label: "办法二：在目标机器上构建", text: "像 Patra 这样，直接在要运行的那台机器上构建，架构天然一致，还省掉传镜像的环节。" }
+  ]}
+/>

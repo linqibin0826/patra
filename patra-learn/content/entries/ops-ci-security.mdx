@@ -1,0 +1,108 @@
+---
+title: 流水线安全：别让输入变成命令
+summary: 把别人能控制的文字直接拼进 shell 命令，就等于让他执行命令。流水线要把输入当数据、把触发源收窄、把权限和第三方依赖钉死。
+type: concept
+difficulty: advanced
+tags: [security, ci-cd]
+prerequisites: [ops-ci-pipeline]
+personalEnv: false
+---
+
+<Diagnose
+  question="workflow_dispatch 有一个文本输入 service，让人手动填服务名。脚本里写成 echo ${{ github.event.inputs.service }}。有人在输入框里填 a; echo 已被注入，会发生什么？"
+  options={["当成一个普通的服务名 a; echo 已被注入 打印出来", "分号后面的 echo 也被当成命令执行了", "GitHub 会自动把特殊字符转义"]}
+  answer="B"
+  ifRight="对。GitHub 先把输入文字原样替换进脚本，shell 再去读这份脚本，于是分号把一条命令变成了两条。"
+  ifWrong="答案是 B。${{ … }} 是在脚本被交给 shell 之前就做的文本替换，没有任何转义。分号之后的内容会被当作新的命令。"
+  suggest="ops-ci-pipeline"
+/>
+
+## 第一层：输入是数据，不是代码
+
+`${{ … }}` 看起来像变量，其实是**模板展开**：GitHub 在运行脚本之前，把这个位置换成对应的文字，再把整份脚本交给 shell。如果这段文字是人填的，就等于把代码的一部分交给了他写。
+
+对比两种写法，输入都是 a; echo 已被注入：
+
+<Compare
+  title="同一个输入，两种接法"
+  variants={[
+    {
+      label: "直接拼进脚本",
+      steps: ["有人在输入框填写：a; echo 已被注入", "GitHub 把这段文字替换进脚本，写成 echo a; echo 已被注入", "shell 把它读成两条命令，分别执行"],
+      results: [{ label: "第二条命令", value: "被执行了", tone: "bad" }],
+      verdict: { tone: "bad", head: "注入成功。", text: "换成更危险的命令，就能读密钥、改仓库、攻击这台机器。" }
+    },
+    {
+      label: "先放进环境变量",
+      steps: ["有人在输入框填写：a; echo 已被注入", "GitHub 只把它存进一个环境变量，不改脚本的文字", "脚本里用双引号引用这个变量，把整串当成一个值"],
+      results: [{ label: "整串内容", value: "只是一个普通字符串", tone: "ok" }],
+      verdict: { tone: "ok", head: "没有任何东西被执行。", text: "脚本的文字是固定的，输入只是被读取的数据。" }
+    }
+  ]}
+/>
+
+Patra 的 cd.yml 就是第二种写法，并且注释里写明了原因：
+
+<CodeRef at=".github/workflows/cd.yml@b6e01875bb5692356021c8a19562f557f319fc54" lines="69-90" />
+
+规则可以记成一句话：**凡是人能控制的内容——手动输入、PR 标题、分支名、提交说明——一律先放进 `env`，在脚本里用 `"$变量"` 读取，不要直接写 `${{ … }}`。** 提交号、运行编号这类系统自己生成的值，风险低得多。
+
+脚本里还有第二层校验：`deploy.sh` 在入口处检查服务名必须在清单里，不认识的直接拒绝执行。输入既要被当作数据，也要被检查合不合理。
+
+## 第二层：谁有资格触发
+
+部署流水线跑在家里的机器上（自托管 runner，下一篇会讲）。这就带来一个问题：Patra 的仓库是**公开**的，任何人都能 fork 一份、提一个 PR。如果 PR 里的代码能在这台机器上运行，等于任何陌生人都能在你家里执行脚本。
+
+所以 cd.yml 在触发器上就划了线：
+
+<CodeRef at=".github/workflows/cd.yml@b6e01875bb5692356021c8a19562f557f319fc54" lines="19-52" />
+
+它只订阅两种事件：
+
+- `push` 到 main：代码已经通过检查和评审，合并进来了。
+- `workflow_dispatch`：手动点按钮，而这个按钮只有对仓库有写权限的人才能点。
+
+**不订阅 `pull_request`**。陌生人的代码想上这台机器，唯一的路是先通过检查和评审并合并进 main，而检查它的是一次性的云端机器，用完就销毁。
+
+<Callout kind="lead">
+
+自托管的机器只执行两种代码：已经合并进 main 的，和有写权限的人亲手指定的。
+
+</Callout>
+
+## 第三层：权限、凭据与第三方
+
+三个更细的习惯：
+
+1. **权限最小化**：workflow 顶部写 `permissions: contents: read`，只给读代码的权限；需要更多的 job 单独申请，比如推送镜像需要 `packages: write`。
+2. **检出时不留凭据**：`actions/checkout` 加 `persist-credentials: false`，防止仓库令牌留在这台机器的 git 配置里，被后面的步骤顺手拿走。
+3. **第三方 action 钉在提交号上**：前面提过的 40 位字符。版本标签（如 `@v4`）可以被作者重新指向另一份代码，一旦作者账号被盗，所有引用标签的人都中招；提交号不可变。
+
+还有一个只在自托管机器上才有的问题：**工作区是持久的**，上一次运行的残留会留给下一次。所以部署流水线要写入一份镜像仓库凭据时，会在最后一步用 `if: always()` 无论成败都删掉它。
+
+<Quiz
+  questions={[
+    {
+      question: "下面哪些内容属于“人能控制的输入”，不应该直接拼进 shell？",
+      options: ["github.sha（本次提交号）", "PR 的标题、分支名、手动填的输入框", "runner 的操作系统名称"],
+      answer: "B",
+      explain: "PR 标题、分支名都由提交者决定，可以包含引号、分号、反引号。提交号和系统信息是 GitHub 生成的，字符固定。"
+    },
+    {
+      question: "为什么部署流水线不能订阅 pull_request？",
+      options: ["因为 pull_request 太慢", "公开仓库里陌生人也能提 PR，会让不受信的代码跑在家里的机器上", "因为 PR 里没有提交号"],
+      answer: "B",
+      explain: "自托管的机器连着家里的网络和容器，只能执行已经通过检查、被合并或被有权限的人明确指定的代码。"
+    }
+  ]}
+/>
+
+<Transfer
+  prompt="你要给部署 workflow 加一个手动输入 image_tag，传给部署脚本。请写出安全的接法，并说出除此之外还该加哪一道防线。"
+  points={[
+    { label: "用 env 传递", text: "在 step 的 env 里写 IMAGE_TAG: 输入值，不要在脚本里直接写模板表达式。" },
+    { label: "脚本里加引号", text: "脚本中用双引号引用这个变量，让整串内容当成一个值。" },
+    { label: "再校验一次", text: "在脚本入口检查格式（只允许十六进制提交号之类），不合法就拒绝，不要依赖调用方是善意的。" },
+    { label: "触发权限", text: "手动触发只有写权限的人能点，这是第二层保险，但不能替代前两项。" }
+  ]}
+/>
