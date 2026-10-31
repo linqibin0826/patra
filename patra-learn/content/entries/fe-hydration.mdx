@@ -1,0 +1,161 @@
+---
+title: 水合：服务端 HTML 怎么「活」过来
+summary: 第一次打开页面时，浏览器先显示服务器画好的 HTML，React 再在浏览器里把客户端组件跑一遍、和 HTML 对上、挂上事件。两边第一次渲染必须一致，不一致会报错并重画。
+type: concept
+difficulty: advanced
+tags: [frontend]
+prerequisites: [fe-server-and-client-components]
+personalEnv: false
+---
+
+<Diagnose
+  question="第一次打开门户主页，导航栏的「快速检索」按钮已经显示出来了，但页面的 JavaScript 还在下载。这时点它会怎样？"
+  options={["正常打开检索框", "没有反应：按钮只是 HTML，点击处理还没挂上", "页面报错"]}
+  answer="B"
+  ifRight="对。看得见不等于能用。这篇讲 HTML 是怎么从「能看」变成「能点」的，以及中间最容易出错的那一步。"
+  ifWrong="答案是 B。客户端组件第一次打开时先在服务器上画成 HTML，浏览器马上能显示；点击、状态这些要等它的 JavaScript 到了、在浏览器里再跑一遍才有。「客户端组件两边都跑」是前置篇的内容。"
+  suggest="fe-server-and-client-components"
+/>
+
+## 先能看，后能点
+
+第一次打开一页时：服务器先把页面画成 HTML 发过来，浏览器马上显示；同时下载客户端组件的 JavaScript。代码到了以后，React 在浏览器里把这些组件再渲染一遍，拿结果和页面上已有的 HTML 逐处对照，对上了就直接沿用这些 DOM 节点，把点击、键盘这些事件挂上去。这一步叫**水合**（hydration）。
+
+水合不重新造页面，只是给已有的页面「接上线」。所以它有一个硬要求：**浏览器里的第一次渲染，必须和服务器画出的 HTML 一模一样。**
+
+<Callout kind="analogy">
+
+像先送来一台装好外壳、还没通电的样机，线路板随后到。装线路板时，每个接口都得对准外壳上的孔；对不上，只能把外壳拆了重装。
+
+</Callout>
+
+## 一个按钮上的快捷键
+
+导航栏的快速检索按钮上写着快捷键：苹果设备是 ⌘K，其他系统是 Ctrl K。是哪种，只有浏览器知道。门户是这样写的：
+
+<CodeRef at="patra-portal/src/components/portal/TopNav.tsx@d0ca49caf72d9d9aacd7459c1054cf9131b3759e" lines="62-71" />
+
+```tsx
+  // 快捷键提示：服务端与首帧写 ⌘K，挂载后在非 Apple 平台改写 Ctrl K（避免水合不一致）
+  const [shortcut, setShortcut] = useState("⌘K");
+  const pathname = usePathname();
+  useUnreadCountsPolling();
+
+  useEffect(() => {
+    if (!/Mac|iPhone|iPad|iPod/.test(navigator.platform || navigator.userAgent)) {
+      setShortcut("Ctrl K");
+    }
+  }, []);
+```
+
+点下一步，看一个 Windows 用户第一次打开页面时发生了什么：
+
+<Stepper
+  title="Windows 上第一次打开门户"
+  nodes={[
+    { id: "server", label: "服务器", sub: "渲染 TopNav" },
+    { id: "html", label: "浏览器 · 页面", sub: "已显示的 HTML" },
+    { id: "react", label: "浏览器 · React", sub: "再跑一遍组件" }
+  ]}
+  links={[
+    { from: "server", to: "html", label: "HTML" },
+    { from: "react", to: "html", label: "对照、挂事件" }
+  ]}
+  steps={[
+    { caption: "服务器渲染 TopNav：`shortcut` 的初值是 ⌘K，HTML 里写的就是 ⌘K。", focus: ["server"], tokens: [{ id: "label", label: "⌘K", at: "server" }] },
+    { caption: "HTML 到了浏览器，导航栏画出来了。看得见 ⌘K，但点按钮还没反应。", focus: ["html"], links: ["server>html"], tokens: [{ id: "label", label: "⌘K", at: "html" }], notes: [{ at: "html", text: "能看 · 不能点", tone: "wait" }] },
+    { caption: "JavaScript 到了。React 在浏览器里把 TopNav 再跑一遍：`useState` 给的还是初值 ⌘K。", focus: ["react"], tokens: [{ id: "label", label: "⌘K", at: "html" }, { id: "client", label: "⌘K", at: "react" }], notes: [{ at: "html", text: "能看 · 不能点", tone: "wait" }] },
+    { caption: "对照：浏览器里的结果和 HTML 一致。React 沿用这些节点，挂上点击与键盘监听。", focus: ["html", "react"], links: ["react>html"], tokens: [{ id: "label", label: "⌘K", at: "html" }], notes: [{ at: "html", text: "已水合 · 能点", tone: "ok" }] },
+    { caption: "水合完成后 effect 才跑：发现不是苹果设备，`setShortcut` 改成 Ctrl K，组件照常重新渲染一次。", focus: ["react", "html"], links: ["react>html"], tokens: [{ id: "label", label: "Ctrl K", at: "html" }], notes: [{ at: "html", text: "已水合 · Ctrl K", tone: "ok" }] }
+  ]}
+  guesses={[
+    { before: 3, question: "如果 TopNav 第一次渲染时就直接读 navigator，在 Windows 上算出 Ctrl K，会怎样？", options: ["没区别，反正最后都显示 Ctrl K", "和 HTML 里服务器画的 ⌘K 对不上，React 报水合错误", "服务器上也会算出 Ctrl K"], answer: "B", explain: "服务器不知道访客用的是什么系统，它画的是 ⌘K。浏览器第一次渲染要是画成 Ctrl K，对照时就对不上。" },
+    { before: 5, question: "effect 里把 ⌘K 改成 Ctrl K，这一次会报水合错误吗？", options: ["会，内容和 HTML 不一样了", "不会：effect 在水合之后才跑，这是一次普通的重新渲染", "要看浏览器"], answer: "B", explain: "要求一致的只有水合那一次渲染。水合结束后，状态怎么变都是正常更新。" }
+  ]}
+/>
+
+## 对不上会怎样
+
+React 发现某处对不上时，会当作一个水合错误：开发模式下页面上弹出报错；它不再沿用那一片的服务器 HTML，而是从最近的出错边界或 `Suspense` 边界开始，在浏览器里整片重新渲染。服务器那部分活白干了，用户还可能看到页面闪一下。
+
+<Callout kind="warn">
+
+React 有个 `suppressHydrationWarning` 属性，能让它对某一个元素的文字差异不报错、保留页面上已有的内容。它只管那一个元素，只适合「本来就注定不同」的个别文字，不是修不一致的办法。
+
+</Callout>
+
+## 不一致从哪来
+
+凡是「服务器和浏览器算出来不一样」的东西，放进第一次渲染都会出事。常见的几类：
+
+| 来源 | 例子 | 改法 |
+|---|---|---|
+| 随机与计数 | `Math.random()`、库里用全局计数器自动生成的 id | 用 `useId`，两边给出同一个 id |
+| 时间 | `Date.now()`、按本机时区和语言格式化日期 | 服务器上定好格式，或等水合后再换成本地格式 |
+| 浏览器才有的信息 | window、navigator、localStorage、屏幕宽度 | 第一次渲染用固定的默认值，挂载后再读 |
+| 别人改了页面 | 浏览器扩展往 HTML 上加了属性 | 不是代码的问题，学会认出它 |
+
+## Patra 里的两种稳妥写法
+
+第一种就是上面的 TopNav：第一次渲染用默认值，`useEffect` 里再换成真实值。
+
+第二种用 React 的 `useSyncExternalStore`。它可以额外给一份「服务端快照」：服务器渲染和水合那一次用这份快照，水合之后才换成浏览器里的真实值。门户判断屏幕宽度的 Hook 是这样写的，服务端快照一律是「不命中」：
+
+<CodeRef at="patra-portal/src/lib/use-media-query.ts@fe4c6bb68c591a9c9b5fe80f76bbfbbbc6aeae75" lines="7-19" />
+
+```ts
+export function useMediaQuery(query: string): boolean {
+  return useSyncExternalStore(
+    (onChange) => {
+      if (!supported()) {
+        return () => {};
+      }
+      const list = window.matchMedia(query);
+      list.addEventListener("change", onChange);
+      return () => list.removeEventListener("change", onChange);
+    },
+    () => supported() && window.matchMedia(query).matches,
+    () => false,
+  );
+}
+```
+
+同样的办法还做出了一个「是否已经过了水合」的开关：
+
+<CodeRef at="patra-portal/src/lib/use-hydrated.ts@6ead12db647bcd3e56f651af791d56e418cb79ff" lines="5-13" />
+
+```ts
+/// 是否已经过了水合：服务端渲染与水合那一次是 false（与服务端输出一致），之后是 true。
+/// 客户端里直接挂载（不是水合）的组件第一次渲染就是 true
+export function useHydrated(): boolean {
+  return useSyncExternalStore(
+    subscribe,
+    () => true,
+    () => false,
+  );
+}
+```
+
+导航栏读当前登录用户时就用它：水合那一次一律显示「登录状态未定」的占位，和服务器画的一致，之后才显示头像或「登录」。
+
+设置页的关注领域选择器（拖拽排序）两种来源都碰上了，开头这几行都是为了让两边第一次渲染一致：
+
+<CodeRef at="patra-portal/src/components/settings/profile/MeshInterestPicker.tsx@fe4c6bb68c591a9c9b5fe80f76bbfbbbc6aeae75" lines="75-77" />
+
+```tsx
+  const narrow = useMediaQuery("(max-width: 880px)");
+  // DndContext 默认用全局计数器生成读屏说明的 id，服务端与浏览器数到的不一样会水合不一致；给它稳定的 id
+  const dndId = useId();
+```
+
+屏幕宽度走 `useMediaQuery`，拖拽库要的 id 交给 `useId`。拖拽库那个 id 为什么会对不上，有一篇坑专门讲。
+
+<Transfer
+  prompt="讨论区每条评论旁显示「3 分钟前」这样的相对时间，由一个客户端组件用 `Date.now()` 减去发表时间算出来。服务器 12:00:00 画出了「3 分钟前」，访客的浏览器 12:01:10 才水合。会发生什么？你会怎么改？"
+  points={[
+    { label: "会对不上", text: "浏览器第一次渲染算出「4 分钟前」，和 HTML 里的「3 分钟前」不一致，报水合错误、这一片重画。" },
+    { label: "根源是时间", text: "`Date.now()` 在两边取的是不同时刻，结果注定不同。" },
+    { label: "第一次渲染用固定值", text: "水合那一次显示一个两边相同的值，比如发表时间的日期，或用 `useHydrated` 判断还没过水合时先不显示相对时间。" },
+    { label: "水合后再算", text: "过了水合（或在 effect 里）再算相对时间并定时刷新，这时的变化是普通更新，不会报错。" }
+  ]}
+/>

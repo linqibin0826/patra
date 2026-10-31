@@ -1,0 +1,196 @@
+---
+title: Route Handler 透传：门户当中间层
+summary: 浏览器只跟门户说话，门户在服务端带上会话去请求网关，再把结果整理好交回浏览器。这种「专给前端用的后端」叫 BFF，在 Next 里用 Route Handler 写。以 Patra 门户的提醒列表为例。
+type: concept
+difficulty: advanced
+tags: [frontend, network]
+prerequisites: [fe-server-and-client-components, http-same-origin-and-cors]
+personalEnv: false
+---
+
+<Diagnose
+  question="门户的页面开在门户的地址上，网关在另一个端口。门户页面里的脚本直接 `fetch` 网关的接口并读响应，默认会怎样？"
+  options={["和请求门户自己一样，正常读到", "浏览器不让脚本读这个响应，除非网关明确允许门户这个来源", "浏览器把请求自动改发到门户"]}
+  answer="B"
+  ifRight="对。端口不同就是不同源，浏览器默认不让脚本读跨源响应。往下看门户怎么干脆绕开这个问题：浏览器只请求门户自己。"
+  ifWrong="答案是 B：协议、主机、端口任何一个不同就算跨源，浏览器不让脚本读跨源响应，除非对方用 CORS 响应头放行。这题考的是同源策略，是读懂这篇的前提。"
+  suggest="http-same-origin-and-cors"
+/>
+
+## 浏览器只跟门户说话
+
+门户的后端是一组服务（identity、interaction、notification……），统一从网关进。按说浏览器可以直接请求网关，但有两个麻烦：
+
+1. 网关和门户不同源，浏览器默认不让门户的脚本读网关的响应。
+2. 网关要 `Authorization: Bearer <令牌>`，而门户把令牌存在 HttpOnly Cookie 里，浏览器里的脚本读不到它，也就没法自己写这个头。
+
+门户的做法是在中间加一层：浏览器只请求门户自己的 `/api/...`，同源、自动带 Cookie；门户在服务端读出令牌，换成请求头去请求网关。
+
+<Callout kind="analogy">
+
+像去银行办事，你只跟柜台说话。柜员拿着你的回执（Cookie）去后台调档案，把需要给你看的那几页复印给你。你不进后台，也不用知道后台的门牌号。
+
+</Callout>
+
+点下面的按钮，看一次请求在哪里被放行、在哪里被挡下：
+
+<Structure
+  title="取一页提醒要经过谁"
+  nodes={[
+    { id: "browser", label: "浏览器", sub: "提醒页", col: 1, desc: "只认识门户的地址。请求 `/api/me/notifications?tab=replies`，同源请求浏览器会自动带上会话 Cookie。" },
+    { id: "portal", label: "/api/me/notifications", sub: "门户 Route Handler", code: true, col: 2, desc: "门户服务端的一段代码。先查参数，再从 Cookie 读令牌，带着令牌请求网关，最后把结果收成门户自己的状态码。" },
+    { id: "gateway", label: "网关", col: 3, desc: "认 `Authorization` 头里的令牌，按路径前缀 `/patra-notification` 把请求转给通知服务。" },
+    { id: "notify", label: "patra-notification", sub: "通知服务", code: true, col: 4, desc: "查出这一页提醒，返回 JSON。" }
+  ]}
+  edges={[
+    { from: "browser", to: "portal", label: "同源 · 带 Cookie" },
+    { from: "portal", to: "gateway", label: "Bearer 令牌", desc: "令牌只在门户服务端和网关之间出现，从不交给浏览器里的脚本。" },
+    { from: "gateway", to: "notify", label: "按前缀转发" }
+  ]}
+  traces={[
+    {
+      button: "取一页「回复」提醒",
+      packet: "replies",
+      hops: [
+        { at: "browser", caption: "提醒页请求门户的 `/api/me/notifications?tab=replies`。" },
+        { at: "portal", caption: "标签认得；Cookie 里有令牌，写进请求头。" },
+        { at: "gateway", caption: "网关认出令牌，转给通知服务。" },
+        { at: "notify", caption: "通知服务返回一页提醒，原路回到浏览器。" }
+      ]
+    },
+    {
+      button: "标签写错了",
+      packet: "tab=abc",
+      hops: [
+        { at: "browser", caption: "有人手改地址，`tab` 写成了 abc。" },
+        { at: "portal", caption: "门户不认识这个标签，直接回 404，不去打扰网关。", drop: true }
+      ]
+    },
+    {
+      button: "没登录",
+      packet: "无 Cookie",
+      hops: [
+        { at: "browser", caption: "请求里没有会话 Cookie。" },
+        { at: "portal", caption: "读不到令牌，门户直接回 401，同样不请求网关。", drop: true }
+      ]
+    }
+  ]}
+/>
+
+## Route Handler：一个文件就是一个接口
+
+在 `app/` 目录下放一个 `route.ts`，导出名叫 `GET`、`PUT` 这类 HTTP 方法的函数，这个路径就成了一个接口。它收标准的 `Request`、回标准的 `Response`，跑在门户的服务器上。门户取提醒列表的接口整个文件只有这么多：
+
+<CodeRef at="patra-portal/src/app/api/me/notifications/route.ts@4a13287485468f2c489027f1aac0bb6174643e8d" lines="6-16" />
+
+```ts
+export const dynamic = "force-dynamic";
+
+/// 一个标签下的一页提醒（`tab`：`replies` / `mentions` / `helpful`；`cursor` 是下一页）。标签不认识时 404，不打网关
+export async function GET(request: Request): Promise<NextResponse> {
+  const query = new URL(request.url).searchParams;
+  const tab = notificationTabSchema.safeParse(query.get("tab"));
+  if (!tab.success) {
+    return readReply({ kind: "not-found" });
+  }
+  return readReply(await fetchNotifications(tab.data, query.get("cursor") ?? undefined));
+}
+```
+
+`force-dynamic` 让它每次请求都现跑，不被缓存：每个人的提醒都不一样。
+
+## 带上会话的那一步
+
+`fetchNotifications` 往下调到 `callNotification`，这里是「读 Cookie、换成请求头」的地方：
+
+<CodeRef at="patra-portal/src/lib/notification/request.ts@4a13287485468f2c489027f1aac0bb6174643e8d" lines="34-44" />
+
+```ts
+  try {
+    const stored = options.auth === "none" ? null : await readSessionToken();
+    const token = stored && canSendToken(stored) ? stored : null;
+    if (!token && options.auth !== "none") {
+      return { kind: "no-session" };
+    }
+    const res = await gatewayFetch(search ? `${endpoint}?${search}` : endpoint, {
+      ...init,
+      ...(token ? { token } : {}),
+      client: await readClientOrigin(),
+    });
+```
+
+真正发请求的是 `gatewayFetch`。整个门户只有这个文件知道网关在哪：
+
+<CodeRef at="patra-portal/src/lib/gateway.ts@4a13287485468f2c489027f1aac0bb6174643e8d" lines="30-44" />
+
+```ts
+/// 统一网关客户端（server-only）：全仓库只有这里读 `PATRA_GATEWAY_BASE_URL`、向网关发请求。
+/// 只负责把请求发出去：原样返回网关的响应，不解读状态码；网络错误和超时照常抛出。
+/// 没传令牌就不带 `Authorization`，所以正文请求不会带上用户的令牌。
+export async function gatewayFetch(path: string, init: GatewayRequestInit = {}): Promise<Response> {
+  const baseUrl = process.env.PATRA_GATEWAY_BASE_URL;
+  if (!baseUrl) {
+    throw new Error("PATRA_GATEWAY_BASE_URL 未配置");
+  }
+  if (init.json !== undefined && init.body !== undefined) {
+    throw new Error("json 和 body 只能给一个");
+  }
+  const headers: Record<string, string> = { ...forwardingHeaders(init.client) };
+  if (init.token) {
+    headers.Authorization = `Bearer ${init.token}`;
+  }
+```
+
+这个文件第一行是 `import "server-only"`：要是有哪个客户端组件不小心 import 了它，构建直接报错。网关地址从环境变量来，只在服务器上读，浏览器永远不知道它。
+
+## 门户不只是转发
+
+中间这层顺手做了几件网关不该管、浏览器做不了的事：
+
+| 做了什么 | 为什么 |
+|---|---|
+| 参数不合法就自己回，不请求网关 | 错的请求不往后端送 |
+| 把结果收成 200 / 401 / 404 / 502 | 页面只按这四种分支，不用懂网关和各服务的错误格式 |
+| 响应带 `Cache-Control: private, no-store` | 每个人的数据不同，不能被任何一层缓存给别人 |
+| 写操作先查 `Origin` | Route Handler 不像 Server Action 那样自带跨站检查，要自己补 |
+
+最后一条是写操作的门槛。「全部标为已读」的接口一开头就查：
+
+<CodeRef at="patra-portal/src/app/api/me/notifications/read/route.ts@4a13287485468f2c489027f1aac0bb6174643e8d" lines="8-14" />
+
+```ts
+/// 全部已读（两个标签一起），返回新的未读数。写操作校验 `Origin`
+export async function PUT(request: Request): Promise<NextResponse> {
+  if (!isSameOrigin(request)) {
+    return forbidden();
+  }
+  return readReply(await markAllNotificationsRead());
+}
+```
+
+<Quiz
+  questions={[
+    {
+      question: "别的网站上藏了一段脚本，让访问它的人的浏览器向门户发 `PUT /api/me/notifications/read`。浏览器会带上门户的会话 Cookie 吗？门户靠什么挡住它？",
+      options: ["不会带 Cookie，所以不用挡", "可能会带上 Cookie；门户靠检查 `Origin` 是不是自己挡住", "靠网关的 CORS 设置挡住"],
+      answer: "B",
+      explain: "Cookie 跟着目标地址走，跨站发来的请求也可能带上它（`SameSite=Lax` 挡不住同一站点不同端口的服务）。所以写操作要看 `Origin`：不是门户自己的就回 403。"
+    },
+    {
+      question: "为什么门户不在 `next.config.ts` 里写一条重写规则，把 `/api/*` 原样转发给网关，省掉这些 Route Handler？",
+      options: ["Next 不支持重写", "原样转发没法在中途读 Cookie、换成 Bearer 头，也没法查参数和整理状态码", "重写更慢"],
+      answer: "B",
+      explain: "BFF 的价值就在中间那几步：把会话换成令牌、挡掉错误请求、把后端的回答翻译成前端好用的样子。"
+    }
+  ]}
+/>
+
+<Transfer
+  prompt="提醒页要加一个「删除这条提醒」按钮，假设网关上已有对应的删除接口。门户这一层你会怎么写？要处理哪些情况？"
+  points={[
+    { label: "写一个 route.ts", text: "在对应路径下导出 `DELETE` 函数，浏览器只请求门户自己的地址。" },
+    { label: "先挡跨站", text: "这是写操作：一开头检查 `Origin`，不是门户自己就回 403。" },
+    { label: "带上会话", text: "服务端读 Cookie 里的令牌、写成 Bearer 头；没有令牌直接回 401，不请求网关。" },
+    { label: "收拢结果", text: "把网关的回答收成门户自己的几种状态码，响应加 `no-store`。" }
+  ]}
+/>

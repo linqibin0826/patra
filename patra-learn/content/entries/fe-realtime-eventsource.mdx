@@ -1,0 +1,203 @@
+---
+title: 前端接收推送：EventSource
+summary: 浏览器用 EventSource 订阅一条事件流，服务器有新数就推过来；连接中途断了浏览器会自己重连，被拒绝时就得靠页面自己接手。以 Patra 门户的未读数推送为例。
+type: concept
+difficulty: advanced
+tags: [frontend, network]
+prerequisites: [web-server-push-and-sse, fe-react-hooks-and-effects]
+topics: [realtime-push]
+sources:
+  - version: v0.16
+    issue: PAP-149
+    pr: 344
+personalEnv: false
+---
+
+<Diagnose
+  question="页面右上角的铃铛靠一条 EventSource 事件流更新未读数。网络断了几秒又恢复了，页面没刷新。接下来最可能发生什么？"
+  options={["铃铛从此不再更新，要刷新页面才行", "浏览器过几秒自己重新连上，铃铛照常更新", "服务器发现断线后，主动重新连回浏览器"]}
+  answer="B"
+  ifRight="对。EventSource 自带断线重连，这是它和自己写一个长请求最大的区别。往下看它什么时候会重连、什么时候会放弃。"
+  ifWrong="答案是 B：连接中途断开，浏览器会按服务器给的间隔自己再连一次。服务器没法主动连浏览器，连接永远是浏览器发起的。这题考的是 SSE 的基本行为。"
+  suggest="web-server-push-and-sse"
+/>
+
+## 开一个连接，事件就源源不断地来
+
+`EventSource` 是浏览器自带的对象。给它一个地址，它发一个 GET 请求，然后一直不挂断：服务器每写一条事件，浏览器就触发一次对应名字的监听函数。
+
+门户只订阅一种事件 `unread-count`，数据是三个标签的未读数。下面是门户建连接的那段：
+
+<CodeRef at="patra-portal/src/lib/notifications/stream.ts@4a13287485468f2c489027f1aac0bb6174643e8d" lines="104-126" />
+
+```ts
+    const connect = () => {
+      disconnect();
+      const next = new EventSource(STREAM_URL);
+      next.addEventListener("open", () => setLive(true));
+      next.addEventListener("unread-count", (event) => void onCounts(event));
+      next.addEventListener("error", () => {
+        setLive(false);
+        if (next.readyState !== EventSource.CLOSED) {
+          return;
+        }
+        next.close();
+        source = null;
+        void client
+          .fetchQuery({
+            queryKey: queryKeys.notificationUnread,
+            queryFn: () => fetchUnread(client),
+            staleTime: 0,
+          })
+          .catch(() => {});
+        retry = setTimeout(connect, STREAM_RETRY_MS);
+      });
+      source = next;
+    };
+```
+
+三个监听各管一件事：`open` 表示连上了；`unread-count` 是数据到了；`error` 是出事了。`error` 里先看 `readyState`，这是下面重连那节的关键。
+
+这段代码放在一个 `useEffect` 里，挂在根布局上，整个站只连一条。effect 的清理函数会关掉连接，所以登出、组件卸载时连接都会断。
+
+## 浏览器连的是门户，不是网关
+
+网关要求推送请求带 `Authorization: Bearer <令牌>`，可是 `EventSource` 只能给地址，加不了请求头。门户的做法是让浏览器连门户自己的 Route Handler，由它在服务端读出 Cookie 里的令牌，再去连网关：
+
+<Sequence
+  title="一条推送连接是怎么搭起来的"
+  actors={[
+    { id: "browser", label: "浏览器", sub: "EventSource" },
+    { id: "portal", label: "门户", sub: "Route Handler" },
+    { id: "gateway", label: "网关" },
+    { id: "notify", label: "patra-notification" }
+  ]}
+  messages={[
+    { from: "browser", to: "portal", label: "GET /api/me/notifications/stream", caption: "同源请求，浏览器自动带上会话 Cookie。EventSource 自己什么头都加不了。" },
+    { from: "portal", to: "gateway", label: "GET …/stream + Bearer 令牌", caption: "Route Handler 从 Cookie 读出令牌，写进 `Authorization` 头，`Accept` 写 `text/event-stream`。没有令牌就直接回 401，不连网关。" },
+    { from: "gateway", to: "notify", label: "转发", caption: "网关认完人，把请求转给通知服务。" },
+    { from: "notify", to: "gateway", label: "200 + 第一条 unread-count", caption: "通知服务一连上就推一次当前未读数，这一条里带着 `retry: 3000`：告诉浏览器断线后隔 3 秒再连。" },
+    { from: "gateway", to: "portal", label: "事件流", caption: "响应体是一条不结束的流。" },
+    { from: "portal", to: "browser", label: "原样透传", caption: "门户不读、不改、不攒，响应头写上 `no-cache, no-transform`。浏览器触发 open，接着触发第一次 unread-count。" },
+    { from: "notify", to: "browser", label: "每 25 秒一行 :ping", dashed: true, caption: "心跳是一行注释，浏览器不触发任何事件，只是让沿路各层知道连接还活着。" },
+    { from: "notify", to: "browser", label: "unread-count", caption: "有人回复了你：通知服务在事务提交后推一条新的未读数，铃铛立刻变。" }
+  ]}
+  summary={{ caption: "浏览器只跟门户说话，令牌一直留在服务端；推送内容沿原路一字不改地流回来。" }}
+/>
+
+门户这一侧的透传只有几行。注意失败时只回状态码，下一节会用到：
+
+<CodeRef at="patra-portal/src/app/api/me/notifications/stream/route.ts@4a13287485468f2c489027f1aac0bb6174643e8d" lines="40-51" />
+
+```ts
+  if (upstream.status !== 200 || !upstream.body) {
+    void upstream.body?.cancel();
+    return status(upstream.status === 200 ? 502 : upstream.status);
+  }
+  return new Response(upstream.body, {
+    status: 200,
+    headers: {
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache, no-transform",
+      "X-Accel-Buffering": "no",
+    },
+  });
+```
+
+## 断线分两种，浏览器只管一种
+
+这里大多数人会卡住：EventSource 的「自动重连」不是什么情况都管。
+
+- **连着连着断了**（网络抖动、服务器到了 30 分钟的连接时长上限主动关掉）：触发 `error`，但 `readyState` 是「连接中」，浏览器 3 秒后自己再连。代码什么都不用做，所以上面那段 `error` 里直接 `return`。
+- **连上时就被拒了**（回的不是 200，比如会话过期的 401、服务挂了的 502）：浏览器认为这个地址不能用，`readyState` 变成「已关闭」，从此不再重连。而且它不告诉你状态码是多少。
+
+第二种情况门户只能自己接手：立刻用普通请求取一次未读数（普通请求能看到状态码，是 401 就让当前用户失效，页面随之登出、断开推送），再定一个 60 秒的计时器重新连。
+
+另外，页面切到后台就主动断开，切回来再连。门户在内网直连时走的是 HTTP/1.1，同一个站点浏览器最多开 6 条连接，开着好几个后台标签页、每个都占一条，前台页面就没连接可用了。
+
+点下面的事件按钮走一遍。试试在「已连通」时点「连上时就被拒」，看它为什么不能发生：
+
+<StateMachine
+  title="一条推送连接的一生"
+  subject="useUnreadStream"
+  states={[
+    { id: "off", label: "未连接", sub: "页面在后台", col: 1, desc: "没有连接。页面在后台、或刚打开还没连。这时未读数靠轮询，每 60 秒取一次（后台标签页连轮询也停）。" },
+    { id: "connecting", label: "连接中", sub: "new EventSource", col: 2, desc: "刚发出 GET，在等门户回响应头。" },
+    { id: "live", label: "已连通", sub: "轮询停", col: 3, desc: "收到了 200 和事件流。`live` 为真，60 秒轮询关掉，未读数全靠推送。" },
+    { id: "reconnecting", label: "浏览器在重连", sub: "等 3 秒", col: 3, row: 2, desc: "连接中途断了。`readyState` 还是「连接中」，浏览器按 `retry: 3000` 自己再连，代码不插手；这段时间轮询恢复。" },
+    { id: "waiting", label: "已关闭，等 60 秒", sub: "门户自己接手", col: 2, row: 2, desc: "被拒了（不是 200），浏览器不再重连。门户立刻取一次未读数，60 秒后再新建一个 EventSource。" }
+  ]}
+  start="off"
+  events={[
+    { id: "visible", label: "页面切到前台" },
+    { id: "open", label: "收到 200，连上" },
+    { id: "drop", label: "连着连着断了" },
+    { id: "refuse", label: "连上时就被拒（非 200）" },
+    { id: "timer", label: "60 秒到了" },
+    { id: "hidden", label: "页面切到后台" }
+  ]}
+  transitions={[
+    { from: "off", event: "visible", to: "connecting", label: "连" },
+    { from: "connecting", event: "open", to: "live", label: "open" },
+    { from: "connecting", event: "refuse", to: "waiting", label: "被拒" },
+    { from: "live", event: "drop", to: "reconnecting", label: "断线" },
+    { from: "reconnecting", event: "open", to: "live", label: "重连成功" },
+    { from: "reconnecting", event: "refuse", to: "waiting", label: "重连被拒" },
+    { from: "waiting", event: "timer", to: "connecting", label: "再试" },
+    { from: "live", event: "hidden", to: "off", label: "断开" },
+    { from: "connecting", event: "hidden", to: "off", label: "断开" },
+    { from: "reconnecting", event: "hidden", to: "off", label: "断开" },
+    { from: "waiting", event: "hidden", to: "off", label: "断开" }
+  ]}
+/>
+
+3 秒这个间隔是通知服务在第一条事件里告诉浏览器的：
+
+<CodeRef at="patra-api/patra-notification/patra-notification-adapter/src/main/java/dev/patra/notification/adapter/realtime/rest/SseUnreadCountStream.java@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="42-52" />
+
+```java
+  public void sendCounts(UnreadCounts counts) {
+    SseEmitter.SseEventBuilder event =
+        SseEmitter.event()
+            .name(EVENT)
+            .data(UnreadCountsEventResponse.from(counts), MediaType.APPLICATION_JSON);
+    if (first) {
+      event.reconnectTime(RECONNECT.toMillis());
+      first = false;
+    }
+    send(event);
+  }
+```
+
+## 收到一条推送之后
+
+`onCounts` 先取消还在路上的轮询请求，再把新数写进未读数缓存。不先取消的话，一个发得早、回得晚的轮询会用旧数把推送来的新数冲掉。铃铛、菜单、提醒页的三个标签读的是同一份缓存，所以一起变。如果用户正开着提醒页，还会顺手重取当前列表，把新出现的提醒标成「新」。
+
+推送只带「数变了」，不带提醒内容。内容仍由页面自己去取。
+
+<Quiz
+  questions={[
+    {
+      question: "会话在页面开着时过期了。推送重连时门户回了 401。EventSource 那边能看到什么？",
+      options: ["一个带 401 的 error 事件", "只有一个 error 事件，readyState 变成已关闭，看不到状态码", "什么都看不到，浏览器继续每 3 秒重连"],
+      answer: "B",
+      explain: "非 200 时 EventSource 直接关闭，不重连，也不暴露状态码。所以门户紧接着用普通请求取一次未读数，从那次请求里才看到 401。"
+    },
+    {
+      question: "用户把门户切到后台 10 分钟，再切回来。这 10 分钟里发生的新回复，铃铛什么时候显示？",
+      options: ["要等下一条推送", "切回来时就会显示：重新建连接，通知服务一连上就推当前值", "要刷新页面"],
+      answer: "B",
+      explain: "切回前台时重新建 EventSource，通知服务连上立刻推一次当前未读数；同时轮询那边切回页面也会取一次。"
+    }
+  ]}
+/>
+
+<Transfer
+  prompt="通知服务重启，大约 40 秒连不上，这段时间门户的推送地址回的不是 200。一个一直开着门户的用户，从重启开始到恢复，他的推送连接和铃铛各经历了什么？"
+  points={[
+    { label: "先是中途断线", text: "原来那条连接被服务端关掉，readyState 是连接中，浏览器 3 秒后自己重连，这期间轮询恢复。" },
+    { label: "重连被拒", text: "重连拿到非 200，EventSource 关闭、不再自己重连；门户立刻取一次未读数（也会失败，铃铛暂时显示不可用）。" },
+    { label: "门户每 60 秒再试", text: "计时器到点新建连接；服务没回来就再进一次「已关闭，等 60 秒」。" },
+    { label: "恢复", text: "服务回来后的那次连接收到 200，通知服务立刻推当前值，铃铛对上，轮询停掉。" }
+  ]}
+/>

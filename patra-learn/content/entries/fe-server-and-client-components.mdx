@@ -1,0 +1,159 @@
+---
+title: 服务端组件与客户端组件
+summary: 页面默认是服务端组件，只在服务器上跑，代码不进浏览器；要状态、事件、浏览器 API 的部分标 `use client`。边界画在 import 上，过边界的只能是可序列化的数据。
+type: concept
+difficulty: advanced
+tags: [frontend]
+prerequisites: [fe-nextjs-pages-and-routing, fe-react-hooks-and-effects]
+personalEnv: false
+---
+
+<Diagnose
+  question="用户主页的 `page.tsx` 是一个 `async` 函数，直接 `await` 网关返回的资料；导航栏 TopNav 用 `useEffect` 往 window 上加键盘监听。哪一段必须在浏览器里运行？"
+  options={["页面里 `await` 网关的那段", "导航栏的键盘监听", "两段都必须", "两段都不必"]}
+  answer="B"
+  ifRight="对。window 和键盘只在浏览器里有，等网关回资料在服务器上就能做。这篇讲 Next.js 怎么把一页拆成这两种组件。"
+  ifWrong="答案是 B。`useEffect` 里的副作用要碰 window，只能在浏览器里跑（前置篇讲过 effect 何时运行）；页面组件的 `async` / `await` 则在服务器上等数据，前一篇路由里出现过。"
+  suggest="fe-react-hooks-and-effects"
+/>
+
+## 页面默认是服务端组件
+
+在 App Router 里，`page.tsx`、`layout.tsx` 以及它们引入的组件，默认都是**服务端组件**：只在服务器上运行，运行完把结果发给浏览器，组件的代码本身不发过去。
+
+所以它们能做浏览器里做不了、也不该做的事：直接调网关、读请求里的 Cookie、用只有服务器知道的配置。用户主页一边取资料、一边查当前登录的是谁：
+
+<CodeRef at="patra-portal/src/app/u/[username]/page.tsx@6ead12db647bcd3e56f651af791d56e418cb79ff" lines="48-52" />
+
+```tsx
+export default async function UserPage({ params }: UserPageProps) {
+  const [lookup, session] = await Promise.all([
+    fetchPublicProfile((await params).username),
+    lookupSession(),
+  ]);
+```
+
+`lookupSession` 要从 Cookie 里读出会话令牌，带着它去问网关。令牌只在服务器上出现，浏览器里的脚本碰不到。门户还给这类文件加了一道门：
+
+<CodeRef at="patra-portal/src/lib/auth/current-user.ts@fe4c6bb68c591a9c9b5fe80f76bbfbbbc6aeae75" lines="1" />
+
+```ts
+import "server-only";
+```
+
+哪个客户端组件不小心引入了它，构建直接失败。
+
+## 要交互的部分标 `use client`
+
+状态、点击、effect、window 和 navigator，这些都要在浏览器里跑。需要它们的文件第一行写 `"use client"`，声明这是**客户端组件**。导航栏就是：
+
+<CodeRef at="patra-portal/src/components/portal/TopNav.tsx@d0ca49caf72d9d9aacd7459c1054cf9131b3759e" lines="1" />
+
+```tsx
+"use client";
+```
+
+服务端组件可以直接渲染客户端组件：用户主页里第一个就是 TopNav。点任意一块，看它在哪边：
+
+<Structure
+  title="用户主页由哪些组件组成"
+  intro="页面和大多数块在服务器上画完；导航栏这一支要发到浏览器。"
+  nodes={[
+    { id: "page", label: "UserPage", sub: "服务端 · page.tsx", code: true, col: 1, row: 2, desc: "async 函数。取资料、查会话，决定 404 还是跳转，再把结果交给下面的组件。" },
+    { id: "topnav", label: "TopNav", sub: "客户端", code: true, col: 2, row: 1, desc: "有状态（对话框开没开、滚动了没有），监听 ⌘K。代码要发到浏览器。" },
+    { id: "header", label: "ProfileHeader", sub: "服务端", code: true, col: 2, row: 2, desc: "只把资料画出来，没有交互，代码不进浏览器。" },
+    { id: "tabs", label: "ProfileTabsGate", sub: "服务端 · async", code: true, col: 2, row: 3, desc: "别人来看时，自己再问一次后端「收藏夹、投稿经验有没有内容」，决定显示哪些标签。async 组件只能是服务端组件。" },
+    { id: "about", label: "ProfileAbout", sub: "服务端", code: true, col: 2, row: 4, desc: "只读展示。" },
+    { id: "brand", label: "BrandMark", sub: "跟着进浏览器", code: true, col: 3, row: 1, desc: "导航栏左上角的品牌标志。文件里没写 use client，但被 TopNav 引入，就跟着进了浏览器的代码包。" },
+    { id: "account", label: "NavAccount", sub: "客户端", code: true, col: 3, row: 2, desc: "在浏览器里查当前用户，显示头像或「登录」。" }
+  ]}
+  edges={[
+    { from: "page", to: "topnav", label: "渲染" },
+    { from: "page", to: "header", label: "渲染" },
+    { from: "page", to: "tabs", label: "渲染" },
+    { from: "page", to: "about", label: "渲染" },
+    { from: "topnav", to: "brand", label: "渲染" },
+    { from: "topnav", to: "account", label: "渲染" }
+  ]}
+/>
+
+## 边界画在 import 上
+
+`"use client"` 只要写在一棵客户端子树的入口。被它引入的文件，以及那些文件再引入的，全都进浏览器的代码包，不用每个都写。导航栏引入的品牌标志 `BrandMark` 文件里没有这一行，照样跟着 TopNav 进了浏览器。
+
+反过来不行：客户端组件不能引入服务端组件，引进来就成了客户端代码。但它可以**接收**服务端组件已经画好的结果。根布局里的 `QueryProvider` 是客户端组件，它包着的 `children` 却是各个服务端页面：
+
+<CodeRef at="patra-portal/src/app/layout.tsx@4a13287485468f2c489027f1aac0bb6174643e8d" lines="52-56" />
+
+```tsx
+        <QueryProvider>
+          {children}
+          <NotificationStream />
+          <Toaster position="bottom-right" />
+        </QueryProvider>
+```
+
+页面在服务器上已经画完，`QueryProvider` 拿到的只是结果，不是页面的代码。
+
+## 过边界的只能是数据
+
+服务端组件渲染客户端组件时，传过去的 props 要先变成一段数据发给浏览器（序列化）。字符串、数字、普通对象、数组都可以；函数不行，比如服务端组件不能给客户端组件传一个 `onClick`（Server Action 是例外，另有一篇讲）。提醒页把要看哪一栏用一个字符串交给客户端的收件箱：
+
+<CodeRef at="patra-portal/src/app/notifications/page.tsx@d0ca49caf72d9d9aacd7459c1054cf9131b3759e" lines="5-8" />
+
+```tsx
+export default async function RepliesPage() {
+  await requireUser("/notifications");
+  return <NotificationInbox tab="replies" />;
+}
+```
+
+<Callout kind="warn">
+
+传给客户端组件的 props 会原样出现在发给浏览器的数据里。会话令牌、只给服务器看的字段，不要顺手塞进 props。
+
+</Callout>
+
+## 客户端组件在服务器上也跑一次
+
+名字容易让人误会。实际情况是：
+
+| | 在服务器上跑 | 在浏览器里跑 |
+|---|---|---|
+| 服务端组件 | 是 | 否 |
+| 客户端组件 | 是 | 是 |
+
+第一次打开页面时，客户端组件先在服务器上跑一遍，画出 HTML，让页面马上能看；它的代码同时发到浏览器，在浏览器里再跑一遍，挂上点击这些交互。「客户端」的意思是「也在浏览器里跑」，不是「只在浏览器里跑」。两次运行的结果必须一样，这是下一篇「水合」的话题。
+
+<Quiz
+  questions={[
+    {
+      question: "门户的文献详情页要加一个「复制 DOI」按钮，点一下把 DOI 写进剪贴板。它应该是哪种组件？",
+      options: ["服务端组件", "客户端组件：要响应点击、要用浏览器的剪贴板接口", "都行"],
+      answer: "B",
+      explain: "点击事件和剪贴板都只在浏览器里有。按钮单独做成一个小的客户端组件，页面其余部分仍是服务端组件。"
+    },
+    {
+      question: "一个文件写了 `use client`，它引入了一个画期刊卡片的组件，那个组件文件没写 `use client`。期刊卡片组件的代码会进浏览器吗？",
+      options: ["不会，它没写 use client", "会：客户端组件引入的模块都进浏览器的代码包", "只在开发模式下会"],
+      answer: "B",
+      explain: "边界在 import 上。想让卡片留在服务器上，就由服务端组件渲染它，再当 `children` 交给客户端组件。"
+    },
+    {
+      question: "打开用户主页时，TopNav 会在服务器上运行吗？",
+      options: ["不会，它是客户端组件", "会：服务器先用它画出 HTML，浏览器再跑一遍", "只有登录用户打开时会"],
+      answer: "B",
+      explain: "第一次打开页面时，客户端组件两边都跑。所以它在首次渲染里不能依赖 window 这类浏览器才有的东西，服务器上没有，或者有也不是访客那一份。"
+    }
+  ]}
+/>
+
+<Transfer
+  prompt="文献详情页要加一个「收藏」按钮，旁边显示这篇文献被收藏了多少次。次数要从网关取，点按钮后次数立刻加一。你会怎么拆：哪部分是服务端组件、哪部分是客户端组件、中间传什么？"
+  points={[
+    { label: "服务端取初始数据", text: "页面（服务端组件）调网关拿到收藏次数和「我收藏了没有」，网关调用和会话令牌都留在服务器上。" },
+    { label: "按钮是客户端组件", text: "按钮要响应点击、记住新的次数，单独做成一个 `use client` 的小组件。" },
+    { label: "props 只传数据", text: "页面把次数（数字）、是否已收藏（布尔）、文献编号（字符串）传给按钮，不传函数。" },
+    { label: "客户端组件尽量小", text: "只有按钮进浏览器，标题、摘要这些仍在服务器上画，发给浏览器的代码更少。" }
+  ]}
+/>
