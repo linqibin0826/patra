@@ -36,6 +36,7 @@ class ReminderDeliveryRepositoryAdapterIT {
   @Autowired private ReminderDeliveryRepository deliveries;
   @Autowired private JdbcClient jdbcClient;
 
+  /// 每例前清空投递表。
   @BeforeEach
   void clean() {
     jdbcClient.sql("TRUNCATE mail.reminder_delivery").update();
@@ -161,6 +162,12 @@ class ReminderDeliveryRepositoryAdapterIT {
         .hasMessageContaining("ck_reminder_delivery_kind");
   }
 
+  /// 一条逐条投递。
+  ///
+  /// @param id id
+  /// @param recipientId recipientId
+  /// @param notificationIds notificationIds
+  /// @return 结果
   private static ReminderDelivery instant(UUID id, long recipientId, List<Long> notificationIds) {
     return ReminderDelivery.instant(
         id, recipientId, NotificationCategory.REPLY, notificationIds, NOW);

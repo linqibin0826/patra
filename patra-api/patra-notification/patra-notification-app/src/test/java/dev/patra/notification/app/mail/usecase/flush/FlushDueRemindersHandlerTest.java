@@ -172,20 +172,36 @@ class FlushDueRemindersHandlerTest {
     assertThat(result).isEqualTo(FlushResult.of(1, 0, 1));
   }
 
+  /// 这些收件人有到点的行，下一页为空。
+  ///
+  /// @param recipients recipients
   private void dueRecipients(List<Long> recipients) {
     when(queue.recipientsDue(NOW, 0L, 100)).thenReturn(recipients);
     when(queue.recipientsDue(eq(NOW), eq(recipients.getLast()), eq(100))).thenReturn(List.of());
   }
 
+  /// 这些提醒仍未读。
+  ///
+  /// @param recipientId recipientId
+  /// @param ids ids
   private void unread(long recipientId, Long... ids) {
     when(inbox.findUnread(eq(recipientId), anyCollection()))
         .thenReturn(List.of(ids).stream().map(FlushDueRemindersHandlerTest::entry).toList());
   }
 
+  /// 一条回复提醒的排队行。
+  ///
+  /// @param id id
+  /// @param queuedAt queuedAt
+  /// @return 结果
   private static QueuedReminder reply(long id, Instant queuedAt) {
     return QueuedReminder.queue(id, 7L, NotificationCategory.REPLY, queuedAt);
   }
 
+  /// 信箱里的一条回复提醒。
+  ///
+  /// @param id id
+  /// @return 结果
   private static InboxEntry entry(long id) {
     return InboxEntry.builder()
         .notificationId(id)

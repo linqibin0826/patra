@@ -25,11 +25,13 @@ class ReminderMailScheduleJobTest {
   private final ReminderMailScheduleJob job = new ReminderMailScheduleJob(commandBus);
   private final XxlJobContext context = new XxlJobContext(1L, null, null, 0, 1);
 
+  /// 设好 XXL 上下文。
   @BeforeEach
   void setContext() {
     XxlJobContext.setXxlJobContext(context);
   }
 
+  /// 清掉 XXL 上下文。
   @AfterEach
   void clearContext() {
     XxlJobContext.setXxlJobContext(null);

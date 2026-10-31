@@ -34,6 +34,7 @@ class ReminderQueueRepositoryAdapterIT {
   @Autowired private TransactionTemplate transactions;
   @Autowired private JdbcClient jdbcClient;
 
+  /// 每例前清空排队表。
   @BeforeEach
   void clean() {
     jdbcClient.sql("TRUNCATE mail.reminder_queue").update();
@@ -101,6 +102,9 @@ class ReminderQueueRepositoryAdapterIT {
         .containsExactly(2L);
   }
 
+  /// 在事务里入队。
+  ///
+  /// @param rows rows
   private void enqueue(QueuedReminder... rows) {
     transactions.executeWithoutResult(status -> queue.enqueue(List.of(rows)));
   }

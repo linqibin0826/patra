@@ -243,12 +243,18 @@ class SendPendingDeliveriesHandlerTest {
     verify(assembler, times(1)).assemble(delivery, NOW);
   }
 
+  /// 一条到点的逐条投递。
+  ///
+  /// @return 结果
   private ReminderDelivery due() {
     ReminderDelivery delivery = delivery();
     page(delivery);
     return delivery;
   }
 
+  /// 取到点投递时回这一页（取两次后为空）。
+  ///
+  /// @param page page
   private void page(ReminderDelivery... page) {
     when(deliveries.findDue(NOW, 50))
         .thenReturn(List.of(page))
@@ -256,6 +262,10 @@ class SendPendingDeliveriesHandlerTest {
         .thenReturn(List.of());
   }
 
+  /// 这条投递装配得出来。
+  ///
+  /// @param delivery delivery
+  /// @param layout layout
   private void ready(ReminderDelivery delivery, Layout layout) {
     when(assembler.assemble(delivery, NOW))
         .thenReturn(
@@ -271,10 +281,17 @@ class SendPendingDeliveriesHandlerTest {
                     .build()));
   }
 
+  /// 发信端口下一次按这一类失败。
+  ///
+  /// @param failure failure
   private void fail(MailDeliveryFailure failure) {
     doThrow(failure(failure)).doAnswer(i -> null).when(mail).deliver(any());
   }
 
+  /// 发信端口的失败。
+  ///
+  /// @param failure failure
+  /// @return 结果
   private static MailDeliveryFailedException failure(MailDeliveryFailure failure) {
     return new MailDeliveryFailedException(
         OutgoingMail.builder()
@@ -288,6 +305,9 @@ class SendPendingDeliveriesHandlerTest {
         "原因");
   }
 
+  /// 一条逐条投递。
+  ///
+  /// @return 结果
   private static ReminderDelivery delivery() {
     return ReminderDelivery.instant(
         UUID.randomUUID(), 7L, NotificationCategory.REPLY, List.of(1L), NOW);

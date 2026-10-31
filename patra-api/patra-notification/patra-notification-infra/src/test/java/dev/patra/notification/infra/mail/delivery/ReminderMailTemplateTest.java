@@ -200,6 +200,10 @@ class ReminderMailTemplateTest {
         .doesNotContain("通知设置</a>");
   }
 
+  /// 一封单条回复邮件的内容。
+  ///
+  /// @param plainText plainText
+  /// @return 结果
   private static ReminderMailContent single(String plainText) {
     return COMPOSER.instant(
         NotificationCategory.REPLY,
@@ -218,6 +222,13 @@ class ReminderMailTemplateTest {
         AT);
   }
 
+  /// 拼一条回复提醒的事实。
+  ///
+  /// @param id id
+  /// @param actor actor
+  /// @param at at
+  /// @param text text
+  /// @return 结果
   private static ReminderFacts facts(long id, String actor, Instant at, String text) {
     return ReminderFacts.builder()
         .notificationId(id)

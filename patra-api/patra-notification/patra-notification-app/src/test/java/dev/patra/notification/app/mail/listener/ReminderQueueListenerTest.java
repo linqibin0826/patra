@@ -66,6 +66,11 @@ class ReminderQueueListenerTest {
     verify(queue, never()).enqueue(any());
   }
 
+  /// 一条刚写入信箱的提醒。
+  ///
+  /// @param id id
+  /// @param category category
+  /// @return 结果
   private static CreatedNotification created(long id, NotificationCategory category) {
     return CreatedNotification.builder()
         .notificationId(id)

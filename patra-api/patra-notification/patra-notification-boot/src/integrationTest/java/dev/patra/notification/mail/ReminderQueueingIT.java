@@ -57,6 +57,11 @@ class ReminderQueueingIT extends NotificationFlowITSupport {
         .isZero();
   }
 
+  /// 收件人 7 的一条提醒草稿。
+  ///
+  /// @param type type
+  /// @param commentId commentId
+  /// @return 结果
   private static NotificationDraft draft(NotificationType type, long commentId) {
     return NotificationDraft.builder()
         .recipientId(7L)

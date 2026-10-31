@@ -2,6 +2,7 @@ package dev.patra.notification.domain.mail.policy;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.tuple;
 
 import dev.patra.notification.domain.inbox.model.read.NotificationType;
 import dev.patra.notification.domain.kernel.model.enums.NotificationCategory;
@@ -241,9 +242,9 @@ class ReminderMailComposerTest {
     assertThat(mail.items())
         .extracting(ReminderItem::actorName, ReminderItem::action, ReminderItem::time)
         .containsExactly(
-            org.assertj.core.groups.Tuple.tuple("王立", "回复了你", "15:02"),
-            org.assertj.core.groups.Tuple.tuple("周敏", "回复了你", "15:05"),
-            org.assertj.core.groups.Tuple.tuple("林知远", "评论了你的投稿经验", "15:09"));
+            tuple("王立", "回复了你", "15:02"),
+            tuple("周敏", "回复了你", "15:05"),
+            tuple("林知远", "评论了你的投稿经验", "15:09"));
     assertThat(mail.items().getFirst().place().line())
         .isEqualTo("文献 · Hydrocortisone, Vitamin C, and Thiamine for the Treatment of Sev…");
     assertThat(mail.items().get(2).place().line())
@@ -518,6 +519,14 @@ class ReminderMailComposerTest {
     assertThat(mail.preheader()).startsWith("R2：");
   }
 
+  /// 单条邮件。
+  ///
+  /// @param category category
+  /// @param type type
+  /// @param actor actor
+  /// @param subject subject
+  /// @param mine mine
+  /// @return 结果
   private static ReminderMailContent single(
       NotificationCategory category,
       NotificationType type,
@@ -550,6 +559,10 @@ class ReminderMailComposerTest {
         .reversed();
   }
 
+  /// @ M0..M(n-1)，时间 15:02 起每条加一分钟，新的在前。
+  ///
+  /// @param n n
+  /// @return 结果
   private static List<ReminderFacts> mentions(int n) {
     return IntStream.range(0, n)
         .mapToObj(
@@ -567,6 +580,17 @@ class ReminderMailComposerTest {
         .reversed();
   }
 
+  /// 拼一条提醒的事实。
+  ///
+  /// @param id id
+  /// @param type type
+  /// @param actor actor
+  /// @param occurredAt occurredAt
+  /// @param plainText plainText
+  /// @param subject subject
+  /// @param commentId commentId
+  /// @param mine mine
+  /// @return 结果
   private static ReminderFacts facts(
       long id,
       NotificationType type,

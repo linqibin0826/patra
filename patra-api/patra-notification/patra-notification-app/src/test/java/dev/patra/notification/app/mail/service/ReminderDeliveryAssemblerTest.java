@@ -77,6 +77,7 @@ class ReminderDeliveryAssemblerTest {
               ReminderLinks.of("https://patra.linqibin.dev"),
               ReminderTimeText.of(ZoneId.of("Asia/Shanghai"))));
 
+  /// 默认一切正常：两类都是逐条、收件人正常且已验证、对象与名片都查得到。
   @BeforeEach
   void happyPath() {
     when(subscriptions.findSubscription(ME)).thenReturn(EmailModes.DEFAULT);
@@ -228,15 +229,30 @@ class ReminderDeliveryAssemblerTest {
     verifyNoInteractions(recipients);
   }
 
+  /// 收件人这些提醒仍未读。
+  ///
+  /// @param entries entries
   private void unread(InboxEntry... entries) {
     when(inbox.findUnread(eq(ME), anyCollection())).thenReturn(List.of(entries));
   }
 
+  /// 一条两条提醒的逐条投递。
+  ///
+  /// @return 结果
   private static ReminderDelivery instant() {
     return ReminderDelivery.instant(
         UUID.randomUUID(), ME, NotificationCategory.REPLY, List.of(1L, 2L), NOW);
   }
 
+  /// 信箱里的一条提醒。
+  ///
+  /// @param id id
+  /// @param type type
+  /// @param actorId actorId
+  /// @param anonymous anonymous
+  /// @param subjectId subjectId
+  /// @param text text
+  /// @return 结果
   private static InboxEntry entry(
       long id,
       NotificationType type,
@@ -257,6 +273,11 @@ class ReminderDeliveryAssemblerTest {
         .build();
   }
 
+  /// 收件人的收件信息。
+  ///
+  /// @param state state
+  /// @param verified verified
+  /// @return 结果
   private static Recipient recipient(AccountState state, boolean verified) {
     return Recipient.builder()
         .userId(ME)
@@ -268,6 +289,12 @@ class ReminderDeliveryAssemblerTest {
         .build();
   }
 
+  /// 替收件人取的名片。
+  ///
+  /// @param id id
+  /// @param name name
+  /// @param state state
+  /// @return 结果
   private static UserCard card(long id, String name, AccountState state) {
     return UserCard.builder()
         .userId(id)
@@ -278,6 +305,10 @@ class ReminderDeliveryAssemblerTest {
         .build();
   }
 
+  /// 一篇文献的对象视图。
+  ///
+  /// @param id id
+  /// @return 结果
   private static SubjectView paper(long id) {
     return SubjectView.builder()
         .subjectId(id)
@@ -288,6 +319,10 @@ class ReminderDeliveryAssemblerTest {
         .build();
   }
 
+  /// 收件人自己的一条投稿经验。
+  ///
+  /// @param id id
+  /// @return 结果
   private static SubjectView myPost(long id) {
     return SubjectView.builder()
         .subjectId(id)

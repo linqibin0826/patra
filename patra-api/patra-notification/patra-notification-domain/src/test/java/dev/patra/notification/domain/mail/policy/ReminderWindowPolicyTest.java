@@ -93,14 +93,28 @@ class ReminderWindowPolicyTest {
     assertThat(plan.batches()).hasSize(1);
   }
 
+  /// T0 之后几分钟。
+  ///
+  /// @param minutes minutes
+  /// @return 结果
   private static Instant minutes(int minutes) {
     return T0.plus(Duration.ofMinutes(minutes));
   }
 
+  /// 一条回复提醒的排队行。
+  ///
+  /// @param id id
+  /// @param queuedAt queuedAt
+  /// @return 结果
   private static QueuedReminder reply(long id, Instant queuedAt) {
     return QueuedReminder.queue(id, 7L, NotificationCategory.REPLY, queuedAt);
   }
 
+  /// 一条 @ 提醒的排队行。
+  ///
+  /// @param id id
+  /// @param queuedAt queuedAt
+  /// @return 结果
   private static QueuedReminder mention(long id, Instant queuedAt) {
     return QueuedReminder.queue(id, 7L, NotificationCategory.MENTION, queuedAt);
   }

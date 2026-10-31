@@ -120,6 +120,10 @@ class ScheduleDailyDigestHandlerTest {
     assertThat(result.purged()).isEqualTo(3);
   }
 
+  /// 设为每日汇总的一个人。
+  ///
+  /// @param userId userId
+  /// @return 结果
   private static EmailSubscription subscription(long userId) {
     return EmailSubscription.of(userId, EmailMode.DIGEST, EmailMode.INSTANT, "T".repeat(43));
   }

@@ -24,6 +24,7 @@ class DailyDigestScheduleJobTest {
   private final CommandBus commandBus = mock(CommandBus.class);
   private final DailyDigestScheduleJob job = new DailyDigestScheduleJob(commandBus);
 
+  /// 清掉 XXL 上下文。
   @AfterEach
   void clearContext() {
     XxlJobContext.setXxlJobContext(null);
@@ -66,12 +67,19 @@ class DailyDigestScheduleJobTest {
     assertThat(context.getHandleMsg()).startsWith("参数应为空或 users=用户ID,…");
   }
 
+  /// 设好带这个参数的 XXL 上下文。
+  ///
+  /// @param param param
+  /// @return 结果
   private static XxlJobContext context(String param) {
     XxlJobContext context = new XxlJobContext(1L, param, null, 0, 1);
     XxlJobContext.setXxlJobContext(context);
     return context;
   }
 
+  /// 一轮建名单的计数。
+  ///
+  /// @return 结果
   private static DigestScheduleResult result() {
     return DigestScheduleResult.of(Instant.parse("2026-10-31T00:00:00Z"), 3, 2, 1);
   }

@@ -243,6 +243,14 @@ class InboxReadAdapterIT extends InboxPersistenceITSupport {
     assertThat(window.newest()).extracting(InboxEntry::commentId).containsExactly(500L);
   }
 
+  /// 指定排序时间与写入时刻的草稿。
+  ///
+  /// @param recipientId recipientId
+  /// @param type type
+  /// @param commentId commentId
+  /// @param occurredAt occurredAt
+  /// @param createdAt createdAt
+  /// @return 结果
   private static NotificationDraft drafted(
       long recipientId,
       NotificationType type,

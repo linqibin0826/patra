@@ -170,6 +170,9 @@ class ReminderDeliveryTest {
         .isInstanceOf(IllegalStateException.class);
   }
 
+  /// 一条两条 @ 提醒的逐条投递。
+  ///
+  /// @return 结果
   private static ReminderDelivery instant() {
     return ReminderDelivery.instant(ID, 7L, NotificationCategory.MENTION, List.of(11L, 12L), NOW);
   }

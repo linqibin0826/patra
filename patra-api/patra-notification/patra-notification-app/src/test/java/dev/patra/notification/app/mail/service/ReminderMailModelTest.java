@@ -36,6 +36,10 @@ class ReminderMailModelTest {
     assertThat(ReminderMailModel.of(content(null))).doesNotContainKey("preheader");
   }
 
+  /// 一封单条邮件的内容。
+  ///
+  /// @param preheader preheader
+  /// @return 结果
   private static ReminderMailContent content(String preheader) {
     return ReminderMailContent.builder()
         .layout(Layout.SINGLE)
