@@ -175,7 +175,6 @@ public class PublishCommentHandler implements CommandHandler<PublishCommentComma
         .authorId(author)
         .authorAnonymous(owner != null && owner.anonymous() && owner.userId() == author)
         .mentionedUserIds(resolved.mentionedUserIds())
-        .body(resolved.body())
         .plainText(plain)
         .publishedAt(now)
         .build();

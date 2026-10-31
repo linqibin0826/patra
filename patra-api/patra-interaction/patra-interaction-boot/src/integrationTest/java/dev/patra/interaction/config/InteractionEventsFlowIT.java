@@ -314,7 +314,6 @@ class InteractionEventsFlowIT extends InteractionFlowITSupport {
                 .authorId(A)
                 .authorAnonymous(true)
                 .mentionedUserIds(List.of(B))
-                .body("<@4002> 正文")
                 .plainText("<@4002> 正文")
                 .publishedAt(at)
                 .build(),
@@ -328,7 +327,6 @@ class InteractionEventsFlowIT extends InteractionFlowITSupport {
                 .authorId(A)
                 .mentionedUserIds(List.of(B))
                 .addedMentionedUserIds(List.of(B))
-                .body("改")
                 .plainText("改")
                 .editedAt(at)
                 .build(),

@@ -27,7 +27,6 @@ import lombok.Builder;
 /// @param authorId 作者
 /// @param authorAnonymous 作者是对象的匿名所有者：提醒里的触发人要显示「匿名作者」
 /// @param mentionedUserIds 正文 @ 到的正常账号，去重、按第一次出现；可能含作者本人
-/// @param body 存储形式的正文（Markdown，含 `<@用户ID>`）
 /// @param plainText 正文转成的全文纯文本（PAP-128），保留 `<@用户ID>`
 /// @param publishedAt 发表时刻（与库里的 `created_at` 相同）
 @Builder
@@ -44,7 +43,6 @@ public record CommentPublishedEvent(
     long authorId,
     boolean authorAnonymous,
     List<Long> mentionedUserIds,
-    String body,
     String plainText,
     Instant publishedAt) {
 

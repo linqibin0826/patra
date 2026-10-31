@@ -175,7 +175,6 @@ class EditCommentHandlerTest {
     CommentEditedEvent event = published();
     assertThat(event.mentionedUserIds()).containsExactly(8L, 9L);
     assertThat(event.addedMentionedUserIds()).containsExactly(9L);
-    assertThat(event.body()).isEqualTo("<@8> <@9> 改");
     assertThat(event.plainText()).isEqualTo("<@8> <@9> 改|[8, 9]");
     assertThat(event.eventId()).isNotNull();
     assertThat(event.version()).isEqualTo(2);

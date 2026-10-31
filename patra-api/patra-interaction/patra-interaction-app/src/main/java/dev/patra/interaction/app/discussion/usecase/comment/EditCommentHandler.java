@@ -133,7 +133,6 @@ public class EditCommentHandler implements CommandHandler<EditCommentCommand, Co
         .authorAnonymous(owner != null && owner.anonymous() && owner.userId() == after.authorId())
         .mentionedUserIds(resolved.mentionedUserIds())
         .addedMentionedUserIds(edit.addedMentionedUserIds())
-        .body(resolved.body())
         .plainText(plain)
         .editedAt(now)
         .build();

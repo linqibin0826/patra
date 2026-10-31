@@ -205,7 +205,6 @@ class PublishCommentHandlerTest {
                 .authorId(AUTHOR)
                 .authorAnonymous(false)
                 .mentionedUserIds(List.of(7L))
-                .body("<@7> 你好")
                 .plainText("<@7> 你好|[7]")
                 .publishedAt(NOW_MICROS)
                 .build());

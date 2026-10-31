@@ -125,7 +125,7 @@ app Handler 的事务内
 | `HelpfulMarkedEvent`（新） | 见下 |
 | `HelpfulUnmarkedEvent`（新） | 见下 |
 
-已有字段（`subjectId`、`subjectType`、`subjectOwner`、`body` 等）不动：旧提醒子域的同步监听器还在用，PAP-143 删它时再看要不要精简。纯文本只放进领域事件、不替换 `body`，过渡期里旧监听器照旧自己转。
+已有字段（`subjectId`、`subjectType`、`subjectOwner` 等）不动。发表、编辑事件原来带的存储形式正文 `body` 只给旧提醒子域的同步监听器用，PAP-143 删掉提醒子域后已从两个事件里删除（2026-10-31，上线前删，mini 上还没有登记行，不受「改字段前登记表要空」的限制）；服务内外都只用纯文本 `plainText`。
 
 新的两个事件放 `domain.reaction.event`（`reaction` 第一次有事件包）：
 
@@ -394,7 +394,7 @@ IT 底座：`InteractionFlowITSupport` 加 `RabbitMQContainerInitializer`，导�
 - 上线后要改外送领域事件的类名或字段（包括本 Issue 新增的），先确认 interaction 的 `event_publication` 是空的（PAP-137 README）。
 - 集成事件 record 的字段只增不改名；要删字段先确认消费端不再读。
 - 要外送 `HelpfulUnmarkedEvent` 时：先有消费方绑定，再按它的需要补字段、加进外送配置。
-- PAP-143 删 `notification` 子域时：同步监听器 `CommentNotificationListener`、`PostNotificationListener` 一起删；`allowingSubscription("notification", …)` 两条随之删；领域事件里只为旧监听器留的字段（`body` 等）可以删，删之前按第一条确认登记表为空。
+- PAP-143 删 `notification` 子域时：同步监听器 `CommentNotificationListener`、`PostNotificationListener` 一起删；`allowingSubscription("notification", …)` 两条随之删。（已完成；领域事件里只为旧监听器留的 `body` 也已删除，见 4.3。）
 - 新增外送事件：照 4.8 在 `InteractionEventsConfiguration` 里选中、路由、映射，api 里加 record 与 `ROUTING_KEY`，通知服务先绑定。
 
 ## 9. 拍板记录

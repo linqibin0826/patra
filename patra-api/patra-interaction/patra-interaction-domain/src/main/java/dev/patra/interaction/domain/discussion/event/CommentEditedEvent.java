@@ -25,7 +25,6 @@ import lombok.Builder;
 /// @param authorAnonymous 作者是对象的匿名所有者
 /// @param mentionedUserIds 编辑后正文 @ 到的人
 /// @param addedMentionedUserIds 这条评论第一次 @ 到的人：提醒只发给他们
-/// @param body 编辑后的正文（存储形式）
 /// @param plainText 编辑后的正文转成的全文纯文本（PAP-128），保留 `<@用户ID>`
 /// @param editedAt 编辑时刻
 @Builder
@@ -43,7 +42,6 @@ public record CommentEditedEvent(
     boolean authorAnonymous,
     List<Long> mentionedUserIds,
     List<Long> addedMentionedUserIds,
-    String body,
     String plainText,
     Instant editedAt) {
 

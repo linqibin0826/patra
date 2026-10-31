@@ -104,7 +104,6 @@ class InteractionEventsConfigurationTest {
         .subjectType(SubjectType.PUBLICATION)
         .rootCommentId(1L)
         .authorId(3L)
-        .body("x")
         .plainText("x")
         .publishedAt(AT)
         .build();
@@ -122,7 +121,6 @@ class InteractionEventsConfigurationTest {
         .subjectType(SubjectType.PUBLICATION)
         .rootCommentId(1L)
         .authorId(3L)
-        .body("y")
         .plainText("y")
         .editedAt(AT)
         .build();

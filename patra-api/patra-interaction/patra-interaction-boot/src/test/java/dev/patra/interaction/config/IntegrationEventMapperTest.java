@@ -49,7 +49,6 @@ class IntegrationEventMapperTest {
             .authorId(7L)
             .authorAnonymous(true)
             .mentionedUserIds(List.of(5L, 6L))
-            .body("<@5> 正文")
             .plainText("<@5> 纯文本")
             .publishedAt(AT)
             .build();
@@ -84,7 +83,6 @@ class IntegrationEventMapperTest {
             .subjectType(SubjectType.PUBLICATION)
             .rootCommentId(10L)
             .authorId(7L)
-            .body("x")
             .plainText("x")
             .publishedAt(AT)
             .build();
@@ -112,7 +110,6 @@ class IntegrationEventMapperTest {
             .authorAnonymous(false)
             .mentionedUserIds(List.of(5L, 6L))
             .addedMentionedUserIds(List.of(6L))
-            .body("改")
             .plainText("改了")
             .editedAt(AT)
             .build();

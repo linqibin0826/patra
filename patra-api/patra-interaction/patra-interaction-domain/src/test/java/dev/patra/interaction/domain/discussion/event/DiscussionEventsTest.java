@@ -111,7 +111,6 @@ class DiscussionEventsTest {
         .rootCommentId(100L)
         .authorId(1L)
         .authorAnonymous(false)
-        .body("正文")
         .publishedAt(T0);
   }
 
@@ -127,7 +126,6 @@ class DiscussionEventsTest {
         .rootCommentId(100L)
         .authorId(1L)
         .authorAnonymous(false)
-        .body("正文")
         .editedAt(T0);
   }
 }
