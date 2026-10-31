@@ -3,8 +3,11 @@ import { z } from "zod";
 import { componentRegistry } from "@/teaching/registry";
 import { checkEntryBody } from "./mdx-rules";
 
-const OPEN = '<Diagnose question="打开网页时发生了什么？" />';
-const CLOSE = '<Recap prompt="用自己的话复述一遍" />';
+// 诊断题与复述题的参数按教学组件登记表写全，这里只关心首尾结构
+const CHOICE = 'options={["甲", "乙"]} answer="A" ifRight="对" ifWrong="错"';
+const POINTS = 'points={[{ text: "一" }, { text: "二" }]}';
+const OPEN = `<Diagnose question="打开网页时发生了什么？" ${CHOICE} />`;
+const CLOSE = `<Recap prompt="用自己的话复述一遍" ${POINTS} />`;
 
 /// 首尾合法，中间放 middle
 function body(middle: string) {
@@ -28,7 +31,9 @@ describe("正文结构", () => {
   });
 
   it("迁移题结尾也可以", () => {
-    expect(rules(`${OPEN}\n\n正文\n\n<Transfer prompt="换到订单服务会怎样？" />\n`)).toEqual([]);
+    expect(
+      rules(`${OPEN}\n\n正文\n\n<Transfer prompt="换到订单服务会怎样？" ${POINTS} />\n`),
+    ).toEqual([]);
   });
 
   it("第一块是段落时报 diagnostic-missing", () => {
@@ -40,7 +45,7 @@ describe("正文结构", () => {
   });
 
   it("诊断题嵌在其他组件里不算开头", () => {
-    expect(rules(`<Recap prompt="x">\n${OPEN}\n</Recap>\n\n${CLOSE}\n`)).toEqual([
+    expect(rules(`<Recap prompt="x" ${POINTS}>\n${OPEN}\n</Recap>\n\n${CLOSE}\n`)).toEqual([
       "diagnostic-missing",
     ]);
   });
@@ -54,17 +59,13 @@ describe("正文结构", () => {
   });
 
   it("标签与内容写在同一行（MDX 解析成段落里的行内组件）也算首尾", () => {
-    expect(
-      rules(
-        '<Diagnose question="问">提示</Diagnose>\n\n正文\n\n<Recap prompt="复述">答案</Recap>\n',
-      ),
-    ).toEqual([]);
+    expect(rules(`${OPEN}\n\n正文\n\n<Recap prompt="复述" ${POINTS}>答案</Recap>\n`)).toEqual([]);
   });
 
   it("段落里除了组件还有别的文字，不算首尾", () => {
-    expect(rules(`${OPEN}\n\n正文\n\n<Recap prompt="复述">答案</Recap> 补一句\n`)).toEqual([
-      "recap-missing",
-    ]);
+    expect(
+      rules(`${OPEN}\n\n正文\n\n<Recap prompt="复述" ${POINTS}>答案</Recap> 补一句\n`),
+    ).toEqual(["recap-missing"]);
   });
 
   it("判断首尾时跳过注释", () => {
@@ -95,7 +96,7 @@ describe("组件与参数", () => {
   it.each([
     ["未登记的组件", "<Foo />"],
     ["HTML 标签", "<div>块</div>"],
-    ["嵌在组件里的未登记组件", '<Recap prompt="x">\n<Foo />\n</Recap>'],
+    ["嵌在组件里的未登记组件", `<Recap prompt="x" ${POINTS}>\n<Foo />\n</Recap>`],
   ])("%s 报 component-unknown", (_name, middle) => {
     expect(rules(body(middle))).toEqual(["component-unknown"]);
   });

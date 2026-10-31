@@ -8,7 +8,7 @@ import remarkGfm from "remark-gfm";
 import { getCatalog } from "@/lib/content/catalog";
 import { findEntry } from "@/lib/content/indexes";
 import { mdxComponents } from "@/mdx-components";
-import { Diagnose, type DiagnoseProps } from "@/teaching/placeholders";
+import { Diagnose, type DiagnoseProps } from "@/teaching/minimal";
 
 export const dynamicParams = false;
 

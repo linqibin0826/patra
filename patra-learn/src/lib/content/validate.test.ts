@@ -2,7 +2,10 @@ import { describe, expect, it } from "vitest";
 import type { RawContent, RawFile } from "./types";
 import { validateContent, validateEntryFiles } from "./validate";
 
-const BODY = '<Diagnose question="为什么要异步？" />\n\n正文\n\n<Recap prompt="复述一遍" />\n';
+// 诊断题与复述题的参数按教学组件登记表写全
+const CHOICE = 'options={["甲", "乙"]} answer="A" ifRight="对" ifWrong="错"';
+const POINTS = 'points={[{ text: "一" }, { text: "二" }]}';
+const BODY = `<Diagnose question="为什么要异步？" ${CHOICE} />\n\n正文\n\n<Recap prompt="复述一遍" ${POINTS} />\n`;
 
 function mdx(slug: string, frontmatter: string, body = BODY): RawFile {
   return { file: `content/entries/${slug}.mdx`, text: `---\n${frontmatter}\n---\n${body}` };
@@ -16,7 +19,7 @@ const VALID: RawContent = {
     mdx(
       "message-queue",
       `title: 消息队列\n${META}\ndifficulty: basic\nprerequisites: [why-async]`,
-      `<Diagnose question="消息队列解决什么问题？" />\n\n<CodeRef at="patra-learn/package.json@pending" />\n\n<Transfer prompt="换成 Kafka 呢？" />\n`,
+      `<Diagnose question="消息队列解决什么问题？" ${CHOICE} />\n\n<CodeRef at="patra-learn/package.json@pending" />\n\n<Transfer prompt="换成 Kafka 呢？" ${POINTS} />\n`,
     ),
   ],
   routes: [
@@ -43,7 +46,7 @@ describe("validateContent", () => {
     const bad = mdx(
       "bad",
       `title: 坏条目\n${META}\ndifficulty: basic\nprerequisites: [nope]`,
-      '地址 100.64.0.1\n\n<Recap prompt="x" />\n',
+      `地址 100.64.0.1\n\n<Recap prompt="x" ${POINTS} />\n`,
     );
     const { issues } = validateContent({ ...VALID, entries: [...VALID.entries, bad] }, deps);
     expect(issues.map((i) => i.rule).sort()).toEqual(
