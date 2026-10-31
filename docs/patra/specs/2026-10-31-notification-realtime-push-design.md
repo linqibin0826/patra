@@ -399,3 +399,14 @@ HTTP/1.1 下浏览器对同一站点最多 6 条连接，所以门户在标签�
 - **变异确认测试会变红**：去掉推送处理器的刷新事件转交 → `should_forward_stream_with_assertion_and_without_session_token` 红（会话令牌直达下游）；把读数挪到锁外 → `should_end_with_latest_counts_when_two_pushes_race` 红；把监听器改成同步 `@EventListener` → `should_push_only_after_commit_and_not_record_publication` 红。
 - **在站的时序**：一轮心跳先发完全部连接再记在站，刚收到心跳时读到的可能还是上一轮的时刻，集成测试用 Awaitility 等它前进。
 - **到寿命的日志**：`onTimeout` 里 `complete()` 后响应正常结束，日志里没有 `AsyncRequestTimeoutException`；浏览器走后的写失败只在 DEBUG 记一行。
+
+### 14.3 独立评审与处理（Opus 子代理，只看代码与本 spec）
+
+| 发现 | 严重度 | 处理 |
+|---|---|---|
+| 建连时记在站失败往外抛：控制器拿不到 emitter，连接却留在表里；之后的发送只攒在没初始化的 emitter 里、永不报错、永不剔除，每轮心跳把他记成在站，离站邮件永远不发 | 中 | 已修：在站改成附带信号，`open` 与心跳里写不进去只记 WARN、不影响推送和同一轮后面的人。复现用例 `should_keep_stream_working_when_presence_cannot_be_recorded_on_open`、`should_mark_other_users_seen_when_one_presence_write_fails` 先红后绿 |
+| 心跳拿用户锁，推送在锁里读库：数据库一慢，心跳排在后面，一轮拖过网关 60 秒读超时，所有推送流一起断开 | 低 | 已修：心跳不拿用户锁（`SseEmitter` 内部用 `writeLock` 串行化写，Spring 7.0.10 源码核对）。复现用例 `should_send_heartbeats_while_a_push_waits_on_the_database` 先红后绿 |
+| 没有每用户的连接上限：一个注册用户用脚本开满 500 条，所有人的推送 503、退回轮询 | 低 | 本版不做：只影响已登录用户、后果是退回轮询而不是不可用；现在是邀请制的少数用户。上线公网前随限流一起考虑 |
+| 停机竞态：`closeAll` 遍历期间新登记的连接没被结束，优雅停机仍会等它（毫秒级窗口） | 低 | 本版不做：窗口只在停机那一刻、最坏多等到优雅停机上限 30 秒；不值得为它加「关闭中」状态 |
+| 测试缺口：网关侧浏览器中途断开后推送池连接是否释放 | — | 已补：`GatewayPushRouteIT.should_free_push_connection_when_browser_disconnects_mid_stream` |
+| 测试缺口：停机路径用的是假响应体、`ContextClosedEvent` 接线没有集成测试 | — | 不补：真实 `SubscriberInputStream` 从别的线程关闭时 `read()` 返回 -1，随后 `clientResponse.close()` 读空即返回（源码核对）；接线是一行 `@EventListener`。部署时的表现在 mini 上看（runbook PAP-145 段） |
