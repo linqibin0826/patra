@@ -192,6 +192,34 @@ class CommentRepositoryAdapterIT extends DiscussionPersistenceITSupport {
     assertThat(saved.getCreatedAt()).isEqualTo(T0);
   }
 
+  /// 新评论的正文版本是 1（PAP-141）。
+  @Test
+  void should_insert_with_initial_version() {
+    long id = insert(null, null, 1L, "根", List.of(), T0);
+
+    assertThat(comments.find(id).orElseThrow().getVersion())
+        .isEqualTo(CommentAggregate.INITIAL_VERSION);
+  }
+
+  /// 改正文把加一后的版本一起写进去：连改两次是 3。
+  @Test
+  void should_persist_incremented_version() {
+    long id = insert(null, null, 1L, "旧", List.of(), T0);
+
+    for (String body : List.of("二", "三")) {
+      transactions.executeWithoutResult(
+          s -> {
+            CommentAggregate locked = comments.findForEdit(id).orElseThrow();
+            comments.updateBody(
+                locked.edit(1L, body, List.of(), T0.plusSeconds(10)).orElseThrow().updated());
+          });
+    }
+
+    CommentAggregate saved = comments.find(id).orElseThrow();
+    assertThat(saved.getVersion()).isEqualTo(3);
+    assertThat(saved.getBody()).isEqualTo("三");
+  }
+
   /// 修改历史的版本号依次递增。
   @Test
   void should_number_revisions_in_order() {

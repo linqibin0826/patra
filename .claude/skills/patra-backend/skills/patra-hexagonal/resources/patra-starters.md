@@ -15,7 +15,7 @@
 | **infra（对象存储）** | `patra-tool-object-storage` |
 | **infra（批处理）** | `patra-tool-batch` |
 | **domain / api（插件自动给，不手写）** | `patra-tool-core` |
-| **boot** | `patra-tool-launch`（插件自动给）、`patra-tool-observability`、`patra-tool-openapi`、`patra-tool-security`（需要鉴权时） |
+| **boot** | `patra-tool-launch`（插件自动给）、`patra-tool-observability`、`patra-tool-openapi`、`patra-tool-security`（需要鉴权时）、`patra-tool-events`（跨服务事件） |
 | **测试** | `patra-tool-test`（插件自动给到 testImplementation） |
 
 ## 模块详情
@@ -99,6 +99,11 @@ public class HttpClientConfiguration {
 **适用**：`patra-{service}-boot`（需要鉴权的服务与网关）
 **功能**：身份断言签发 / 验签、安全异常透传
 
+### patra-tool-events
+
+**适用**：`patra-{service}-boot`（发布或消费跨服务事件的服务）
+**功能**：Spring Modulith 事件发布登记当 Outbox、AMQP 外送到 RabbitMQ 并等 publisher confirm、XXL-Job 补投（`eventPublicationResubmitJob`）、消费端 `ProcessedEventPort` 去重、`EventQueue` 死信队列声明、ack / 重试 / prefetch 默认值。接入步骤与 Flyway 模板见模块 README
+
 ## 依赖检查清单
 
 新建功能时，按以下顺序检查：
@@ -109,6 +114,6 @@ public class HttpClientConfiguration {
 4. **Infra 层（服务调用 / 外部 REST）** → `patra-tool-http-client`（可选）
 5. **Infra 层（对象存储）** → `patra-tool-object-storage`（可选）
 6. **Domain 层** → 不能手写任何工具模块依赖
-7. **Boot 层** → `patra-tool-observability` / `patra-tool-openapi`（可选）/ `patra-tool-security`（可选）
+7. **Boot 层** → `patra-tool-observability` / `patra-tool-openapi`（可选）/ `patra-tool-security`（可选）/ `patra-tool-events`（可选）
 
 声明了却没 import 的 project 依赖会被 R5（`checkDeclaredDependencies`）拦下。

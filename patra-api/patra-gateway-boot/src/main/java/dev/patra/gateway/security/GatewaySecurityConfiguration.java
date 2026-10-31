@@ -34,7 +34,8 @@ import org.springframework.web.filter.ForwardedHeaderFilter;
 /// 网关鉴权的装配：签名器、两条过滤器链、入站转发头的剥除、出站头过滤器。查会话经 identity 的内部接口
 /// （代理在 `IdentityClientConfiguration`，PAP-106）。
 ///
-/// 两条过滤器链：第一条只匹配拒绝名单、对所有人 403；第二条查会话、identity 默认需登录、其余放行。
+/// 两条过滤器链：第一条只匹配拒绝名单、对所有人 403；第二条查会话、identity 与 notification 的推送连接
+/// 需登录、其余放行。
 /// starter 的默认过滤器链因为这里声明了而让位，它的写出器、错误映射、验签器照常生效。
 ///
 /// 设计：`docs/patra/specs/2026-10-09-gateway-auth-design.md`。
@@ -67,6 +68,11 @@ public class GatewaySecurityConfiguration {
   /// identity 的全部路径，公开名单之外默认需登录。
   static final String IDENTITY_PATHS = "/patra-identity/**";
 
+  /// notification 的推送连接（PAP-145）：在网关就要求登录。没登录或已登出的请求不借推送专用池的连接，
+  /// 也到不了 notification；401 由写出器直接输出，不受请求 `Accept: text/event-stream` 影响。
+  /// 推送连接到点（30 分钟）重连时，网关借这一下重新查会话。notification 自己也会再判一次。
+  static final String PUSH_STREAM_PATH = "/patra-notification/me/notifications/stream";
+
   /// 第一条链：拒绝名单，对任何人 403。
   ///
   /// 链里没有认证过滤器，所有人在这条链上都是匿名，撞上 `denyAll` 时框架走的是未登录入口点；
@@ -92,7 +98,7 @@ public class GatewaySecurityConfiguration {
   }
 
   /// 第二条链：其余全部。从 `Authorization: Bearer` 里的会话令牌建立认证，identity 默认需登录，
-  /// 公开名单和其他路由全放行。
+  /// notification 的推送连接需登录，公开名单和其他路由全放行。
   ///
   /// 关掉 Spring Security 默认的响应头写出器：它会给缺少的响应补 `Cache-Control: no-store`、
   /// `X-Content-Type-Options` 等，而代理透传的响应要保持下游原样（PAP-69 的契约）。
@@ -129,6 +135,8 @@ public class GatewaySecurityConfiguration {
                     .requestMatchers(IDENTITY_PUBLIC_PATHS)
                     .permitAll()
                     .requestMatchers(IDENTITY_PATHS)
+                    .authenticated()
+                    .requestMatchers(PUSH_STREAM_PATH)
                     .authenticated()
                     .anyRequest()
                     .permitAll());

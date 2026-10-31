@@ -3,6 +3,7 @@ package dev.patra.identity.domain.account.port.read;
 import dev.patra.identity.domain.account.model.read.AvatarOwner;
 import dev.patra.identity.domain.account.model.read.PublicUserReadModel;
 import dev.patra.identity.domain.account.model.read.UserAccountReadModel;
+import dev.patra.identity.domain.account.model.read.UserRecipientReadModel;
 import dev.patra.identity.domain.account.model.read.UserSummaryReadModel;
 import dev.patra.identity.domain.account.model.vo.DisplayNamePrefix;
 import dev.patra.identity.domain.account.model.vo.Username;
@@ -37,6 +38,12 @@ public interface UserReadPort {
   /// @param userIds 用户 ID，调用方已去重
   /// @return 存在的那些，不保证顺序
   List<UserSummaryReadModel> findSummaries(Collection<Long> userIds);
+
+  /// 按用户 ID 批量读收件信息原始数据（批量收件信息接口，PAP-142）：用户表的邮箱与状态、资料表的昵称。
+  ///
+  /// @param userIds 用户 ID，调用方已去重
+  /// @return 存在的那些，不保证顺序
+  List<UserRecipientReadModel> findRecipients(Collection<Long> userIds);
 
   /// 按用户名前缀读正常账号的摘要原始数据（@ 联想，PAP-118）：只含 `ACTIVE`，按用户名的字节序升序，
   /// 最多 `limit` 个。主页对谁可见由调用方用 `UserSummaryReadModel.access()` 判。

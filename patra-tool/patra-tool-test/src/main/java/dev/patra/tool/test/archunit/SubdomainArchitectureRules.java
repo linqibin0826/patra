@@ -481,7 +481,7 @@ public final class SubdomainArchitectureRules {
             case "internal", "scheduler", "mq", "config" -> depth == 1;
             default -> false;
           };
-      case "api" -> depth == 1 && Set.of("endpoint", "dto").contains(first);
+      case "api" -> depth == 1 && Set.of("endpoint", "dto", "event").contains(first);
       default -> false;
     };
   }

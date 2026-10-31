@@ -1,5 +1,6 @@
 package dev.patra.interaction.app.reaction.usecase.helpful;
 
+import static dev.patra.interaction.app.reaction.ReactionFixtures.NOW;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -10,6 +11,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import dev.patra.interaction.domain.reaction.event.HelpfulUnmarkedEvent;
 import dev.patra.interaction.domain.reaction.model.enums.HelpfulTargetType;
 import dev.patra.interaction.domain.reaction.model.vo.HelpfulMark;
 import dev.patra.interaction.domain.reaction.model.vo.HelpfulTarget;
@@ -19,11 +21,16 @@ import dev.patra.tool.core.security.ClientType;
 import dev.patra.tool.core.security.CurrentUser;
 import dev.patra.tool.core.security.CurrentUserPort;
 import dev.patra.tool.test.transaction.RecordingTransactions;
+import java.time.Clock;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
+import org.springframework.context.ApplicationEventPublisher;
 
 /// 取消有帮助（spec §4.2）：只要登录，不查资格与目标；目标锁里真删掉才减。
 class UnmarkHelpfulHandlerTest {
@@ -33,6 +40,7 @@ class UnmarkHelpfulHandlerTest {
 
   private final HelpfulRepository helpful = mock(HelpfulRepository.class);
   private final CurrentUserPort currentUser = mock(CurrentUserPort.class);
+  private final ApplicationEventPublisher publisher = mock(ApplicationEventPublisher.class);
   private final List<String> events = new ArrayList<>();
   private UnmarkHelpfulHandler handler;
 
@@ -57,7 +65,14 @@ class UnmarkHelpfulHandlerTest {
             })
         .when(helpful)
         .countOf(TARGET);
-    handler = new UnmarkHelpfulHandler(helpful, currentUser, new RecordingTransactions(events));
+    doAnswer(invocation -> events.add("publish")).when(publisher).publishEvent(any(Object.class));
+    handler =
+        new UnmarkHelpfulHandler(
+            helpful,
+            currentUser,
+            new RecordingTransactions(events),
+            publisher,
+            Clock.fixed(NOW, ZoneOffset.UTC));
   }
 
   @Test
@@ -74,6 +89,7 @@ class UnmarkHelpfulHandlerTest {
             "delete",
             "target-1",
             "received7:-1",
+            "publish",
             "count",
             RecordingTransactions.END);
   }
@@ -98,6 +114,32 @@ class UnmarkHelpfulHandlerTest {
     assertThat(result).isEqualTo(HelpfulResult.of(false, 2));
     verify(helpful, never()).adjustTargetCount(any(), anyInt());
     verify(helpful, never()).adjustReceived(anyLong(), anyLong());
+    verify(publisher, never()).publishEvent(any(Object.class));
+  }
+
+  /// 真删掉了才发「有帮助已取消」（PAP-141，只在服务内发布、不外送）：谁取消了哪个目标、什么时候。
+  @Test
+  void should_publish_unmarked_event_after_delete() {
+    givenDeleted(Optional.of(HelpfulMark.of(7L)));
+
+    handler.handle(UnmarkHelpfulCommand.of(HelpfulTargetType.POST, 500L));
+
+    ArgumentCaptor<HelpfulUnmarkedEvent> captor =
+        ArgumentCaptor.forClass(HelpfulUnmarkedEvent.class);
+    verify(publisher).publishEvent(captor.capture());
+    HelpfulUnmarkedEvent event = captor.getValue();
+    assertThat(event.eventId()).isNotNull();
+    assertThat(event)
+        .usingRecursiveComparison()
+        .ignoringFields("eventId")
+        .isEqualTo(
+            HelpfulUnmarkedEvent.builder()
+                .eventId(UUID.randomUUID())
+                .targetType(HelpfulTargetType.POST)
+                .targetId(500L)
+                .userId(ME)
+                .unmarkedAt(NOW)
+                .build());
   }
 
   /// 桩删除结果，删的时候记一笔。

@@ -9,6 +9,10 @@ spring:
       host: ${PATRA_INFRA_HOST:127.0.0.1}
       port: 16379
       username: default
+  rabbitmq:
+    host: ${PATRA_INFRA_HOST:127.0.0.1}
+    port: 5672
+    username: patra
 
 patra:
   object-storage:

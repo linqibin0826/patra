@@ -3,7 +3,7 @@
 # 受影响单元路由 SSOT —— ci.yml 与 cd.yml 共用。输出一个 JSON 对象到 stdout：
 #   { "backend_units":[...], "portal_changed":bool, "learn_changed":bool,
 #     "nacos_changed":bool, "docs_only":bool, "full_run":bool, "coverage_mode":"none|flags|full" }
-#   backend_units ⊆ [registry,catalog,identity,interaction,gateway,foundation]
+#   backend_units ⊆ [registry,catalog,identity,interaction,notification,gateway,foundation]
 #   nacos_changed：patra-infra/nacos/*/*.yaml 或推送脚本有改动、或全量时为 true；CD 据此在部署前推送 Nacos 配置
 #
 # 模式：
@@ -19,7 +19,7 @@
 set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 GRAPH="$SCRIPT_DIR/module-graph.json"
-ALL_UNITS='["registry","catalog","identity","interaction","gateway","foundation"]'
+ALL_UNITS='["registry","catalog","identity","interaction","notification","gateway","foundation"]'
 LEARN_CHANGED=false   # 全局初始化：防环境注入假阳性 / 非布尔值炸 --argjson
 NACOS_CHANGED=false   # 同上：全局初始化
 
@@ -73,6 +73,7 @@ classify() {
       patra-infra/docker/alertmanager/*|patra-infra/docker/grafana/*|patra-infra/docker/loki/*) docs_all=false; continue;;
       patra-infra/docker/mysql-ops/*|patra-infra/docker/otel-agent/*|patra-infra/docker/otel-collector/*) docs_all=false; continue;;
       patra-infra/docker/postgres/*|patra-infra/docker/prometheus/*|patra-infra/docker/tempo/*) docs_all=false; continue;;
+      patra-infra/docker/rabbitmq/*) docs_all=false; continue;;
     esac
     # 文档判定必须排在 portal / learn 之前：两者目录下的 *.md（设计简报、README、规则文档）
     # 不进应用构建，portal-cd / learn-cd 也用 '!**/*.md' 排除，这里保持同一口径。

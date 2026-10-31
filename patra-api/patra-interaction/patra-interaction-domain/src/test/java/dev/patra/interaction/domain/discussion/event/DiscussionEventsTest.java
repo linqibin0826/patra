@@ -9,6 +9,7 @@ import dev.patra.interaction.domain.subject.model.vo.SubjectOwner;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
 /// 事件是不可变的契约：列表字段在构造时拷贝，`null` 视为空。
@@ -42,11 +43,67 @@ class DiscussionEventsTest {
         .isInstanceOf(UnsupportedOperationException.class);
   }
 
+  /// 评论已删除缺事件 ID 就拒绝（PAP-141）：外送时原样带进集成事件，补投靠它不变才去得了重，所以不兜底生成。
+  @Test
+  void should_reject_comment_deleted_without_event_id() {
+    assertThatThrownBy(
+            () ->
+                CommentDeletedEvent.builder()
+                    .commentId(1L)
+                    .version(1)
+                    .subjectId(SubjectId.of(2L))
+                    .authorId(3L)
+                    .deletedAt(T0)
+                    .build())
+        .isInstanceOf(NullPointerException.class)
+        .hasMessageContaining("eventId");
+  }
+
+  /// 发表、编辑事件缺事件 ID 同样拒绝。
+  @Test
+  void should_reject_published_and_edited_without_event_id() {
+    assertThatThrownBy(() -> published().eventId(null).build())
+        .isInstanceOf(NullPointerException.class)
+        .hasMessageContaining("eventId");
+    assertThatThrownBy(() -> edited().eventId(null).build())
+        .isInstanceOf(NullPointerException.class)
+        .hasMessageContaining("eventId");
+  }
+
+  /// 外送映射要解引用的字段在创建时就必填（PAP-141）：缺了让发布的事务回滚，不留一条永远发不出去的登记行。
+  @Test
+  void should_reject_events_missing_fields_the_mapping_needs() {
+    assertThatThrownBy(() -> published().subjectId(null).build())
+        .isInstanceOf(NullPointerException.class)
+        .hasMessageContaining("subjectId");
+    assertThatThrownBy(() -> published().subjectType(null).build())
+        .isInstanceOf(NullPointerException.class)
+        .hasMessageContaining("subjectType");
+    assertThatThrownBy(() -> edited().subjectId(null).build())
+        .isInstanceOf(NullPointerException.class)
+        .hasMessageContaining("subjectId");
+    assertThatThrownBy(() -> edited().subjectType(null).build())
+        .isInstanceOf(NullPointerException.class)
+        .hasMessageContaining("subjectType");
+    assertThatThrownBy(
+            () ->
+                CommentDeletedEvent.builder()
+                    .eventId(UUID.randomUUID())
+                    .commentId(1L)
+                    .version(1)
+                    .authorId(3L)
+                    .deletedAt(T0)
+                    .build())
+        .isInstanceOf(NullPointerException.class)
+        .hasMessageContaining("subjectId");
+  }
+
   /// 一个发表事件（列表另给）。
   ///
   /// @return 构造器
   private static CommentPublishedEvent.CommentPublishedEventBuilder published() {
     return CommentPublishedEvent.builder()
+        .eventId(UUID.randomUUID())
         .commentId(100L)
         .subjectId(SubjectId.of(11L))
         .subjectType(SubjectType.POST)
@@ -54,7 +111,6 @@ class DiscussionEventsTest {
         .rootCommentId(100L)
         .authorId(1L)
         .authorAnonymous(false)
-        .body("正文")
         .publishedAt(T0);
   }
 
@@ -63,13 +119,13 @@ class DiscussionEventsTest {
   /// @return 构造器
   private static CommentEditedEvent.CommentEditedEventBuilder edited() {
     return CommentEditedEvent.builder()
+        .eventId(UUID.randomUUID())
         .commentId(100L)
         .subjectId(SubjectId.of(11L))
         .subjectType(SubjectType.PUBLICATION)
         .rootCommentId(100L)
         .authorId(1L)
         .authorAnonymous(false)
-        .body("正文")
         .editedAt(T0);
   }
 }

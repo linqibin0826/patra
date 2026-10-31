@@ -1,0 +1,3 @@
+dev.patra.tool.events.autoconfigure.EventsRabbitAutoConfiguration
+dev.patra.tool.events.autoconfigure.EventsResubmitAutoConfiguration
+dev.patra.tool.events.autoconfigure.EventsConsumerAutoConfiguration

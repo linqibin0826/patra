@@ -5,6 +5,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import dev.patra.interaction.domain.post.model.aggregate.PostAggregate;
 import dev.patra.interaction.domain.post.model.enums.FinalOutcome;
 import dev.patra.interaction.domain.post.model.enums.FirstDecision;
+import dev.patra.interaction.domain.post.model.read.ExperienceDigest;
+import dev.patra.interaction.domain.post.model.read.ExperienceOutline;
 import dev.patra.interaction.domain.post.model.read.ExperienceStats;
 import dev.patra.interaction.domain.post.model.read.HelpfulRankedPost;
 import dev.patra.interaction.domain.post.model.read.PostStats;
@@ -285,5 +287,58 @@ class PostReadAdapterIT extends PostPersistenceITSupport {
   /// @return ID
   private static List<PostId> ids(List<PostAggregate> page) {
     return page.stream().map(PostAggregate::postId).toList();
+  }
+
+  /// 结果与正文（PAP-141）：首轮决定、最终结果、首轮天数、总天数原样，正文是存储原文。
+  @Test
+  void should_find_digest_with_outline_and_body() {
+    PostAggregate post = publish(U, J1, false, fields("2026-01-01"), "正文", T0);
+
+    ExperienceDigest digest = reads.findDigest(post.postId().value()).orElseThrow();
+
+    assertThat(digest.outline())
+        .isEqualTo(
+            ExperienceOutline.of(FirstDecision.MAJOR_REVISION, FinalOutcome.IN_PROGRESS, 10, null));
+    assertThat(digest.body()).isEqualTo("正文");
+  }
+
+  /// 没写正文时正文为空。
+  @Test
+  void should_find_digest_without_body() {
+    PostAggregate post = publish(U, J1, false, fields("2026-01-02"), null, T0);
+
+    assertThat(reads.findDigest(post.postId().value()).orElseThrow().body()).isNull();
+  }
+
+  /// 已删除的经验照样返回。
+  @Test
+  void should_find_digest_of_deleted_post() {
+    PostAggregate post = publish(U, J1, false, fields("2026-01-03"), "正文", T0);
+    delete(post.postId(), T0.plusSeconds(60));
+
+    assertThat(reads.findDigest(post.postId().value())).isPresent();
+  }
+
+  /// 没有这条经验为空。
+  @Test
+  void should_return_empty_digest_when_post_missing() {
+    assertThat(reads.findDigest(999_999L)).isEmpty();
+  }
+
+  /// 批量取结果（PAP-143 的内部接口）：已删除的照样返回，没有的省略。
+  @Test
+  void should_find_outlines_including_deleted() {
+    PostAggregate kept = publish(U, J1, false, fields("2026-01-04"), null, T0);
+    PostAggregate deleted = publish(U, J1, false, fields("2026-01-05"), null, T0);
+    delete(deleted.postId(), T0.plusSeconds(60));
+
+    Map<PostId, ExperienceOutline> outlines =
+        reads.findOutlines(List.of(kept.postId(), deleted.postId(), PostId.of(999_999L)));
+
+    assertThat(outlines)
+        .containsOnlyKeys(kept.postId(), deleted.postId())
+        .containsEntry(
+            kept.postId(),
+            ExperienceOutline.of(FirstDecision.MAJOR_REVISION, FinalOutcome.IN_PROGRESS, 10, null));
   }
 }

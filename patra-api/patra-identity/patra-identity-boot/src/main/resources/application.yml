@@ -34,12 +34,11 @@ spring:
       # 所有环境都设超时：Redis 卡住时登录几秒内返回 503，不用等 Lettuce 默认的 60 秒
       connect-timeout: 10s
       timeout: 5s
-
-management:
-  health:
-    mail:
-      # 不拿 SMTP 连通性当健康：容器 healthcheck 每 10 秒一次会变成一天八千多次登录服务商，CD 也不该因此回滚
-      enabled: false
+  modulith:
+    events:
+      # 安全邮件事件带一次性令牌链接（PAP-104）：broker 确认收下即删登记行，不留历史。事件模块默认也是 delete，
+      # 这里写死，模块默认值改了 identity 也不跟着变
+      completion-mode: delete
 
 patra:
   web:
@@ -71,9 +70,9 @@ patra:
           web:
             idle: 30d
             absolute: 180d
-    # 邮件：服务商坐标（spring.mail.*）、发件人、门户地址随环境变，在 Nacos 的 patra-identity.yaml
+    # 邮件链接与令牌：identity 不发信（PAP-104，安全邮件改发事件），门户地址随环境变，在 Nacos 的 patra-identity.yaml
     mail:
-      zone: Asia/Shanghai                 # 安全通知里时间的显示时区
+      zone: Asia/Shanghai                 # 公开主页加入时间的换算时区
       token-retention: 30d                # 过期令牌保留多久后删行
       links:
         verify-email-path: /verify-email          # 门户的验证邮箱落地页

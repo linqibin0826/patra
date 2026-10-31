@@ -42,16 +42,22 @@ class ApplicationConfigTest {
   }
 
   @Test
-  @DisplayName("邮件健康检查关掉；服务商坐标、发件人、门户地址这些随环境变的键不在 jar 里（在 Nacos）")
-  void should_disable_mail_health_indicator_and_keep_environment_keys_in_nacos()
-      throws IOException {
-    assertThat(property("application.yml", "management.health.mail.enabled")).isEqualTo("false");
+  @DisplayName("identity 不发信（PAP-104）：jar 里没有邮件服务商、发件人与邮件健康检查的键；门户地址随环境变、在 Nacos")
+  void should_carry_no_mail_sending_settings_and_keep_portal_address_in_nacos() throws IOException {
     assertThat(propertyNames("application.yml"))
         .noneMatch(
             name ->
                 name.startsWith("spring.mail.")
+                    || name.startsWith("management.health.mail.")
                     || name.equals("patra.identity.mail.from")
                     || name.equals("patra.identity.mail.links.base-url"));
+  }
+
+  @Test
+  @DisplayName("安全邮件事件发完即删登记行（带一次性令牌）：identity 自己写死 delete，不跟事件模块的默认值走")
+  void should_pin_event_completion_mode_to_delete() throws IOException {
+    assertThat(property("application.yml", "spring.modulith.events.completion-mode"))
+        .isEqualTo("delete");
   }
 
   @Test

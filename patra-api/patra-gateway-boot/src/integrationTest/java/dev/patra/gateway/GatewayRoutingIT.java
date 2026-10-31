@@ -60,6 +60,13 @@ class GatewayRoutingIT {
           .options(wireMockConfig().dynamicPort().http2PlainDisabled(true).gzipDisabled(true))
           .build();
 
+  /// notification 的下游桩：验证 `/patra-notification/**` 路由（PAP-139）。
+  @RegisterExtension
+  static final WireMockExtension notification =
+      WireMockExtension.newInstance()
+          .options(wireMockConfig().dynamicPort().http2PlainDisabled(true).gzipDisabled(true))
+          .build();
+
   @Autowired private RestTestClient restClient;
   @Autowired private Environment environment;
 
@@ -70,6 +77,9 @@ class GatewayRoutingIT {
     registry.add(
         "spring.cloud.discovery.client.simple.instances.patra-interaction[0].uri",
         interaction::baseUrl);
+    registry.add(
+        "spring.cloud.discovery.client.simple.instances.patra-notification[0].uri",
+        notification::baseUrl);
   }
 
   /// `/patra-interaction/**` 剥掉前缀转到 `lb://patra-interaction`，查询串原样。
@@ -90,6 +100,54 @@ class GatewayRoutingIT {
     interaction.verify(
         getRequestedFor(urlPathEqualTo("/collections/1"))
             .withQueryParam("view", equalTo("reader")));
+  }
+
+  /// `/patra-notification/**` 剥掉前缀转到 `lb://patra-notification`，查询串原样。
+  @Test
+  void should_route_notification_prefix_to_notification_service() {
+    notification.stubFor(
+        get(urlPathEqualTo("/notifications"))
+            .withQueryParam("tab", equalTo("reply"))
+            .willReturn(okJson("{}")));
+
+    restClient
+        .get()
+        .uri("/patra-notification/notifications?tab=reply")
+        .exchange()
+        .expectStatus()
+        .isOk();
+
+    notification.verify(
+        getRequestedFor(urlPathEqualTo("/notifications")).withQueryParam("tab", equalTo("reply")));
+  }
+
+  /// 邮箱服务商的 RFC 8058 一键退订（PAP-142）：不带 `Authorization` 的 POST 不被要求登录，转到 notification，
+  /// 查询串里的令牌与类别不变，下游的 200 原样回给对方。网关对 notification 的路径没有登录要求，这一例守着它：
+  /// 以后给这些路径加登录要求，免登录退订就断了。
+  ///
+  /// 表单体只断言「包含」：网关按请求参数重新拼表单体，查询串里的参数被剔掉、只留下分隔符，下游收到的是
+  /// `&&List-Unsubscribe=One-Click`。空段按表单规则会被忽略，notification 也不看这个请求体。
+  @Test
+  void should_forward_anonymous_one_click_unsubscribe_without_redirect() {
+    notification.stubFor(post(urlPathEqualTo("/unsubscribe/one-click")).willReturn(okJson("{}")));
+
+    restClient
+        .post()
+        .uri("/patra-notification/unsubscribe/one-click?token=abc&category=REPLY")
+        .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+        .body("List-Unsubscribe=One-Click")
+        .exchange()
+        .expectStatus()
+        .isOk()
+        .expectHeader()
+        .doesNotExist(HttpHeaders.LOCATION);
+
+    notification.verify(
+        postRequestedFor(urlPathEqualTo("/unsubscribe/one-click"))
+            .withQueryParam("token", equalTo("abc"))
+            .withQueryParam("category", equalTo("REPLY"))
+            .withoutHeader(HttpHeaders.AUTHORIZATION)
+            .withRequestBody(containing("List-Unsubscribe=One-Click")));
   }
 
   @Test

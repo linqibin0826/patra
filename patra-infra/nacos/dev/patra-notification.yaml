@@ -1,0 +1,31 @@
+patra.config-source.service: patra-notification.yaml
+
+spring:
+  datasource:
+    url: jdbc:postgresql://${PATRA_INFRA_HOST:127.0.0.1}:15432/patra_notification
+  # RabbitMQ 的 host、port、username 在公共配置；密码只写在用到它的服务文件里（值在 ~/.patra/secrets/rabbitmq.env）
+  rabbitmq:
+    password: ${RABBITMQ_PASSWORD}
+  mail:
+    # 全站只有通知服务发信（PAP-105）。默认指向 Mailpit（mini 的 core 栈，无鉴权、无 TLS）；
+    # mini 的真实服务商（Resend）由 ~/.patra/secrets/mail.env 覆盖
+    host: ${PATRA_MAIL_HOST:${PATRA_INFRA_HOST:127.0.0.1}}
+    port: ${PATRA_MAIL_PORT:1025}
+    username: ${PATRA_MAIL_USERNAME:}
+    password: ${PATRA_MAIL_PASSWORD:}
+    properties:
+      "[mail.smtp.auth]": ${PATRA_MAIL_AUTH:false}
+      "[mail.smtp.ssl.enable]": ${PATRA_MAIL_SSL:false}
+      "[mail.smtp.starttls.enable]": ${PATRA_MAIL_STARTTLS:false}
+      "[mail.smtp.starttls.required]": ${PATRA_MAIL_STARTTLS:false}
+      "[mail.smtp.connectiontimeout]": 10000
+      "[mail.smtp.timeout]": 15000
+      "[mail.smtp.writetimeout]": 15000
+
+patra:
+  notification:
+    mail:
+      from: ${PATRA_MAIL_FROM:Patra <no-reply@patra.local>}
+      # 提醒邮件里门户链接与一键退订地址的域名（PAP-146）；线上由 .env.common 给 https://patra.linqibin.dev，同 identity
+      links:
+        base-url: ${PATRA_PORTAL_BASE_URL:http://linqibins-mac-mini:4000}

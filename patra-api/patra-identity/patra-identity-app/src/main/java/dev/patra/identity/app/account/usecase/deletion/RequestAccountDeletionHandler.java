@@ -32,7 +32,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.support.TransactionOperations;
 
 /// 发起注销（PAP-100 设计第 7.1 节）：字段 → 状态守卫 → 用户名比对 → 再认证 → 事务里进冷静期、作废令牌、
-/// 撤销全部会话（含本机）→ 提交后发「注销已提交」。
+/// 撤销全部会话（含本机）、登记「注销已提交」（与注销同成同败，提交后由通知服务发出，PAP-104）。
 ///
 /// 用户名比对放在再认证之前：门户本来先比一遍，错了直接提示，不用先弹密码框。比对只去首尾空白、转小写，
 /// 不走用户名规则：格式不合法的输入也只是「不一致」。改邮箱的撤销令牌不作废（release spec 2.1.7：冷静期内
@@ -73,6 +73,9 @@ public class RequestAccountDeletionHandler
       throw new InvalidUserFieldsException(List.of(UserFieldViolations.usernameMismatch()));
     }
     reauthenticationGuard.requireRecent(current);
+    // 解析 UA 与属地是纯计算：再认证通过之后、事务之外
+    ClientOrigin origin =
+        clientOriginResolver.resolve(RequestOrigin.of(command.clientIp(), command.userAgent()));
     Instant now = clock.instant();
     Requested requested =
         Objects.requireNonNull(
@@ -95,22 +98,15 @@ public class RequestAccountDeletionHandler
                           .orElseThrow(AuthenticationRequiredException::new);
                   EmailAddress email =
                       saved.getEmail().orElseThrow(AuthenticationRequiredException::new);
-                  return new Requested(
-                      email, account.displayName(), saved.getDeletionDueAt(), revoked.size());
+                  emailDelivery.send(
+                      AccountDeletionRequestedMail.builder()
+                          .to(email)
+                          .displayName(account.displayName())
+                          .deletionDueAt(saved.getDeletionDueAt())
+                          .notice(origin.toNotice(now))
+                          .build());
+                  return new Requested(saved.getDeletionDueAt(), revoked.size());
                 }));
-    // 解析放在事务提交之后、发信之前：纯计算，不占事务
-    ClientOrigin origin =
-        clientOriginResolver.resolve(RequestOrigin.of(command.clientIp(), command.userAgent()));
-    boolean accepted =
-        emailDelivery.send(
-            AccountDeletionRequestedMail.of(
-                requested.email(),
-                requested.displayName(),
-                requested.deletionDueAt(),
-                origin.toNotice(now, AccountDeletionRequestedMail.NOT_ME_ADVICE)));
-    if (!accepted) {
-      log.warn("「注销已提交」邮件被发信执行器拒收: userId={}", userId);
-    }
     log.info(
         "前台用户已申请注销: userId={}, deletionDueAt={}, revokedSessions={}",
         userId,
@@ -119,12 +115,9 @@ public class RequestAccountDeletionHandler
     return AccountDeletionRequested.of(requested.deletionDueAt());
   }
 
-  /// 事务里一起产出的收件人、昵称、到期时间和撤销的会话数。
+  /// 事务里一起产出的到期时间和撤销的会话数。
   ///
-  /// @param email 收件人
-  /// @param displayName 昵称
   /// @param deletionDueAt 到期时间
   /// @param revokedSessions 撤销了几条会话
-  private record Requested(
-      EmailAddress email, String displayName, Instant deletionDueAt, int revokedSessions) {}
+  private record Requested(Instant deletionDueAt, int revokedSessions) {}
 }

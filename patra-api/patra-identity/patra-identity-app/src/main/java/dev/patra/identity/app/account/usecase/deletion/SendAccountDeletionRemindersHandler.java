@@ -12,7 +12,6 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -20,10 +19,9 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.support.TransactionOperations;
 
 /// 发注销到期前提醒（PAP-100 设计第 10 节）：按 ID 游标分批扫「冷静期、没提醒过、到期在提前量之内」的用户，
-/// 每个用户一个事务、加锁复核后记下提醒时间，提交后发「将在 N 天后删除」。先记后发，不会重复。
-///
-/// 发信被执行器拒收时另开一个短事务把标记清回去，下次运行重发，这个用户计入失败（与新设备提醒被拒时退回冷却
-/// 同一做法）。被接下之后真正发送失败只记日志，不重发。单个用户失败不影响其他。
+/// 每个用户一个事务、加锁复核后记下提醒时间，并在同一事务里登记「将在 N 天后删除」（PAP-104）。标记与邮件
+/// 同成同败：登记失败时标记随事务回滚，这个用户计入失败、下次运行重试；提交了就一定会发、不会重复。
+/// 单个用户失败不影响其他。
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -57,16 +55,8 @@ public class SendAccountDeletionRemindersHandler
       for (long id : ids) {
         afterId = id;
         try {
-          Optional<AccountDeletionReminderMail> mail = markOne(id, now, lead);
-          if (mail.isEmpty()) {
-            continue;
-          }
-          if (emailDelivery.send(mail.get())) {
+          if (remindOne(id, now, lead)) {
             sent++;
-          } else {
-            log.warn("注销提醒邮件被发信执行器拒收，退回标记待下次重发: userId={}", id);
-            unmark(id);
-            failed++;
           }
         } catch (RuntimeException e) {
           log.error("注销提醒失败: userId={}", id, e);
@@ -78,19 +68,19 @@ public class SendAccountDeletionRemindersHandler
     return ReminderRunResult.of(sent, failed);
   }
 
-  /// 在一个事务里给一个用户记下提醒时间，并备好邮件。锁内复核不需要提醒就跳过。
+  /// 在一个事务里给一个用户记下提醒时间并登记提醒邮件。锁内复核不需要提醒就跳过。
   ///
   /// @param id 用户 ID
   /// @param now 本轮的当前时间
   /// @param lead 提前量
-  /// @return 要发的提醒；跳过时为空
-  private Optional<AccountDeletionReminderMail> markOne(long id, Instant now, Duration lead) {
-    return Objects.requireNonNull(
+  /// @return 登记了提醒为 `true`；跳过时为 `false`
+  private boolean remindOne(long id, Instant now, Duration lead) {
+    return Boolean.TRUE.equals(
         transactions.execute(
             status -> {
               Optional<User> found = users.findByIdForUpdate(id);
               if (found.isEmpty() || !found.get().needsDeletionReminder(now, lead)) {
-                return Optional.empty();
+                return false;
               }
               User user = found.get();
               user.markDeletionReminded(now);
@@ -100,27 +90,14 @@ public class SendAccountDeletionRemindersHandler
                       .findAccount(id)
                       .map(UserAccountReadModel::displayName)
                       .orElse(user.getUsername().value());
-              return Optional.of(
-                  AccountDeletionReminderMail.of(
-                      user.getEmail().orElseThrow(),
-                      displayName,
-                      user.getDeletionDueAt(),
-                      lead.toDays()));
+              emailDelivery.send(
+                  AccountDeletionReminderMail.builder()
+                      .to(user.getEmail().orElseThrow())
+                      .displayName(displayName)
+                      .deletionDueAt(user.getDeletionDueAt())
+                      .daysLeft(lead.toDays())
+                      .build());
+              return true;
             }));
-  }
-
-  /// 在另一个事务里把提醒标记清回去，让下一轮重发。
-  ///
-  /// @param id 用户 ID
-  private void unmark(long id) {
-    transactions.executeWithoutResult(
-        status ->
-            users
-                .findByIdForUpdate(id)
-                .ifPresent(
-                    user -> {
-                      user.clearDeletionReminder();
-                      users.save(user);
-                    }));
   }
 }

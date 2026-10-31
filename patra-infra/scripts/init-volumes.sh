@@ -29,6 +29,7 @@ mkdir -p \
   "$ROOT"/mailpit \
   "$ROOT"/nacos/data \
   "$ROOT"/nacos/logs \
+  "$ROOT"/rabbitmq/data \
   "$ROOT"/minio/data \
   "$ROOT"/es/data \
   "$ROOT"/xxl-job-admin/logs \
@@ -74,7 +75,7 @@ SECRETS="${HOME}/.patra/secrets"
 echo "[4/4] 准备密钥目录 ${SECRETS}..."
 mkdir -p "$SECRETS"
 chmod 700 "$SECRETS"
-echo "  ✓ 密钥目录就绪（redis.env、gateway.env 要另外放进去）"
+echo "  ✓ 密钥目录就绪（redis.env、rabbitmq.env、gateway.env 等要另外放进去）"
 echo ""
 
 echo "===================================="
@@ -82,7 +83,7 @@ echo "✅ 初始化完成"
 echo "===================================="
 echo ""
 echo "下一步："
-echo "  把 redis.env、gateway.env 放进 ~/.patra/secrets/（见 patra-infra/docker/README.md「密钥」）"
+echo "  把 redis.env、rabbitmq.env、gateway.env 等放进 ~/.patra/secrets/（见 patra-infra/docker/README.md「密钥」）"
 echo "  bash patra-infra/scripts/compose-all.sh up   # 拉起全部子栈（各为独立 project）"
 echo "  bash patra-infra/scripts/compose-all.sh ps   # 查看所有 patra-* 容器"
 echo ""

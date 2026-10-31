@@ -1,0 +1,79 @@
+server:
+  port: 6600
+  # 解析网关注入的 X-Forwarded-*，让 OpenAPI 文档里的地址指向网关
+  forward-headers-strategy: framework
+
+spring:
+  # 数据源地址、账号随环境变，在 Nacos：patra-notification.yaml、patra-common.yaml
+  # （源文件在 patra-infra/nacos/dev/），由启动器 PatraApplication 导入
+  datasource:
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+  flyway:
+    enabled: true
+    # 递归扫描：每个子域的脚本在 db/migration/{子域}/，整个服务一份历史（public.flyway_schema_history）。
+    # 不设 schemas：设了 Flyway 会自己建这些 schema 并把历史表挪进第一个，脚本里由 CREATE SCHEMA 建
+    locations: classpath:db/migration
+  jpa:
+    # 关掉 OSIV：请求第一次查库拿到的连接不会一直占到请求结束
+    open-in-view: false
+
+patra:
+  web:
+    error:
+      context-prefix: NOTIFICATION
+  events:
+    consumer:
+      # 按消息头 __TypeId__ 还原事件时只认这些包（按包名精确匹配、不含子包；java.lang / java.util 总是信任）
+      trusted-packages:
+        # interaction 的评论、投稿经验与有帮助事件：信箱队列一个监听类收多种事件（PAP-143、PAP-144）
+        - dev.patra.interaction.api.discussion.event
+        - dev.patra.interaction.api.post.event
+        - dev.patra.interaction.api.reaction.event
+        # identity 的安全邮件事件（PAP-104）
+        - dev.patra.identity.api.account.event
+  http-client:
+    http-interface:
+      groups:
+        # 退订落地页取脱敏邮箱与账号状态（批量收件信息，按主键查，毫秒级）：超时压短，identity 卡住时很快 503
+        identity:
+          base-url: lb://patra-identity
+          connect-timeout: 1s
+          read-timeout: 2s
+        # 提醒列表读时现查对象视图与经验结果（按主键批量查，一页 ≤ 20 个）：超时压短，interaction 卡住时列表很快降级
+        interaction:
+          base-url: lb://patra-interaction
+          connect-timeout: 1s
+          read-timeout: 2s
+  notification:
+    mail:
+      # 邮件里时间的显示时区（链接过期时刻、注销到期时刻、安全通知的发生时间）；用户都在国内
+      zone: Asia/Shanghai
+    # 实时推送（PAP-145，设计 docs/patra/specs/2026-10-31-notification-realtime-push-design.md 第 6 节）
+    realtime:
+      # 心跳间隔：短于网关读超时 60 秒、Cloudflare 空闲超时 125 秒，否则中间的代理会把安静的连接当成死连接断掉
+      heartbeat-interval: 25s
+      # 一条推送连接最长活多久，也是 SseEmitter 的异步超时（不设是 Tomcat 默认的 30 秒）；
+      # 到点服务端正常结束，浏览器重连、网关借机重新查会话（登出与封禁最晚这么久生效）
+      max-connection-age: 30m
+
+management:
+  health:
+    mail:
+      # 不拿 SMTP 连通性当健康：容器 healthcheck 每 10 秒一次会变成一天八千多次登录服务商；
+      # 服务商抖动时信由重试与死信兜着，CD 也不该因此回滚
+      enabled: false
+
+# XXL-Job 执行器：管理端地址随环境变，在 Nacos 公共配置 patra-common.yaml；执行器端口 = 服务端口 + 1 = 6601
+xxl:
+  job:
+    executor:
+      # 回调地址：admin 按它回调本执行器。与 Nacos 注册地址同一个变量；容器里不设，自动探测 patra-net 上的 IP
+      ip: ${PATRA_ADVERTISE_IP:}
+      logpath: ${XXL_JOB_EXECUTOR_LOG_PATH:${PATRA_LOG_DIR:logs}/xxl-job/patra-notification}
+      logretentiondays: ${XXL_JOB_LOG_RETENTION_DAYS:30}

@@ -34,7 +34,7 @@ Gradle 模块按层，**模块内先按子域、再按组件类型**。由 `patr
 ├─ internal             *EndpointImpl 与它用的 *ApiConverter
 ├─ scheduler | mq | config
 
-{根}.api.{子域}.{endpoint | dto}
+{根}.api.{子域}.{endpoint | dto | event}   event 放发给别的服务的集成事件 record
 {根}.api.error          服务级错误码（保留包）
 {根}、{根}.config       启动类与组装，不属于任何子域
 ```

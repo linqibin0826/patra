@@ -6,6 +6,7 @@ import static org.assertj.core.groups.Tuple.tuple;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
@@ -46,6 +47,7 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -90,6 +92,7 @@ class RequestAccountDeletionHandlerTest {
           userAgent -> DeviceProfile.of("Chrome 141 · macOS", DeviceClass.DESKTOP),
           ip -> Optional.of("中国 广东 深圳"));
   private final AtomicBoolean inTransaction = new AtomicBoolean(false);
+  private final List<Boolean> sentInTransaction = new ArrayList<>();
   private final RequestAccountDeletionHandler handler =
       new RequestAccountDeletionHandler(
           currentUserPort,
@@ -113,7 +116,13 @@ class RequestAccountDeletionHandlerTest {
     when(users.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
     when(userReadPort.findAccount(42L)).thenReturn(Optional.of(ACCOUNT));
     when(sessionTerminator.terminateAll(anyLong(), any(), any())).thenReturn(List.of(7001L));
-    when(emailDelivery.send(any())).thenReturn(true);
+    doAnswer(
+            invocation -> {
+              sentInTransaction.add(inTransaction.get());
+              return null;
+            })
+        .when(emailDelivery)
+        .send(any());
   }
 
   @Test
@@ -197,7 +206,7 @@ class RequestAccountDeletionHandlerTest {
   }
 
   @Test
-  @DisplayName("发起成功：进冷静期、作废令牌（撤销令牌不动）、撤销全部会话，提交后发信，返回到期时间")
+  @DisplayName("发起成功：进冷静期、作废令牌（撤销令牌不动）、撤销全部会话，同一事务里登记「注销已提交」，返回到期时间")
   void should_request_deletion_revoke_tokens_and_all_sessions() {
     AccountDeletionRequested result = handler.handle(command("chen-yu"));
 
@@ -219,15 +228,17 @@ class RequestAccountDeletionHandlerTest {
     assertThat(requested.displayName()).isEqualTo("陈宇");
     assertThat(requested.deletionDueAt()).isEqualTo(NOW.plus(COOLING));
     assertThat(requested.notice().device()).isEqualTo("Chrome 141 · macOS");
+    assertThat(sentInTransaction).containsExactly(true);
     assertThat(result.deletionDueAt()).isEqualTo(NOW.plus(COOLING));
   }
 
   @Test
-  @DisplayName("邮件被发信执行器拒收：照常返回到期时间")
-  void should_still_succeed_when_mail_rejected() {
-    when(emailDelivery.send(any())).thenReturn(false);
+  @DisplayName("登记失败：异常原样抛出，注销随事务回滚")
+  void should_fail_when_registration_fails() {
+    IllegalStateException boom = new IllegalStateException("登记表写入失败");
+    doThrow(boom).when(emailDelivery).send(any());
 
-    assertThat(handler.handle(command("chen-yu")).deletionDueAt()).isEqualTo(NOW.plus(COOLING));
+    assertThatThrownBy(() -> handler.handle(command("chen-yu"))).isSameAs(boom);
   }
 
   /// 带客户端信息的命令。

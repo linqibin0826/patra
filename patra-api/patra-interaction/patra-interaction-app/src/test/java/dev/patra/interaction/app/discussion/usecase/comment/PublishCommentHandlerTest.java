@@ -19,6 +19,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -44,9 +45,11 @@ import dev.patra.interaction.domain.subject.model.enums.PublishKind;
 import dev.patra.interaction.domain.subject.model.enums.SubjectCapability;
 import dev.patra.interaction.domain.subject.model.enums.SubjectType;
 import dev.patra.interaction.domain.subject.model.read.UserCard;
+import dev.patra.interaction.domain.subject.model.vo.PlainText;
 import dev.patra.interaction.domain.subject.model.vo.SubjectOwner;
 import dev.patra.interaction.domain.subject.port.gateway.PublishGuardGateway;
 import dev.patra.interaction.domain.subject.port.gateway.SubjectGateway;
+import dev.patra.interaction.domain.subject.port.markdown.PlainTextPort;
 import dev.patra.interaction.domain.subject.port.read.SubjectReadPort;
 import java.time.Clock;
 import java.time.Instant;
@@ -56,6 +59,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.TreeSet;
+import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import org.junit.jupiter.api.BeforeEach;
@@ -72,6 +77,10 @@ class PublishCommentHandlerTest {
   private static final long NEW_ID = 900L;
   private static final Instant NOW = Instant.parse("2026-10-27T08:00:00.123456789Z");
   private static final Instant NOW_MICROS = Instant.parse("2026-10-27T08:00:00.123456Z");
+
+  /// 假的纯文本转换：把收到的正文与提及名单拼出来，测试据此核对两个参数。
+  private static final PlainTextPort ECHO_PLAIN_TEXT =
+      (markdown, mentioned) -> PlainText.of(markdown + "|" + new TreeSet<>(mentioned));
 
   private final List<String> events = new ArrayList<>();
   private final SubjectReadPort subjectReads = mock(SubjectReadPort.class);
@@ -99,6 +108,7 @@ class PublishCommentHandlerTest {
             views,
             signedIn(AUTHOR),
             recording(events),
+            ECHO_PLAIN_TEXT,
             publisher,
             Clock.fixed(NOW, ZoneOffset.UTC));
     when(guard.requireEligible(AUTHOR)).thenAnswer(record("eligible", self));
@@ -113,6 +123,19 @@ class PublishCommentHandlerTest {
     doAnswer(record("publish", null)).when(publisher).publishEvent(any(Object.class));
     when(reads.findById(NEW_ID)).thenReturn(Optional.of(root(NEW_ID, AUTHOR).build()));
     when(views.assemble(any(), any(), any(), any(), any())).thenReturn(List.of(assembled));
+  }
+
+  /// 每次发表的事件都有新生成的事件 ID（PAP-141）。
+  @Test
+  void should_publish_event_with_fresh_event_id() {
+    handler.handle(PublishCommentCommand.of("publication", "100", null, "一"));
+    handler.handle(PublishCommentCommand.of("publication", "100", null, "二"));
+
+    ArgumentCaptor<Object> captor = ArgumentCaptor.forClass(Object.class);
+    verify(publisher, times(2)).publishEvent(captor.capture());
+    UUID first = ((CommentPublishedEvent) captor.getAllValues().get(0)).eventId();
+    UUID second = ((CommentPublishedEvent) captor.getAllValues().get(1)).eventId();
+    assertThat(first).isNotNull().isNotEqualTo(second);
   }
 
   /// 未知类型、空正文、不合法的父评论 ID、101 个候选：都在任何远程调用之前拒绝。
@@ -169,16 +192,20 @@ class PublishCommentHandlerTest {
     assertThat(inserted.mentionedUserIds()).containsExactly(7L);
     assertThat(inserted.createdAt()).isEqualTo(NOW_MICROS);
     assertThat(capturePublished())
+        .usingRecursiveComparison()
+        .ignoringFields("eventId")
         .isEqualTo(
             CommentPublishedEvent.builder()
+                .eventId(UUID.randomUUID())
                 .commentId(NEW_ID)
+                .version(CommentAggregate.INITIAL_VERSION)
                 .subjectId(PUB_ID)
                 .subjectType(SubjectType.PUBLICATION)
                 .rootCommentId(NEW_ID)
                 .authorId(AUTHOR)
                 .authorAnonymous(false)
                 .mentionedUserIds(List.of(7L))
-                .body("<@7> 你好")
+                .plainText("<@7> 你好|[7]")
                 .publishedAt(NOW_MICROS)
                 .build());
     verify(views)
@@ -249,6 +276,7 @@ class PublishCommentHandlerTest {
             .authorId(6L)
             .state(CommentState.DELETED)
             .createdAt(NOW)
+            .version(CommentAggregate.INITIAL_VERSION)
             .build();
     when(comments.find(40L)).thenReturn(Optional.of(placeholderRoot));
 
@@ -309,6 +337,7 @@ class PublishCommentHandlerTest {
         .body("父评论")
         .mentionedUserIds(Set.of())
         .createdAt(NOW)
+        .version(CommentAggregate.INITIAL_VERSION)
         .build();
   }
 

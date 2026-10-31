@@ -1,5 +1,6 @@
 package dev.patra.identity.app.account.usecase.password;
 
+import static dev.patra.identity.app.account.usecase.OutgoingMailMatchers.sameMailAs;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -142,7 +143,7 @@ class RequestPasswordResetHandlerTest {
   }
 
   @Test
-  @DisplayName("正常用户：事务里锁用户行并签发 PASSWORD_RESET，事务后发带重设链接的邮件；返回下次可申请时间")
+  @DisplayName("正常用户：事务里锁用户行、签发 PASSWORD_RESET 并登记带重设链接的邮件；返回下次可申请时间")
   void should_issue_and_send_for_active_user() {
     when(emailTokenIssuer.issue(any(), anyLong(), any(), any()))
         .thenAnswer(
@@ -152,7 +153,7 @@ class RequestPasswordResetHandlerTest {
             });
     doAnswer(
             invocation -> {
-              assertThat(inTransaction).isFalse();
+              assertThat(inTransaction).isTrue();
               return null;
             })
         .when(emailDelivery)
@@ -167,8 +168,13 @@ class RequestPasswordResetHandlerTest {
     order
         .verify(emailDelivery)
         .send(
-            PasswordResetMail.of(
-                EMAIL, "陈宇", "https://patra.example/reset-password#token=" + SECRET.value()));
+            sameMailAs(
+                PasswordResetMail.builder()
+                    .to(EMAIL)
+                    .displayName("陈宇")
+                    .resetUrl("https://patra.example/reset-password#token=" + SECRET.value())
+                    .linkExpiresAt(ISSUED.token().getExpiresAt())
+                    .build()));
     assertThat(result.email()).isEqualTo("chen.yu@example.com");
     assertThat(result.nextRequestAt()).isEqualTo(NOW.plusSeconds(60));
     verifyNoInteractions(loginThrottle);

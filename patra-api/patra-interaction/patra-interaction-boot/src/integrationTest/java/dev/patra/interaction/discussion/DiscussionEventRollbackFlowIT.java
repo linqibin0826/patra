@@ -92,7 +92,7 @@ class DiscussionEventRollbackFlowIT extends DiscussionFlowITSupport {
     assertThat(second.parentAuthorId()).isEqualTo(A);
     assertThat(second.authorId()).isEqualTo(B);
     assertThat(second.mentionedUserIds()).containsExactly(C);
-    assertThat(second.body()).isEqualTo("<@1003> 同意");
+    assertThat(second.plainText()).isEqualTo("<@1003> 同意");
     assertThat(second.publishedAt()).isEqualTo(replyCreatedAt);
     CommentEditedEvent third = (CommentEditedEvent) events.get(2);
     assertThat(third.commentId()).isEqualTo(reply);

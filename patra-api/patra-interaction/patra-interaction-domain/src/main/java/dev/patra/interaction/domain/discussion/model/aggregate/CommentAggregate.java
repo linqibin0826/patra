@@ -28,6 +28,9 @@ import lombok.ToString;
 @EqualsAndHashCode
 public final class CommentAggregate {
 
+  /// 发表时的正文版本。
+  public static final int INITIAL_VERSION = 1;
+
   private final long commentId;
   private final SubjectId subjectId;
   private final long rootId;
@@ -38,6 +41,7 @@ public final class CommentAggregate {
   private final Set<Long> mentionedUserIds;
   private final Instant createdAt;
   private final Instant revisedAt;
+  private final int version;
 
   /// 创建并校验不变量。
   ///
@@ -51,6 +55,7 @@ public final class CommentAggregate {
   /// @param mentionedUserIds 这条评论曾经 @ 到过的人（只增不减）
   /// @param createdAt 发表时刻
   /// @param revisedAt 当前版本由一次记版本的编辑产生的时刻，可空
+  /// @param version 正文版本：发表为 1，每次正文确有变化加 1（集成事件靠它判新旧）
   @Builder(toBuilder = true)
   private CommentAggregate(
       long commentId,
@@ -62,7 +67,8 @@ public final class CommentAggregate {
       String body,
       Set<Long> mentionedUserIds,
       Instant createdAt,
-      Instant revisedAt) {
+      Instant revisedAt,
+      int version) {
     this.commentId = commentId;
     this.subjectId = Objects.requireNonNull(subjectId, "subjectId 不能为 null");
     this.rootId = rootId;
@@ -73,6 +79,10 @@ public final class CommentAggregate {
     this.mentionedUserIds = mentionedUserIds == null ? Set.of() : Set.copyOf(mentionedUserIds);
     this.createdAt = Objects.requireNonNull(createdAt, "createdAt 不能为 null");
     this.revisedAt = revisedAt;
+    this.version = version;
+    if (version < INITIAL_VERSION) {
+      throw new IllegalStateException("正文版本从 1 起：" + commentId);
+    }
     if ((state == CommentState.ACTIVE) != (body != null)) {
       throw new IllegalStateException("正常评论必须有正文、占位不能有正文：" + commentId);
     }
@@ -107,7 +117,7 @@ public final class CommentAggregate {
     }
   }
 
-  /// 编辑正文（spec 5.5）：发布后整 5 分钟之内原地替换、不记版本；之后把旧正文存成一版。
+  /// 编辑正文（spec 5.5）：发布后整 5 分钟之内原地替换、不记版本；之后把旧正文存成一版。两种都给正文版本加一。
   ///
   /// @param editorId 编辑者
   /// @param newBody 新正文（存储形式）
@@ -137,6 +147,7 @@ public final class CommentAggregate {
             .body(newBody)
             .mentionedUserIds(merged)
             .revisedAt(withinGrace ? revisedAt : now)
+            .version(version + 1)
             .build();
     return Optional.of(CommentEdit.of(updated, archived, added));
   }

@@ -196,7 +196,8 @@ class ConfirmEmailChangeHandlerTest {
                             .equals(
                                 "https://patra.example/revert-email-change#token="
                                     + REVERT_SECRET.value())
-                        && n.notice().notMeAdvice().equals(EmailChangedNoticeMail.NOT_ME_ADVICE)
+                        && n.linkExpiresAt()
+                            .equals(NOW.plus(EmailTokenPurpose.EMAIL_CHANGE_REVERT.validity()))
                         && n.notice().device().equals("Chrome 141 · macOS")
                         && n.notice().ipAddress().equals("127.0.0.1")
                         && n.notice().ipLocation().equals("内网")));
@@ -208,8 +209,8 @@ class ConfirmEmailChangeHandlerTest {
   }
 
   @Test
-  @DisplayName("签发在事务内，发信在事务后")
-  void should_send_after_transaction() {
+  @DisplayName("签发与两封邮件的登记都在事务内")
+  void should_register_both_mails_inside_transaction() {
     when(emailTokenIssuer.issue(any(), anyLong(), any(), any()))
         .thenAnswer(
             invocation -> {
@@ -221,7 +222,7 @@ class ConfirmEmailChangeHandlerTest {
             });
     org.mockito.Mockito.doAnswer(
             invocation -> {
-              assertThat(inTransaction).isFalse();
+              assertThat(inTransaction).isTrue();
               return null;
             })
         .when(emailDelivery)

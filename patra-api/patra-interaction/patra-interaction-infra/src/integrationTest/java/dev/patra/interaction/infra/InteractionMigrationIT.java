@@ -35,8 +35,43 @@ class InteractionMigrationIT {
                     + "WHERE schema_name NOT LIKE 'pg\\_%' AND schema_name <> 'information_schema'",
                 String.class))
         .contains("public", "subject", "collection")
-        .isSubsetOf(
-            "public", "subject", "collection", "discussion", "post", "notification", "reaction");
+        .isSubsetOf("public", "subject", "collection", "discussion", "post", "reaction");
+  }
+
+  /// 提醒搬到通知服务后（PAP-143），旧的 `notification` schema 由前向迁移删掉，连同里面的表。
+  @Test
+  void should_drop_notification_schema() {
+    assertThat(
+            jdbcTemplate.queryForObject(
+                "SELECT count(*) FROM information_schema.schemata WHERE schema_name = 'notification'",
+                Long.class))
+        .isZero();
+  }
+
+  /// 事件发布登记表（PAP-141）在 public，不属于任何子域；列是 Modulith 固定的那几列。
+  @Test
+  void should_create_event_publication_in_public() {
+    assertThat(
+            jdbcTemplate.queryForList(
+                "SELECT table_schema FROM information_schema.tables "
+                    + "WHERE table_name = 'event_publication'",
+                String.class))
+        .containsExactly("public");
+    assertThat(
+            jdbcTemplate.queryForList(
+                "SELECT column_name FROM information_schema.columns "
+                    + "WHERE table_schema = 'public' AND table_name = 'event_publication'",
+                String.class))
+        .containsExactlyInAnyOrder(
+            "id",
+            "listener_id",
+            "event_type",
+            "serialized_event",
+            "publication_date",
+            "completion_date",
+            "status",
+            "completion_attempts",
+            "last_resubmission_date");
   }
 
   /// Flyway 历史表只有一张，在 public。

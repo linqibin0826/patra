@@ -41,7 +41,7 @@ assert_field "$F" '.backend_units' '["catalog","identity","interaction"]' "catal
 echo "== 场景 6：全局 path → 全量；foundation 模块 → 扇出（非全量）=="
 assert_field "build-logic/src/main/kotlin/x.gradle.kts" '.full_run' 'true' "build-logic 全量"
 assert_field "patra-tool/patra-tool-core/src/main/java/X.java" '.full_run' 'false' "patra-tool-core 非全量"
-assert_field "patra-tool/patra-tool-core/src/main/java/X.java" '.backend_units' '["catalog","foundation","gateway","identity","interaction","registry"]' "patra-tool-core 扇出全部 5 个服务与 foundation"
+assert_field "patra-tool/patra-tool-core/src/main/java/X.java" '.backend_units' '["catalog","foundation","gateway","identity","interaction","notification","registry"]' "patra-tool-core 扇出全部 6 个服务与 foundation"
 
 echo "== 场景 7：workflow 自身变更 → 全量后端 + portal =="
 assert_field ".github/workflows/ci.yml" '.full_run' 'true' "workflow 全量"
@@ -65,6 +65,8 @@ assert_field "patra-infra/scripts/compose-all.sh" '.full_run' 'false' "运维脚
 assert_field "patra-infra/docker/docker-compose.tailnet.yaml" '.backend_units' '[]' "tailnet 栈 backend 空"
 assert_field "patra-infra/docker/docker-compose.core.yaml" '.backend_units' '[]' "core 栈 backend 空"
 assert_field "patra-infra/docker/prometheus/prometheus.yml" '.backend_units' '[]' "基建栈配置目录 backend 空"
+assert_field "patra-infra/docker/rabbitmq/conf.d/20-patra.conf" '.full_run' 'false' "rabbitmq 配置目录非全量"
+assert_field "patra-infra/docker/rabbitmq/conf.d/20-patra.conf" '.backend_units' '[]' "rabbitmq 配置目录 backend 空"
 assert_field "patra-infra/docker/.env" '.backend_units' '[]' "基建栈 .env backend 空"
 assert_field "patra-infra/docker/docker-compose.tailnet.yaml" '.docs_only' 'false' "纯基建不算 docs_only"
 F="$(printf 'patra-infra/docker/docker-compose.tailnet.yaml\npatra-api/patra-catalog/patra-catalog-infra/src/main/java/X.java')"
@@ -95,7 +97,7 @@ echo "== 场景 14：Nacos 配置 → foundation（CI 检查）+ 用到它的服
 F="patra-infra/nacos/dev/patra-catalog.yaml"
 assert_field "$F" '.nacos_changed' 'true' "nacos yaml 触发推送"
 assert_field "$F" '.backend_units' '["catalog","foundation"]' "服务的 nacos yaml 重部署该服务（启动时读的配置才生效）"
-assert_field "patra-infra/nacos/dev/patra-common.yaml" '.backend_units' '["catalog","foundation","gateway","identity","interaction","registry"]' "公共 nacos yaml 重部署全部 5 个服务"
+assert_field "patra-infra/nacos/dev/patra-common.yaml" '.backend_units' '["catalog","foundation","gateway","identity","interaction","notification","registry"]' "公共 nacos yaml 重部署全部 6 个服务"
 assert_field "patra-infra/nacos/dev/patra-common.yaml" '.full_run' 'false' "公共 nacos yaml 非全量"
 assert_field "patra-infra/nacos/dev/patra-unknown.yaml" '.backend_units' '["foundation"]' "对不上服务的 nacos yaml 只跑 foundation"
 assert_field "$F" '.full_run' 'false' "nacos yaml 非全量"
@@ -121,6 +123,11 @@ F="patra-api/patra-interaction/patra-interaction-infra/src/main/resources/db/mig
 assert_field "$F" '.backend_units' '["interaction"]' "interaction 私有只跑 interaction"
 assert_field "settings.gradle.kts" '.backend_units | index("interaction") != null' 'true' "全量运行包含 interaction"
 assert_field "patra-infra/nacos/dev/patra-interaction.yaml" '.backend_units' '["foundation","interaction"]' "interaction 的 nacos yaml 重部署 interaction"
+echo "== 场景 16：notification 单元（私有改动只跑 notification；全量运行包含 notification；它的 nacos yaml 只重部署它）=="
+F="patra-api/patra-notification/patra-notification-infra/src/main/java/X.java"
+assert_field "$F" '.backend_units' '["notification"]' "notification 私有只跑 notification"
+assert_field "settings.gradle.kts" '.backend_units | index("notification") != null' 'true' "全量运行包含 notification"
+assert_field "patra-infra/nacos/dev/patra-notification.yaml" '.backend_units' '["foundation","notification"]' "notification 的 nacos yaml 重部署 notification"
 echo
 echo "通过 $PASS / 失败 $FAIL"
 [ "$FAIL" -eq 0 ]

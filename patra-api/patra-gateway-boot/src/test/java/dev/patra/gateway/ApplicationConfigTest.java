@@ -6,6 +6,8 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
+import java.util.stream.IntStream;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.EnvironmentPostProcessor;
@@ -13,6 +15,7 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.env.YamlPropertySourceLoader;
 import org.springframework.boot.logging.DeferredLogFactory;
 import org.springframework.core.env.EnumerablePropertySource;
+import org.springframework.core.env.PropertySource;
 import org.springframework.core.env.StandardEnvironment;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.support.SpringFactoriesLoader;
@@ -23,6 +26,9 @@ import org.springframework.core.io.support.SpringFactoriesLoader.FailureHandler;
 /// 服务名由启动器传入，Nacos 接入由 starter 注入。
 @DisplayName("jar 内配置文件约束")
 class ApplicationConfigTest {
+
+  /// Gateway 路由列表的配置前缀。
+  private static final String ROUTES = "spring.cloud.gateway.server.webmvc.routes";
 
   @Test
   @DisplayName("classpath 上没有 profile 文件")
@@ -73,6 +79,26 @@ class ApplicationConfigTest {
                     .getFirst()
                     .postProcessEnvironment(environment, new SpringApplication()))
         .doesNotThrowAnyException();
+  }
+
+  @Test
+  @DisplayName("推送路由排在通用 notification 路由之前、走 lb-push，推送池上限 500")
+  void should_route_push_stream_before_general_notification_route() throws IOException {
+    PropertySource<?> yaml =
+        new YamlPropertySourceLoader()
+            .load("application.yml", new ClassPathResource("application.yml"))
+            .getFirst();
+    List<Object> routeIds =
+        IntStream.range(0, 20)
+            .mapToObj(i -> yaml.getProperty(ROUTES + "[" + i + "].id"))
+            .filter(Objects::nonNull)
+            .toList();
+
+    int push = routeIds.indexOf("patra-notification-stream");
+    assertThat(push).isNotNegative().isLessThan(routeIds.indexOf("patra-notification"));
+    assertThat(yaml.getProperty(ROUTES + "[" + push + "].uri"))
+        .hasToString("lb-push://patra-notification");
+    assertThat(yaml.getProperty("patra.gateway.push.max-connections")).hasToString("500");
   }
 
   /// 读出 classpath 上一份 YAML 的全部属性名，多文档合在一起。

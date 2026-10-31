@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{html/fragments/layout :: mail('讨论提醒', ${mail.eyebrow}, ${mail.heading}, ~{::content}, ${mail.why})}">
+<body>
+<!-- 每日汇总（画布 Digest）：引导句 → 分节（回复我的 / @ 我的，各自新的在前）→ 没列出的条数 → 打开提醒页 -->
+<th:block th:fragment="content">
+<p style="margin:16px 0 0 0;" th:text="${mail.lead}">10 月 30 日 08:00 到 10 月 31 日 08:00（北京时间）之间……</p>
+<div th:each="section : ${mail.sections}" style="margin-top:32px;">
+  <div class="p-fg1 p-rule-strong" style="padding-bottom:10px;border-bottom:1px solid #1c1917;font-family:'SF Mono',Menlo,Consolas,'PingFang SC',monospace;font-size:11px;letter-spacing:0.08em;color:#1c1917;" th:text="${section.title}">回复我的 · 3 条</div>
+  <th:block th:each="it : ${section.items}"><th:block th:replace="~{html/fragments/reminder-item :: item(${it}, '16px')}"></th:block></th:block>
+</div>
+<p th:if="${mail.overflow != null}" class="p-fg3" style="margin:16px 0 0 0;font-size:14px;line-height:1.6;color:#57534e;" th:text="${mail.overflow}">还有 4 条没有列出（回复 2 条、@ 2 条），到提醒页查看。</p>
+<th:block th:replace="~{html/fragments/button :: button(${mail.buttonUrl}, ${mail.buttonLabel}, null)}"></th:block>
+</th:block>
+</body>
+</html>

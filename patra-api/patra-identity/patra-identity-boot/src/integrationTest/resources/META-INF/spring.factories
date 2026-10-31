@@ -1,2 +1,2 @@
-# 每个测试方法结束后等在途邮件发完，见 IdentityMailDrainTestExecutionListener
-org.springframework.test.context.TestExecutionListener=dev.patra.identity.config.IdentityMailDrainTestExecutionListener
+# 每个测试方法结束后等事件发布登记表清空，见 IdentitySecurityMailDrainTestExecutionListener
+org.springframework.test.context.TestExecutionListener=dev.patra.identity.config.IdentitySecurityMailDrainTestExecutionListener

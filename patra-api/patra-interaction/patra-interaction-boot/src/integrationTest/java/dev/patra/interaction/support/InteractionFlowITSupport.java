@@ -9,8 +9,10 @@ import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.extension.Extension;
 import dev.patra.interaction.infra.config.InteractionITPostgreSQLContainerInitializer;
 import dev.patra.tool.security.test.TestIdentity;
+import dev.patra.tool.test.container.initializer.RabbitMQContainerInitializer;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
+import org.springframework.amqp.core.AmqpAdmin;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.resttestclient.autoconfigure.AutoConfigureRestTestClient;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -28,15 +30,20 @@ import org.springframework.test.web.servlet.client.RestTestClient;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
-/// 各子域流程测试的共用底座：真实 PostgreSQL、真实的身份断言验签；catalog 与 identity 由 WireMock 扮演，经
-/// Spring Cloud LoadBalancer + SimpleDiscoveryClient 走 `lb://` 这条真实的路（照 `SubjectRegistryFlowIT`）。
+/// 各子域流程测试的共用底座：真实 PostgreSQL、真实 RabbitMQ、真实的身份断言验签；catalog 与 identity 由 WireMock 扮演，
+/// 经 Spring Cloud LoadBalancer + SimpleDiscoveryClient 走 `lb://` 这条真实的路（照 `SubjectRegistryFlowIT`）。
 ///
-/// 子类共用同一个 Spring 上下文。每例前清空全部子域 schema 里的表（从 `pg_tables` 现查，新子域的表自动纳入）。
+/// 子类共用同一个 Spring 上下文。每例前清空全部子域 schema 里的表（从 `pg_tables` 现查，新子域的表自动纳入）、事件发布
+/// 登记表（在 public）与替通知服务绑定路由键的测试队列（PAP-141）。
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-@ContextConfiguration(initializers = InteractionITPostgreSQLContainerInitializer.class)
+@ContextConfiguration(
+    initializers = {
+      InteractionITPostgreSQLContainerInitializer.class,
+      RabbitMQContainerInitializer.class
+    })
 @ActiveProfiles("test")
 @AutoConfigureRestTestClient
-@Import(DiscussionEventRecorder.class)
+@Import({DiscussionEventRecorder.class, InteractionEventsITSpringConfig.class})
 public abstract class InteractionFlowITSupport {
 
   /// JSON 解析。
@@ -66,6 +73,7 @@ public abstract class InteractionFlowITSupport {
 
   @Autowired protected RestTestClient restClient;
   @Autowired protected JdbcTemplate jdbcTemplate;
+  @Autowired protected AmqpAdmin amqpAdmin;
 
   /// 每例从干净的表与假数据开始；两个假服务对任何请求都交给转换器。
   @BeforeEach
@@ -78,6 +86,8 @@ public abstract class InteractionFlowITSupport {
     if (!tables.isEmpty()) {
       jdbcTemplate.update("TRUNCATE " + String.join(", ", tables));
     }
+    jdbcTemplate.update("TRUNCATE public.event_publication");
+    amqpAdmin.purgeQueue(InteractionEventsITSpringConfig.QUEUE, false);
     catalog.resetAll();
     identity.resetAll();
     CATALOG_DATA.clear();

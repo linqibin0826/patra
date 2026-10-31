@@ -4,5 +4,5 @@
 /// 占位、@ 联想；评论写入时在同一事务里发布进程内事件。
 ///
 /// 别的子域只能用它的 `domain.discussion.port.read`、`domain.discussion.model.read`、
-/// `domain.discussion.event`；提醒子域只经事件契约 `domain.discussion.event` 订阅。
+/// `domain.discussion.event`。评论的发表、编辑、删除另外外送给通知服务（PAP-141），站内提醒由它生成（PAP-143）。
 package dev.patra.interaction.app.discussion;

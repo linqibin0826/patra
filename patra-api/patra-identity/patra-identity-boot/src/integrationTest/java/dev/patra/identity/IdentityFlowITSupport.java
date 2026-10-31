@@ -2,11 +2,12 @@ package dev.patra.identity;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.icegreen.greenmail.util.GreenMail;
+import dev.patra.identity.api.account.event.SecurityMailEvent;
 import dev.patra.identity.config.IdentityClockITSpringConfig;
 import dev.patra.identity.config.IdentityITMinIOContainerInitializer;
 import dev.patra.identity.config.IdentityITPostgreSQLContainerInitializer;
-import dev.patra.identity.config.IdentityMailITSpringConfig;
+import dev.patra.identity.config.IdentitySecurityMailITFixture;
+import dev.patra.identity.config.IdentitySecurityMailITSpringConfig;
 import dev.patra.identity.infra.session.store.SessionToken;
 import dev.patra.tool.core.security.AccountType;
 import dev.patra.tool.core.security.ClientType;
@@ -14,24 +15,18 @@ import dev.patra.tool.core.security.CurrentUser;
 import dev.patra.tool.security.assertion.IdentityAssertionSigner;
 import dev.patra.tool.security.test.TestSigningKey;
 import dev.patra.tool.test.clock.MutableClock;
+import dev.patra.tool.test.container.initializer.RabbitMQContainerInitializer;
 import dev.patra.tool.test.container.initializer.RedisContainerInitializer;
-import dev.patra.tool.test.mail.GreenMailSmtpInitializer;
-import jakarta.mail.BodyPart;
-import jakarta.mail.internet.MimeMessage;
-import jakarta.mail.internet.MimeMultipart;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.net.http.HttpClient;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.time.Duration;
 import java.time.Instant;
-import java.util.Arrays;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.junit.jupiter.api.BeforeEach;
@@ -54,7 +49,8 @@ import org.springframework.web.client.RestClient.RequestHeadersSpec.ConvertibleC
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
-/// 账号安全流程测试的共用基座：真实的 PostgreSQL、Redis、GreenMail 和安全过滤器链，时钟可拨动。
+/// 账号安全流程测试的共用基座：真实的 PostgreSQL、Redis、RabbitMQ（捕获队列代替通知服务收安全邮件事件）和安全过滤器链，
+/// 时钟可拨动。
 ///
 /// 全部请求走裸的 JDK HttpClient：`RestTestClient` 在真实端口上的 Apache 客户端会按 `Retry-After` 自动重试 429。
 /// 断言用测试时钟签：identity 验签 `exp` 用的也是这个时钟。注解组合与 `EmailVerificationFlowIT` 相同，
@@ -64,12 +60,12 @@ import tools.jackson.databind.json.JsonMapper;
     initializers = {
       IdentityITPostgreSQLContainerInitializer.class,
       RedisContainerInitializer.class,
-      GreenMailSmtpInitializer.class,
+      RabbitMQContainerInitializer.class,
       IdentityITMinIOContainerInitializer.class
     })
 @ActiveProfiles("test")
 @AutoConfigureRestTestClient
-@Import({IdentityClockITSpringConfig.class, IdentityMailITSpringConfig.class})
+@Import({IdentityClockITSpringConfig.class, IdentitySecurityMailITSpringConfig.class})
 abstract class IdentityFlowITSupport {
 
   static final JsonMapper JSON = JsonMapper.builder().build();
@@ -82,14 +78,14 @@ abstract class IdentityFlowITSupport {
   @Autowired MutableClock clock;
   @Autowired Environment environment;
 
-  final GreenMail greenMail = GreenMailSmtpInitializer.getGreenMail();
+  @Autowired IdentitySecurityMailITFixture securityMails;
 
-  /// 每个用例从 T0 和空邮箱开始；清掉找回密码按 IP 的两个窗口键——所有用例同一个 IP，
+  /// 每个用例从 T0 和空的捕获队列开始；清掉找回密码按 IP 的两个窗口键——所有用例同一个 IP，
   /// 而窗口按测试时钟判、上一个用例拨到未来的记录会让这个用例一开始就 429。
   @BeforeEach
   void resetClockAndMailbox() {
     clock.set(T0);
-    GreenMailSmtpInitializer.purge();
+    securityMails.purge();
     String ipHash = sha256Hex("127.0.0.1").substring(0, 32);
     redis.delete(
         List.of("idn:pw-reset:hour:ip:" + ipHash, "idn:pw-reset-submit:minute:ip:" + ipHash));
@@ -218,114 +214,24 @@ abstract class IdentityFlowITSupport {
     return headers;
   }
 
-  /// 等 GreenMail 累计收到 n 封。
+  /// 发给某个地址的某种安全邮件事件，最多等 5 秒：外送在事务提交后异步进行。
   ///
-  /// @param count 累计封数
-  void waitForMails(int count) {
-    assertThat(greenMail.waitForIncomingEmail(5_000, count)).as("等第 %d 封邮件", count).isTrue();
+  /// @param type 事件类型
+  /// @param recipient 收件地址
+  /// @param <T> 事件类型
+  /// @return 第一个匹配的事件
+  <T extends SecurityMailEvent> T mailEvent(Class<T> type, String recipient) {
+    return securityMails.await(type, recipient);
   }
 
-  /// 收件人与主题都匹配的那一封，最多等 5 秒。发信是异步的，而登录会额外发新设备提醒（PAP-99）、
-  /// 上一个用例的邮件也可能晚到，按总封数等不可靠，所以按收件人与主题等。
+  /// 从链接里取令牌。
   ///
-  /// @param recipient 收件人
-  /// @param subject 主题
-  /// @return 邮件
-  MimeMessage mailFor(String recipient, String subject) {
-    long deadline = System.nanoTime() + Duration.ofSeconds(5).toNanos();
-    while (true) {
-      Optional<MimeMessage> found =
-          Arrays.stream(greenMail.getReceivedMessages())
-              .filter(
-                  mail -> recipients(mail).contains(recipient) && subject.equals(subjectOf(mail)))
-              .findFirst();
-      if (found.isPresent()) {
-        return found.get();
-      }
-      if (System.nanoTime() >= deadline) {
-        throw new AssertionError("没有发给 " + recipient + " 的「" + subject + "」");
-      }
-      greenMail.waitForIncomingEmail(200, greenMail.getReceivedMessages().length + 1);
-    }
-  }
-
-  /// 邮件主题（已解码）。
-  ///
-  /// @param mail 邮件
-  /// @return 主题
-  static String subjectOf(MimeMessage mail) {
-    try {
-      return mail.getSubject();
-    } catch (Exception e) {
-      throw new IllegalStateException(e);
-    }
-  }
-
-  /// 邮件里某种类型的那一部分的正文。
-  ///
-  /// @param mail 邮件
-  /// @param contentType `text/plain` 或 `text/html`
-  /// @return 正文
-  static String partText(MimeMessage mail, String contentType) {
-    try {
-      String found = findPart(mail.getContent(), contentType);
-      assertThat(found).as("%s 部分", contentType).isNotNull();
-      return found;
-    } catch (Exception e) {
-      throw new IllegalStateException("读邮件失败", e);
-    }
-  }
-
-  /// 递归找某种类型的部分。
-  ///
-  /// @param content 内容
-  /// @param contentType 类型前缀
-  /// @return 正文；没有时为 `null`
-  static String findPart(Object content, String contentType) throws Exception {
-    if (content instanceof MimeMultipart multipart) {
-      for (int i = 0; i < multipart.getCount(); i++) {
-        BodyPart part = multipart.getBodyPart(i);
-        if (part.getContentType().startsWith(contentType)) {
-          return part.getContent().toString();
-        }
-        String nested = findPart(part.getContent(), contentType);
-        if (nested != null) {
-          return nested;
-        }
-      }
-    }
-    return null;
-  }
-
-  /// 收件人列表。
-  ///
-  /// @param mail 邮件
-  /// @return 地址
-  static List<String> recipients(MimeMessage mail) {
-    try {
-      return Arrays.stream(mail.getAllRecipients()).map(Object::toString).toList();
-    } catch (Exception e) {
-      throw new IllegalStateException(e);
-    }
-  }
-
-  /// 从正文里的链接取令牌。
-  ///
-  /// @param text 正文
+  /// @param link 带 `#token=` 的链接
   /// @return 令牌
-  static String tokenIn(String text) {
-    Matcher matcher = TOKEN_IN_LINK.matcher(text);
-    assertThat(matcher.find()).as("正文里有带令牌的链接").isTrue();
+  static String tokenIn(String link) {
+    Matcher matcher = TOKEN_IN_LINK.matcher(link);
+    assertThat(matcher.find()).as("链接里有令牌").isTrue();
     return matcher.group(1);
-  }
-
-  /// 发给某人的某封邮件的文本部分里的令牌。
-  ///
-  /// @param recipient 收件人
-  /// @param subject 主题
-  /// @return 令牌
-  String tokenInMail(String recipient, String subject) {
-    return tokenIn(partText(mailFor(recipient, subject), "text/plain"));
   }
 
   /// SHA-256 的十六进制。

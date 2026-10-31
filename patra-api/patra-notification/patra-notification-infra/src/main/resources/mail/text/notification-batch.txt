@@ -1,0 +1,18 @@
+[(${mail.heading})]
+
+[(${mail.lead})]
+[# th:each="it : ${mail.items}"]
+[(${it.actorName})] [(${it.action})] · [(${it.time})]
+[# th:each="seg : ${it.excerpt}"][(${seg.text})][/]
+[(${it.place.line})]
+查看并回复：[(${it.link})]
+[/][# th:if="${mail.overflow != null}"]
+[(${mail.overflow})]
+[/]
+[(${mail.buttonLabel})]：[(${mail.buttonUrl})]
+
+——
+[(${mail.why})]
+[(${mail.unsubscribeLabel})]：[(${mail.unsubscribeUrl})]
+通知设置：[(${mail.preferencesUrl})]
+[(${footnote})]

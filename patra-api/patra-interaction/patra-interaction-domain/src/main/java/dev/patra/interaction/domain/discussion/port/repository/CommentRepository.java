@@ -48,7 +48,7 @@ public interface CommentRepository {
   /// @return 新评论 ID
   long insert(NewComment comment);
 
-  /// 改正文：只写 `body`、`mentioned_user_ids`、`revised_at`。
+  /// 改正文：只写 `body`、`mentioned_user_ids`、`revised_at`、`version`。
   ///
   /// @param comment 改完的评论
   void updateBody(CommentAggregate comment);

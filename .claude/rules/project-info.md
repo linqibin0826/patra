@@ -14,6 +14,7 @@
 - `patra-catalog` - 目录服务 (采集外部数据源并直接入库；文献、期刊、MeSH、机构、全文)
 - `patra-identity` - 身份服务 (前台用户的注册、登录、会话、封禁)
 - `patra-interaction` - 社区互动服务 (文献库、收藏夹、讨论、投稿经验、提醒、有帮助；以后的关注)，每层按子域分包，子域边界由 ArchUnit 守
+- `patra-notification` - 通知服务 (站内提醒、提醒偏好与退订、邮件、实时推送)，每层按子域分包，子域边界由 ArchUnit 守
 - `patra-gateway-boot` - API 网关 (路由、认证、限流)
 
 ## 模块结构
@@ -29,7 +30,7 @@ patra-{service}/
 └── patra-{service}-boot     # 启动入口 (@SpringBootApplication)
 ```
 
-**工具模块**（`patra-tool/`，12 个，包 `dev.patra.tool.<能力>`，配置前缀 `patra.<能力>`，R1–R5 由 `./gradlew check` 守）:
+**工具模块**（`patra-tool/`，13 个，包 `dev.patra.tool.<能力>`，配置前缀 `patra.<能力>`，R1–R5 由 `./gradlew check` 守）:
 - `patra-tool-core` - 纯 Java：DDD 基类、错误类型、当前用户、`PatraOrders`
 - `patra-tool-cqrs` - 命令总线、`SimpleCommandBus`、内置拦截器
 - `patra-tool-web` - MVC 错误解析引擎、ProblemDetail、Long → String
@@ -37,6 +38,7 @@ patra-{service}/
 - `patra-tool-observability` - 出日志与 actuator 默认值、logback
 - `patra-tool-security` / `patra-tool-openapi`
 - `patra-tool-launch` - `PatraApplication`、Nacos 默认值、`Clock`
+- `patra-tool-events` - 跨服务事件：Modulith 登记表当 Outbox、AMQP 外送等确认、补投、消费端去重与死信
 - `patra-tool-test` - 测试自动配置与 Testcontainers 基座
 
 **服务内分包**：层模块内先按子域、再按组件类型，模板与子域规则见 `.claude/rules/tech/package-layout.md`，由 `patra-tool-test` 的 `SubdomainArchitectureRules` 守。

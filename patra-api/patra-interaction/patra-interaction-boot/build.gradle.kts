@@ -35,11 +35,15 @@ dependencies {
     // 身份断言验签 → CurrentUserPort：文献库、收藏夹的接口要知道是谁在操作
     implementation(project(":patra-tool:patra-tool-security"))
 
-    // 架构测试要看到全部五层：domain、app 已经经 adapter、infra 传进来，api 还没有调用方
-    testImplementation(project(":patra-api:patra-interaction:patra-interaction-api"))
+    // 集成事件外送（PAP-141）：Modulith 事件发布登记当 Outbox，提交后外送到 RabbitMQ 并等确认；
+    // 映射成 api 模块里的集成事件 record
+    implementation(project(":patra-tool:patra-tool-events"))
+    implementation(project(":patra-api:patra-interaction:patra-interaction-api"))
 
     // 集成测试的 PG 容器初始化器
     testImplementation(testFixtures(project(":patra-api:patra-interaction:patra-interaction-infra")))
     // 流程测试用测试私钥签身份断言
     testImplementation(testFixtures(project(":patra-tool:patra-tool-security")))
+    // 事件流程测试用 Modulith 的事件序列化器核对登记表里的领域事件能原样读回（PAP-141）
+    testImplementation("org.springframework.modulith:spring-modulith-events-core")
 }

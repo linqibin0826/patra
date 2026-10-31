@@ -1,0 +1,33 @@
+# 测试里不连 Nacos
+spring:
+  cloud:
+    discovery:
+      enabled: false
+    nacos:
+      discovery:
+        enabled: false
+    service-registry:
+      auto-registration:
+        enabled: false
+  # 不起 RabbitMQ 监听：只有流程测试（NotificationFlowITSupport）起了 RabbitMQ 容器并打开它
+  rabbitmq:
+    listener:
+      simple:
+        auto-startup: false
+
+# 测试里不起 XXL-Job 执行器
+xxl:
+  job:
+    enabled: false
+
+# 邮件渠道：发件人在 Nacos，测试里给一个；SMTP 地址给一个不会被连的默认值，
+# 收信的测试由 GreenMailSmtpInitializer 覆盖成 GreenMail（它的属性优先级最高）
+spring.mail:
+  host: 127.0.0.1
+  port: 1025
+patra:
+  notification:
+    mail:
+      from: "Patra <no-reply@patra.local>"
+      links:
+        base-url: http://portal.test

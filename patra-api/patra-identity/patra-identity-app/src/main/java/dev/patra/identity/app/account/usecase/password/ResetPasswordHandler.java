@@ -47,7 +47,8 @@ import org.springframework.transaction.support.TransactionOperations;
 /// 令牌不被消费）→ 哈希（事务外）→
 /// 事务里：按哈希查令牌（用途不符 422）→ 锁用户行（不存在、封禁、注销 422）→ 条件消费 → 令牌邮箱
 /// 必须等于当前邮箱 → 换哈希（没有凭据行就新建）→ 批量作废令牌（待确认的改邮箱随之取消）→
-/// 写验证时间 → 撤销全部会话并记 `PASSWORD_RESET` → 事务后清零登录失败、发「密码已重设」。不自动登录。
+/// 写验证时间 → 撤销全部会话并记 `PASSWORD_RESET` → 登记「密码已重设」（与重设同成同败，PAP-104）→
+/// 事务后清零登录失败。不自动登录。
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -98,6 +99,9 @@ public class ResetPasswordHandler implements CommandHandler<ResetPasswordCommand
     }
     EmailTokenSecret secret = parsed.orElseThrow();
     PasswordHash hash = passwordHashing.hash(PlainPassword.of(command.newPassword()));
+    // 解析 UA 与属地是纯计算：放在事务之外
+    ClientOrigin origin =
+        clientOriginResolver.resolve(RequestOrigin.of(command.clientIp(), command.userAgent()));
     Done done =
         Objects.requireNonNull(
             transactions.execute(
@@ -137,7 +141,9 @@ public class ResetPasswordHandler implements CommandHandler<ResetPasswordCommand
                       sessionTerminator.terminateAll(userId, LoginEndReason.PASSWORD_RESET, now);
                   UserAccountReadModel account =
                       userReadPort.findAccount(userId).orElseThrow(() -> invalid());
-                  return new Done(userId, email, account.displayName(), revoked.size());
+                  emailDelivery.send(
+                      PasswordResetDoneMail.of(email, account.displayName(), origin.toNotice(now)));
+                  return new Done(userId, email, revoked.size());
                 }));
     // 清零登录失败与会话无关，放在提交之后（transaction.md 第 2 节）；重设已生效，清理失败只记日志
     try {
@@ -145,14 +151,6 @@ public class ResetPasswordHandler implements CommandHandler<ResetPasswordCommand
     } catch (RuntimeException e) {
       log.warn("重设密码后清零登录失败计数失败: userId={}", done.userId(), e);
     }
-    // 解析放在事务提交之后、发信之前：纯计算，不占事务
-    ClientOrigin origin =
-        clientOriginResolver.resolve(RequestOrigin.of(command.clientIp(), command.userAgent()));
-    emailDelivery.send(
-        PasswordResetDoneMail.of(
-            done.email(),
-            done.displayName(),
-            origin.toNotice(now, PasswordResetDoneMail.NOT_ME_ADVICE)));
     log.info("密码已重设: userId={}, revokedSessions={}", done.userId(), done.revokedSessions());
     return PasswordReset.of(done.email().value());
   }
@@ -168,7 +166,6 @@ public class ResetPasswordHandler implements CommandHandler<ResetPasswordCommand
   ///
   /// @param userId 用户 ID
   /// @param email 账号邮箱
-  /// @param displayName 昵称
   /// @param revokedSessions 撤销了几条会话
-  private record Done(long userId, EmailAddress email, String displayName, int revokedSessions) {}
+  private record Done(long userId, EmailAddress email, int revokedSessions) {}
 }

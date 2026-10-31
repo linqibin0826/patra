@@ -1,0 +1,14 @@
+[# th:replace="~{text/fragments/header}" /]
+你好，[(${displayName})]：
+
+你的 [(${siteName})] 账号邮箱已从本地址改为 [(${newEmailMasked})]，本地址不再能登录。
+
+[# th:replace="~{text/fragments/security-notice}" /]
+
+撤销链接：
+[(${revertUrl})]
+
+撤销链接 [(${linkExpiresAt})] 前有效。
+建议立即到安全设置修改密码并检查登录设备：[(${securityUrl})]
+
+[# th:replace="~{text/fragments/footer}" /]

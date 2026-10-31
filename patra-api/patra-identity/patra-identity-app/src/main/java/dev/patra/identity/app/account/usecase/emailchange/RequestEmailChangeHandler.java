@@ -36,7 +36,8 @@ import org.springframework.transaction.support.TransactionOperations;
 ///
 /// 顺序（错误码从便宜到贵）：字段（422，含与当前相同）→ 状态（409 / 401）→ 再认证（403）→
 /// 已有待确认（409 `EMAIL_CHANGE_PENDING`）→ 新邮箱被别人使用（409 `email` / `ALREADY_REGISTERED`，
-/// 和注册一致，不消耗配额）→ 限流（429）→ 事务里锁用户行、重判、签发 `EMAIL_CHANGE_CONFIRM` → 事务后发信。
+/// 和注册一致，不消耗配额）→ 限流（429）→ 事务里锁用户行、重判、签发 `EMAIL_CHANGE_CONFIRM`、登记发到新邮箱的
+/// 确认信（与令牌同成同败，提交后由通知服务发出，PAP-104）。
 /// 「待确认」就是一条未过期的确认令牌，不加表列。
 @Slf4j
 @Component
@@ -87,7 +88,7 @@ public class RequestEmailChangeHandler
             wait -> {
               throw new EmailChangeLimitedException(wait);
             });
-    Prepared prepared =
+    IssuedEmailToken confirmToken =
         Objects.requireNonNull(
             transactions.execute(
                 status -> {
@@ -107,16 +108,17 @@ public class RequestEmailChangeHandler
                           userId,
                           newEmail,
                           command.clientIp());
-                  return new Prepared(
-                      issued,
-                      EmailChangeConfirmMail.of(
-                          newEmail,
-                          account.displayName(),
-                          links.confirmEmailChangeUrl(issued.secret())));
+                  emailDelivery.send(
+                      EmailChangeConfirmMail.builder()
+                          .to(newEmail)
+                          .displayName(account.displayName())
+                          .confirmUrl(links.confirmEmailChangeUrl(issued.secret()))
+                          .linkExpiresAt(issued.token().getExpiresAt())
+                          .build());
+                  return issued;
                 }));
-    emailDelivery.send(prepared.mail());
-    log.info("改邮箱确认邮件已排队: userId={}, tokenId={}", userId, prepared.issued().token().getId());
-    return EmailChangeRequested.of(newEmail.value(), prepared.issued().token().getExpiresAt());
+    log.info("改邮箱确认邮件已登记: userId={}, tokenId={}", userId, confirmToken.token().getId());
+    return EmailChangeRequested.of(newEmail.value(), confirmToken.token().getExpiresAt());
   }
 
   /// 已有未过期的确认令牌就拒绝。
@@ -129,10 +131,4 @@ public class RequestEmailChangeHandler
       throw new EmailChangePendingException();
     }
   }
-
-  /// 事务里签发好的令牌和邮件。
-  ///
-  /// @param issued 已保存的令牌与原文
-  /// @param mail 要发的邮件
-  private record Prepared(IssuedEmailToken issued, EmailChangeConfirmMail mail) {}
 }

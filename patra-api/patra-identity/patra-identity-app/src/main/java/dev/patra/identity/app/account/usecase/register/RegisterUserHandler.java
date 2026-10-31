@@ -52,8 +52,8 @@ import org.springframework.transaction.support.TransactionOperations;
 /// 有错一次报全）→ 哈希 → 在一个事务里存用户、存空资料、存凭据、建会话。
 /// 哈希放在事务外：事务开始时就会占住数据库连接，而哈希可能要排队几秒。
 /// 建会话放在事务里：Redis 写失败整个注册回滚，用户重试不会撞 409。
-/// 验证邮件的令牌也在事务里签发（用户点到链接时令牌一定已落库）；事务提交后先把首封计进重发限流
-/// （只计冷却和账号窗口，不判、不计 IP，失败只记 WARN），再异步发信。
+/// 验证邮件的令牌也在事务里签发，邮件在同一事务里登记（与注册同成同败，提交后由通知服务发出，PAP-104）；
+/// 事务提交后把首封计进重发限流（只计冷却和账号窗口，不判、不计 IP，失败只记 WARN）。
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -126,19 +126,19 @@ public class RegisterUserHandler implements CommandHandler<RegisterUserCommand, 
                   IssuedEmailToken issued =
                       emailTokenIssuer.issue(
                           EmailTokenPurpose.EMAIL_VERIFY, saved.getId(), email, command.clientIp());
-                  EmailVerificationMail mail =
-                      EmailVerificationMail.of(
-                          email,
-                          account.displayName(),
-                          links.verifyEmailUrl(issued.secret()),
-                          issued.token().getExpiresAt());
-                  return new Registration(saved, session, account, issued.token(), mail);
+                  emailDelivery.send(
+                      EmailVerificationMail.builder()
+                          .to(email)
+                          .displayName(account.displayName())
+                          .verifyUrl(links.verifyEmailUrl(issued.secret()))
+                          .linkExpiresAt(issued.token().getExpiresAt())
+                          .build());
+                  return new Registration(saved, session, account, issued.token());
                 }));
     long userId = registration.user().getId();
     markSentQuietly(userId, now);
-    emailDelivery.send(registration.mail());
     log.info(
-        "前台用户已注册并登录，验证邮件已排队: userId={}, username={}, tokenId={}",
+        "前台用户已注册并登录，验证邮件已登记: userId={}, username={}, tokenId={}",
         userId,
         registration.user().getUsername().value(),
         registration.token().getId());
@@ -157,17 +157,12 @@ public class RegisterUserHandler implements CommandHandler<RegisterUserCommand, 
     }
   }
 
-  /// 事务里一起产出的用户、会话、账号信息和签发好的验证邮件。
+  /// 事务里一起产出的用户、会话、账号信息和签发好的验证令牌。
   ///
   /// @param user 新用户
   /// @param session 新会话
   /// @param account 账号信息
   /// @param token 签发好的验证令牌
-  /// @param mail 要发的验证邮件
   private record Registration(
-      User user,
-      IssuedUserSession session,
-      UserAccountReadModel account,
-      EmailToken token,
-      EmailVerificationMail mail) {}
+      User user, IssuedUserSession session, UserAccountReadModel account, EmailToken token) {}
 }

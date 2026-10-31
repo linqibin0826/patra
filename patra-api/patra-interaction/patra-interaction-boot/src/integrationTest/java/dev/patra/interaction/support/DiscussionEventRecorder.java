@@ -31,7 +31,7 @@ public class DiscussionEventRecorder {
   /// @param event 事件
   @EventListener
   void on(CommentPublishedEvent event) {
-    if (event.body().contains(FAIL_MARKER)) {
+    if (event.plainText().contains(FAIL_MARKER)) {
       throw new IllegalStateException("订阅方失败");
     }
     EVENTS.add(event);

@@ -6,7 +6,8 @@ Patra 的 API 网关：所有外部请求的统一入口，按路径前缀路由
 
 ## 职责
 
-- **路由**：`/patra-catalog/**`、`/patra-registry/**`、`/patra-identity/**`、`/patra-interaction/**` 剥掉第一段后转给对应服务，经 Nacos 发现、Spring Cloud LoadBalancer 选实例。
+- **路由**：`/patra-catalog/**`、`/patra-registry/**`、`/patra-identity/**`、`/patra-interaction/**`、`/patra-notification/**` 剥掉第一段后转给对应服务，经 Nacos 发现、Spring Cloud LoadBalancer 选实例。
+- **推送连接**（PAP-145）：`/patra-notification/me/notifications/stream` 是一条单独的路由（`lb-push://`，排在通用 notification 路由之前），走推送专用连接池，见下文「推送路由」。
 - **鉴权**：`Authorization: Bearer <会话令牌>` → 调 identity 的 `POST /_internal/sessions/introspect`（`lb://patra-identity`，令牌放请求体，不缓存）→ 建认证对象；不是「恰好一个非空 Bearer 头 + identity 说 active」的一律按匿名，是否放行由下面的路径规则决定。令牌格式只由 identity 判断，网关不连 Redis。
 - **入站转发头**：只有受信代理（门户）发来的 `X-Forwarded-For` 被采用，Tomcat `RemoteIpValve` 据此改写客户端地址；其余一切 `Forwarded` / `X-Forwarded-*`（包括非受信来源的 `X-Forwarded-For`）在 servlet 层直接剥掉、不解释（`ForwardedHeaderFilter` 的 `removeOnly`），路径规则、路由和下面的出站头都按真实请求算。
 - **出站请求头**：剥掉外部自带的 `Authorization`；已登录时写入网关现签的 60 秒身份断言（`Authorization: Bearer <JWT>`），匿名不写；再由框架追加网关自己的 `X-Forwarded-*` / `Forwarded`，剥逐跳头。下游收到的 `Authorization` 只可能是网关签的断言，或者没有。
@@ -23,7 +24,8 @@ Patra 的 API 网关：所有外部请求的统一入口，按路径前缀路由
 | 第一条链 | `/*/_internal/**`、`/*/admin/**`、`/*/actuator/**` | 任何人 403 `GW-0403`；不读令牌、不查会话。服务之间的直连调用不过网关，不受影响 |
 | 第二条链 | `/patra-identity/auth/register`、`/auth/login`、`/auth/logout`、`/v3/api-docs`、`/v3/api-docs/**` | 放行（登出公开是为了幂等：会话已失效也要能到达 identity） |
 | 第二条链 | `/patra-identity/**` 其余 | 需登录；匿名 401 `GW-0401` |
-| 第二条链 | 其他一切（catalog、registry、interaction、网关自己的 `/actuator/**` 与 `/scalar`） | 放行 |
+| 第二条链 | `/patra-notification/me/notifications/stream`（推送连接） | 需登录；匿名、已登出 401 `GW-0401`，不借推送池的连接 |
+| 第二条链 | 其他一切（catalog、registry、interaction、notification、网关自己的 `/actuator/**` 与 `/scalar`） | 放行 |
 
 规则只看路径不看方法。网关自己的 `/actuator/health` 没有服务前缀，compose 健康检查照常。`//`、`%2F`、`;`、`..` 这类路径由 Spring Security 的防火墙以 400 拒绝（框架默认，不是 ProblemDetail）。
 
@@ -35,6 +37,10 @@ patra-gateway-boot/
 │   ├── PatraGatewayApplication.java              # 启动类
 │   ├── config/GatewayConfiguration.java          # HTTP 客户端不谈压缩（Reactor Netty 关 compress）
 │   ├── config/IdentityClientConfiguration.java   # identity 查会话接口的 HTTP Interface 代理（lb://patra-identity）
+│   ├── config/PushRouteConfiguration.java        # 推送路由：lb-push scheme 的处理器定义、推送专用连接池与客户端
+│   ├── config/PushProxyHandlerFunction.java      # 推送处理器：转交刷新事件、停机时结束推送流、销毁时释放池
+│   ├── config/PushProxyExchange.java             # 推送代理交换：逐字节读、按事件刷；停机时关掉正在转发的响应体
+│   ├── config/GatewayPushProperties.java         # patra.gateway.push.max-connections
 │   ├── error/                                    # 代理失败 → 网关自己的应用异常（503 / 504，固定文案）
 │   └── security/
 │       ├── GatewaySecurityConfiguration.java     # 签名器（启动自检）、两条过滤器链、入站转发头剥除、出站头过滤器、错误映射
@@ -54,7 +60,8 @@ patra-gateway-boot/
     ├── GatewayTrustedProxyIT.java                # 受信代理的 X-Forwarded-For 被采用
     ├── GatewayUntrustedProxyIT.java              # 非受信来源的被剥掉；登录设备接口需登录
     ├── GatewayBlockedPathsIT.java                # 拒绝名单
-    └── GatewayIdentityUnavailableIT.java         # identity 查不了会话（它回 503、连不上）→ 503
+    ├── GatewayIdentityUnavailableIT.java         # identity 查不了会话（它回 503、连不上）→ 503
+    └── GatewayPushRouteIT.java                   # 推送路由：要登录、逐条事件到达、池满 503 而普通请求照常、出站头
 ```
 
 ## 会话与断言
@@ -84,7 +91,17 @@ patra-gateway-boot/
 | 重定向 | 不跟随 | `spring.http.clients.redirects: dont-follow` |
 | 压缩 | 关 | `GatewayConfiguration` 关掉 Boot 给 Reactor Netty 默认开的压缩 |
 | 线程 | 虚拟线程 | `spring.threads.virtual.enabled: true` |
+| 推送连接池 | 最多 500 条、不排队 | `patra.gateway.push.max-connections`；只给推送路由用，满了新推送立即 503，普通请求的池子不受影响 |
 | 查会话（identity） | 连接 1 秒、读 2 秒 | `patra.http-client.http-interface.groups.identity`，独立的 Apache HttpClient（`RestClientFactory` 在 customizer 之后设，不被 Gateway 的 Reactor 工厂盖掉）；identity 卡住时带令牌的请求几秒内变成 503 |
+
+## 推送路由
+
+设计：[通知服务实时推送（PAP-145）](../../docs/patra/specs/2026-10-31-notification-realtime-push-design.md) 第 7 节。
+
+- **为什么单独一个池子**：推送连接一借 30 分钟。全局池每个下游地址 500 条，通知服务只有一个实例，推送连接和它的普通接口共用这 500 条，推送一多普通请求就要排队。推送池上限单独算、不排队，满了立即 503（`GW-0503`），前端退回轮询。
+- **怎么接上**：Gateway 从配置建路由时按 `uri` 的 scheme 找名为 `{scheme}HandlerFunctionDefinition` 的 Bean（自带的 `lb://` 就是这样接的）。`lb-pushHandlerFunctionDefinition` 照用自带的负载均衡过滤器，处理器换成推送池的那一个。推送用的代理交换与处理器都**不是** Bean：自带的那两个是 `@ConditionalOnMissingBean`，多一个同类型的 Bean，所有 `lb://` 路由都会换到推送池上；推送用的 `RestClient` 也必须从容器里的 Builder `clone()` 后再改（那个 Builder 是单例，自带的代理交换也用它）。
+- **逐条事件刷出**：Reactor 客户端的响应体输入流（Spring 7.0.10）一次读要读满 16 KB 或读到流结束才返回，Gateway 自带的「读一块刷一次」会把几十字节的事件攒到流结束。`PushProxyExchange` 逐字节读、读到空行（事件结尾）就刷。普通路由目前没有事件流，不受影响；以后别的路由要转事件流，同样要处理。
+- **停机**：推送流要挂 30 分钟，优雅停机会一直等。停机开始（`ContextClosedEvent`）时关掉正在转发的下游响应体，转发正常结束，浏览器 3 秒后重连。
 
 ## 错误
 

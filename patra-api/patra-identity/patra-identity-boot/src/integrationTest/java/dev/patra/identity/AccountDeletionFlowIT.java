@@ -2,21 +2,21 @@ package dev.patra.identity;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import dev.patra.identity.api.account.event.AccountDeletionCancelledMailEvent;
+import dev.patra.identity.api.account.event.AccountDeletionCompletedMailEvent;
+import dev.patra.identity.api.account.event.AccountDeletionReminderMailEvent;
+import dev.patra.identity.api.account.event.AccountDeletionRequestedMailEvent;
+import dev.patra.identity.api.account.event.EmailChangeConfirmMailEvent;
+import dev.patra.identity.api.account.event.EmailChangedNoticeMailEvent;
 import dev.patra.identity.app.account.usecase.deletion.DeletionRunResult;
 import dev.patra.identity.app.account.usecase.deletion.ExecuteDueAccountDeletionsCommand;
 import dev.patra.identity.app.account.usecase.deletion.ReminderRunResult;
 import dev.patra.identity.app.account.usecase.deletion.SendAccountDeletionRemindersCommand;
-import dev.patra.identity.domain.account.model.vo.mail.AccountDeletionCancelledMail;
-import dev.patra.identity.domain.account.model.vo.mail.AccountDeletionCompletedMail;
-import dev.patra.identity.domain.account.model.vo.mail.AccountDeletionRequestedMail;
-import dev.patra.identity.domain.account.model.vo.mail.EmailChangeConfirmMail;
-import dev.patra.identity.domain.account.model.vo.mail.EmailChangedNoticeMail;
 import dev.patra.tool.cqrs.CommandBus;
 import dev.patra.tool.objectstorage.ObjectStorageOperations;
 import dev.patra.tool.objectstorage.domain.ObjectMetadata;
 import java.io.ByteArrayInputStream;
 import java.time.Duration;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
@@ -33,7 +33,6 @@ import org.springframework.http.HttpMethod;
 class AccountDeletionFlowIT extends IdentityFlowITSupport {
 
   private static final Duration COOLING = Duration.ofDays(15);
-  private static final String REMINDER_SUBJECT = "你的 Patra 账号将在 3 天后删除";
 
   private static final String AVATAR_BUCKET = "patra-identity-avatar";
 
@@ -41,7 +40,7 @@ class AccountDeletionFlowIT extends IdentityFlowITSupport {
   @Autowired ObjectStorageOperations avatarStorage;
 
   @Test
-  @DisplayName("发起：超窗 403、用户名不符 422；成功后全部会话下线、主页 404、令牌作废但撤销链接仍有效、收到「注销已提交」")
+  @DisplayName("发起：超窗 403、用户名不符 422；成功后全部会话下线、主页 404、令牌作废但撤销链接仍有效、登记「注销已提交」")
   void should_request_deletion_after_reauth_and_username_check() {
     String email = "flow.del.req@example.com";
     RawResponse registered = register(email, "u-del-req");
@@ -60,7 +59,9 @@ class AccountDeletionFlowIT extends IdentityFlowITSupport {
             assertionFor(userId, sessionA));
     assertThat(change.status()).as(change.body()).isEqualTo(202);
     String confirmToken =
-        tokenInMail("flow.del.req.new@example.com", EmailChangeConfirmMail.SUBJECT);
+        tokenIn(
+            mailEvent(EmailChangeConfirmMailEvent.class, "flow.del.req.new@example.com")
+                .confirmUrl());
 
     clock.advance(Duration.ofMinutes(11));
     RawResponse stale = deletion(userId, sessionA, "u-del-req");
@@ -85,8 +86,8 @@ class AccountDeletionFlowIT extends IdentityFlowITSupport {
     assertThat(
             post("/auth/email/change/confirm", Map.of("token", confirmToken), noHeaders()).status())
         .isEqualTo(422);
-    String body = partText(mailFor(email, AccountDeletionRequestedMail.SUBJECT), "text/plain");
-    assertThat(body).contains("2026-11-04 16:00 (UTC+8)");
+    assertThat(mailEvent(AccountDeletionRequestedMailEvent.class, email).deletionDueAt())
+        .isEqualTo(T0.plus(COOLING));
   }
 
   @Test
@@ -98,11 +99,13 @@ class AccountDeletionFlowIT extends IdentityFlowITSupport {
     long userId = userIdOf(registered);
     long sessionId = latestSessionIdOf(userId);
     post("/me/email/change", Map.of("newEmail", newEmail), assertionFor(userId, sessionId));
-    String confirmToken = tokenInMail(newEmail, EmailChangeConfirmMail.SUBJECT);
+    String confirmToken =
+        tokenIn(mailEvent(EmailChangeConfirmMailEvent.class, newEmail).confirmUrl());
     assertThat(
             post("/auth/email/change/confirm", Map.of("token", confirmToken), noHeaders()).status())
         .isEqualTo(200);
-    String revertToken = tokenInMail(oldEmail, EmailChangedNoticeMail.SUBJECT);
+    String revertToken =
+        tokenIn(mailEvent(EmailChangedNoticeMailEvent.class, oldEmail).revertUrl());
 
     assertThat(deletion(userId, sessionId, "u-del-revert").status()).isEqualTo(200);
 
@@ -117,7 +120,7 @@ class AccountDeletionFlowIT extends IdentityFlowITSupport {
   }
 
   @Test
-  @DisplayName("冷静期内：登录拿到 PENDING_DELETION、写接口 409、再发起 409；取消后恢复 ACTIVE、写接口恢复、收到「已取消」")
+  @DisplayName("冷静期内：登录拿到 PENDING_DELETION、写接口 409、再发起 409；取消后恢复 ACTIVE、写接口恢复、登记「已取消」")
   void should_allow_login_and_cancel_during_cooling_period() {
     String email = "flow.del.cancel@example.com";
     RawResponse registered = register(email, "u-del-cancel");
@@ -140,11 +143,11 @@ class AccountDeletionFlowIT extends IdentityFlowITSupport {
     assertThat(cancelled.status()).as(cancelled.body()).isEqualTo(200);
     assertThat(json(cancelled).get("status").asString()).isEqualTo("ACTIVE");
     assertThat(exchange(HttpMethod.PUT, "/me/profile", Map.of(), auth).status()).isEqualTo(200);
-    mailFor(email, AccountDeletionCancelledMail.SUBJECT);
+    mailEvent(AccountDeletionCancelledMailEvent.class, email);
   }
 
   @Test
-  @DisplayName("到期前 3 天提醒只发一次：任务跑两次，第二次一封都不发")
+  @DisplayName("到期前 3 天提醒只登记一次：任务跑两次，第二次一个都不登记")
   void should_send_reminder_once() {
     String email = "flow.del.remind@example.com";
     long userId = userIdOf(register(email, "u-del-remind"));
@@ -156,8 +159,10 @@ class AccountDeletionFlowIT extends IdentityFlowITSupport {
 
     assertThat(first.sent()).isGreaterThanOrEqualTo(1);
     assertThat(second).isEqualTo(ReminderRunResult.of(0, 0));
-    mailFor(email, REMINDER_SUBJECT);
-    assertThat(mailsTo(email, REMINDER_SUBJECT)).isEqualTo(1);
+    List<AccountDeletionReminderMailEvent> reminders =
+        securityMails.all(AccountDeletionReminderMailEvent.class, email);
+    assertThat(reminders).hasSize(1);
+    assertThat(reminders.getFirst().daysLeft()).isEqualTo(3);
   }
 
   @Test
@@ -235,8 +240,10 @@ class AccountDeletionFlowIT extends IdentityFlowITSupport {
     assertThat(avatarStorage.deleteByPrefix(AVATAR_BUCKET, "avatar/" + userId + "/")).isZero();
     assertThat(redis.hasKey(sessionKey(coolingToken))).isFalse();
     assertThat(endReasonOf(coolingSession)).isEqualTo("DELETION_COMPLETED");
-    mailFor(email, AccountDeletionCompletedMail.SUBJECT);
-    assertThat(mailsTo(email, AccountDeletionCompletedMail.SUBJECT)).isEqualTo(1);
+    List<AccountDeletionCompletedMailEvent> completed =
+        securityMails.all(AccountDeletionCompletedMailEvent.class, email);
+    assertThat(completed).as("「已注销」发到注销前的邮箱").hasSize(1);
+    assertThat(completed.getFirst().username()).isEqualTo("u-del-done");
     assertThat(login(email, PASSWORD).status()).isEqualTo(401);
     RawResponse reborn =
         post(
@@ -284,17 +291,5 @@ class AccountDeletionFlowIT extends IdentityFlowITSupport {
   private int countByUser(String table, long userId) {
     return jdbcTemplate.queryForObject(
         "SELECT count(*) FROM " + table + " WHERE user_id = ?", Integer.class, userId);
-  }
-
-  /// 收件箱里发给某人、某主题的封数；先等 1 秒让异步发信落定。
-  ///
-  /// @param recipient 收件人
-  /// @param subject 主题
-  /// @return 封数
-  private long mailsTo(String recipient, String subject) {
-    greenMail.waitForIncomingEmail(1_000, greenMail.getReceivedMessages().length + 1);
-    return Arrays.stream(greenMail.getReceivedMessages())
-        .filter(mail -> recipients(mail).contains(recipient) && subject.equals(subjectOf(mail)))
-        .count();
   }
 }

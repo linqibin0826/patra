@@ -33,7 +33,6 @@ import org.springframework.cloud.health.RefreshScopeHealthIndicator;
 import org.springframework.core.ResolvableType;
 import org.springframework.core.env.MapPropertySource;
 import org.springframework.data.redis.core.StringRedisTemplate;
-import org.springframework.mail.javamail.JavaMailSender;
 
 /// identity 配置的在线刷新（PAP-78）：改环境后发布 `EnvironmentChangeEvent`，即 Nacos 推送后
 /// Spring Cloud 的 `ContextRefresher` 发出的事件，验证服务不重启就用上新值。
@@ -57,7 +56,6 @@ class IdentityConfigRefreshIT {
           .withBean(SessionStorePort.class, () -> mock(SessionStorePort.class))
           .withBean(CurrentUserPort.class, () -> mock(CurrentUserPort.class))
           .withBean(EmailTokenRepository.class, () -> mock(EmailTokenRepository.class))
-          .withBean(JavaMailSender.class, () -> mock(JavaMailSender.class))
           .withBean(UserAgentParsingPort.class, () -> mock(UserAgentParsingPort.class))
           .withBean(IpGeolocationPort.class, () -> mock(IpGeolocationPort.class))
           .withPropertyValues(

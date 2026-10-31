@@ -13,6 +13,7 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
@@ -112,7 +113,9 @@ public class DeleteCommentHandler implements CommandHandler<DeleteCommentCommand
   private static CommentDeletedEvent deleted(
       CommentAggregate comment, boolean placeholder, Instant now) {
     return CommentDeletedEvent.builder()
+        .eventId(UUID.randomUUID())
         .commentId(comment.getCommentId())
+        .version(comment.getVersion())
         .subjectId(comment.getSubjectId())
         .authorId(comment.getAuthorId())
         .placeholder(placeholder)

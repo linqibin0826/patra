@@ -2,6 +2,9 @@ package dev.patra.identity.adapter.account.internal;
 
 import dev.patra.identity.adapter.account.rest.converter.AvatarUrls;
 import dev.patra.identity.api.account.dto.AccountStatus;
+import dev.patra.identity.api.account.dto.UserRecipientResp;
+import dev.patra.identity.api.account.dto.UserRecipientsReq;
+import dev.patra.identity.api.account.dto.UserRecipientsResp;
 import dev.patra.identity.api.account.dto.UserResolutionResp;
 import dev.patra.identity.api.account.dto.UserResolveByUsernamesReq;
 import dev.patra.identity.api.account.dto.UserResolveResp;
@@ -11,6 +14,7 @@ import dev.patra.identity.api.account.dto.UserSummariesReq;
 import dev.patra.identity.api.account.dto.UserSummariesResp;
 import dev.patra.identity.api.account.dto.UserSummaryResp;
 import dev.patra.identity.api.account.endpoint.UserEndpoint;
+import dev.patra.identity.app.account.usecase.query.UserRecipientQueryService;
 import dev.patra.identity.app.account.usecase.query.UserResolutionQueryService;
 import dev.patra.identity.app.account.usecase.query.UserSuggestionQueryService;
 import dev.patra.identity.app.account.usecase.query.UserSummaryQueryService;
@@ -20,7 +24,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.RestController;
 
 /// 用户内部端点：`POST /_internal/users/summaries`（PAP-108）、`POST /_internal/users/suggest` 与
-/// `POST /_internal/users/resolve/by-usernames`（PAP-118）。
+/// `POST /_internal/users/resolve/by-usernames`（PAP-118）、
+/// `POST /_internal/users/recipients`（PAP-142）。
 ///
 /// 权限：内部服务间调用（`/_internal` 路径，网关对外 403），interaction 经服务发现直连。
 /// 信任边界：访客 ID 取自请求体，不取转发的身份断言——identity 信任内部调用方；注销清理任务没有访客，填空。
@@ -31,6 +36,7 @@ public class UserEndpointImpl implements UserEndpoint {
   private final UserSummaryQueryService userSummaryQueryService;
   private final UserSuggestionQueryService userSuggestionQueryService;
   private final UserResolutionQueryService userResolutionQueryService;
+  private final UserRecipientQueryService userRecipientQueryService;
 
   /// 批量用户摘要。
   ///
@@ -74,6 +80,27 @@ public class UserEndpointImpl implements UserEndpoint {
                         user.username(),
                         user.userId(),
                         AccountStatus.valueOf(user.status().name())))
+            .toList());
+  }
+
+  /// 批量收件信息。
+  ///
+  /// @param request 用户 ID
+  /// @return 收件信息
+  @Override
+  public UserRecipientsResp recipients(UserRecipientsReq request) {
+    return UserRecipientsResp.of(
+        userRecipientQueryService.recipients(request.userIds()).stream()
+            .map(
+                view ->
+                    UserRecipientResp.builder()
+                        .userId(view.userId())
+                        .email(view.email())
+                        .emailVerified(view.emailVerified())
+                        .accountStatus(AccountStatus.valueOf(view.status().name()))
+                        .username(view.username())
+                        .displayName(view.displayName())
+                        .build())
             .toList());
   }
 

@@ -17,7 +17,6 @@ import dev.patra.tool.cqrs.CommandHandler;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -26,11 +25,12 @@ import org.springframework.transaction.support.TransactionOperations;
 
 /// 执行到期的注销（PAP-100 设计第 9、11 节）：按 ID 游标分批扫冷静期已到期的用户，每个用户一个事务、
 /// 加锁复核后匿名化——转 `DELETED`（邮箱置空、行与用户名保留）、删凭据、清资料（行保留）、删令牌、
-/// 撤销冷静期内登录的会话；提交后给注销前的邮箱发「已注销」。
+/// 撤销冷静期内登录的会话，并在同一事务里给注销前的邮箱登记「已注销」（PAP-104）。
 ///
 /// 单个用户失败只记日志、计数，接着处理下一个，它仍在冷静期，下次运行再试；按 ID 往后翻，不会反复撞上它。
-/// 锁内复核挡住「扫描之后刚取消」与并发的两次运行，重跑幂等。「已注销」被发信执行器拒收时邮箱已经置空，
-/// 没法重发，只记日志，注销本身照样算完成。头像对象在加锁事务之前按前缀删，删之前不加锁复核仍到期（PAP-97）。
+/// 锁内复核挡住「扫描之后刚取消」与并发的两次运行，重跑幂等。「已注销」与匿名化同成同败：登记失败时匿名化
+/// 一起回滚，用户仍在冷静期，下次运行重试（以前提交后再发，信丢了邮箱已置空、没法重发）。
+/// 头像对象在加锁事务之前按前缀删，删之前不加锁复核仍到期（PAP-97）。
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -68,9 +68,8 @@ public class ExecuteDueAccountDeletionsHandler
         afterId = id;
         try {
           deleteAvatarObjectsIfDue(id, now);
-          Optional<Completed> done = completeOne(id, now);
-          if (done.isPresent()) {
-            notifyCompleted(id, done.get());
+          if (completeOne(id, now)) {
+            log.info("前台用户已注销: userId={}", id);
             completed++;
           }
         } catch (RuntimeException e) {
@@ -95,18 +94,19 @@ public class ExecuteDueAccountDeletionsHandler
     }
   }
 
-  /// 在一个事务里匿名化一个用户。锁内复核不到期（刚取消、被封禁、已完成）就跳过。
+  /// 在一个事务里匿名化一个用户，并给注销前的邮箱登记「已注销」。锁内复核不到期（刚取消、被封禁、已完成）
+  /// 就跳过。
   ///
   /// @param id 用户 ID
   /// @param now 本轮的当前时间
-  /// @return 完成时给「已注销」邮件用的收件人、昵称、用户名；跳过时为空
-  private Optional<Completed> completeOne(long id, Instant now) {
-    return Objects.requireNonNull(
+  /// @return 完成时为 `true`；跳过时为 `false`
+  private boolean completeOne(long id, Instant now) {
+    return Boolean.TRUE.equals(
         transactions.execute(
             status -> {
               Optional<User> found = users.findByIdForUpdate(id);
               if (found.isEmpty() || !found.get().isDeletionDue(now)) {
-                return Optional.empty();
+                return false;
               }
               User user = found.get();
               EmailAddress email = user.getEmail().orElseThrow();
@@ -127,29 +127,9 @@ public class ExecuteDueAccountDeletionsHandler
                       });
               tokens.deleteAllByUserId(id);
               sessionTerminator.terminateAll(id, LoginEndReason.DELETION_COMPLETED, now);
-              return Optional.of(new Completed(email, displayName, user.getUsername().value()));
+              emailDelivery.send(
+                  AccountDeletionCompletedMail.of(email, displayName, user.getUsername().value()));
+              return true;
             }));
   }
-
-  /// 给注销前的邮箱发「已注销」，并打日志。
-  ///
-  /// @param id 用户 ID
-  /// @param completed 收件人、昵称、用户名
-  private void notifyCompleted(long id, Completed completed) {
-    boolean accepted =
-        emailDelivery.send(
-            AccountDeletionCompletedMail.of(
-                completed.email(), completed.displayName(), completed.username()));
-    if (!accepted) {
-      log.warn("「已注销」邮件被发信执行器拒收: userId={}", id);
-    }
-    log.info("前台用户已注销: userId={}", id);
-  }
-
-  /// 匿名化之前留下的收件人、昵称和用户名。
-  ///
-  /// @param email 注销前的邮箱
-  /// @param displayName 注销前的昵称
-  /// @param username 用户名
-  private record Completed(EmailAddress email, String displayName, String username) {}
 }

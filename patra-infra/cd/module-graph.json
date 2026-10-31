@@ -5,6 +5,7 @@
         "catalog",
         "identity",
         "interaction",
+        "notification",
         "gateway",
         "foundation"
     ],
@@ -112,7 +113,8 @@
             "impacts": [
                 "gateway",
                 "identity",
-                "interaction"
+                "interaction",
+                "notification"
             ],
             "tasks": [
                 "check"
@@ -180,7 +182,8 @@
             "project": ":patra-api:patra-interaction:patra-interaction-api",
             "unit": "interaction",
             "impacts": [
-                "interaction"
+                "interaction",
+                "notification"
             ],
             "tasks": [
                 "check"
@@ -226,6 +229,74 @@
             "unit": "interaction",
             "impacts": [
                 "interaction"
+            ],
+            "tasks": [
+                "check",
+                "integrationTest"
+            ]
+        },
+        {
+            "dir": "patra-api/patra-notification/patra-notification-adapter",
+            "project": ":patra-api:patra-notification:patra-notification-adapter",
+            "unit": "notification",
+            "impacts": [
+                "notification"
+            ],
+            "tasks": [
+                "check"
+            ]
+        },
+        {
+            "dir": "patra-api/patra-notification/patra-notification-api",
+            "project": ":patra-api:patra-notification:patra-notification-api",
+            "unit": "notification",
+            "impacts": [
+                "notification"
+            ],
+            "tasks": [
+                "check"
+            ]
+        },
+        {
+            "dir": "patra-api/patra-notification/patra-notification-app",
+            "project": ":patra-api:patra-notification:patra-notification-app",
+            "unit": "notification",
+            "impacts": [
+                "notification"
+            ],
+            "tasks": [
+                "check"
+            ]
+        },
+        {
+            "dir": "patra-api/patra-notification/patra-notification-boot",
+            "project": ":patra-api:patra-notification:patra-notification-boot",
+            "unit": "notification",
+            "impacts": [
+                "notification"
+            ],
+            "tasks": [
+                "check",
+                "integrationTest"
+            ]
+        },
+        {
+            "dir": "patra-api/patra-notification/patra-notification-domain",
+            "project": ":patra-api:patra-notification:patra-notification-domain",
+            "unit": "notification",
+            "impacts": [
+                "notification"
+            ],
+            "tasks": [
+                "check"
+            ]
+        },
+        {
+            "dir": "patra-api/patra-notification/patra-notification-infra",
+            "project": ":patra-api:patra-notification:patra-notification-infra",
+            "unit": "notification",
+            "impacts": [
+                "notification"
             ],
             "tasks": [
                 "check",
@@ -324,6 +395,7 @@
                 "gateway",
                 "identity",
                 "interaction",
+                "notification",
                 "registry"
             ],
             "tasks": [
@@ -338,10 +410,26 @@
                 "catalog",
                 "foundation",
                 "identity",
-                "interaction"
+                "interaction",
+                "notification"
             ],
             "tasks": [
                 "check"
+            ]
+        },
+        {
+            "dir": "patra-tool/patra-tool-events",
+            "project": ":patra-tool:patra-tool-events",
+            "unit": "foundation",
+            "impacts": [
+                "foundation",
+                "identity",
+                "interaction",
+                "notification"
+            ],
+            "tasks": [
+                "check",
+                "integrationTest"
             ]
         },
         {
@@ -353,7 +441,8 @@
                 "foundation",
                 "gateway",
                 "identity",
-                "interaction"
+                "interaction",
+                "notification"
             ],
             "tasks": [
                 "check",
@@ -370,6 +459,7 @@
                 "gateway",
                 "identity",
                 "interaction",
+                "notification",
                 "registry"
             ],
             "tasks": [
@@ -387,6 +477,7 @@
                 "gateway",
                 "identity",
                 "interaction",
+                "notification",
                 "registry"
             ],
             "tasks": [
@@ -418,6 +509,7 @@
                 "gateway",
                 "identity",
                 "interaction",
+                "notification",
                 "registry"
             ],
             "tasks": [
@@ -432,7 +524,8 @@
                 "catalog",
                 "foundation",
                 "identity",
-                "interaction"
+                "interaction",
+                "notification"
             ],
             "tasks": [
                 "check"
@@ -446,7 +539,8 @@
                 "foundation",
                 "gateway",
                 "identity",
-                "interaction"
+                "interaction",
+                "notification"
             ],
             "tasks": [
                 "check",
@@ -463,6 +557,7 @@
                 "gateway",
                 "identity",
                 "interaction",
+                "notification",
                 "registry"
             ],
             "tasks": [
@@ -480,6 +575,7 @@
                 "gateway",
                 "identity",
                 "interaction",
+                "notification",
                 "registry"
             ],
             "tasks": [

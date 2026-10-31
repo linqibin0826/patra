@@ -30,7 +30,8 @@ import org.springframework.transaction.support.TransactionOperations;
 /// 当前用户重发验证邮件。
 ///
 /// 顺序：不加锁预判状态（已验证 409、注销中 409、封禁 / 不存在 401，乱点的人不消耗配额）→ 限流
-/// （放行即已计数，之后失败不退还）→ 事务里加行锁重读、重判、作废旧令牌并签发新的 → 事务提交后异步发信。
+/// （放行即已计数，之后失败不退还）→ 事务里加行锁重读、重判、作废旧令牌并签发新的、登记验证邮件
+/// （与令牌同成同败，提交后由通知服务发出，PAP-104）。
 /// 行锁让同一用户的两次并发重发串行，第二次在锁后重判。
 @Slf4j
 @Component
@@ -83,16 +84,17 @@ public class ResendEmailVerificationHandler
                   IssuedEmailToken issued =
                       emailTokenIssuer.issue(
                           EmailTokenPurpose.EMAIL_VERIFY, userId, email, command.clientIp());
-                  return new Prepared(
-                      issued,
-                      EmailVerificationMail.of(
-                          email,
-                          account.displayName(),
-                          links.verifyEmailUrl(issued.secret()),
-                          issued.token().getExpiresAt()));
+                  EmailVerificationMail mail =
+                      EmailVerificationMail.builder()
+                          .to(email)
+                          .displayName(account.displayName())
+                          .verifyUrl(links.verifyEmailUrl(issued.secret()))
+                          .linkExpiresAt(issued.token().getExpiresAt())
+                          .build();
+                  emailDelivery.send(mail);
+                  return new Prepared(issued, mail);
                 }));
-    emailDelivery.send(prepared.mail());
-    log.info("验证邮件已重发排队: userId={}, tokenId={}", userId, prepared.issued().token().getId());
+    log.info("验证邮件已重发登记: userId={}, tokenId={}", userId, prepared.issued().token().getId());
     return EmailVerificationResent.of(prepared.mail().to().value(), resendPolicy.nextResendAt(now));
   }
 

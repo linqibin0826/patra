@@ -25,6 +25,7 @@ import dev.patra.interaction.domain.subject.model.vo.SubjectId;
 import dev.patra.interaction.domain.subject.model.vo.SubjectOwner;
 import dev.patra.interaction.domain.subject.port.gateway.PublishGuardGateway;
 import dev.patra.interaction.domain.subject.port.gateway.SubjectGateway;
+import dev.patra.interaction.domain.subject.port.markdown.PlainTextPort;
 import dev.patra.tool.core.security.CurrentUserPort;
 import dev.patra.tool.cqrs.CommandHandler;
 import java.time.Clock;
@@ -33,6 +34,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
@@ -43,7 +45,7 @@ import org.springframework.transaction.support.TransactionOperations;
 /// 1. 本地校验（类型、能力、key、父评论 ID、正文、@ 候选），任何远程调用之前；
 /// 2. 事务外：发表资格（identity）→ 解析对象（文献首次评论时登记）→ 预读父评论 → 解析 @（identity）；
 /// 3. 事务：发表守卫计数 → 回复时拿楼锁、重读父评论判能否回复 → 插入 → 楼内回复数（回复时）与对象评论数 +1 →
-///    发布 {@link CommentPublishedEvent}；
+///    发布 {@link CommentPublishedEvent}（带事件 ID 与事务外转好的纯文本，PAP-141）；
 /// 4. 拼响应：自己的名片用资格那一步的。
 @Component
 @RequiredArgsConstructor
@@ -58,6 +60,7 @@ public class PublishCommentHandler implements CommandHandler<PublishCommentComma
   private final CommentViews views;
   private final CurrentUserPort currentUser;
   private final TransactionOperations transactions;
+  private final PlainTextPort plainText;
   private final ApplicationEventPublisher events;
   private final Clock clock;
 
@@ -79,6 +82,8 @@ public class PublishCommentHandler implements CommandHandler<PublishCommentComma
     SubjectView subject = subjects.requireActive(subjectId);
     CommentAggregate parent = command.parentId() == null ? null : preReadParent(command, subjectId);
     ResolvedBody resolved = mentions.resolve(draft, Set.of());
+    String plain =
+        plainText.toPlainText(resolved.body(), Set.copyOf(resolved.mentionedUserIds())).value();
     Instant now = clock.instant().truncatedTo(ChronoUnit.MICROS);
     Long id =
         transactions.execute(
@@ -100,7 +105,7 @@ public class PublishCommentHandler implements CommandHandler<PublishCommentComma
                 comments.recordReply(locked.getRootId(), now);
               }
               comments.incrementCommentCount(subjectId);
-              events.publishEvent(published(newId, subject, locked, author, resolved, now));
+              events.publishEvent(published(newId, subject, locked, author, resolved, plain, now));
               return newId;
             });
     CommentRecord record = reads.findById(id).orElseThrow();
@@ -142,6 +147,7 @@ public class PublishCommentHandler implements CommandHandler<PublishCommentComma
   /// @param parent 锁内读到的父评论，根评论为 `null`
   /// @param author 作者
   /// @param resolved 正文与提及
+  /// @param plain 正文的纯文本
   /// @param now 发表时刻
   /// @return 事件
   private static CommentPublishedEvent published(
@@ -150,10 +156,13 @@ public class PublishCommentHandler implements CommandHandler<PublishCommentComma
       CommentAggregate parent,
       long author,
       ResolvedBody resolved,
+      String plain,
       Instant now) {
     SubjectOwner owner = subject.owner();
     return CommentPublishedEvent.builder()
+        .eventId(UUID.randomUUID())
         .commentId(commentId)
+        .version(CommentAggregate.INITIAL_VERSION)
         .subjectId(subject.subjectId())
         .subjectType(subject.type())
         .subjectOwner(owner)
@@ -166,7 +175,7 @@ public class PublishCommentHandler implements CommandHandler<PublishCommentComma
         .authorId(author)
         .authorAnonymous(owner != null && owner.anonymous() && owner.userId() == author)
         .mentionedUserIds(resolved.mentionedUserIds())
-        .body(resolved.body())
+        .plainText(plain)
         .publishedAt(now)
         .build();
   }

@@ -161,47 +161,6 @@ class ExperienceFlowIT extends InteractionFlowITSupport {
     assertThat(status(send(HttpMethod.DELETE, A, "/posts/" + id, null))).isEqualTo(204);
   }
 
-  /// PAP-127：删除经验时，它下面的提醒（作者收到的评论提醒、楼里的回复提醒）同一事务里全部删掉，未读数随之归零。
-  @Test
-  void should_remove_notifications_when_post_deleted() {
-    String id = postId(publish(A, revised(today.minusDays(30), 10, "ACCEPTED"), false));
-    String root = commentOn(B, id, "有个问题", null);
-    commentOn(A, id, "回复你", root);
-    assertThat(count("SELECT count(*) FROM notification.notification WHERE recipient_id = ?", A))
-        .isEqualTo(1L);
-    assertThat(count("SELECT count(*) FROM notification.notification WHERE recipient_id = ?", B))
-        .isEqualTo(1L);
-
-    assertThat(status(send(HttpMethod.DELETE, A, "/posts/" + id, null))).isEqualTo(204);
-
-    assertThat(count("SELECT count(*) FROM notification.notification")).isZero();
-    assertThat(json(get(A, "/me/notifications/unread-count")).get("total").asInt()).isZero();
-  }
-
-  /// PAP-127：删提醒失败时经验也不删（同一事务回滚），500。
-  @Test
-  void should_keep_post_when_notification_delete_fails() {
-    String id = postId(publish(A, revised(today.minusDays(30), 10, "ACCEPTED"), false));
-    commentOn(B, id, "有个问题", null);
-    jdbcTemplate.execute(
-        "CREATE OR REPLACE FUNCTION public.test_fail() RETURNS trigger LANGUAGE plpgsql AS"
-            + " $$ BEGIN RAISE EXCEPTION 'test failure'; END $$");
-    jdbcTemplate.execute(
-        "CREATE TRIGGER test_fail_notification BEFORE DELETE ON notification.notification"
-            + " FOR EACH ROW EXECUTE FUNCTION public.test_fail()");
-    try {
-      assertThat(status(send(HttpMethod.DELETE, A, "/posts/" + id, null))).isEqualTo(500);
-    } finally {
-      jdbcTemplate.execute(
-          "DROP TRIGGER IF EXISTS test_fail_notification ON notification.notification");
-      jdbcTemplate.execute("DROP FUNCTION IF EXISTS public.test_fail()");
-    }
-
-    assertThat(json(get(null, "/posts/" + id)).get("deleted").asBoolean()).isFalse();
-    assertThat(registryState(id)).isEqualTo("ACTIVE");
-    assertThat(count("SELECT count(*) FROM notification.notification")).isEqualTo(1L);
-  }
-
   /// AC：同一人对同一刊用相同投稿日期重复创建被拒，响应带已有经验的 ID；删掉之后可以再写。
   @Test
   void should_reject_duplicate_submission_date() {
@@ -283,6 +242,51 @@ class ExperienceFlowIT extends InteractionFlowITSupport {
     send(HttpMethod.PUT, A, "/posts/" + id, revised(moved, 40, "IN_PROGRESS"));
     assertThat((String) registryRow(id).get("snapshot"))
         .contains("\"publishedDate\": \"" + moved.toString().substring(0, 7) + "\"");
+  }
+
+  /// 内部接口（PAP-143，通知服务读时现查）：对象视图带 key、期刊快照、所有者；经验结果按帖子 ID 取，删除后仍可取。
+  @Test
+  void should_serve_subject_view_and_outline_internally() {
+    LocalDate submitted = today.minusMonths(3).withDayOfMonth(1);
+    String id = postId(publish(A, revised(submitted, 10, "IN_PROGRESS"), true));
+    long subjectId =
+        jdbcTemplate.queryForObject(
+            "SELECT subject_id FROM subject.registry WHERE target_type = 3 AND source_id = ?",
+            Long.class,
+            Long.parseLong(id));
+
+    EntityExchangeResult<String> views =
+        call(
+            HttpMethod.POST,
+            null,
+            "/_internal/subjects/views",
+            "{\"subjectIds\":[" + subjectId + ", 999999]}");
+    send(HttpMethod.DELETE, A, "/posts/" + id, null);
+    EntityExchangeResult<String> outlines =
+        call(HttpMethod.POST, null, "/_internal/posts/outlines", "{\"postIds\":[" + id + "]}");
+
+    assertThat(status(views)).isEqualTo(200);
+    JsonNode view = json(views).get("subjects").get(0);
+    assertThat(json(views).get("subjects")).hasSize(1);
+    assertThat(view.get("type").asString()).isEqualTo("POST");
+    assertThat(view.get("key").asString()).isEqualTo(id);
+    assertThat(view.get("available").asBoolean()).isTrue();
+    assertThat(view.get("journal").asString()).isEqualTo("Journal 100");
+    assertThat(view.get("publishedDate").asString())
+        .isEqualTo(submitted.toString().substring(0, 7));
+    assertThat(view.get("ownerId").asLong()).isEqualTo(A);
+    assertThat(view.get("ownerAnonymous").asBoolean()).isTrue();
+    assertThat(status(outlines)).isEqualTo(200);
+    JsonNode outline = json(outlines).get("outlines").get(0);
+    assertThat(outline.get("firstDecision").asString()).isEqualTo("MAJOR_REVISION");
+    assertThat(outline.get("finalOutcome").asString()).isEqualTo("IN_PROGRESS");
+    assertThat(outline.get("firstRoundDays").asInt()).isEqualTo(10);
+    assertThat(outline.get("totalDays").isNull()).isTrue();
+    assertThat(
+            status(
+                call(
+                    HttpMethod.POST, null, "/_internal/posts/outlines", "{\"postIds\":[1, null]}")))
+        .isEqualTo(422);
   }
 
   /// 修改历史：发布后马上改不记版本、不算「已编辑」；过了 5 分钟再改记一版，当前版本在前。

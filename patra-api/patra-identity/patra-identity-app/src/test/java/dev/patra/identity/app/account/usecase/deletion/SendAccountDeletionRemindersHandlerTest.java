@@ -4,6 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -22,6 +24,7 @@ import dev.patra.identity.domain.account.policy.AccountDeletionPolicy;
 import dev.patra.identity.domain.account.port.mail.EmailDeliveryPort;
 import dev.patra.identity.domain.account.port.read.UserReadPort;
 import dev.patra.identity.domain.account.port.repository.UserRepository;
+import dev.patra.tool.test.transaction.RecordingTransactions;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -33,9 +36,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
-import org.springframework.transaction.support.TransactionOperations;
 
-/// SendAccountDeletionRemindersHandler 单元测试：标记后发信、锁内复核、拒收退回标记、单个失败不影响其他。
+/// SendAccountDeletionRemindersHandler 单元测试：标记与登记提醒同一事务、锁内复核、登记失败计入失败、单个失败不影响其他。
 @DisplayName("SendAccountDeletionRemindersHandler 单元测试")
 class SendAccountDeletionRemindersHandlerTest {
 
@@ -47,13 +49,14 @@ class SendAccountDeletionRemindersHandlerTest {
   private final UserReadPort userReadPort = mock(UserReadPort.class);
   private final EmailDeliveryPort emailDelivery = mock(EmailDeliveryPort.class);
   private final List<Instant> savedReminders = new ArrayList<>();
+  private final List<String> events = new ArrayList<>();
   private final SendAccountDeletionRemindersHandler handler =
       new SendAccountDeletionRemindersHandler(
           users,
           userReadPort,
           AccountDeletionPolicy.of(Duration.ofDays(15), LEAD),
           emailDelivery,
-          TransactionOperations.withoutTransaction(),
+          new RecordingTransactions(events),
           Clock.fixed(NOW, ZoneOffset.UTC));
 
   @BeforeEach
@@ -65,19 +68,28 @@ class SendAccountDeletionRemindersHandlerTest {
             invocation -> {
               User user = invocation.getArgument(0);
               savedReminders.add(user.getDeletionRemindedAt());
+              events.add("save");
               return user;
             });
-    when(emailDelivery.send(any())).thenReturn(true);
+    doAnswer(
+            invocation -> {
+              events.add("send");
+              return null;
+            })
+        .when(emailDelivery)
+        .send(any());
   }
 
   @Test
-  @DisplayName("该提醒的用户：记下提醒时间，提交后发「将在 3 天后删除」")
-  void should_mark_and_send_reminder() {
+  @DisplayName("该提醒的用户：记下提醒时间与登记「将在 3 天后删除」在同一个事务里")
+  void should_mark_reminder_and_register_mail_in_one_transaction() {
     pendingUsers(42L);
 
     ReminderRunResult result = handler.handle(SendAccountDeletionRemindersCommand.of());
 
     assertThat(savedReminders).containsExactly(NOW);
+    assertThat(events)
+        .containsExactly(RecordingTransactions.BEGIN, "save", "send", RecordingTransactions.END);
     ArgumentCaptor<OutgoingMail> mail = ArgumentCaptor.forClass(OutgoingMail.class);
     verify(emailDelivery).send(mail.capture());
     AccountDeletionReminderMail reminder = (AccountDeletionReminderMail) mail.getValue();
@@ -104,14 +116,16 @@ class SendAccountDeletionRemindersHandlerTest {
   }
 
   @Test
-  @DisplayName("发信被拒收：把提醒标记清回去，下次重发，计入失败")
-  void should_unmark_when_mail_rejected() {
+  @DisplayName("登记失败：抛出让标记随事务回滚（不另开事务清标记），计入失败，下次运行重试")
+  void should_count_failure_and_keep_unmarked_when_registration_fails() {
     pendingUsers(42L);
-    when(emailDelivery.send(any())).thenReturn(false);
+    doThrow(new IllegalStateException("登记表写入失败")).when(emailDelivery).send(any());
 
     ReminderRunResult result = handler.handle(SendAccountDeletionRemindersCommand.of());
 
-    assertThat(savedReminders).containsExactly(NOW, null);
+    assertThat(savedReminders).containsExactly(NOW);
+    verify(emailDelivery).send(any());
+    assertThat(events).as("事务没有提交，也没有另开事务清标记").containsExactly(RecordingTransactions.BEGIN, "save");
     assertThat(result).isEqualTo(ReminderRunResult.of(0, 1));
   }
 
