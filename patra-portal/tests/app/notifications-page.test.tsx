@@ -9,6 +9,7 @@ vi.mock("next/navigation", () => ({
 }));
 vi.mock("@/lib/auth/current-user", () => ({ lookupSession: vi.fn() }));
 
+import HelpfulPage from "@/app/notifications/helpful/page";
 import { metadata } from "@/app/notifications/layout";
 import MentionsPage from "@/app/notifications/mentions/page";
 import RepliesPage from "@/app/notifications/page";
@@ -26,14 +27,20 @@ describe("/notifications", () => {
     await expect(MentionsPage()).rejects.toThrow(
       "NEXT_REDIRECT:/login?next=%2Fnotifications%2Fmentions",
     );
+    await expect(HelpfulPage()).rejects.toThrow(
+      "NEXT_REDIRECT:/login?next=%2Fnotifications%2Fhelpful",
+    );
   });
 
-  it("已登录：两个地址各是一个标签", async () => {
+  it("已登录：三个地址各是一个标签", async () => {
     const replies = await RepliesPage();
     const mentions = await MentionsPage();
+    const helpful = await HelpfulPage();
     expect(replies.type).toBe(NotificationInbox);
     expect(replies.props).toEqual({ tab: "replies" });
     expect(mentions.props).toEqual({ tab: "mentions" });
+    expect(helpful.type).toBe(NotificationInbox);
+    expect(helpful.props).toEqual({ tab: "helpful" });
   });
 
   it("标题「提醒 · Patra」，不收录", () => {

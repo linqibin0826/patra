@@ -1,14 +1,16 @@
 "use client";
 
-import { ArrowUpRight, Check, MailWarning } from "lucide-react";
+import { ArrowUpRight, MailWarning } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
+import { RadioRow } from "@/components/settings/RadioRow";
+import { type SaveState, SaveStatus } from "@/components/settings/SaveStatus";
 import { SettingsCard } from "@/components/settings/SettingsCard";
 import type { CurrentUser } from "@/lib/auth/types";
 import { useCommonFailureRedirect } from "@/lib/auth/use-common-failure-redirect";
 import { type SavePrivacyResult, savePrivacy } from "@/lib/identity/profile-actions";
 import type { PrivacySettings } from "@/lib/identity/profile-schema";
-import { RADIO_INPUT, SWITCH_INPUT } from "@/lib/portal-ui";
+import { SWITCH_INPUT } from "@/lib/portal-ui";
 
 const PAGE = "/settings/privacy";
 /// 「已保存」显示 2 秒后淡出
@@ -16,7 +18,6 @@ const SAVED_MS = 2_000;
 
 /// 三组设置
 type Group = "profile" | "professional" | "indexing";
-type Status = "saving" | "saved" | "failed";
 
 const PROFILE_OPTIONS = [
   { value: "PUBLIC", title: "公开", description: "任何人都能看到，包括没有登录的访客" },
@@ -42,13 +43,13 @@ interface PrivacyFormProps {
 export function PrivacyForm({ initial, user }: PrivacyFormProps) {
   const leave = useCommonFailureRedirect(PAGE);
   const [shown, setShown] = useState(initial);
-  const [status, setStatus] = useState<Partial<Record<Group, Status>>>({});
+  const [status, setStatus] = useState<Partial<Record<Group, SaveState>>>({});
   const confirmed = useRef(initial);
   const queue = useRef<Promise<void>>(Promise.resolve());
   /// 最近一次发出的请求序号，以及每组最近一次改动的请求序号
   const latest = useRef(0);
   const groupLatest = useRef<Partial<Record<Group, number>>>({});
-  const statusRef = useRef<Partial<Record<Group, Status>>>({});
+  const statusRef = useRef<Partial<Record<Group, SaveState>>>({});
   const timers = useRef<Partial<Record<Group, ReturnType<typeof setTimeout>>>>({});
 
   useEffect(() => {
@@ -56,7 +57,7 @@ export function PrivacyForm({ initial, user }: PrivacyFormProps) {
     return () => Object.values(pending).forEach(clearTimeout);
   }, []);
 
-  function mark(group: Group, next: Status | undefined) {
+  function mark(group: Group, next: SaveState | undefined) {
     clearTimeout(timers.current[group]);
     statusRef.current = { ...statusRef.current, [group]: next };
     setStatus(statusRef.current);
@@ -195,52 +196,5 @@ export function PrivacyForm({ initial, user }: PrivacyFormProps) {
         <ArrowUpRight className="size-3.5" strokeWidth={1.75} aria-hidden="true" />
       </Link>
     </div>
-  );
-}
-
-/// 单选的一行：标签 + 一行说明
-function RadioRow({
-  name,
-  title,
-  description,
-  checked,
-  onSelect,
-}: {
-  name: string;
-  title: string;
-  description: string;
-  checked: boolean;
-  onSelect: () => void;
-}) {
-  return (
-    <label className="flex cursor-pointer items-start gap-3 py-2">
-      <input
-        type="radio"
-        name={name}
-        checked={checked}
-        onChange={onSelect}
-        className={`${RADIO_INPUT} mt-0.5`}
-      />
-      <div className="flex flex-col gap-0.5">
-        <div className="text-base leading-5 font-medium text-fg-1">{title}</div>
-        <div className="text-sm leading-5 text-fg-3">{description}</div>
-      </div>
-    </label>
-  );
-}
-
-/// 卡片标题右侧的保存状态（读屏礼貌播报）
-function SaveStatus({ status }: { status: Status | undefined }) {
-  return (
-    <span aria-live="polite" className="text-sm leading-5">
-      {status === "saving" && <span className="text-fg-3">保存中…</span>}
-      {status === "saved" && (
-        <span className="inline-flex items-center gap-1.5 text-status-success-ink">
-          <Check className="size-3.5" strokeWidth={2} aria-hidden="true" />
-          已保存
-        </span>
-      )}
-      {status === "failed" && <span className="text-status-danger">没有保存成功，请重试</span>}
-    </span>
   );
 }

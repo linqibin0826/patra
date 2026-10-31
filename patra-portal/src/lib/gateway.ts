@@ -85,9 +85,13 @@ export interface GatewayStreamInit {
   headerTimeoutMs?: number;
   /// 浏览器来源，同 `GatewayRequestInit.client`
   client?: ClientOrigin;
+  /// 会话令牌，有值时写成 `Authorization: Bearer <token>`（实时推送的事件流要登录）
+  token?: string;
+  /// `Accept` 头，如推送的 `text/event-stream`
+  accept?: string;
 }
 
-/// 取网关上的文件（PDF、正文图片、导出文件），响应体原样流式交给调用方转发。
+/// 取网关上的文件（PDF、正文图片、导出文件）与提醒的实时推送，响应体原样流式交给调用方转发。
 /// 与 `gatewayFetch` 的区别在超时：只计到响应头到达为止。之后的下载可能持续几分钟（155 MB 的 PDF、
 /// 慢速网络），不能用总时长掐断；下载中途卡住由 fetch 自带的两次读之间的空闲超时兜底。
 export async function gatewayStream(path: string, init: GatewayStreamInit = {}): Promise<Response> {
@@ -108,6 +112,8 @@ export async function gatewayStream(path: string, init: GatewayStreamInit = {}):
       method: init.method ?? "GET",
       headers: {
         ...forwardingHeaders(init.client),
+        ...(init.token ? { Authorization: `Bearer ${init.token}` } : {}),
+        ...(init.accept ? { Accept: init.accept } : {}),
         ...(init.ifNoneMatch ? { "If-None-Match": init.ifNoneMatch } : {}),
         ...(init.json === undefined ? {} : { "Content-Type": "application/json" }),
       },

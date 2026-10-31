@@ -6,7 +6,7 @@ import { renderNotifications, unreadResponse } from "@tests/support/notification
 import { toast } from "sonner";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import "@testing-library/jest-dom/vitest";
-import type { Notification, NotificationPage } from "@/lib/interaction/notification-schema";
+import type { Notification, NotificationPage } from "@/lib/notification/inbox-schema";
 import { useMarkAllRead, useMarkRead } from "@/lib/notifications/mark-read";
 import { type UnreadData, useUnreadCountsPolling } from "@/lib/notifications/queries";
 import { queryKeys } from "@/lib/query-keys";
@@ -16,10 +16,16 @@ vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 const fetchMock = vi.fn<typeof fetch>();
 const REPLY = makeNotification({ notificationId: "1", type: "COMMENT_REPLY" });
 const MENTION = makeNotification({ notificationId: "2", type: "MENTION" });
+const HELPFUL = makeNotification({
+  notificationId: "3",
+  type: "POST_HELPFUL",
+  actorCount: 2,
+  commentId: null,
+});
 
 type Client = ReturnType<typeof renderNotifications>["client"];
 
-/// 两个标签各一页、未读 2 条（回复 1、@ 1）
+/// 三个标签各一页、未读 3 条（回复 1、@ 1、有帮助 1）
 function seed(client: Client) {
   const page = (items: Notification[]): InfiniteData<NotificationPage> => ({
     pages: [{ items, nextCursor: null }],
@@ -27,14 +33,15 @@ function seed(client: Client) {
   });
   client.setQueryData(queryKeys.notificationList("replies"), page([REPLY]));
   client.setQueryData(queryKeys.notificationList("mentions"), page([MENTION]));
+  client.setQueryData(queryKeys.notificationList("helpful"), page([HELPFUL]));
   client.setQueryData<UnreadData>(queryKeys.notificationUnread, {
-    counts: { total: 2, replies: 1, mentions: 1 },
+    counts: { total: 2, replies: 1, mentions: 1, helpful: 1 },
     etag: '"1-1"',
   });
 }
 
 const unread = (client: Client) => client.getQueryData<UnreadData>(queryKeys.notificationUnread);
-const readFlag = (client: Client, tab: "replies" | "mentions") =>
+const readFlag = (client: Client, tab: "replies" | "mentions" | "helpful") =>
   client
     .getQueryData<InfiniteData<NotificationPage>>(queryKeys.notificationList(tab))
     ?.pages[0]?.items.map((n) => n.read);
@@ -85,19 +92,33 @@ describe("单条已读", () => {
     const { client } = renderNotifications(<MarkOne notification={MENTION} />, { seed });
     await userEvent.click(screen.getByRole("button", { name: "标一条" }));
     expect(readFlag(client, "mentions")).toEqual([true]);
-    expect(unread(client)).toEqual({ counts: { total: 1, replies: 1, mentions: 0 }, etag: null });
+    expect(unread(client)).toEqual({
+      counts: { total: 1, replies: 1, mentions: 0, helpful: 1 },
+      etag: null,
+    });
     expect(fetchMock).toHaveBeenCalledWith("/api/me/notifications/2/read", {
       method: "PUT",
       keepalive: true,
     });
   });
 
+  it("有帮助：只减有帮助的数，铃铛用的 total 不变", async () => {
+    fetchMock.mockReturnValue(new Promise(() => {}));
+    const { client } = renderNotifications(<MarkOne notification={HELPFUL} />, { seed });
+    await userEvent.click(screen.getByRole("button", { name: "标一条" }));
+    expect(readFlag(client, "helpful")).toEqual([true]);
+    expect(unread(client)?.counts).toEqual({ total: 2, replies: 1, mentions: 1, helpful: 0 });
+  });
+
   it("用返回的计数覆盖，ETag 仍为空", async () => {
-    fetchMock.mockResolvedValue(Response.json({ total: 5, replies: 4, mentions: 1 }));
+    fetchMock.mockResolvedValue(Response.json({ total: 5, replies: 4, mentions: 1, helpful: 0 }));
     const { client } = renderNotifications(<MarkOne notification={REPLY} />, { seed });
     await userEvent.click(screen.getByRole("button", { name: "标一条" }));
     await vi.waitFor(() =>
-      expect(unread(client)).toEqual({ counts: { total: 5, replies: 4, mentions: 1 }, etag: null }),
+      expect(unread(client)).toEqual({
+        counts: { total: 5, replies: 4, mentions: 1, helpful: 0 },
+        etag: null,
+      }),
     );
   });
 
@@ -106,7 +127,7 @@ describe("单条已读", () => {
     fetchMock.mockImplementation((url) =>
       String(url).endsWith("/unread-count")
         ? poll.promise
-        : Promise.resolve(Response.json({ total: 1, replies: 0, mentions: 1 })),
+        : Promise.resolve(Response.json({ total: 1, replies: 0, mentions: 1, helpful: 0 })),
     );
     function Page() {
       useUnreadCountsPolling();
@@ -121,11 +142,11 @@ describe("单条已读", () => {
     await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
     await userEvent.click(screen.getByRole("button", { name: "标一条" }));
     await act(async () => {
-      poll.resolve(unreadResponse({ total: 2, replies: 1, mentions: 1 }, '"1-1"'));
+      poll.resolve(unreadResponse({ total: 2, replies: 1, mentions: 1, helpful: 0 }, '"1-1"'));
       await poll.promise;
     });
     await vi.waitFor(() =>
-      expect(unread(client)?.counts).toEqual({ total: 1, replies: 0, mentions: 1 }),
+      expect(unread(client)?.counts).toEqual({ total: 1, replies: 0, mentions: 1, helpful: 0 }),
     );
   });
 
@@ -133,8 +154,8 @@ describe("单条已读", () => {
     fetchMock.mockImplementation((url) =>
       Promise.resolve(
         String(url).endsWith("/unread-count")
-          ? unreadResponse({ total: 1, replies: 0, mentions: 1 }, '"0-1"')
-          : Response.json({ total: 1, replies: 0, mentions: 1 }),
+          ? unreadResponse({ total: 1, replies: 0, mentions: 1, helpful: 0 }, '"0-1"')
+          : Response.json({ total: 1, replies: 0, mentions: 1, helpful: 0 }),
       ),
     );
     function Page() {
@@ -153,6 +174,15 @@ describe("单条已读", () => {
     expect(poll?.[0]).toBe("/api/me/notifications/unread-count");
     expect(new Headers(poll?.[1]?.headers).has("If-None-Match")).toBe(false);
     focusManager.setFocused(undefined);
+  });
+
+  it("请求失败或 404：未读数标为过期（推送连着时没有轮询来纠正乐观的减 1）", async () => {
+    fetchMock.mockResolvedValue(Response.json({ reason: "not-found" }, { status: 404 }));
+    const { client } = renderNotifications(<MarkOne notification={REPLY} />, { seed });
+    await userEvent.click(screen.getByRole("button", { name: "标一条" }));
+    await vi.waitFor(() =>
+      expect(client.getQueryState(queryKeys.notificationUnread)?.isInvalidated).toBe(true),
+    );
   });
 
   it("404 忽略：不报错，乐观结果留着；已读的再点不发请求", async () => {
@@ -180,10 +210,14 @@ describe("全部已读", () => {
     await userEvent.click(screen.getByRole("button", { name: "全部" }));
     expect(readFlag(client, "replies")).toEqual([true]);
     expect(readFlag(client, "mentions")).toEqual([true]);
-    expect(unread(client)).toEqual({ counts: { total: 0, replies: 0, mentions: 0 }, etag: null });
+    expect(readFlag(client, "helpful")).toEqual([true]);
+    expect(unread(client)).toEqual({
+      counts: { total: 0, replies: 0, mentions: 0, helpful: 0 },
+      etag: null,
+    });
     expect(screen.getByRole("button", { name: "全部" })).toBeDisabled();
     expect(fetchMock).toHaveBeenCalledWith("/api/me/notifications/read", { method: "PUT" });
-    await act(async () => finish(Response.json({ total: 0, replies: 0, mentions: 0 })));
+    await act(async () => finish(Response.json({ total: 0, replies: 0, mentions: 0, helpful: 0 })));
     await vi.waitFor(() => expect(toast.success).toHaveBeenCalledWith("已全部标为已读"));
   });
 
@@ -194,9 +228,10 @@ describe("全部已读", () => {
     expect(await screen.findByText("失败了")).toBeInTheDocument();
     expect(readFlag(client, "replies")).toEqual([false]);
     expect(unread(client)).toEqual({
-      counts: { total: 2, replies: 1, mentions: 1 },
+      counts: { total: 2, replies: 1, mentions: 1, helpful: 1 },
       etag: '"1-1"',
     });
     expect(toast.success).not.toHaveBeenCalled();
+    expect(client.getQueryState(queryKeys.notificationUnread)?.isInvalidated).toBe(true);
   });
 });

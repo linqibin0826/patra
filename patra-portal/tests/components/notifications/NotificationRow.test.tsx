@@ -33,9 +33,13 @@ describe("NotificationRow", () => {
   it.each([
     ["昨天写时分", "2026-10-26T13:40:00Z", "21:40"],
     ["更早写月日", "2026-10-21T02:00:00Z", "10 月 21 日"],
-  ])("时间按分组写：%s", (_, createdAt, text) => {
+  ])("时间按分组写：%s", (_, occurredAt, text) => {
     render(
-      <NotificationRow notification={makeNotification({ createdAt })} now={NOW} onOpen={vi.fn()} />,
+      <NotificationRow
+        notification={makeNotification({ occurredAt })}
+        now={NOW}
+        onOpen={vi.fn()}
+      />,
     );
     expect(screen.getByText(text)).toBeInTheDocument();
   });
@@ -189,5 +193,90 @@ describe("NotificationRow", () => {
     expect(row).not.toHaveTextContent("《");
     expect(row.querySelector("i")).toHaveTextContent("Bifidobacterium longum");
     expect(row.querySelector("sub")).toHaveTextContent("2");
+  });
+
+  describe("有帮助", () => {
+    /// 周敏等 2 人点了你的投稿经验：最近一位是陈宇（默认触发人）
+    const helpful = (overrides: Parameters<typeof makeNotification>[0] = {}) =>
+      makeNotification({
+        type: "POST_HELPFUL",
+        actorCount: 2,
+        commentId: null,
+        excerpt: "第二轮小修后编辑直接接收",
+        subject: {
+          type: "post",
+          key: "5",
+          available: true,
+          title: null,
+          journal: null,
+          abbreviation: "J Am Heart Assoc",
+          submittedMonth: "2026-03",
+          mine: true,
+          experience: {
+            firstDecision: "MAJOR_REVISION",
+            finalOutcome: "ACCEPTED",
+            firstRoundDays: 41,
+            totalDays: 96,
+          },
+        },
+        ...overrides,
+      });
+
+    it("合并条目：名字是最近一位，「等 N 人」跟在后面；去经验页；读屏先说未读", () => {
+      render(<NotificationRow notification={helpful()} now={NOW} onOpen={vi.fn()} />);
+      const row = screen.getByRole("link", { name: /^未读，陈宇等 2 人觉得你的投稿经验有帮助/ });
+      expect(row).toHaveAttribute("href", "/posts/5");
+      expect(
+        screen.getByText("你的投稿经验 · J Am Heart Assoc · 2026 年 3 月投稿"),
+      ).toBeInTheDocument();
+    });
+
+    it("2 人起头像压 +N−1 角标，读屏跳过；1 人没有角标", () => {
+      const { unmount } = render(
+        <NotificationRow notification={helpful({ actorCount: 3 })} now={NOW} onOpen={vi.fn()} />,
+      );
+      expect(screen.getByText("+2")).toHaveAttribute("aria-hidden", "true");
+      unmount();
+      render(
+        <NotificationRow notification={helpful({ actorCount: 1 })} now={NOW} onOpen={vi.fn()} />,
+      );
+      expect(screen.queryByText(/^\+\d/)).not.toBeInTheDocument();
+      expect(screen.getByRole("link")).toHaveTextContent("陈宇觉得你的投稿经验有帮助");
+    });
+
+    it("正文是你自己那条内容，未读也不加深", () => {
+      render(<NotificationRow notification={helpful()} now={NOW} onOpen={vi.fn()} />);
+      expect(screen.getByText("第二轮小修后编辑直接接收")).toHaveClass("text-fg-2");
+    });
+
+    it("经验没有正文：写结果行", () => {
+      render(
+        <NotificationRow notification={helpful({ excerpt: null })} now={NOW} onOpen={vi.fn()} />,
+      );
+      expect(screen.getByText("首轮 41 天 · 大修 → 录用")).toBeInTheDocument();
+    });
+
+    it("时间用 occurredAt", () => {
+      render(
+        <NotificationRow
+          notification={helpful({ occurredAt: "2026-10-27T09:00:00Z" })}
+          now={NOW}
+          onOpen={vi.fn()}
+        />,
+      );
+      expect(screen.getByRole("link").querySelector("time")).toHaveAttribute(
+        "dateTime",
+        "2026-10-27T09:00:00Z",
+      );
+    });
+  });
+
+  it("推送来的新条目：浅陶土底淡出（类名 anim-fresh，减弱动效时 CSS 不生效）", () => {
+    const { rerender } = render(
+      <NotificationRow notification={makeNotification()} now={NOW} onOpen={vi.fn()} fresh />,
+    );
+    expect(screen.getByRole("link")).toHaveClass("anim-fresh");
+    rerender(<NotificationRow notification={makeNotification()} now={NOW} onOpen={vi.fn()} />);
+    expect(screen.getByRole("link")).not.toHaveClass("anim-fresh");
   });
 });

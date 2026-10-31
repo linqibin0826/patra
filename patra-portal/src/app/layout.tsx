@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { IBM_Plex_Mono, Inter, Newsreader } from "next/font/google";
+import { NotificationStream } from "@/components/notifications/NotificationStream";
 import { Toaster } from "@/components/ui/sonner";
 import { cn } from "@/lib/utils";
 import { QueryProvider } from "@/providers/query-provider";
@@ -50,6 +51,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <div id="top" aria-hidden />
         <QueryProvider>
           {children}
+          <NotificationStream />
           <Toaster position="bottom-right" />
         </QueryProvider>
       </body>

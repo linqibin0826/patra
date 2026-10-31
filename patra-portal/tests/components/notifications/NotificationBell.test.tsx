@@ -22,11 +22,11 @@ afterEach(() => {
   fetchMock.mockClear();
 });
 
-/// 未读数已在缓存里
-const withCounts = (total: number) => ({
+/// 未读数已在缓存里；`helpful` 是有帮助的未读，不计入 `total`
+const withCounts = (total: number, helpful = 0) => ({
   seed: (client: QueryClient) =>
     client.setQueryData<UnreadData>(queryKeys.notificationUnread, {
-      counts: { total, replies: total, mentions: 0 },
+      counts: { total, replies: total, mentions: 0, helpful },
       etag: null,
     }),
 });
@@ -54,6 +54,11 @@ describe("NotificationBell", () => {
   it("3 条：徽标 3，名称「提醒，3 条未读」", () => {
     renderNotifications(<NotificationBell />, withCounts(3));
     expect(screen.getByRole("link", { name: "提醒，3 条未读" })).toHaveTextContent("3");
+  });
+
+  it("有帮助的未读不进铃铛：回复与 @ 都是 0 时不挂徽标", () => {
+    renderNotifications(<NotificationBell />, withCounts(0, 9));
+    expect(screen.getByRole("link", { name: "提醒" })).not.toHaveTextContent(/\d/);
   });
 
   it("超过 99 写 99+", () => {

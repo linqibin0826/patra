@@ -5,9 +5,10 @@ import { BrandMark } from "@/components/portal/BrandMark";
 import { Venation } from "@/components/portal/Venation";
 
 interface AuthShellProps {
-  title: string;
+  /// 不传时不出标题与副文案：退订确认页读取中的骨架连标题一起画（PAP-148 spec 第 7.2 节）
+  title?: string;
   /// 副文案；可以带强调（找回密码已发送态里的邮箱）
-  description: ReactNode;
+  description?: ReactNode;
   /// 「返回」指向的站内路径，已经过 `safeNextPath`；null 时不显示「返回」（取消注销页不能被绕开，简报 §3.16）
   back: string | null;
   /// 标题上方的状态图标（落地页结果、取消注销页，见 `StateIcon`）
@@ -58,10 +59,14 @@ export function AuthShell({ title, description, back, icon, children }: AuthShel
           <div aria-hidden="true" className="flex-2 max-[880px]:hidden" />
           <div className="w-full max-w-100">
             {icon}
-            <h1 className="font-serif text-display-3 leading-heading font-medium tracking-tight text-fg-1">
-              {title}
-            </h1>
-            <p className="mt-3 text-md leading-relaxed text-fg-2">{description}</p>
+            {title !== undefined && (
+              <h1 className="font-serif text-display-3 leading-heading font-medium tracking-tight text-fg-1">
+                {title}
+              </h1>
+            )}
+            {description !== undefined && (
+              <p className="mt-3 text-md leading-relaxed text-fg-2">{description}</p>
+            )}
             {children}
           </div>
           <div aria-hidden="true" className="flex-3 max-[880px]:hidden" />

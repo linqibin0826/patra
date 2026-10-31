@@ -11,7 +11,7 @@ afterEach(() => {
 });
 
 describe("SettingsNav", () => {
-  it("桌面侧栏四项：个人资料、账号、安全、隐私，不渲染通知与已连接账号", () => {
+  it("桌面侧栏五项：个人资料、账号、安全、隐私、通知，不渲染已连接账号", () => {
     render(<SettingsNav />);
     const desktop = screen.getByRole("navigation", { name: "设置分区" });
     const links = Array.from(desktop.querySelectorAll("a"));
@@ -20,12 +20,12 @@ describe("SettingsNav", () => {
       ["账号", "/settings/account"],
       ["安全", "/settings/security"],
       ["隐私", "/settings/privacy"],
+      ["通知", "/settings/notifications"],
     ]);
-    expect(screen.queryByText("通知")).not.toBeInTheDocument();
     expect(screen.queryByText("已连接账号")).not.toBeInTheDocument();
   });
 
-  it("移动分段标签用短名：资料、账号、安全、隐私", () => {
+  it("移动分段标签用短名、五等分：资料、账号、安全、隐私、通知", () => {
     render(<SettingsNav />);
     const mobile = screen.getByRole("navigation", { name: "设置分区（窄屏）" });
     expect(Array.from(mobile.querySelectorAll("a")).map((link) => link.textContent)).toEqual([
@@ -33,7 +33,9 @@ describe("SettingsNav", () => {
       "账号",
       "安全",
       "隐私",
+      "通知",
     ]);
+    expect(mobile).toHaveClass("grid-cols-5");
   });
 
   it("当前分区标 aria-current", () => {
@@ -44,5 +46,13 @@ describe("SettingsNav", () => {
       "/settings/privacy",
       "/settings/privacy",
     ]);
+  });
+
+  it("通知分区标 aria-current", () => {
+    mockPathname = "/settings/notifications";
+    render(<SettingsNav />);
+    expect(
+      screen.getAllByRole("link", { current: "page" }).map((link) => link.textContent),
+    ).toEqual(["通知", "通知"]);
   });
 });

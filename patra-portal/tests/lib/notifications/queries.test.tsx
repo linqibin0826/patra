@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import "@testing-library/jest-dom/vitest";
 import { useUnreadCounts, useUnreadCountsPolling } from "@/lib/notifications/queries";
 import { queryKeys } from "@/lib/query-keys";
+import { useNotificationStreamStore } from "@/store/notification-stream";
 
 const fetchMock = vi.fn<typeof fetch>();
 let renders = 0;
@@ -32,6 +33,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  useNotificationStreamStore.setState({ live: false });
   vi.useRealTimers();
   vi.unstubAllGlobals();
   fetchMock.mockReset();
@@ -39,8 +41,24 @@ afterEach(() => {
 });
 
 describe("未读数轮询", () => {
+  it("推送连着时不轮询；断开后恢复 60 秒一次", async () => {
+    fetchMock.mockImplementation(async () =>
+      unreadResponse({ total: 3, replies: 2, mentions: 1, helpful: 0 }, '"2-1-0"'),
+    );
+    renderNotifications(<Nav />);
+    await fetchCalls(fetchMock, 1);
+    act(() => useNotificationStreamStore.setState({ live: true }));
+    await act(() => vi.advanceTimersByTimeAsync(180_000));
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    act(() => useNotificationStreamStore.setState({ live: false }));
+    await act(() => vi.advanceTimersByTimeAsync(60_000));
+    await fetchCalls(fetchMock, 2);
+  });
+
   it("第一次不带 If-None-Match、不走浏览器缓存；之后带上一次的 ETag", async () => {
-    fetchMock.mockResolvedValueOnce(unreadResponse({ total: 3, replies: 2, mentions: 1 }, '"2-1"'));
+    fetchMock.mockResolvedValueOnce(
+      unreadResponse({ total: 3, replies: 2, mentions: 1, helpful: 0 }, '"2-1"'),
+    );
     fetchMock.mockResolvedValueOnce(unreadResponse(304, '"2-1"'));
     renderNotifications(<Nav />);
     expect(await screen.findByText("共 3")).toBeInTheDocument();
@@ -53,7 +71,9 @@ describe("未读数轮询", () => {
   });
 
   it("304 时缓存是同一个对象，读未读数的组件不重新渲染", async () => {
-    fetchMock.mockResolvedValueOnce(unreadResponse({ total: 3, replies: 2, mentions: 1 }, '"2-1"'));
+    fetchMock.mockResolvedValueOnce(
+      unreadResponse({ total: 3, replies: 2, mentions: 1, helpful: 0 }, '"2-1"'),
+    );
     fetchMock.mockResolvedValueOnce(unreadResponse(304, '"2-1"'));
     const { client } = renderNotifications(<Nav />);
     await screen.findByText("共 3");
@@ -67,8 +87,12 @@ describe("未读数轮询", () => {
   });
 
   it("60 秒后取到新数就更新", async () => {
-    fetchMock.mockResolvedValueOnce(unreadResponse({ total: 3, replies: 2, mentions: 1 }, '"2-1"'));
-    fetchMock.mockResolvedValueOnce(unreadResponse({ total: 4, replies: 3, mentions: 1 }, '"3-1"'));
+    fetchMock.mockResolvedValueOnce(
+      unreadResponse({ total: 3, replies: 2, mentions: 1, helpful: 0 }, '"2-1"'),
+    );
+    fetchMock.mockResolvedValueOnce(
+      unreadResponse({ total: 4, replies: 3, mentions: 1, helpful: 0 }, '"3-1"'),
+    );
     renderNotifications(<Nav />);
     await screen.findByText("共 3");
     await act(() => vi.advanceTimersByTimeAsync(60_000));
@@ -76,8 +100,12 @@ describe("未读数轮询", () => {
   });
 
   it("切回页面立即取一次（不等 60 秒、不管是否过期）", async () => {
-    fetchMock.mockResolvedValueOnce(unreadResponse({ total: 1, replies: 1, mentions: 0 }, '"1-0"'));
-    fetchMock.mockResolvedValueOnce(unreadResponse({ total: 2, replies: 2, mentions: 0 }, '"2-0"'));
+    fetchMock.mockResolvedValueOnce(
+      unreadResponse({ total: 1, replies: 1, mentions: 0, helpful: 0 }, '"1-0"'),
+    );
+    fetchMock.mockResolvedValueOnce(
+      unreadResponse({ total: 2, replies: 2, mentions: 0, helpful: 0 }, '"2-0"'),
+    );
     renderNotifications(<Nav />);
     await screen.findByText("共 1");
     act(() => {
@@ -103,7 +131,9 @@ describe("未读数轮询", () => {
 
   it("取不到时不可用，下一次轮询成功就恢复", async () => {
     fetchMock.mockResolvedValueOnce(Response.json({ reason: "unavailable" }, { status: 502 }));
-    fetchMock.mockResolvedValueOnce(unreadResponse({ total: 2, replies: 1, mentions: 1 }, '"1-1"'));
+    fetchMock.mockResolvedValueOnce(
+      unreadResponse({ total: 2, replies: 1, mentions: 1, helpful: 0 }, '"1-1"'),
+    );
     renderNotifications(<Nav />);
     expect(await screen.findByText("不可用")).toBeInTheDocument();
     await act(() => vi.advanceTimersByTimeAsync(60_000));
@@ -111,7 +141,9 @@ describe("未读数轮询", () => {
   });
 
   it("只有轮询观察者聚焦重取：多处读者不会多发请求", async () => {
-    fetchMock.mockResolvedValue(unreadResponse({ total: 1, replies: 1, mentions: 0 }, '"1-0"'));
+    fetchMock.mockResolvedValue(
+      unreadResponse({ total: 1, replies: 1, mentions: 0, helpful: 0 }, '"1-0"'),
+    );
     renderNotifications(
       <>
         <Nav />

@@ -320,9 +320,21 @@ describe("冷静期账号整页打开任何页面都去取消注销页", () => {
     "/confirm-email-change",
     "/revert-email-change",
     "/account/deletion-pending",
+    "/unsubscribe",
+    `/unsubscribe/one-click?token=${"t".repeat(43)}&category=REPLY`,
   ])("专注页 %s 不查", async (path) => {
     const res = await proxy(signedIn(path));
     expect(res.headers.get("x-middleware-next")).toBe("1");
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("冷静期账号在浏览器里打开一键退订地址：放行，令牌不会被抄进取消注销页的 next", async () => {
+    fetchMock.mockResolvedValue(me(PENDING));
+    const res = await proxy(
+      signedIn(`/unsubscribe/one-click?token=${"t".repeat(43)}&category=REPLY`),
+    );
+    expect(res.headers.get("x-middleware-next")).toBe("1");
+    expect(res.headers.get("location")).toBeNull();
     expect(fetchMock).not.toHaveBeenCalled();
   });
 

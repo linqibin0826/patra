@@ -115,6 +115,21 @@ describe("gatewayStream", () => {
     expect(new Headers(call()[1]?.headers).has("If-None-Match")).toBe(false);
   });
 
+  it("带会话令牌与 Accept（推送的事件流）；不传时都没有", async () => {
+    await gatewayStream("/patra-notification/me/notifications/stream", {
+      token: "patra_user_abc",
+      accept: "text/event-stream",
+    });
+    const headers = new Headers(call()[1]?.headers);
+    expect(headers.get("Authorization")).toBe("Bearer patra_user_abc");
+    expect(headers.get("Accept")).toBe("text/event-stream");
+    fetchMock.mockClear();
+    await gatewayStream("/x");
+    const plain = new Headers(call()[1]?.headers);
+    expect(plain.has("Authorization")).toBe(false);
+    expect(plain.has("Accept")).toBe(false);
+  });
+
   it("超时只计到响应头到达：之后慢慢下载大文件不会被掐断", async () => {
     vi.useFakeTimers();
     try {
