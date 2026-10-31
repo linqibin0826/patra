@@ -15,6 +15,10 @@ import static org.mockito.Mockito.when;
 import dev.patra.notification.domain.inbox.model.read.UnreadCounts;
 import dev.patra.notification.domain.inbox.port.read.InboxReadPort;
 import dev.patra.notification.domain.kernel.port.gateway.PresenceGateway;
+import dev.patra.tool.core.security.AccountType;
+import dev.patra.tool.core.security.ClientType;
+import dev.patra.tool.core.security.CurrentUser;
+import dev.patra.tool.core.security.CurrentUserPort;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -32,8 +36,22 @@ class UnreadCountStreamRegistryTest {
 
   private final InboxReadPort inboxReadPort = mock(InboxReadPort.class);
   private final PresenceGateway presenceGateway = mock(PresenceGateway.class);
+  private final CurrentUserPort currentUser = mock(CurrentUserPort.class);
   private final UnreadCountStreamRegistry registry =
-      new UnreadCountStreamRegistry(inboxReadPort, presenceGateway);
+      new UnreadCountStreamRegistry(inboxReadPort, presenceGateway, currentUser);
+
+  @Test
+  void should_open_for_current_user_and_return_their_id() {
+    when(currentUser.require())
+        .thenReturn(CurrentUser.of(USER, 1L, AccountType.USER, ClientType.WEB));
+    when(inboxReadPort.unreadCounts(USER)).thenReturn(UnreadCounts.of(3, 0, 0));
+    RecordingStream stream = new RecordingStream();
+
+    long userId = registry.openForCurrentUser(stream);
+
+    assertThat(userId).isEqualTo(USER);
+    assertThat(stream.sent).containsExactly(UnreadCounts.of(3, 0, 0));
+  }
 
   @Test
   void should_send_current_counts_and_mark_seen_on_open() {

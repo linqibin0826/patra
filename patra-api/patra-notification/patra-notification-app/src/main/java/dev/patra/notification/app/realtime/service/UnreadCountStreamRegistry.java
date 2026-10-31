@@ -3,6 +3,7 @@ package dev.patra.notification.app.realtime.service;
 import dev.patra.notification.domain.inbox.model.read.UnreadCounts;
 import dev.patra.notification.domain.inbox.port.read.InboxReadPort;
 import dev.patra.notification.domain.kernel.port.gateway.PresenceGateway;
+import dev.patra.tool.core.security.CurrentUserPort;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -23,9 +24,20 @@ public class UnreadCountStreamRegistry {
 
   private final InboxReadPort inboxReadPort;
   private final PresenceGateway presenceGateway;
+  private final CurrentUserPort currentUser;
 
   /// 每个用户开着的连接；集合本身也是这个用户的锁。
   private final ConcurrentMap<Long, Set<UnreadCountStream>> streams = new ConcurrentHashMap<>();
+
+  /// 给当前用户登记一条连接（要登录，没有身份断言时抛出，安全 starter 回 401）。
+  ///
+  /// @param stream 连接
+  /// @return 当前用户 ID：连接结束时注销要用
+  public long openForCurrentUser(UnreadCountStream stream) {
+    long userId = currentUser.require().userId();
+    open(userId, stream);
+    return userId;
+  }
 
   /// 登记一条连接：放进表、推一次当前值、记一次在站。
   ///
@@ -34,7 +46,7 @@ public class UnreadCountStreamRegistry {
   ///
   /// @param userId 用户
   /// @param stream 连接
-  public void open(long userId, UnreadCountStream stream) {
+  void open(long userId, UnreadCountStream stream) {
     Set<UnreadCountStream> userStreams =
         streams.compute(
             userId,

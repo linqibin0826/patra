@@ -54,6 +54,13 @@ patra:
     mail:
       # 邮件里时间的显示时区（链接过期时刻、注销到期时刻、安全通知的发生时间）；用户都在国内
       zone: Asia/Shanghai
+    # 实时推送（PAP-145，设计 docs/patra/specs/2026-10-31-notification-realtime-push-design.md 第 6 节）
+    realtime:
+      # 心跳间隔：短于网关读超时 60 秒、Cloudflare 空闲超时 125 秒，否则中间的代理会把安静的连接当成死连接断掉
+      heartbeat-interval: 25s
+      # 一条推送连接最长活多久，也是 SseEmitter 的异步超时（不设是 Tomcat 默认的 30 秒）；
+      # 到点服务端正常结束，浏览器重连、网关借机重新查会话（登出与封禁最晚这么久生效）
+      max-connection-age: 30m
 
 management:
   health:

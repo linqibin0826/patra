@@ -47,6 +47,15 @@ class ApplicationConfigTest {
     assertThat(property("patra.web.error.context-prefix")).isEqualTo("NOTIFICATION");
   }
 
+  /// 推送（PAP-145）：心跳短于网关读超时 60 秒、Cloudflare 125 秒；寿命 30 分钟，也是显式设的异步超时
+  /// （不设是 Tomcat 默认的 30 秒）。
+  @Test
+  @DisplayName("推送心跳 25 秒、连接寿命 30 分钟")
+  void should_set_realtime_heartbeat_and_connection_age() throws IOException {
+    assertThat(property("patra.notification.realtime.heartbeat-interval")).isEqualTo("25s");
+    assertThat(property("patra.notification.realtime.max-connection-age")).isEqualTo("30m");
+  }
+
   /// Flyway 递归扫 `db/migration`，不设 `schemas`：设了 Flyway 会自己建 schema 并把历史表挪进去。
   ///
   /// @throws IOException 读取失败时
