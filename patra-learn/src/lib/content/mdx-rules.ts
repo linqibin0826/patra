@@ -119,6 +119,49 @@ function roleOf(block: MdNode | undefined, registry: Record<string, ComponentSpe
   return registry[node.name]?.role;
 }
 
+/// 读组件属性的字面量值；展开属性与非字面量的属性另行列出
+function readAttributes(node: MdNode) {
+  const props: Record<string, unknown> = {};
+  const dynamicNames: string[] = [];
+  let spread = false;
+  for (const attr of node.attributes ?? []) {
+    if (attr.type === "mdxJsxExpressionAttribute" || !attr.name) {
+      spread = true;
+      continue;
+    }
+    const value = attr.value;
+    if (value === null || value === undefined) {
+      props[attr.name] = true;
+    } else if (typeof value === "string") {
+      props[attr.name] = value;
+    } else {
+      try {
+        props[attr.name] = evaluateExpressionValue(value.data?.estree);
+      } catch {
+        dynamicNames.push(attr.name);
+      }
+    }
+  }
+  return { props, spread, dynamicNames };
+}
+
+/// 正文里所有名为 name 的组件的字面量参数，按出现顺序；解析失败时为空。页面在构建时用它读诊断题、代码引用
+export function readComponents(body: string, name: string): Record<string, unknown>[] {
+  let root: MdNode;
+  try {
+    root = processor.parse(body) as unknown as MdNode;
+  } catch {
+    return [];
+  }
+  const found: Record<string, unknown>[] = [];
+  const walk = (node: MdNode) => {
+    if (JSX_TYPES.has(node.type) && node.name === name) found.push(readAttributes(node).props);
+    for (const child of node.children ?? []) walk(child);
+  };
+  walk(root);
+  return found;
+}
+
 /// 检查一篇条目的正文，返回问题与正文里的代码引用
 export function checkEntryBody(
   input: { slug: string; file: string; body: string },
@@ -149,31 +192,12 @@ export function checkEntryBody(
       );
       return;
     }
-    const props: Record<string, unknown> = {};
-    let dynamic = false;
-    for (const attr of node.attributes ?? []) {
-      if (attr.type === "mdxJsxExpressionAttribute" || !attr.name) {
-        report("component-prop-dynamic", `<${name}> 不能用展开属性 {...}`);
-        dynamic = true;
-        continue;
-      }
-      const value = attr.value;
-      if (value === null || value === undefined) {
-        props[attr.name] = true;
-      } else if (typeof value === "string") {
-        props[attr.name] = value;
-      } else {
-        try {
-          props[attr.name] = evaluateExpressionValue(value.data?.estree);
-        } catch {
-          report(
-            "component-prop-dynamic",
-            `<${name}> 的 ${attr.name} 只能写字面量，不能写变量或表达式`,
-          );
-          dynamic = true;
-        }
-      }
+    const { props, spread, dynamicNames } = readAttributes(node);
+    if (spread) report("component-prop-dynamic", `<${name}> 不能用展开属性 {...}`);
+    for (const attrName of dynamicNames) {
+      report("component-prop-dynamic", `<${name}> 的 ${attrName} 只能写字面量，不能写变量或表达式`);
     }
+    const dynamic = spread || dynamicNames.length > 0;
     if (!dynamic) {
       const result = spec.props.safeParse(props);
       if (!result.success) {

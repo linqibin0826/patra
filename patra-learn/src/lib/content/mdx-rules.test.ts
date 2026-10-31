@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 import { componentRegistry } from "@/teaching/registry";
-import { checkEntryBody } from "./mdx-rules";
+import { checkEntryBody, readComponents } from "./mdx-rules";
 
 // 诊断题与复述题的参数按教学组件登记表写全，这里只关心首尾结构
 const CHOICE = 'options={["甲", "乙"]} answer="A" ifRight="对" ifWrong="错"';
@@ -152,5 +152,28 @@ describe("代码引用收集", () => {
     expect(codeRefs).toEqual([
       { entry: "outbox", file: "content/entries/outbox.mdx", at: "p/a.ts@pending", lines: "3-5" },
     ]);
+  });
+});
+
+describe("readComponents：页面在构建时读组件的字面量参数", () => {
+  it("按出现顺序返回同名组件的参数，含写在段落里的行内组件", () => {
+    const text = body(
+      '<CodeRef at="a.java@pending" lines="1-2" />\n\n正文 <CodeRef at="b.java@pending" /> 尾巴',
+    );
+    expect(readComponents(text, "CodeRef")).toEqual([
+      { at: "a.java@pending", lines: "1-2" },
+      { at: "b.java@pending" },
+    ]);
+    expect(readComponents(text, "Diagnose")[0]).toMatchObject({
+      question: "打开网页时发生了什么？",
+      options: ["甲", "乙"],
+      answer: "A",
+    });
+  });
+
+  it("解析失败或没有该组件时返回空列表，不是字面量的参数跳过", () => {
+    expect(readComponents("<Diagnose question=", "Diagnose")).toEqual([]);
+    expect(readComponents(body("正文"), "Quiz")).toEqual([]);
+    expect(readComponents('<CodeRef at={x} lines="3" />', "CodeRef")).toEqual([{ lines: "3" }]);
   });
 });
