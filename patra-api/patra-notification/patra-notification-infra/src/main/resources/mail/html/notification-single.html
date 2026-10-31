@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{html/fragments/layout :: mail('讨论提醒', ${mail.eyebrow}, ${mail.heading}, ~{::content}, ${mail.why})}">
+<body>
+<!-- 离站逐条·单条（画布 Mail）：在哪 → 对方的话 → 查看并回复。摘录保留换行（white-space:pre-line） -->
+<th:block th:fragment="content">
+<div style="margin-top:20px;">
+  <div class="p-fg3" style="font-family:'SF Mono',Menlo,Consolas,'PingFang SC',monospace;font-size:11px;letter-spacing:0.08em;color:#57534e;" th:text="${mail.single.place.label}">文献讨论</div>
+  <div class="p-fg1" style="margin-top:6px;font-family:Georgia,'Songti SC','Noto Serif SC',serif;font-size:17px;line-height:1.45;color:#1c1917;" th:text="${mail.single.place.text}">文献标题</div>
+</div>
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin-top:20px;">
+  <tr>
+    <td class="p-quote" style="padding:18px 20px;background:#f1eadc;border-radius:8px;">
+      <div class="p-fg3" style="font-size:13px;line-height:1.6;color:#57534e;"><span class="p-fg1" style="font-weight:600;color:#1c1917;" th:text="${mail.single.actorName}">王立</span> · <span th:text="${mail.single.time}">10 月 30 日 15:02</span></div>
+      <div class="p-fg1" style="margin-top:6px;font-size:15px;line-height:1.75;color:#1c1917;white-space:pre-line;"><th:block th:each="seg : ${mail.single.excerpt}"><span th:if="${seg.mention}" class="p-link" style="color:#97441e;font-weight:500;" th:text="${seg.text}">@陈宇</span><th:block th:unless="${seg.mention}" th:text="${seg.text}">摘录</th:block></th:block></div>
+    </td>
+  </tr>
+</table>
+<th:block th:replace="~{html/fragments/button :: button(${mail.buttonUrl}, ${mail.buttonLabel}, null)}"></th:block>
+</th:block>
+</body>
+</html>

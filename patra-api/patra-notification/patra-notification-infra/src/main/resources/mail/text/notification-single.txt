@@ -1,0 +1,13 @@
+[(${mail.heading})]
+
+[(${mail.single.place.label})]：[(${mail.single.place.text})]
+[(${mail.single.actorName})] · [(${mail.single.time})]
+[# th:each="seg : ${mail.single.excerpt}"][(${seg.text})][/]
+
+[(${mail.buttonLabel})]：[(${mail.buttonUrl})]
+
+——
+[(${mail.why})]
+[(${mail.unsubscribeLabel})]：[(${mail.unsubscribeUrl})]
+通知设置：[(${mail.preferencesUrl})]
+[(${footnote})]

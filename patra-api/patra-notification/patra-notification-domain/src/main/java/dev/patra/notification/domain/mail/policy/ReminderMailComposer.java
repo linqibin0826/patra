@@ -100,7 +100,7 @@ public final class ReminderMailComposer {
             .unsubscribeLabel("退订这类邮件")
             .unsubscribeUrl(links.unsubscribeConfirm(token, unsubscribe))
             .oneClickUrl(links.unsubscribeOneClick(token, unsubscribe))
-            .settingsUrl(links.settings());
+            .preferencesUrl(links.settings());
     return ordered.size() == 1
         ? single(mail, ordered.getFirst(), mentionNames)
         : batch(mail, category, ordered, mentionNames, now);
@@ -177,7 +177,7 @@ public final class ReminderMailComposer {
         .unsubscribeLabel("退订每日汇总")
         .unsubscribeUrl(links.unsubscribeConfirm(token, UnsubscribeLinkCategory.DIGEST))
         .oneClickUrl(links.unsubscribeOneClick(token, UnsubscribeLinkCategory.DIGEST))
-        .settingsUrl(links.settings())
+        .preferencesUrl(links.settings())
         .build();
   }
 

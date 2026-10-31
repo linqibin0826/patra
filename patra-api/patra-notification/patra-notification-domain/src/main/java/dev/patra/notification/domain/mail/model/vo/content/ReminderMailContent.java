@@ -20,7 +20,7 @@ import lombok.Builder;
 /// @param why 卡片外那一句（不含后面的两个链接）
 /// @param unsubscribeLabel 退订链接的文字
 /// @param unsubscribeUrl 退订确认页
-/// @param settingsUrl 通知设置页
+/// @param preferencesUrl 通知设置页（不叫 `settingsUrl`：OGNL 3.3 读属性时跳过 `set` 开头的方法，模板会读不到）
 /// @param oneClickUrl RFC 8058 一键退订地址
 @Builder
 public record ReminderMailContent(
@@ -39,7 +39,7 @@ public record ReminderMailContent(
     String why,
     String unsubscribeLabel,
     String unsubscribeUrl,
-    String settingsUrl,
+    String preferencesUrl,
     String oneClickUrl) {
 
   /// 防御性拷贝，列表为空时给空列表。

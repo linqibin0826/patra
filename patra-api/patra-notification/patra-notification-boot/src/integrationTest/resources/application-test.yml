@@ -29,3 +29,5 @@ patra:
   notification:
     mail:
       from: "Patra <no-reply@patra.local>"
+      links:
+        base-url: http://portal.test

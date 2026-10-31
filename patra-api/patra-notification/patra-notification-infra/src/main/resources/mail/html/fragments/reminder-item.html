@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<body>
+<!-- 提醒邮件列表里的一条（多条合一与每日汇总共用，画布 Mail / Digest 的列表块）：名字 动作 ……… 时间 / 摘录 / 在哪 / 查看并回复。
+     pad 是上下内边距（多条合一 18px，汇总 16px） -->
+<table th:fragment="item(it, pad)" role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" class="p-rule" style="border-bottom:1px solid #e7e1d4;">
+  <tr>
+    <td th:style="|padding:${pad} 0;|" style="padding:18px 0;">
+      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+        <tr>
+          <td class="p-fg3" style="font-size:14px;line-height:20px;color:#57534e;"><span class="p-fg1" style="font-weight:600;color:#1c1917;" th:text="${it.actorName}">王立</span> <span th:text="${it.action}">回复了你</span></td>
+          <td align="right" class="p-fg3" style="white-space:nowrap;vertical-align:top;font-family:'SF Mono',Menlo,Consolas,'PingFang SC',monospace;font-size:12px;line-height:20px;color:#57534e;" th:text="${it.time}">15:02</td>
+        </tr>
+      </table>
+      <div class="p-fg1" style="margin-top:6px;font-size:15px;line-height:1.75;color:#1c1917;"><th:block th:each="seg : ${it.excerpt}"><span th:if="${seg.mention}" class="p-link" style="color:#97441e;font-weight:500;" th:text="${seg.text}">@陈宇</span><th:block th:unless="${seg.mention}" th:text="${seg.text}">摘录</th:block></th:block></div>
+      <div class="p-fg3" style="margin-top:6px;font-size:13px;line-height:1.6;color:#57534e;" th:text="${it.place.line}">文献 · 标题</div>
+      <div style="margin-top:10px;"><a class="p-link" th:href="${it.link}" href="#" style="color:#97441e;font-size:14px;font-weight:500;text-decoration:none;">查看并回复 →</a></div>
+    </td>
+  </tr>
+</table>
+</body>
+</html>

@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{html/fragments/layout :: mail('讨论提醒', ${mail.eyebrow}, ${mail.heading}, ~{::content}, ${mail.why})}">
+<body>
+<!-- 离站逐条·同一类到点的几条合成一封（画布 Mail「到点 N 条」）：引导句 → 列表（每条各带链接）→ 打开提醒页 -->
+<th:block th:fragment="content">
+<p style="margin:16px 0 0 0;" th:text="${mail.lead}">你不在 Patra 上的这段时间，有 3 条回复还没看。</p>
+<div class="p-rule-strong" style="margin-top:24px;border-top:1px solid #1c1917;">
+  <th:block th:each="it : ${mail.items}"><th:block th:replace="~{html/fragments/reminder-item :: item(${it}, '18px')}"></th:block></th:block>
+</div>
+<p th:if="${mail.overflow != null}" class="p-fg3" style="margin:16px 0 0 0;font-size:14px;line-height:1.6;color:#57534e;" th:text="${mail.overflow}">还有 2 条没有列出，到提醒页查看。</p>
+<th:block th:replace="~{html/fragments/button :: button(${mail.buttonUrl}, ${mail.buttonLabel}, null)}"></th:block>
+</th:block>
+</body>
+</html>

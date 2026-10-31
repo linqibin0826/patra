@@ -43,7 +43,7 @@ class ReminderMailModelTest {
         .preheader(preheader)
         .unsubscribeLabel("退订这类邮件")
         .unsubscribeUrl("https://p/unsubscribe#token=T&category=REPLY")
-        .settingsUrl("https://p/settings/notifications")
+        .preferencesUrl("https://p/settings/notifications")
         .oneClickUrl("https://p/unsubscribe/one-click?token=T&category=REPLY")
         .build();
   }

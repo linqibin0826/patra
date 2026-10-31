@@ -26,3 +26,6 @@ patra:
   notification:
     mail:
       from: ${PATRA_MAIL_FROM:Patra <no-reply@patra.local>}
+      # 提醒邮件里门户链接与一键退订地址的域名（PAP-146）；线上由 .env.common 给 https://patra.linqibin.dev，同 identity
+      links:
+        base-url: ${PATRA_PORTAL_BASE_URL:http://linqibins-mac-mini:4000}

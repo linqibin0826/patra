@@ -31,7 +31,7 @@ public final class ReminderMailModel {
         "asideLinks",
         List.of(
             AsideLink.of(content.unsubscribeLabel(), content.unsubscribeUrl()),
-            AsideLink.of("通知设置", content.settingsUrl())));
+            AsideLink.of("通知设置", content.preferencesUrl())));
     return Map.copyOf(model);
   }
 }

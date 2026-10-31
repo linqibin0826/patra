@@ -123,7 +123,7 @@ class ReminderMailComposerTest {
         .isEqualTo(BASE + "/unsubscribe#token=" + TOKEN + "&category=REPLY");
     assertThat(mail.oneClickUrl())
         .isEqualTo(BASE + "/unsubscribe/one-click?token=" + TOKEN + "&category=REPLY");
-    assertThat(mail.settingsUrl()).isEqualTo(BASE + "/settings/notifications");
+    assertThat(mail.preferencesUrl()).isEqualTo(BASE + "/settings/notifications");
     assertThat(mail.lead()).isNull();
     assertThat(mail.overflow()).isNull();
   }

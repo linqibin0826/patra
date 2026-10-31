@@ -34,6 +34,7 @@
       .p-warn { background: #2a2418 !important; border-color: #8a6420 !important; }
       .p-warn-ink { color: #dcb46a !important; }
       .p-foot { background: #292524 !important; }
+      .p-quote { background: #292524 !important; }
     }
   </style>
 </head>
@@ -41,6 +42,8 @@
 <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" class="p-bg" style="background:#f7f2e8;">
   <tr>
     <td align="center" class="p-outer" style="padding:40px 16px;">
+      <!-- 预览文字（提醒邮件）：收件箱列表里显示，正文里看不见；安全邮件不设 -->
+      <div th:if="${preheader != null}" style="display:none;max-height:0;overflow:hidden;opacity:0;color:#f7f2e8;" th:text="${preheader}">预览文字</div>
       <table role="presentation" width="600" cellspacing="0" cellpadding="0" border="0" style="max-width:600px;width:100%;">
         <tr>
           <td class="p-card" style="background:#fbf8f2;border:1px solid #ddd5c4;border-radius:12px;overflow:hidden;">
@@ -74,15 +77,16 @@
               <tr>
                 <td class="p-pad p-foot" style="padding:28px 36px;background:#1c1917;font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei','Helvetica Neue',Arial,sans-serif;">
                   <p style="margin:0 0 12px 0;font-family:Georgia,'Songti SC','Noto Serif SC',serif;font-size:17px;line-height:1.4;color:#fbf8f2;">医学知识，自古写在叶上。</p>
-                  <p style="margin:0;font-size:12px;line-height:1.8;color:#c7c0b6;"><span th:text="|此邮件由 ${siteName} 系统自动发出，请勿回复。|">此邮件由 Patra 系统自动发出，请勿回复。</span><br><span th:text="|${siteName} 不会在邮件里向你索要密码。|">Patra 不会在邮件里向你索要密码。</span></p>
+                  <p style="margin:0;font-size:12px;line-height:1.8;color:#c7c0b6;"><span th:text="${footnote} ?: |此邮件由 ${siteName} 系统自动发出，请勿回复。|">此邮件由 Patra 系统自动发出，请勿回复。</span><br><span th:text="|${siteName} 不会在邮件里向你索要密码。|">Patra 不会在邮件里向你索要密码。</span></p>
                 </td>
               </tr>
             </table>
           </td>
         </tr>
-        <!-- 卡片外的一句：为什么收到这封邮件 -->
+        <!-- 卡片外的一句：为什么收到这封邮件；提醒邮件后面接退订与通知设置两个链接（asideLinks），安全邮件是纯文字 -->
         <tr>
-          <td class="p-fg3" style="padding:16px 4px 0 4px;font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei','Helvetica Neue',Arial,sans-serif;font-size:12px;line-height:1.7;color:#57534e;" th:text="${aside}">这是一封账号安全提醒。</td>
+          <td th:if="${asideLinks == null}" class="p-fg3" style="padding:16px 4px 0 4px;font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei','Helvetica Neue',Arial,sans-serif;font-size:12px;line-height:1.7;color:#57534e;" th:text="${aside}">这是一封账号安全提醒。</td>
+          <td th:unless="${asideLinks == null}" class="p-fg3" style="padding:16px 4px 0 4px;font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei','Helvetica Neue',Arial,sans-serif;font-size:12px;line-height:1.7;color:#57534e;"><th:block th:text="${aside}">你收到这封邮件，是因为……</th:block><th:block th:each="link, iter : ${asideLinks}"><th:block th:unless="${iter.first}"> · </th:block><a class="p-link" th:href="${link.url}" href="#" style="color:#97441e;text-decoration:underline;" th:text="${link.label}">退订这类邮件</a></th:block></td>
         </tr>
       </table>
     </td>
