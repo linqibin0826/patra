@@ -1,0 +1,174 @@
+---
+title: Redis：内存里的键值库
+summary: Redis 把数据放在内存里按键存取，自带过期时间，单条命令是原子的。讲它适合放什么，以及怎么用 Lua 脚本把几步操作做成一个整体。
+type: concept
+difficulty: basic
+tags: [redis, database, backend]
+prerequisites: [db-what-is-a-database]
+---
+
+<Diagnose
+  question="用户登录后，服务端要记住「这个人已登录」，并且希望 30 分钟没操作就自动失效，不需要写清理程序。把这份信息放在哪里最顺手？"
+  options={["PostgreSQL 的一张会话表，再写一个定时任务每分钟删过期的", "Redis：写入时直接给这条数据设一个 30 分钟的过期时间，到点自己消失", "放在服务进程的内存里，重启就丢也无所谓"]}
+  answer="B"
+  ifRight="对。数据会自己过期，正是 Redis 最常见的用法之一。往下读它是怎么做到的，以及 Patra 的登录会话怎么放。"
+  ifWrong="答案是 B。第一种能做，但要自己写清理任务；第三种服务一重启所有人都得重新登录，多个实例之间还互相看不到。Redis 是独立的、能被多个服务实例共用的内存库，写入时可以直接指定存活时间。"
+  suggest="db-what-is-a-database"
+/>
+
+## Redis 是什么
+
+上一篇讲的 PostgreSQL 是**关系型数据库**：数据放表里，有列有类型，靠 SQL 查询，存在磁盘上。
+
+**Redis** 是另一类：**键值库**。数据没有表，只有一个个「键 → 值」：
+
+```
+session:abc123  →  { user_id: 7, last_active_at: ... }
+login-fail:7    →  3
+```
+
+你给它一个键，它返回对应的值。因为数据放在**内存**里，读写极快（通常比查磁盘上的数据库快一两个数量级）。
+
+代价也来自内存：容量比磁盘小得多，也更贵；机器重启数据可能丢（可以配置持久化，但不是它的强项）。
+
+所以 Redis 的定位是**快而不求永远**：存那些丢了可以重新来、或者本来就该过期的东西。账号、文献这类"丢了就是事故"的数据，仍然放在 PostgreSQL 里。
+
+## 值不止是字符串
+
+一个键下面的值有几种形状：
+
+| 类型 | 长什么样 | 典型用途 |
+|---|---|---|
+| 字符串（string） | 一段文字或数字，可以直接加 1 | 计数器 |
+| 哈希（hash） | 一个键下面有多个字段，像一行小表 | 一个会话的各项信息 |
+| 有序集合（sorted set） | 每个成员带一个分数，按分数排好 | 排行榜、「到期时间」排序 |
+| 列表、集合 | 顺序列表、不重复集合 | 队列、去重 |
+
+## 过期时间：数据自己消失
+
+Redis 里每个键都可以设置**过期时间（TTL）**，到点自动删除。
+
+Patra 登录会话就靠它。建会话时，除了把各项信息写成一个哈希，还会给这个键设上过期时间：
+
+<CodeRef at="patra-api/patra-identity/patra-identity-infra/src/main/resources/redis/session-create.lua@8a1deacc881d2260bb5802caf0ad974aff0d6072" lines="60-61" />
+
+```lua
+redis.call('HSET', sessionKey, unpack(fields))
+redis.call('PEXPIRE', sessionKey, math.min(idle, expiresAt - now))
+```
+
+`PEXPIRE` 设的是毫秒级过期。取"不活跃过期时间"和"距离绝对过期还剩多久"中较小的那个：用户太久不动会过期，用得再勤也有一个总上限。没有任何清理程序，到点 Redis 自己删。
+
+用户每次操作要"续期"，也是重设一次过期时间：
+
+<CodeRef at="patra-api/patra-identity/patra-identity-infra/src/main/resources/redis/session-touch.lua@8a1deacc881d2260bb5802caf0ad974aff0d6072" lines="19-21" />
+
+```lua
+if now - tonumber(session['last_active_at']) >= tonumber(ARGV[2]) then
+  redis.call('HSET', KEYS[1], 'last_active_at', ARGV[1])
+  redis.call('PEXPIRE', KEYS[1], math.min(tonumber(session['idle_timeout_ms']), expiresAt - now))
+```
+
+## 命令是原子的，但「读再写」两步不是
+
+Redis 处理命令是**一条一条排队执行**的：每条命令执行时，不会被别的命令打断。所以 `INCR`（计数加 1）这种单条命令是原子的，十个人同时 `INCR`，结果就是准确加了 10。
+
+但如果你把"读出来，加 1，再写回去"拆成两条命令，中间就有空子可钻：
+
+<Stepper
+  title="两个请求同时登录失败，分两步更新失败计数"
+  nodes={[
+    { id: "a", label: "请求 A" },
+    { id: "redis", label: "Redis", sub: "失败次数 = 0" },
+    { id: "b", label: "请求 B" }
+  ]}
+  links={[
+    { from: "a", to: "redis", label: "读/写" },
+    { from: "b", to: "redis", label: "读/写" }
+  ]}
+  steps={[
+    { caption: "A 读失败次数：读到 0。", focus: ["a", "redis"], links: ["a>redis"], tokens: [{ id: "a", label: "A 读到 0", at: "a" }], notes: [{ at: "redis", text: "失败次数 = 0" }] },
+    { caption: "几乎同时，B 也读失败次数：也读到 0。A 还没写回去。", focus: ["b", "redis"], links: ["b>redis"], tokens: [{ id: "a", label: "A 读到 0", at: "a" }, { id: "b", label: "B 读到 0", at: "b" }], notes: [{ at: "redis", text: "失败次数 = 0" }] },
+    { caption: "A 算出 0 加 1 等于 1，写回去。", focus: ["a", "redis"], links: ["a>redis"], tokens: [{ id: "a", label: "A 写入 1", at: "redis" }, { id: "b", label: "B 读到 0", at: "b" }], notes: [{ at: "redis", text: "失败次数 = 1", tone: "wait" }] },
+    { caption: "B 也算出 0 加 1 等于 1，写回去，把 A 的结果覆盖了。两次失败，只记了 1 次。", focus: ["b", "redis"], links: ["b>redis"], tokens: [{ id: "b", label: "B 写入 1", at: "redis" }], notes: [{ at: "redis", text: "失败次数 = 1，应该是 2", tone: "bad" }] }
+  ]}
+  guesses={[
+    { before: 3, question: "A 和 B 都读到了 0，A 先写 1，B 再写 1。最终的失败次数是几？", options: ["2，Redis 会自动累加", "1，B 的写入覆盖了 A 的", "0，两次写入互相抵消"], answer: "B", explain: "读出来和写回去是两条独立的命令，中间别人可以插进来。两个请求都基于旧值 0 算出 1，后写的覆盖了先写的，丢了一次计数。" }
+  ]}
+/>
+
+对于简单的计数，用一条原子的 `INCR` 就解决。但很多场景要把好几步捆在一起：先看有没有被锁、再数失败次数、再决定放不放行、放行了还要登记……这就轮到 **Lua 脚本**。
+
+## Lua 脚本：把几步捆成一个整体
+
+Redis 允许你把一段 Lua 脚本交给它执行。**整段脚本执行期间，别的命令都得等着**，所以脚本等价于"一个不可分割的操作"。
+
+Patra 登录限次的核心就是一段脚本：
+
+<CodeRef at="patra-api/patra-identity/patra-identity-infra/src/main/resources/redis/login-throttle-begin.lua@2c72f64fa87141c8e1f23d4ba583c052e6800212" lines="5-20" />
+
+```lua
+local lockTtl = redis.call('PTTL', KEYS[3])
+if lockTtl > 0 then
+  return lockTtl
+end
+local time = redis.call('TIME')
+local now = tonumber(time[1]) * 1000 + math.floor(tonumber(time[2]) / 1000)
+redis.call('ZREMRANGEBYSCORE', KEYS[2], '-inf', now)
+local failures = tonumber(redis.call('GET', KEYS[1]) or '0')
+local inflight = redis.call('ZCARD', KEYS[2])
+if failures + inflight >= tonumber(ARGV[1]) then
+  return -1
+end
+local ttl = tonumber(ARGV[3])
+redis.call('ZADD', KEYS[2], now + ttl, ARGV[2])
+redis.call('PEXPIRE', KEYS[2], ttl)
+return 0
+```
+
+读法：先看账号有没有被临时锁住；没有的话，数一下"已失败的次数 + 正在验证中的次数"，到了上限就拒绝；没到，就登记一条"正在验证中"并返回放行。判断和登记在同一段脚本里，两个并发的登录尝试不可能同时看到"还差一次"然后都放行。
+
+这里还用到了一个有序集合（`ZADD`）：成员是每次正在进行的尝试，分数是它的过期时间。每次先把过期的清掉（`ZREMRANGEBYSCORE`）再数，不需要另外的清理程序。
+
+<Callout kind="warn">
+
+Lua 脚本期间别的命令都在等，所以脚本要短、不能做耗时的事。把脚本当作"一小段不可分割的数据库操作"，不要往里塞业务逻辑。
+
+</Callout>
+
+## 什么该放 Redis，什么不该
+
+| 适合 | 不适合 |
+|---|---|
+| 会过期的状态：登录会话、验证码 | 不能丢的业务数据：账号、文献、评论 |
+| 高频读写的计数与限流 | 需要复杂查询、多表连接的数据 |
+| 可以重新生成的缓存 | 要靠它永久保存的唯一副本 |
+
+Patra 的分工很清楚：**账号信息在 PostgreSQL，登录会话在 Redis**。会话丢了用户重新登录即可，账号丢了就是事故。
+
+<Quiz
+  title="考考自己"
+  questions={[
+    {
+      question: "10 个请求同时对同一个键执行 INCR（加 1），键原来是 0。最后值是多少？",
+      options: ["10", "可能小于 10，会丢更新", "取决于哪个最后到"],
+      answer: "A",
+      explain: "INCR 是单条原子命令，Redis 一条条执行，不会丢。丢更新发生在「先读再写」分成两条命令的时候。"
+    },
+    {
+      question: "下面哪种数据最不适合只放在 Redis 里？",
+      options: ["登录会话", "接口限流的计数", "用户的注册账号信息"],
+      answer: "C",
+      explain: "账号丢了无法重建，要放在 PostgreSQL 这样的持久库里。会话和限流计数丢了影响很小，还自带过期。"
+    }
+  ]}
+/>
+
+<Transfer
+  prompt="你要做「邮箱验证码」：用户请求发验证码后，6 位数字 10 分钟内有效，同一个邮箱 1 分钟内只能请求一次。你会怎么用 Redis 存和限制？为什么这类数据适合 Redis，而不是 PostgreSQL？"
+  points={[
+    { label: "存验证码", text: "键是邮箱，值是验证码，写入时设 10 分钟过期，到点自动消失，不需要清理任务。" },
+    { label: "限制频率", text: "另用一个键记「最近 1 分钟发过」，过期时间设 1 分钟；请求来时这个键还在就拒绝。判断「不存在才写入」要一步完成，用 SET 的 NX 选项或一段脚本，避免先查再写被并发穿过。" },
+    { label: "为什么是 Redis", text: "数据短命、自带过期、读写频繁、丢了影响不大（用户再要一次）；放 PostgreSQL 要自己写清理任务，也没必要把这种短命数据落盘。" }
+  ]}
+/>

@@ -1,0 +1,200 @@
+---
+title: record 与不可变对象
+summary: record 是一种只装数据、造好就不能改的类，两个值相同的 record 就算相等。用收藏夹名称 CollectionName 看值语义、紧凑构造器和防御性拷贝。
+type: concept
+difficulty: basic
+tags: [java]
+prerequisites: [java-classes-objects-interfaces]
+personalEnv: false
+---
+
+<Diagnose
+  question="CollectionName 是 Patra 里表示收藏夹名称的类型。连着调用两次 CollectionName.parse(「组会」)，得到两个对象 a 和 b。a.equals(b) 的结果是什么？"
+  options={["true，两个名字的值一样", "false，它们是两次 new 出来的两个对象", "编译报错，对象不能这样比"]}
+  answer="A"
+  ifRight="对。CollectionName 是一个 record，record 按「值」比相等，不按「是不是同一个对象」。下面讲 record 还替你做了哪些事，以及为什么 Patra 里装数据的类型几乎都写成 record。"
+  ifWrong="答案是 A。两次 parse 确实造了两个对象，普通类默认按「是不是同一个对象」比，会得到 false；但 CollectionName 是 record，按值比。先确认自己分得清类和对象，再往下读。"
+  suggest="java-classes-objects-interfaces"
+/>
+
+<Callout kind="lead">
+
+**record** 是专门用来装数据的类：写一行声明，Java 自动生成字段、构造器、读取方法和「按值比较」的 `equals`。它的字段造好就不能再改，这叫**不可变**。
+
+</Callout>
+
+## 一行声明，等于写了一整个类
+
+Patra 的收藏夹名称是这样定义的：
+
+<CodeRef at="patra-api/patra-interaction/patra-interaction-domain/src/main/java/dev/patra/interaction/domain/collection/model/vo/CollectionName.java@3cf6fa5757b3be54c3b030e4cace871f53e2599c" lines="9-29" />
+
+```java
+public record CollectionName(String value) {
+
+  /// 字段名。
+  public static final String FIELD = "name";
+
+  /// 字素上限。
+  public static final int MAX_GRAPHEMES = 100;
+
+  /// 解析用户输入。
+  ///
+  /// @param raw 原文
+  /// @return 名称
+  /// @throws InvalidCollectionFieldsException 不合法
+  public static CollectionName parse(String raw) {
+    String text = TextRules.normalize(raw);
+    if (text.isEmpty()) {
+      throw TextRules.violation(FIELD, TextRules.REQUIRED, "请输入名称");
+    }
+    TextRules.check(FIELD, text, MAX_GRAPHEMES, false);
+    return new CollectionName(text);
+  }
+}
+```
+
+关键在第一行 `record CollectionName(String value)`。括号里的 `String value` 叫**组件**，光凭这一行，Java 就替你生成了：
+
+- 一个不能改的字段 `value`（`private final`）；
+- 一个构造器 `new CollectionName(String value)`；
+- 一个读取方法 `value()`（注意不叫 `getValue()`）；
+- 按 `value` 比较的 `equals` 和 `hashCode`，以及打印出 `CollectionName[value=组会]` 的 `toString`。
+
+没有 `setValue`。造出来是什么名字，就一直是什么名字。
+
+## 值对象：只看值，不看是哪一个
+
+收藏夹名称这种东西，只关心它的值：两个名字都是「组会」，那就是同一个名字，没人在乎它们是不是内存里的同一个对象。这类东西在 DDD 里叫**值对象**，Patra 把它们放在 `model/vo` 目录下（vo 就是 value object），几乎都写成 record。
+
+record 的 `equals` 正好是按值比的，所以开头那道题是 `true`。普通的类如果不自己写 `equals`，比的是「是不是同一个对象」，结果是 `false`。
+
+## 不可变为什么更安全
+
+一个对象能被改，麻烦在于：它常常同时被好几处代码拿着。一处改了，其他几处没打招呼就跟着变了。
+
+<Callout kind="analogy">
+
+可变对象像共享文档：你发给三个人看，其中一人顺手改了一句，另外两人读到的也变了，没人知道是谁改的。不可变对象像打印出来的纸：想改只能另印一张新的，手里那张永远不变。
+
+</Callout>
+
+写成 record，就从根上排除了「被谁偷偷改了」：要改名，只能造一个新的 `CollectionName`。多处代码放心共享同一个对象，多个线程同时读也不会出错。
+
+## 构造器里把关
+
+普通 record 的构造器什么都不检查，传 `null` 也照收。要检查，可以写一个**紧凑构造器**：和 record 同名，不写括号和参数，里面只写检查，赋值由 Java 在后面自动补上。
+
+<CodeRef at="patra-api/patra-identity/patra-identity-domain/src/main/java/dev/patra/identity/domain/account/port/throttle/LoginAttempt.java@5073ab1358404ecd989e722373cd9f7edafe238b" lines="12-23" />
+
+```java
+public record LoginAttempt(AccountType accountType, EmailAddress email, String ticketId) {
+
+  /// 校验非空。
+  ///
+  /// @param accountType 账号类型
+  /// @param email 邮箱
+  /// @param ticketId 在途登记的随机 ID
+  public LoginAttempt {
+    Objects.requireNonNull(accountType, "accountType 不能为 null");
+    Objects.requireNonNull(email, "email 不能为 null");
+    Objects.requireNonNull(ticketId, "ticketId 不能为 null");
+  }
+```
+
+`public LoginAttempt { … }` 就是紧凑构造器。三个组件只要有一个是 `null`，对象就造不出来。
+
+`CollectionName` 走的是另一条路：规则比较多（去掉首尾空白、最多 100 个字、不能换行），放在静态方法 `parse` 里，用户输入一律经过 `parse`。它的构造器仍然是公开的、不做检查；整个仓库里 `new CollectionName(…)` 只出现在 `parse` 的最后一行。
+
+## 坑：record 只管住了自己那一层
+
+record 的字段不能改，指的是「字段不能指向别的东西」。如果字段本身是一个 `List`，列表里的内容还是能被改的，因为外面的人可能还拿着同一个列表。
+
+Patra 编辑评论时会产出一个 `CommentEdit`，其中一个组件是「这次新 @ 到的人」的列表：
+
+<CodeRef at="patra-api/patra-interaction/patra-interaction-domain/src/main/java/dev/patra/interaction/domain/discussion/model/vo/CommentEdit.java@6d96ac9d6c2b8463cddf24d8b3461215b4ff8f4c" lines="12-18" />
+
+```java
+public record CommentEdit(
+    CommentAggregate updated, RevisionRecord archived, List<Long> addedMentionedUserIds) {
+
+  /// 防御性拷贝。
+  public CommentEdit {
+    addedMentionedUserIds = List.copyOf(addedMentionedUserIds);
+  }
+```
+
+紧凑构造器里把传进来的列表换成了 `List.copyOf(…)`：一份新的、不能修改的副本。这叫**防御性拷贝**。切换下面两种写法，看调用方事后改了自己的列表会怎样：
+
+<Compare
+  title="调用方事后改了自己的列表"
+  variants={[
+    { label: "不拷贝", steps: ["调用方建了一个可修改的列表 ids，里面是用户 7 和 9", "new CommentEdit(..., ids)，record 直接存下 ids 这个列表", "调用方继续用 ids，往里加了用户 12", "读 edit.addedMentionedUserIds()"], results: [{ label: "读到的人", value: "7、9、12", tone: "bad" }, { label: "提醒发给", value: "用户 12 也收到了「有人 @ 了你」", tone: "bad" }], verdict: { tone: "bad", head: "record 被改了。", text: "record 和调用方拿着同一个列表，调用方一改，这个本该不变的结果也跟着变了。" } },
+    { label: "List.copyOf", steps: ["调用方建了一个可修改的列表 ids，里面是用户 7 和 9", "new CommentEdit(..., ids)，紧凑构造器存下 List.copyOf(ids) 这份副本", "调用方继续用 ids，往里加了用户 12", "读 edit.addedMentionedUserIds()"], results: [{ label: "读到的人", value: "7、9", tone: "ok" }, { label: "提醒发给", value: "只有 7 和 9", tone: "ok" }], verdict: { tone: "ok", head: "互不影响。", text: "record 存的是自己的副本，调用方改原列表碰不到它；副本本身也不能 add，谁都改不了。" } }
+  ]}
+/>
+
+<Callout kind="warn">
+
+`List.copyOf(null)` 会直接抛异常。参数可能为 `null` 时，先判断再拷贝，Patra 的代码规范里的例子就是 `errors != null ? List.copyOf(errors) : List.of()`。
+
+</Callout>
+
+Patra 把这条写进了代码规范：record 里有集合，就必须在紧凑构造器里做防御性拷贝。
+
+<CodeRef at=".claude/rules/code-style.md@79a711f5ee5e7ea63b9b48d6e7bc29d664684f99" lines="33-43" />
+
+## 参数多了换 Builder
+
+`new LoginAttempt(type, email, ticketId)` 三个参数还看得清；参数一多，`new UserCard(1L, null, 「陈宇」, null, 3, …)` 这样一长串，就很难看出哪个值对哪个组件。Patra 的规范按参数个数分：
+
+<CodeRef at=".claude/rules/code-style.md@79a711f5ee5e7ea63b9b48d6e7bc29d664684f99" lines="11-15" />
+
+- 不超过 4 个：写一个静态工厂方法 `of(…)`，比如上面 `CommentEdit` 文件里接着就有 `CommentEdit.of(…)`；
+- 5 个及以上：加 Lombok 的 `@Builder`，按名字一个个填。
+
+用户名片 `UserCard` 有 8 个组件，所以用 `@Builder`：
+
+<CodeRef at="patra-api/patra-interaction/patra-interaction-domain/src/main/java/dev/patra/interaction/domain/subject/model/read/UserCard.java@5073ab1358404ecd989e722373cd9f7edafe238b" lines="18-27" />
+
+```java
+@Builder
+public record UserCard(
+    long userId,
+    String username,
+    String displayName,
+    String avatarUrl,
+    int avatarPalette,
+    AccountState state,
+    boolean emailVerified,
+    boolean profileVisible) {}
+```
+
+造的时候写成 `UserCard.builder().userId(…).displayName(…)….build()`，每个值前面都带着它的名字。`@Builder` 怎么凭一个标签就多出 `builder()` 方法，「注解：贴在代码上的标签」那篇讲。
+
+<Quiz
+  questions={[
+    {
+      question: "想把一个已有的 CollectionName 改成新名字，应该怎么做？",
+      options: ["调用 name.setValue(新名字)", "用 CollectionName.parse(新名字) 造一个新的，替换掉旧的", "直接给 name.value 赋值"],
+      answer: "B",
+      explain: "record 没有 setter，字段是 final 的，赋值也编译不过。要变，就造一个新的。"
+    },
+    {
+      question: "一个 record 的组件是 List<String> tags，紧凑构造器里什么都没写。下面哪句是对的？",
+      options: ["tags 不能指向别的列表，但列表里的内容仍可能被外面改掉", "record 是不可变的，列表内容也一定改不了", "record 的组件不能是 List"],
+      answer: "A",
+      explain: "record 只保证字段本身不重新赋值。列表若是外面传进来的可修改列表，外面还能往里加东西，所以要 List.copyOf。"
+    }
+  ]}
+/>
+
+<Transfer
+  prompt="Patra 要给收藏夹加「标签」：一个收藏夹可以有几个标签，标签不能重复，每个最多 20 个字。照这篇的规矩，你会怎么定义表示「一个收藏夹的全部标签」的类型？"
+  points={[
+    { label: "写成 record", text: "它是值对象，只关心值，用 record，比如 record CollectionTags(Set<String> values)，放在 model/vo 下。" },
+    { label: "防御性拷贝", text: "紧凑构造器里 values = Set.copyOf(values)，外面再改原集合也影响不到它；可能为 null 时先判空，给 Set.of()。" },
+    { label: "规则放在一个入口", text: "像 CollectionName.parse 那样，用一个静态方法统一做去空白、长度检查，用户输入都走它。" },
+    { label: "参数少用 of", text: "只有一个组件，不需要 @Builder，用 of 或 parse 造。" }
+  ]}
+/>

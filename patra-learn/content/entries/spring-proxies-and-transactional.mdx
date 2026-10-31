@@ -1,0 +1,208 @@
+---
+title: 代理：@Transactional 为什么有时不生效
+summary: 开事务的不是 @Transactional 这个注解，而是 Spring 包在 Bean 外面的一层代理。从别的 Bean 调进来会经过代理；同一个类里自己调自己，直接走到了原对象，事务就悄悄没了。
+type: concept
+difficulty: advanced
+tags: [spring, java, database]
+prerequisites: [spring-dependency-injection, db-transactions]
+personalEnv: false
+---
+
+<Diagnose
+  question="一个方法贴了 `@Transactional`，里面往数据库写了两行，写完第二行之后抛出一个 `RuntimeException`。方法结束后数据库里会留下几行？"
+  options={["2 行，写进去了就是写进去了", "1 行，只回滚最后那一行", "0 行，事务回滚，两行都撤销"]}
+  answer="C"
+  ifRight="对，前提是 `@Transactional` 真的生效了。这篇讲它在什么情况下会悄悄不生效，那时答案就变成了 2 行。"
+  ifWrong="答案是 C：事务里的写入要么一起提交、要么一起撤销，抛异常就整体回滚。事务本身是什么、回滚意味着什么，在数据库事务那篇讲，这篇建立在它上面。"
+  suggest="db-transactions"
+/>
+
+<Callout kind="lead">
+
+Spring 发现一个 Bean 的方法上有 `@Transactional`，就不把原对象交给别人，而是交出一个**代理**：外表和原对象一样，调用它的方法时先开事务、再转给原对象、最后提交或回滚。只有经过代理的调用才有事务。类里面用 `this` 调自己的方法，不经过代理。
+
+</Callout>
+
+## 注解自己不开事务
+
+`@Transactional` 和所有注解一样，只是贴在代码上的标签。它本身不会让任何事情发生，要有人读它、照它办。读它的是 Spring 的事务拦截器，而拦截器装在代理上。
+
+<Callout kind="analogy">
+
+公司规定「所有报销单都要经财务盖章」。外面的人递单子，都交给前台，前台转财务盖章，这一步不会漏。可如果你是部门内部的人，直接从同事桌上拿单子去办，就绕过了前台，也就没人盖章。代理就是那个前台，`this` 调用就是直接去同事桌上拿。
+
+</Callout>
+
+## 代理站在哪
+
+下图是 catalog 的全文解析里两个 Bean 的关系。`JatsFullTextParsePersister` 的方法贴了 `@Transactional`，所以容器里登记的、递给 `JatsFullTextParseRunner` 的，其实是它的代理。
+
+<Structure
+  title="Runner 拿到的是 Persister 的代理"
+  nodes={[
+    { id: "runner", label: "JatsFullTextParseRunner", sub: "调用方", code: true, col: 1, desc: "构造器参数要一个 `JatsFullTextParsePersister`。容器递给它的不是原对象，是代理。它自己察觉不到。" },
+    { id: "proxy", label: "代理", sub: "事务拦截器装在这里", col: 2, desc: "看被调的方法有没有 `@Transactional`：有就先开事务，再转给原对象；原对象返回后提交，抛异常就回滚。" },
+    { id: "target", label: "JatsFullTextParsePersister", sub: "原对象", code: true, col: 3, desc: "真正写库的代码在这里。它被代理包在里面，自己不开事务。" }
+  ]}
+  edges={[
+    { from: "runner", to: "proxy", label: "persister.recordParsed(...)", desc: "Runner 以为在调 Persister，实际先到了代理。" },
+    { from: "proxy", to: "target", label: "开事务后转交", desc: "代理开好事务，再调用原对象的同名方法。" }
+  ]}
+/>
+
+看真实代码。Persister 的每个写库方法都要求一个新事务，一篇文章一个事务：
+
+<CodeRef at="patra-api/patra-catalog/patra-catalog-app/src/main/java/dev/patra/catalog/app/fulltext/usecase/parse/JatsFullTextParsePersister.java@5073ab1358404ecd989e722373cd9f7edafe238b" lines="35-48" />
+
+```java
+  @Transactional(propagation = Propagation.REQUIRES_NEW, rollbackFor = Exception.class)
+  public void recordParsed(ParseCandidate c, FullTextBody body, Instant parsedAt) {
+    repository.saveBody(c.publicationId(), body, JatsBodyParserPort.PARSER_VERSION);
+    repository.save(
+        current(c).toBuilder()
+            .status(FullTextStatus.PARSED)
+            .unavailableReason(null)
+            .wordCount(body.wordCount())
+            .parserVersion(JatsBodyParserPort.PARSER_VERSION)
+            .parsedAt(parsedAt)
+            .lastError(null)
+            .build());
+    repository.setHasFullText(c.publicationId(), true);
+  }
+```
+
+三次写库（正文、状态、`has_full_text` 标记）在同一个事务里，要么全成、要么全不成。调用它的是另一个 Bean：
+
+<CodeRef at="patra-api/patra-catalog/patra-catalog-app/src/main/java/dev/patra/catalog/app/fulltext/usecase/parse/JatsFullTextParseRunner.java@5073ab1358404ecd989e722373cd9f7edafe238b" lines="81-86" />
+
+```java
+    if (result.noBody()) {
+      persister.recordNoBody(c, clock.instant());
+      return stats.plusNoBody();
+    }
+    persister.recordParsed(c, result.body(), clock.instant());
+    return stats.plusParsed();
+```
+
+## 自调用：一步步看事务在哪丢的
+
+假设图省事，把 `recordParsed` 直接写在 Runner 里，Runner 用 `this.recordParsed(...)` 调它，注解照样贴着。点「下一步」看会怎样。
+
+<Stepper
+  title="同一个类里调自己的 @Transactional 方法"
+  nodes={[
+    { id: "job", label: "定时任务", sub: "外面的调用方" },
+    { id: "proxy", label: "Runner 的代理" },
+    { id: "target", label: "Runner 原对象", sub: "run() 与 recordParsed()" },
+    { id: "db", label: "PostgreSQL" }
+  ]}
+  links={[
+    { from: "job", to: "proxy" },
+    { from: "proxy", to: "target" },
+    { from: "target", to: "db" }
+  ]}
+  steps={[
+    { caption: "定时任务调 `runner.run()`。它拿到的是 Runner 的代理，调用先到代理。", focus: ["job", "proxy"], links: ["job>proxy"], tokens: [{ id: "call", label: "run()", at: "proxy" }] },
+    { caption: "`run()` 上没有 `@Transactional`，代理什么也不做，直接转给原对象。", focus: ["proxy", "target"], links: ["proxy>target"], tokens: [{ id: "call", label: "run()", at: "target" }], notes: [{ at: "proxy", text: "没注解，不开事务" }] },
+    { caption: "原对象在 `run()` 里调 `this.recordParsed(...)`。`this` 就是原对象自己，这次调用从头到尾没离开原对象，代理根本不知道发生过。", focus: ["target"], tokens: [{ id: "call", label: "recordParsed()", at: "target" }], notes: [{ at: "proxy", text: "没经过", tone: "wait" }] },
+    { caption: "`recordParsed` 里的三次写库，没有事务包着，各自提交。写完正文和状态后，第三次写库出错：前两次已经落库，收不回来了。", focus: ["target", "db"], links: ["target>db"], tokens: [{ id: "call", label: "写库", at: "db" }], notes: [{ at: "db", text: "写进了 2 次", tone: "bad" }] }
+  ]}
+  guesses={[
+    { before: 3, question: "`recordParsed` 上明明贴着 `@Transactional(REQUIRES_NEW)`。原对象用 `this` 调它，会开一个新事务吗？", options: ["会，注解贴在方法上就会生效", "不会：读注解、开事务的是代理，`this` 调用不经过代理", "会，但要等方法结束才开"], answer: "B", explain: "事务是代理开的。`this` 指向原对象，调用直接落在原对象上，代理没机会插手。" },
+    { before: 4, question: "这时写到第三次出错，数据库里这篇文章会怎样？", options: ["三次都撤销，和有事务时一样", "前两次已经提交，正文和状态写进去了，标记却没改", "数据库自动把三次合成一个事务"], answer: "B", explain: "没有事务，每次写库各自提交。这正是开头那道诊断题的反面：答案从 0 行变成了 2 行。" }
+  ]}
+/>
+
+这种 bug 最难发现的地方是：**顺利的时候和有事务一模一样**。测试只跑顺利的路径，永远是绿的；要等哪天数据库在中间出一次错，才留下一篇「正文在、标记没改」的半成品。
+
+<Compare
+  title="逐篇提交，两种写法"
+  failureLabel="在第 2、3 步之间出错"
+  variants={[
+    { label: "同类自调用", steps: ["写正文 `saveBody`", "写状态 `PARSED`", "置 `has_full_text = true`"], results: [{ label: "这篇文章", value: "三样都写好了", tone: "ok" }], verdict: { tone: "ok", head: "看不出问题。", text: "顺利的时候，有没有事务结果一样。" }, failure: { after: 2, results: [{ label: "正文、状态", value: "已提交", tone: "bad" }, { label: "has_full_text", value: "还是 false", tone: "bad" }], verdict: { tone: "bad", head: "留下半成品。", text: "注解没生效，前两次写库各自提交，撤不回来。" } } },
+    { label: "独立的 Persister Bean", steps: ["写正文 `saveBody`", "写状态 `PARSED`", "置 `has_full_text = true`"], results: [{ label: "这篇文章", value: "三样都写好了", tone: "ok" }], verdict: { tone: "ok", head: "看不出区别。", text: "顺利的时候两种写法一样。" }, failure: { after: 2, results: [{ label: "正文、状态", value: "回滚了", tone: "ok" }, { label: "has_full_text", value: "原样", tone: "ok" }], verdict: { tone: "ok", head: "整篇撤销。", text: "调用经过代理，三次写库在同一个新事务里，出错一起回滚，这篇保持原状态等下次。" } } }
+  ]}
+/>
+
+Patra 里真这样拆过不止一处。catalog 的 LetPub 富化在类注释里写明了原因：
+
+<CodeRef at="patra-api/patra-catalog/patra-catalog-app/src/main/java/dev/patra/catalog/app/venue/usecase/letpub/LetPubEnrichmentWorker.java@5073ab1358404ecd989e722373cd9f7edafe238b" lines="26-28" />
+
+```java
+/// **为什么与 [LetPubEnrichmentRunner] 是两个 bean**：Spring AOP 自调用不触发代理，
+/// 而 [LetPubEnrichmentPersister] 需要通过跨 bean 调用才能激活 `@Transactional`。
+/// Runner → Worker → Persister 是三层独立 bean，AOP 代理在每一跳都生效。
+```
+
+这个坑在 Patra 里也真的写错过一次：后端技能的 Handler 写法指南里，原先有一个「同类里另写一个 `@Transactional` 方法再自己调用」来拆事务的示例。制定事务规范时发现它根本不生效，改掉了，规范里专门加了一条「不自调用带注解的方法」。
+
+## 不靠代理的写法：TransactionOperations
+
+除了拆 Bean，还有一种写法根本不依赖代理：把要放进事务的那段代码交给 `TransactionOperations`，由它当场开事务、执行、提交。Patra 的写命令 Handler 一律这样写，登出就是：
+
+<CodeRef at="patra-api/patra-identity/patra-identity-app/src/main/java/dev/patra/identity/app/session/usecase/logout/LogoutUserHandler.java@5073ab1358404ecd989e722373cd9f7edafe238b" lines="50-68" />
+
+```java
+    Instant now = clock.instant();
+    try {
+      transactions.executeWithoutResult(
+          status ->
+              records
+                  .findById(user.sessionId())
+                  .ifPresentOrElse(
+                      login -> {
+                        login.end(LoginEndReason.LOGOUT, now);
+                        records.save(login);
+                      },
+                      () ->
+                          log.info(
+                              "登出时找不到登录记录: userId={}, sessionId={}",
+                              user.userId(),
+                              user.sessionId())));
+    } catch (RuntimeException e) {
+      log.warn("登出后结束登录记录失败，记录留空: userId={}, sessionId={}", user.userId(), user.sessionId(), e);
+    }
+```
+
+事务的范围就是 `executeWithoutResult` 里的那段，一眼看得见，也不存在「经没经过代理」的问题。前面删 Redis 会话那一步在事务外，因为事务里只放数据库操作。
+
+## Patra 怎么守住这些规矩
+
+规矩写在 `.claude/rules/tech/transaction.md`，再由测试守住，不靠人记：
+
+1. **构建脚本**：约定插件 `patra.hexagonal-app` 给应用层模块加上 `spring-tx` 依赖，`@Transactional` 和 `TransactionOperations` 都来自它。
+
+<CodeRef at="build-logic/src/main/kotlin/patra.hexagonal-app.gradle.kts@b6e01875bb5692356021c8a19562f557f319fc54" lines="28-29" />
+
+2. **架构测试**：真正把事务限定在应用层的，是 `patra-tool-test` 里的 ArchUnit 规则，每个服务的架构测试都会跑。方法上的 `@Transactional` 只能在 app 层（infra 只放行 `MANDATORY`，它不开事务，只检查调用方有没有事务）；类上不许贴；实现了 `CommandHandler` 的类一个都不许贴。
+
+<CodeRef at="patra-tool/patra-tool-test/src/main/java/dev/patra/tool/test/archunit/HexagonalArchitectureRules.java@cfec9c9f30270dcf03f5cd7b6e54a0cd3b59296b" lines="428-464" />
+
+自调用这一条测试没法查，只能靠写法：要单独事务的方法放进独立的 Bean，或者干脆用 `TransactionOperations`。
+
+<Quiz
+  questions={[
+    {
+      question: "有人把 `@Transactional` 贴在一个 `private` 方法上，从同类的 public 方法里调它。会有事务吗？",
+      options: ["有，private 方法也能被拦截", "没有：既是自调用，代理也管不到 private 方法", "要看传播方式"],
+      answer: "B",
+      explain: "两条理由各自都够：代理只能替外面能调到的方法开事务，而这次调用又是 `this` 调用。Patra 的规范要求注解只加在 public 方法上。"
+    },
+    {
+      question: "Runner 调 `persister.recordParsed(...)`，`persister` 是构造器注入进来的。这次调用经过代理吗？",
+      options: ["经过：注入进来的是代理", "不经过：调的是另一个类的普通方法", "只有第一次经过"],
+      answer: "A",
+      explain: "容器给所有依赖它的 Bean 递的都是代理。只要是通过注入的引用去调，就经过代理。"
+    }
+  ]}
+/>
+
+<Transfer
+  prompt="一个查询服务的方法贴了 `@Transactional(readOnly = true)`，里面查完数据后，调用同类的另一个方法 `recordView()` 往数据库记一笔浏览，`recordView()` 上贴了 `@Transactional(propagation = REQUIRES_NEW)`，想让它单独提交。这样写有什么问题？你会怎么改？"
+  points={[
+    { label: "注解不生效", text: "`recordView()` 是同类 `this` 调用，不经过代理，`REQUIRES_NEW` 被无视。它会在外层那个只读事务里执行，写入可能报错或被丢掉。" },
+    { label: "拆成独立 Bean", text: "把 `recordView()` 挪到一个单独的 Bean（比如一个 Persister），注入进来再调，代理才能替它开新事务。" },
+    { label: "或者不用注解", text: "也可以在写库那一段用 `TransactionOperations` 显式开事务，不依赖代理。" },
+    { label: "再想想该不该在这", text: "查询里顺手写库本身值得怀疑：Patra 的规范是查询默认不加事务、事务里只放数据库操作，记浏览更适合提交后的事件处理。" }
+  ]}
+/>

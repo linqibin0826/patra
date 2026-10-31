@@ -1,0 +1,131 @@
+---
+title: 会话归 identity 独占
+summary: 网关原来和 identity 共用一个库直接读写 Redis 里的会话。后来改成只有 identity 碰会话，网关每个带令牌的请求调 identity 查一次：边界清楚了，代价是每个请求多一次服务间调用。
+type: decision
+difficulty: practice
+tags: [ddd, security, redis]
+prerequisites: [ddd-bounded-contexts, web-gateway-auth-by-session-lookup]
+topics: [login-session]
+sources:
+  - version: v0.12
+    issue: PAP-106
+    pr: 274
+personalEnv: false
+---
+
+<Diagnose
+  question="网关和 identity 引用同一个会话模块（jar），两边都直接读写 Redis 里的会话。现在要把「60 秒内不重复续期」改成 120 秒，至少要重新部署哪些服务？"
+  options={["只部署 identity", "identity 和网关都要部署", "只部署网关"]}
+  answer="B"
+  ifRight="对。规则写在两个服务共用的库里，改一处就得两边一起发版。这正是这次要拆掉的耦合。"
+  ifWrong="答案是 B。续期规则写在共用的 jar 里，网关和 identity 各打包了一份，只部署一边，两边的规则就不一致。这题考的是限界上下文：一份规则被两个服务各自执行，边界就是模糊的。"
+/>
+
+## 背景：两个服务共用一份会话规则
+
+v0.8 做账号登录时的设计是：identity 负责建会话、删会话；网关每收到一个带令牌的请求，自己去 Redis 查会话、顺手续期，查到了就给下游签一份 60 秒有效的身份断言。为此两边共用一个模块 `patra-identity-session`，里面有令牌格式、Redis 键、8 段 Lua 脚本和读写会话的类。
+
+到 v0.12 用户中心收尾时（2026-10-23），这套结构暴露了三个问题：
+
+1. 会话规则（过期时间怎么算、绝对过期、60 秒续期节流）写在两边都依赖的库里，改会话格式要两个服务一起部署。
+2. 网关拿着 Redis 的读写密码，也拿着 identity 全部写会话的方法，实际只用到其中一个「查并续期」。
+3. 这个模块不属于六边形的任何一层，边界只能靠文档解释。
+
+## 业界怎么分：三类做法
+
+为这个问题查过约 20 个系统的公开文档和源码，做法分成三类：
+
+<DecisionOptions
+  options={[
+    { name: "签发方独占，网关每次调它", summary: "只有身份服务读写会话；网关每个请求调它的查询接口（introspection、whoami）。Keycloak、Ory Kratos 加 Oathkeeper、Authelia 都是这类。", pros: "会话规则只在一处，改了只部署身份服务；不缓存就没有撤销延迟，登出、封禁立即生效。", cons: "每个请求多一次服务间调用；身份服务不可用时，所有带令牌的请求都受影响。", chosen: true },
+    { name: "网关自持会话，签断言给下游", summary: "网关自己存会话，身份服务不碰存储。Pomerium、oauth2-proxy、Cloudflare Access 是这类。", pros: "少一次调用。", cons: "身份服务想主动撤销会话很难：oauth2-proxy 的后端登出至今没合并，Pomerium 要等刷新失败才删。" },
+    { name: "共享库加共享 Redis", summary: "大家引同一个 jar，谁要谁读 Redis。Spring Session、Sa-Token、RuoYi-Cloud 是这类。", pros: "实现最快，Patra 原来就接近这一类。", cons: "契约就是那个 jar，任何一方改了都要所有使用方一起升级。" }
+  ]}
+/>
+
+Patra 原来的做法是「第三类的机制、第二类的边界」：网关直读 Redis 并签断言，identity 建会话、删会话。
+
+v0.8 当初否决过第一类，理由是「每个请求多一跳，撤销还有一个缓存时间的窗口」。这次重新算账：不缓存查询结果，就不存在撤销窗口；多一跳发生在同一台 Mac mini 上的两个容器之间，是个位数毫秒。
+
+还排除过几条路：直接用 Spring Session（绝对过期、续期节流、换令牌等七八项仍要自己补）；Redis Functions 让脚本只归 identity（Spring Data Redis 没有调用它的接口，还会引入「先加载函数再部署」的顺序约束）；把格式放进 api 模块加契约测试（契约测试只能发现两边不一致，不能让规则只写一份）。
+
+## 选择：网关只调 identity
+
+<Callout kind="lead" label="选了什么">
+
+identity 独占会话存储：共用模块删掉，内容并进 identity 自己的基础设施层。identity 提供内部接口 `POST /_internal/sessions/introspect`，按令牌查会话、节流续期，返回当前用户。网关去掉 Redis 依赖和密码，每个带令牌的请求调这个接口，查到了照旧签 60 秒断言。查询结果不缓存。
+
+</Callout>
+
+<Sequence
+  title="一个带令牌的请求，现在怎么认人"
+  actors={[
+    { id: "browser", label: "门户", sub: "带 Bearer 令牌" },
+    { id: "gateway", label: "网关" },
+    { id: "identity", label: "identity", sub: "独占会话" },
+    { id: "service", label: "下游服务" }
+  ]}
+  messages={[
+    { from: "browser", to: "gateway", label: "Authorization: Bearer 令牌", caption: "门户把会话令牌放进 Authorization 头，发给网关。" },
+    { from: "gateway", to: "identity", label: "POST /_internal/sessions/introspect", caption: "网关把令牌放在请求体里问 identity：这个令牌还有效吗？" },
+    { from: "identity", to: "gateway", label: "active: true，userId …", caption: "identity 查 Redis、按 60 秒节流续期，回答有效，并带上用户 ID、会话 ID。" },
+    { from: "gateway", to: "service", label: "60 秒身份断言", caption: "网关签一份 60 秒有效的断言，连同请求转给下游。下游只验断言，不碰会话。" }
+  ]}
+/>
+
+契约放进新建的 `patra-identity-api` 模块，这是 identity 的第一份服务间契约：
+
+<CodeRef at="patra-api/patra-identity/patra-identity-api/src/main/java/dev/patra/identity/api/session/endpoint/SessionEndpoint.java@5073ab1358404ecd989e722373cd9f7edafe238b" lines="20-33" />
+
+```java
+@HttpExchange(url = "/_internal/sessions", accept = "application/json", contentType = "application/json")
+public interface SessionEndpoint {
+  @PostExchange("/introspect")
+  SessionIntrospectionResp introspect(@RequestBody SessionIntrospectionReq request);
+}
+```
+
+令牌放请求体而不放 `Authorization` 头，有两个原因：identity 自己的安全过滤器会把 `Authorization: Bearer` 当成身份断言去验签，会话令牌放进去会被拒成 401；放请求体也让令牌不进 URL 和访问日志。返回形状参照 RFC 7662 的 `active` 字段：令牌格式不对、会话不存在、过了绝对过期，都回 `200 {"active": false}`。
+
+<Quiz
+  questions={[
+    {
+      question: "identity 整个停了。这时一个没登录的访客打开文献详情页（请求不带令牌），会怎样？",
+      options: ["一样返回 503，网关查不了会话", "正常返回，网关只对带令牌的请求调 identity", "网关退回去直接读 Redis"],
+      answer: "B",
+      explain: "不带令牌的请求按匿名处理，网关根本不调 identity，所以不受它可用性的影响。带令牌的请求才会因为查不了会话变成 503。"
+    }
+  ]}
+/>
+
+## 查不到时网关怎么回
+
+网关只包住这一次调用，把失败翻译成两种结果：
+
+| 情形 | 输出 |
+|---|---|
+| identity 回 503（它自己连不上 Redis） | 503 |
+| 连不上 identity、超时 | 503 |
+| 注册中心里没有 identity 实例 | 503 |
+| identity 回了别的错误 | 500 |
+
+<CodeRef at="patra-api/patra-gateway-boot/src/main/java/dev/patra/gateway/security/SessionTokenAuthenticationConverter.java@5073ab1358404ecd989e722373cd9f7edafe238b" lines="70-89" />
+
+## 代价
+
+<Callout kind="cost">
+
+- 每个带令牌的请求多一次网关到 identity 的调用；网关给这次调用配了 1 秒连接超时、2 秒读超时，identity 卡住时几秒内变成 503。
+- identity 成了所有登录态请求的必经之路，它不可用，登录用户的请求全部 503。
+- 网关不能再回滚到这次改动之前的镜像：旧网关启动要读 Redis 密码，而配置中心和部署文件都已经不再提供它。要回滚，得先撤销基础设施的改动。
+
+</Callout>
+
+<Transfer
+  prompt="假设以后网关跑三台、每秒上千个带令牌的请求，每次都调 identity 成了瓶颈。你会怎么改？每种改法要付出什么？"
+  points={[
+    { label: "加短缓存", text: "网关把查询结果缓存几十秒，调用量降下来；代价是登出、封禁要等缓存过期才生效，撤销窗口等于缓存时间。Kong 的插件默认 30 秒。" },
+    { label: "缓存加主动失效", text: "identity 撤销会话时发消息让网关删缓存；消息可能丢，要再用过期时间兜底，业界没有成熟产品这么组合。" },
+    { label: "换成自包含令牌", text: "签一个带过期时间的 JWT，网关只验签不调用；代价是令牌在过期前很难撤销。" }
+  ]}
+/>

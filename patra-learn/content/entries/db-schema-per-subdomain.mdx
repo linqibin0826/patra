@@ -1,0 +1,107 @@
+---
+title: 一个库、多个 schema、一份迁移历史
+summary: 新建互动服务时，Patra 让每个子域在同一个库里各占一个 schema，整个服务共用一份 Flyway 历史，子域之间不建跨 schema 外键。三版之后，提醒子域整个搬去新服务，只用一行 DROP SCHEMA。
+type: decision
+difficulty: advanced
+tags: [database, ddd]
+prerequisites: [db-schema-migrations-flyway]
+topics: [service-boundaries]
+sources:
+  - version: v0.13
+    issue: PAP-111
+  - version: v0.16
+    issue: PAP-143
+    pr: 343
+personalEnv: false
+---
+
+<Diagnose
+  question="一个服务里有好几个子域，所有表都放在默认的 public schema 里，几张表还对公共底座表建了外键。现在要把其中一个子域拆成独立服务，最费事的是哪一步？"
+  options={["改代码里的包名", "从一堆表里挑出属于它的、先拆掉外键，再搬数据", "改网关路由"]}
+  answer="B"
+  ifRight="对。数据层的边界最难事后补。这篇讲 Patra 怎么在建服务第一天就把这条边界画进库里。"
+  ifWrong="答案是 B。包名和路由改起来很快；难的是数据：表混在一起要逐张挑，外键把子域和底座绑在一起，要先拆约束。这题考的是迁移脚本怎么管理库结构，先读 Flyway 那篇。"
+  suggest="db-schema-migrations-flyway"
+/>
+
+## 背景
+
+v0.13 文献库那一版新建了 `patra-interaction`（社区互动服务）。它当时只有两个子域：`subject`（被互动的对象，比如一篇文献，是公共底座）和 `collection`（收藏）。以后的讨论、投稿经验、有帮助、提醒都会放进来。
+
+约束有两条：
+
+- 一个人维护、跑在一台 Mac mini 上，每多一个库就多一套连接池和运维。
+- 服务的拆分条件已经写进 README：哪个子域的负载、发布节奏或存储明显和其他子域分化，就剥成独立服务。存储要为这一天留好口子。
+
+分区键、主键形状、schema 划分，建成以后再改就要重写数据，属于难逆的决定，所以第一天就定。
+
+## 选项
+
+<DecisionOptions
+  options={[
+    { name: "每个子域一个库", summary: "subject、collection 各自一个 PostgreSQL 库。", pros: "隔离最彻底，拆服务时库直接带走。", cons: "一台机器上多个库，服务里要配多套数据源和连接池；跨子域的读要跨库。" },
+    { name: "全部放 public schema", summary: "一个库，所有子域的表混在默认 schema 里。", pros: "最省事，也是大多数项目的默认做法。", cons: "以后拆服务要逐张表挑出来；表名还得自己加前缀防撞。" },
+    { name: "一个库，每个子域一个 schema", summary: "库只有一个，每个子域在迁移脚本里 CREATE SCHEMA 建自己的 schema，整个服务共用一份 Flyway 历史。", pros: "一套连接池；子域的表天然成组，搬走时按 schema 整体搬。", cons: "所有子域的迁移挤在一份历史里，一起上线；跨子域的完整性没有外键兜底。", chosen: true }
+  ]}
+/>
+
+还有一个子选项一起定了：子域的表**不对**底座的 `subject.registry` 建跨 schema 外键，只建索引。建了外键，子域和底座就在库层绑死了，拆分时得先拆约束。
+
+## 选择与做法
+
+选「一个库，每个子域一个 schema」。具体做法有四点。
+
+**1. schema 在脚本里建。** 每个子域的第一个迁移脚本就是 `CREATE SCHEMA`：
+
+<CodeRef at="patra-api/patra-interaction/patra-interaction-infra/src/main/resources/db/migration/subject/V20261024100000__create_subject_schema.sql@3cf6fa5757b3be54c3b030e4cace871f53e2599c" />
+
+**2. 一份历史，递归扫描，不设 `schemas`。** 脚本按子域放在 `db/migration/{子域}/` 下，Flyway 递归扫描整个目录。
+
+<CodeRef at="patra-api/patra-interaction/patra-interaction-boot/src/main/resources/application.yml@3cf6fa5757b3be54c3b030e4cace871f53e2599c" lines="17-21" />
+
+不设 `spring.flyway.schemas` 是有意的：设了，Flyway 会自己建这些 schema，还会把历史表挪进列表里的第一个。历史表要留在 `public`，schema 由脚本自己建。
+
+**3. 版本号用时间戳。** 几个子域同时加脚本时，`V5`、`V6` 这种递增号很容易撞；`V20261024100000` 这种时间戳基本不会。
+
+**4. 每个 schema 自给自足。** 连 `set_updated_at()` 这样的触发器函数也在每个 schema 里各建一份，schema 整体搬走时不依赖别的 schema。
+
+<CodeRef at="patra-api/patra-interaction/patra-interaction-infra/src/main/resources/db/migration/collection/V20261024210000__create_collection_tables.sql@3cf6fa5757b3be54c3b030e4cace871f53e2599c" lines="1-23" />
+
+## 三版之后：真的搬了一次
+
+v0.16 通知中心那一版，站内提醒从 interaction 搬去了新建的 `patra-notification` 服务。interaction 这边删掉提醒子域的数据，只需要一个新脚本：
+
+<CodeRef at="patra-api/patra-interaction/patra-interaction-infra/src/main/resources/db/migration/notification/V20261031180000__drop_notification_schema.sql@5b1d855a5da18806b91a52f24253e64d40d743a8" />
+
+<Quiz
+  questions={[
+    {
+      question: "notification 目录下原来的三个建表脚本已经没用了。直接把它们删掉，会怎样？",
+      options: ["没影响，表都已经删了", "下次启动时 Flyway 校验失败：历史表里记着这些已执行的版本，却找不到脚本", "Flyway 会自动把这三个版本从历史里去掉"],
+      answer: "B",
+      explain: "Flyway 启动时会把历史表和脚本逐个对照校验。已执行过的版本找不到脚本，校验失败，服务起不来。所以旧脚本保留，只为历史。"
+    }
+  ]}
+/>
+
+旧提醒不迁移：这是那一版的范围决定，切换后信箱从空开始。
+
+## 代价
+
+<Callout kind="cost">
+
+- **一份历史，一起上线**：所有子域的迁移按时间戳排在同一条线上，一个子域的脚本出错，整个服务都起不来。
+- **没有外键兜底**：子域引用底座只存 `subject_id`，引用完整性靠写入路径（先登记再引用）和每日对账保证。写错了，库不会拦你。
+- **库只有一个**：连接池、备份、磁盘都共用，一个子域的慢查询会拖累别的子域。真到这一步，就是该按拆分条件剥成独立服务的时候。
+
+</Callout>
+
+<Transfer
+  prompt="你的服务里有「订单」和「库存」两个子域，现在想按这种做法分 schema。库存表要不要对订单表建外键？如果半年后库存要拆成独立服务，你会怎么做？"
+  points={[
+    { label: "不建跨 schema 外键", text: "库存只存订单 ID 并建索引，完整性靠写入顺序和对账；拆的时候没有约束要先拆。" },
+    { label: "按 schema 整体搬", text: "新服务建自己的库，把库存 schema 的表结构和数据搬过去。" },
+    { label: "旧服务里删 schema", text: "加一个 DROP SCHEMA 的新迁移脚本，旧脚本保留，否则 Flyway 校验失败。" },
+    { label: "跨子域的读改成调接口", text: "原来直接 SQL 读对方 schema 的地方，拆完以后要改成调新服务的接口或订阅它的事件。" }
+  ]}
+/>

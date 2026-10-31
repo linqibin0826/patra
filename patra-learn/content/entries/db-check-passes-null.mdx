@@ -1,0 +1,82 @@
+---
+title: CHECK 约束遇到 NULL 直接放行
+summary: PostgreSQL 的 CHECK 只拦结果为 false 的行，结果为 NULL（未知）时算通过。条件里有可能为 NULL 的列，要显式写 IS NOT NULL；约束测试要断言违反的是哪条约束。
+type: pitfall
+difficulty: practice
+tags: [database, testing]
+prerequisites: [db-constraints-and-null]
+sources:
+  - version: v0.14
+    issue: PAP-120
+    pr: 304
+personalEnv: false
+---
+
+<Diagnose
+  question="表上有约束 CHECK (natural_key = 'post:' || source_id)。插入一行，source_id 是 NULL，natural_key 是 'post:11'。这一行能插进去吗？"
+  options={["插不进去：'post:11' 不等于 'post:' 拼 NULL", "能插进去", "报语法错误"]}
+  answer="B"
+  ifRight="对。'post:' || NULL 是 NULL，比较结果也是 NULL，CHECK 只拦 false。"
+  ifWrong="答案是 B。任何值和 NULL 拼接、比较，结果都是 NULL（未知），而 CHECK 只在结果为 false 时拒绝。这题考的是 SQL 的三值逻辑，先读约束与 NULL 那篇。"
+  suggest="db-constraints-and-null"
+/>
+
+## 坑
+
+PostgreSQL 的 CHECK 约束只在表达式**结果为 false** 时拒绝这一行。结果是 NULL（「未知」）时，算通过。
+
+条件里只要有一列可能是 NULL，整条表达式就可能变成 NULL，约束就悄悄失效了。
+
+## 一个真实的例子
+
+v0.14 讨论那一版，interaction 的对象登记表（`subject.registry`）要登记一种新对象：帖子（投稿经验）。帖子的规则是「来源 ID 永远有，锚就是 `post:` 加来源 ID」。最初的约束写成：
+
+```sql
+CHECK (target_type <> 3 OR natural_key = 'post:' || source_id)
+```
+
+`target_type = 3` 是帖子。看起来没毛病：不是帖子就放过，是帖子就要求锚和来源 ID 对得上。
+
+<Params
+  title="动手：这一行会不会被拦住"
+  guess={{ question: "插入一个帖子（target_type = 3），source_id 为 NULL，用最初那条约束。结果是？", options: ["被拦住", "放行", "取决于 natural_key 写的是什么"], answer: "B", explain: "target_type <> 3 是 false；'post:' || NULL 是 NULL，和 natural_key 比较还是 NULL。false OR NULL = NULL，CHECK 放行。" }}
+  controls={[
+    { type: "switch", id: "is-post", label: "这一行是帖子（target_type = 3）", default: true },
+    { type: "switch", id: "source-null", label: "source_id 是 NULL", default: true },
+    { type: "switch", id: "explicit", label: "约束里显式写了 source_id IS NOT NULL", default: false }
+  ]}
+  cases={[
+    { when: { "is-post": false }, results: [{ label: "target_type <> 3", value: "true", tone: "ok" }, { label: "整条表达式", value: "true", tone: "ok" }], verdict: { tone: "ok", head: "放行，本来就该放。", text: "不是帖子，这条约束不管它。" } },
+    { when: { "source-null": false }, results: [{ label: "'post:' || source_id", value: "有值", tone: "ok" }, { label: "整条表达式", value: "true 或 false", tone: "ok" }], verdict: { tone: "ok", head: "约束正常工作。", text: "source_id 有值时，锚对得上就放行，对不上就拦住。" } },
+    { when: { explicit: true }, results: [{ label: "source_id IS NOT NULL", value: "false", tone: "bad" }, { label: "整条表达式", value: "false", tone: "bad" }], verdict: { tone: "ok", head: "拦住了。", text: "false AND 任何东西都是 false，NULL 混不进来。" } },
+    { results: [{ label: "'post:' || NULL", value: "NULL", tone: "wait" }, { label: "false OR NULL", value: "NULL", tone: "wait" }], verdict: { tone: "bad", head: "放行了。", text: "结果是 NULL，CHECK 当成通过。一个没有来源 ID 的帖子进了库。" } }
+  ]}
+/>
+
+更糟的是，表上另一条约束 `ck_registry_source_present` 本来就允许「已失效」的行没有来源 ID。一个失效状态、来源 ID 为空的帖子，两条约束**都拦不住**。
+
+## 为什么
+
+SQL 用三值逻辑：true、false、unknown（NULL）。NULL 表示「不知道」，和它拼接、比较，结果也是「不知道」。
+
+`WHERE` 只留下结果为 true 的行，NULL 被当成「不要」；CHECK 正好反过来，只拒绝 false，NULL 被当成「放过」。同一个 NULL，在两个地方的待遇相反，这里大多数人会卡住。
+
+## 怎么避开
+
+**1. 条件里可能为 NULL 的列，显式写 `IS NOT NULL`。** 最终的约束：
+
+<CodeRef at="patra-api/patra-interaction/patra-interaction-infra/src/main/resources/db/migration/subject/V20261027120000__extend_registry_for_journal_and_post.sql@6d96ac9d6c2b8463cddf24d8b3461215b4ff8f4c" lines="14-20" />
+
+**2. 约束测试要断言违反的是哪条约束。** 只断言「抛了 `DataIntegrityViolationException`」不够：可能是别的约束碰巧拦住了，测试照样是绿的。这一版的这个漏洞，单测和集成测试都没抓到，是收尾评审时才查出来的。
+
+<CodeRef at="patra-api/patra-interaction/patra-interaction-infra/src/integrationTest/java/dev/patra/interaction/infra/InteractionMigrationIT.java@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="170-179" />
+
+<Transfer
+  prompt="你要给订单表加一条约束：「状态是已发货时，必须有快递单号」。tracking_no 可以为空。你会怎么写？再想想：如果写成 CHECK (status <> 'SHIPPED' OR length(tracking_no) > 0)，哪种行会漏过去？"
+  points={[
+    { label: "漏掉的行", text: "已发货但 tracking_no 是 NULL：length(NULL) 是 NULL，NULL > 0 还是 NULL，整条表达式为 NULL，放行。" },
+    { label: "正确写法", text: "CHECK (status <> 'SHIPPED' OR (tracking_no IS NOT NULL AND length(tracking_no) > 0))。" },
+    { label: "status 本身也可能为空", text: "status 为 NULL 时 status <> 'SHIPPED' 也是 NULL；status 应该先设 NOT NULL。" },
+    { label: "测试", text: "插入一行已发货、单号为空的数据，断言报错信息里有这条约束的名字。" }
+  ]}
+/>

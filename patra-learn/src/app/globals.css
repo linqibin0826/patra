@@ -1,24 +1,88 @@
 @import "tailwindcss";
 
-/* 学习站设计系统 token（源：Claude Design 画布 e2bb7c08 Tokens 页）。
-   线路 5 色在 src/content/lines.ts 数据里（内联 style 使用），此处只放会
-   生成 utility 的中性/语义色——每个 token 必须真被 utility 消费（防死类）。 */
+/* 学习站设计系统 token（源：PAP-156 hi-fi 画布 project/learn.css 的 :root，花园方向）。
+   每个 token 都要真被 utility 消费（防死类）：这里只放已有组件与页面用到的，页面（PAP-162）用到新的再从 learn.css 补。
+   动效时长与缓动由 GSAP 使用，定义在 src/teaching/motion.ts（160 / 280 / 560 ms，power3.out / power2.inOut / back.out(1.6)），
+   这里的 --ease-* 给 CSS 过渡（悬停、按下）用，曲线与之对应。 */
 @theme {
-  --color-bg: #fafaf8; /* 页面底 */
-  --color-surface: #ffffff; /* 卡片面 */
-  --color-mist: #f1f2ee; /* 浅灰块（代码底、徽章底） */
-  --color-line: #e3e5df; /* 描边 */
-  --color-fog: #8b929b; /* 次要文字 */
-  --color-slate: #565d66; /* 正文灰 */
-  --color-ink: #22262c; /* 主文字 */
+  /* 底色与面 */
+  --color-ground: #f3f5ef; /* 页面底：带一点绿的纸色 */
+  --color-surface: #ffffff; /* 卡片 */
+  --color-surface-soft: #fafbf8; /* 次要卡片、组件操作栏 */
+  --color-moss: #e7efe6; /* 「打个比方」「顺带想通的」等温和面板 */
+  --color-moss-line: #d3dfd1; /* 首页进度卡、难度说明卡的描边 */
+  --color-line: #dce2d8; /* 卡片描边 */
+  --color-line-soft: #eef2ec; /* 行线、行内代码底 */
 
-  --color-ok: #2c9457; /* 成功/教训 */
-  --color-warn: #b98014; /* 提醒 */
-  --color-danger: #cc4747; /* 危险/红线 */
+  /* 文字（在底色上都 ≥ 4.5:1）；ink-5 只给图标、虚线、禁用描边，不给文字 */
+  --color-ink: #1f2a24;
+  --color-ink-2: #33403a;
+  --color-ink-3: #4a574f;
+  --color-ink-4: #5f6b63;
+  --color-ink-5: #8a968e;
 
-  --font-sans:
-    ui-sans-serif, system-ui, "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
-  --font-mono: "JetBrains Mono Variable", "SF Mono", monospace;
+  /* 主色：水青 */
+  --color-teal: #0b6f7e;
+  --color-teal-deep: #08525d; /* 悬停、按下 */
+  --color-teal-mark: #0e8fa3; /* 焦点环、选中描边 */
+  --color-teal-tint: #dff0ee; /* 选中底 */
+  --color-teal-wash: #eef5f3; /* 「你猜会怎样」底 */
+  --color-teal-soft: #5db5c2; /* 掌握度：理解中、已走过的步骤 */
+  --color-teal-pale: #c6dcd9; /* 掌握度：刚接触 */
+  --color-link-line: #9fcfd6; /* 正文链接下划线 */
+  --color-mark: #fbe7b5; /* 搜索命中高亮 */
+
+  /* 语义：判对判错、悬而未决（同排查类型色）、决策类型色 */
+  --color-correct: #2f6b3a;
+  --color-correct-bg: #e6f1e4;
+  --color-wrong: #a23b2a;
+  --color-wrong-bg: #fbedea;
+  --color-amber: #8f5500;
+  --color-amber-bg: #f6efdf;
+  --color-decision: #3d6b2e;
+
+  /* 代码块（深色，与花园底拉开；底色用 ink） */
+  --color-code-ink: #e3ece6;
+  --color-code-dim: #a9b8af;
+  --color-code-link: #7fd3de;
+
+  /* 字体（决策 G）：中文全用系统字体（标题宋体、正文黑体），西文与数字 Source Serif 4，控件用系统 UI 字体 */
+  --font-display:
+    "Source Serif 4 Variable", "Songti SC", "STSong", "Noto Serif CJK SC", "Source Han Serif SC",
+    serif;
+  --font-body:
+    "Source Serif 4 Variable", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei",
+    "Noto Sans CJK SC", sans-serif;
+  --font-ui:
+    system-ui, -apple-system, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei",
+    "Noto Sans CJK SC", sans-serif;
+  --font-mono: "JetBrains Mono Variable", ui-monospace, Menlo, Consolas, monospace;
+
+  /* 字号 */
+  --text-display: 38px; /* 条目标题 */
+  --text-h1: 32px; /* 页面标题 */
+  --text-h2: 22px; /* 节标题 */
+  --text-h3: 18px; /* 卡片标题 */
+  --text-lead: 19px; /* 一句话、回顾题题干 */
+  --text-ui: 14.5px; /* 控件、卡片说明 */
+  --text-meta: 13px; /* 元信息 */
+  --text-tiny: 12px; /* 徽章 */
+
+  /* 圆角与阴影 */
+  --radius-card: 14px;
+  --radius-inner: 10px;
+  --radius-chip: 6px;
+  --shadow-card: 0 1px 2px rgba(31, 42, 36, 0.05);
+  --shadow-lift: 0 10px 28px rgba(31, 42, 36, 0.12); /* 卡片悬停浮起 */
+
+  /* 版心：页面、正文列、侧栏 */
+  --container-page: 1200px;
+  --container-article: 680px;
+  --container-aside: 280px;
+
+  /* CSS 过渡用的缓动，与 GSAP 的 power3.out / back.out(1.6) 对应（power2.inOut 只在 GSAP 里用） */
+  --ease-out: cubic-bezier(0.22, 0.8, 0.24, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 /* 桌面触控板滚到顶 / 底时不做弹性回弹，否则整页会被拖出一段再弹回。
@@ -26,5 +90,20 @@
 @media (hover: hover) and (pointer: fine) and (not (any-pointer: coarse)) {
   html {
     overscroll-behavior-y: none;
+  }
+}
+
+/* 链接默认水青、无下划线（画板 .l-root a）；正文里的链接在 prose 组件里另加下划线 */
+@layer base {
+  a {
+    color: var(--color-teal);
+    text-decoration: none;
+  }
+  a:hover {
+    color: var(--color-teal-deep);
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-teal-mark);
+    outline-offset: 2px;
   }
 }

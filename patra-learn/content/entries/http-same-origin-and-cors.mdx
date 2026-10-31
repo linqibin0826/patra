@@ -1,0 +1,120 @@
+---
+title: 同源策略与跨域
+summary: 浏览器为什么不让一个网站的脚本随便读另一个网站的数据，CORS 怎样放行，以及 Patra 为什么让浏览器只和门户说话。
+type: concept
+difficulty: basic
+tags: [network, security, frontend]
+prerequisites: [http-cookie-and-session]
+personalEnv: false
+---
+
+<Diagnose
+  question="https://patra.linqibin.dev 和 https://learn.linqibin.dev 。浏览器认为这两个地址是「同源」的吗？"
+  options={["是，它们都在 linqibin.dev 下面", "不是，主机名不同就是不同的源", "取决于它们是不是同一台服务器"]}
+  answer="B"
+  ifRight="对，同源要求协议、主机名、端口三样都一样，主机名差一个字都不算。往下读。"
+  ifWrong="答案是 B：同源看的是协议、主机名、端口，三样全相同才算。patra 和 learn 主机名不同，就是两个不同的源，哪怕它们的服务器其实是同一台。"
+  suggest="http-cookie-and-session"
+/>
+
+## 为什么浏览器要管这件事
+
+你登录了银行网站，浏览器里有银行的 Cookie。这时你又打开了另一个不认识的网页，网页里的脚本悄悄向银行发请求。浏览器会自动带上银行的 Cookie，如果脚本还能读到响应，你的账户信息就泄露了。
+
+浏览器的对策叫**同源策略**：一个网页里的脚本，默认只能读**同源**的响应。
+
+**源** = 协议 + 主机名 + 端口。三样全一样才叫同源。
+
+<Quiz
+  title="哪些算同源"
+  questions={[
+    {
+      question: "页面在 https://patra.linqibin.dev ，脚本请求 https://patra.linqibin.dev/api/me 。同源吗？",
+      options: ["同源，只有路径不同", "不同源"],
+      answer: "A",
+      explain: "协议、主机名、端口都一样，路径不参与判断。"
+    },
+    {
+      question: "页面在 https://patra.linqibin.dev ，脚本请求 http://patra.linqibin.dev/api/me 。同源吗？",
+      options: ["同源，主机名一样", "不同源，协议不同"],
+      answer: "B",
+      explain: "https 和 http 是不同的协议，就是不同的源。"
+    },
+    {
+      question: "页面在 http://localhost:4000 ，脚本请求 http://localhost:9528 。同源吗？",
+      options: ["同源，都是 localhost", "不同源，端口不同"],
+      answer: "B",
+      explain: "端口也是源的一部分。本地开发时，前端在 4000、后端在 9528，天然就是跨域，这是开发时最常碰到的情形。"
+    }
+  ]}
+/>
+
+## 跨域怎么放行：CORS
+
+同源策略太严，有些时候你就是需要网页读另一个源的接口，比如公开数据 API。解决办法叫 **CORS**（跨域资源共享）：由**被访问的服务器**在响应头里表态，说「我允许这个源来读」。
+
+注意方向：是**接口所在的服务器**决定放行，不是发请求的网页。
+
+<Sequence
+  title="一次需要预检的跨域请求"
+  actors={[
+    { id: "script", label: "页面脚本", sub: "来自 A 站" },
+    { id: "browser", label: "浏览器" },
+    { id: "api", label: "接口服务", sub: "B 站" }
+  ]}
+  messages={[
+    { from: "script", to: "browser", label: "fetch B 站，用 PUT 加 JSON", caption: "A 站上的脚本要向 B 站发一个 PUT 请求。跨域，且不是最简单的请求。" },
+    { from: "browser", to: "api", label: "预检 OPTIONS：A 站能用 PUT 吗？", caption: "浏览器先替脚本问一句，不带真正的数据。这叫预检。" },
+    { from: "api", to: "browser", label: "Allow-Origin: A 站；Allow-Methods: PUT", caption: "B 站表态：允许 A 站，允许 PUT。如果这一步不表态，浏览器就不会发真正的请求。" },
+    { from: "browser", to: "api", label: "真正的 PUT 请求", caption: "得到许可，浏览器才把真正的请求发出去。" },
+    { from: "api", to: "browser", label: "响应，同样带着 Allow-Origin", caption: "响应头里也要带许可。缺了它，浏览器会把响应扣下。" },
+    { from: "browser", to: "script", label: "交给脚本", caption: "许可头齐了，脚本才拿到响应。" }
+  ]}
+  summary={{ caption: "放行与否完全由 B 站的响应头决定。脚本和浏览器都不能自己放行。" }}
+/>
+
+<Callout kind="warn">
+
+CORS 只是浏览器的行为。你用 curl 或服务器代码请求任何接口，都不受它限制。它防的是「别人的网页借你的浏览器偷数据」，不是接口的访问控制。接口该登录还是要登录。
+
+</Callout>
+
+## Patra 的选择：让浏览器只和门户说话
+
+与其一个个放行，不如**不跨域**。Patra 门户是浏览器唯一直接访问的后端：浏览器请求门户，门户在服务器上再去请求网关。对浏览器来说，所有请求都是同源的。
+
+<Structure
+  title="门户当中间层"
+  intro="点一块看它为什么这样放。"
+  nodes={[
+    { id: "browser", label: "浏览器", sub: "只认门户", col: 1, desc: "它请求的永远是门户自己的地址，同源，不触发 CORS。" },
+    { id: "portal", label: "门户", sub: "Route Handler", col: 2, desc: "收到请求后，在服务器上带着会话再去请求网关。会话令牌只在服务器上流动。" },
+    { id: "gateway", label: "网关", sub: "不对浏览器开放", col: 3, desc: "浏览器访问不到它，所以也不需要为它配置跨域许可。" }
+  ]}
+  edges={[
+    { from: "browser", to: "portal", label: "同源请求" },
+    { from: "portal", to: "gateway", label: "服务器到服务器" }
+  ]}
+/>
+
+这个做法有三个好处：不用配 CORS；会话令牌不暴露给浏览器里的脚本；网关不用对外。v0.11 做全文阅读时，就把 PDF 和图片也改成经门户同源接口转发，没有用对象存储的公开链接。
+
+<CodeRef at="docs/patra/release-specs/v0.11-fulltext-reader.md@2f9c1ec90948f98db84440021c27175f77320454" lines="105-107" />
+
+## 同源不等于安全：写操作还要再核对一次
+
+即使所有请求都同源，别的网站仍然可能诱导你的浏览器向门户发写请求（带着你的 Cookie）。Cookie 的 `SameSite=Lax` 能挡一部分，但并非全部：**同一域名下不同端口算同一个「站点」**，端口不同并不能让 `SameSite` 区分它们。
+
+所以门户的写操作 Route Handler 多做一步：请求头里的 `Origin` 必须存在，并且它的主机必须等于这次请求的主机。
+
+<CodeRef at="patra-portal/src/lib/same-origin.ts@fe4c6bb68c591a9c9b5fe80f76bbfbbbc6aeae75" lines="1-15" />
+
+<Transfer
+  prompt="假设学习站（learn.linqibin.dev）想在浏览器里直接读门户（patra.linqibin.dev）的一个公开接口。这会遇到什么？有哪些办法？"
+  points={[
+    { label: "会被拦", text: "两个主机名不同，是不同源。浏览器默认不让学习站的脚本读门户的响应。" },
+    { label: "办法一", text: "门户的接口在响应头里允许学习站这个源（CORS）。如果还要带 Cookie，就必须写具体的源，不能用通配星号。" },
+    { label: "办法二", text: "不让浏览器跨域：学习站自己的服务端去请求门户，再转给浏览器。" },
+    { label: "学习站实际上", text: "学习站是纯静态站，没有后端，进度只存在读者的浏览器里，根本不请求门户，也就没有这个问题。" }
+  ]}
+/>

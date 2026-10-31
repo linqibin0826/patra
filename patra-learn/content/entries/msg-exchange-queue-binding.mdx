@@ -1,0 +1,135 @@
+---
+title: 交换机、队列、绑定与路由键：一条消息怎么找到队列
+summary: RabbitMQ 里生产者不直接把消息放进队列，而是交给交换机；交换机按绑定规则和消息上的路由键，把它投进匹配的队列。Patra 用 topic 交换机，每个消费者一个自己的队列。
+type: concept
+difficulty: basic
+tags: [backend, messaging]
+prerequisites: [msg-what-is-a-message-queue]
+personalEnv: false
+---
+
+<Diagnose
+  question="一条消息带着路由键 comment.published，被交给 RabbitMQ 的一个交换机。交换机凭什么决定把它投进哪个队列？"
+  options={["看消息正文的内容", "看各个队列当初声明的绑定规则，和消息上的路由键匹不匹配", "把消息复制进所有队列"]}
+  answer="B"
+  ifRight="对。交换机自己不存消息，只按绑定规则转发。这篇把这套规则讲清楚。"
+  ifWrong="答案是 B：队列在连接交换机时声明「我要收哪些路由键」，这叫绑定；消息到达时，交换机拿路由键去对照。上一篇讲的「生产者把消息放进队列」，在 RabbitMQ 里多了交换机这一站。"
+  suggest="msg-what-is-a-message-queue"
+/>
+
+## 为什么多了一站
+
+上一篇的图是：生产者 → 队列 → 消费者。RabbitMQ 在中间加了一个角色：**交换机**。生产者不再直接面对队列，而是只面对交换机。
+
+<Callout kind="analogy">
+
+把它想成寄信。你把信投进邮局的分拣台（交换机），信封上写着一个标签（路由键）。各个信箱（队列）事先跟分拣台登记过「标签是这些的信，请投给我」（绑定）。你不用知道有哪些信箱，也不用知道谁在收。
+
+</Callout>
+
+四个词一次说清：
+
+| 词 | 干什么 |
+|---|---|
+| 交换机（exchange） | 分拣台。接收生产者的消息，自己不存消息 |
+| 队列（queue） | 信箱。真正存消息，等消费者来取 |
+| 路由键（routing key） | 消息上的标签，例如 `comment.published` |
+| 绑定（binding） | 队列对交换机的登记：「这些路由键的消息请投给我」 |
+
+## 三种交换机
+
+交换机怎么用路由键去对照绑定，由它的**类型**决定：
+
+| 类型 | 规则 | 适合 |
+|---|---|---|
+| direct | 路由键和绑定的键完全一样才投 | 一对一的点对点投递 |
+| topic | 绑定的键可以带通配符：`*` 代替一个词，`#` 代替零个或多个词，词之间用点隔开 | 按事件类型分发 |
+| fanout | 不看路由键，投给所有绑定了它的队列 | 广播 |
+
+Patra 里用到了前两种：
+
+- `interaction.events`、`identity.events` 是 topic 交换机，路由键就是事件类型，例如 `comment.published`。
+- 每个队列的死信交换机 `<队列>.dlx` 是 direct 交换机（下下篇讲死信）。
+- fanout 目前没有用到。
+
+Patra 绑定时没有用通配符，而是把要收的路由键一个个写出来。
+
+<Structure
+  title="notification.inbox 绑定了 interaction.events 的五个路由键"
+  nodes={[
+    { id: "producer", label: "interaction", sub: "生产者", col: 1, desc: "发消息时只写交换机名和路由键，不写队列名。" },
+    { id: "exchange", label: "interaction.events", sub: "交换机 · topic", code: true, col: 2, desc: "不存消息，只按路由键对照绑定，转发给匹配的队列。" },
+    { id: "inbox", label: "notification.inbox", sub: "队列", code: true, col: 3, desc: "绑定了 5 个路由键：comment.published、comment.edited、comment.deleted、post.deleted、helpful.marked。" }
+  ]}
+  edges={[
+    { from: "producer", to: "exchange" },
+    { from: "exchange", to: "inbox", label: "绑定 · 5 个路由键", desc: "通知服务启动时声明这个队列，并登记它要收的 5 个路由键。" }
+  ]}
+  traces={[
+    {
+      button: "发一条 comment.published",
+      packet: "comment.published",
+      hops: [
+        { at: "producer", caption: "interaction 把消息交给 interaction.events，路由键是 comment.published。" },
+        { at: "exchange", caption: "交换机对照绑定：notification.inbox 登记过这个键，匹配。" },
+        { at: "inbox", caption: "消息进入 notification.inbox，等通知服务来取。" }
+      ]
+    },
+    {
+      button: "发一条没人绑定的键",
+      packet: "helpful.cancelled",
+      hops: [
+        { at: "producer", caption: "假设 interaction 发了一条路由键没有任何队列登记的消息。" },
+        { at: "exchange", caption: "对照一圈，没有队列要它。消息投不出去。", drop: true }
+      ]
+    }
+  ]}
+/>
+
+队列名和 5 个路由键都是仓库里的真实声明：
+
+<CodeRef at="patra-api/patra-notification/patra-notification-boot/src/main/java/dev/patra/notification/config/InboxQueueConfiguration.java@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="20-34" />
+
+```java
+return EventQueue.named(InboxConsumer.NAME)
+    .bind(
+        InteractionExchange.NAME,
+        CommentPublished.ROUTING_KEY,
+        CommentEdited.ROUTING_KEY,
+        CommentDeleted.ROUTING_KEY,
+        PostDeleted.ROUTING_KEY,
+        HelpfulMarked.ROUTING_KEY)
+    .declarables();
+```
+
+## 投不出去的消息会怎样
+
+看上面的第二个按钮。RabbitMQ 默认对投不出去的消息悄悄丢掉，生产者什么也不知道。Patra 发送时加了一个标志（`mandatory`），让这种消息被退回来，生产者才能知道「没有人要它」。这件事后面讲发送确认时再展开，这里先记住：**没有队列绑定的路由键，消息就是投不出去**。
+
+所以 Patra 有一条约定：事件要外送，必须先有队列订阅它。`interaction` 的外送配置里就没有「有帮助已取消」，因为通知服务对它没有动作，也就没有队列绑定它。
+
+<Quiz
+  questions={[
+    {
+      question: "一个队列只绑定了 comment.*（topic 交换机，* 代表一个词）。路由键为 comment.edited 的消息会进这个队列吗？",
+      options: ["会", "不会"],
+      answer: "A",
+      explain: "comment.edited 是「comment」加一个词，匹配 comment.*。但 post.deleted 就不匹配。"
+    },
+    {
+      question: "生产者往交换机发了一条消息，没有任何队列的绑定匹配它的路由键。如果什么也不配置，RabbitMQ 默认怎么做？",
+      options: ["把消息投进所有队列", "悄悄丢掉，生产者不知道", "存起来，等有队列绑定时再投"],
+      answer: "B",
+      explain: "交换机自己不存消息。投不出去的消息默认被丢掉，要靠 mandatory 之类的设置才能让生产者知道。"
+    }
+  ]}
+/>
+
+<Transfer
+  prompt="通知服务以后要拆成两个队列：一个负责写站内提醒，一个负责发邮件，两者都要收到「评论发表了」。交换机和绑定应该怎么设计？一条 comment.published 消息会被投几份？"
+  points={[
+    { label: "两个队列各自绑定", text: "站内提醒队列和邮件队列分别绑定 interaction.events 的 comment.published，各自一份登记。" },
+    { label: "投两份", text: "交换机把消息复制到每个匹配的队列，两个队列各得一份，互不影响。" },
+    { label: "每个消费方一个自己的队列", text: "这是 RabbitMQ 的常见做法：一个队列里的消息被多个消费者分着处理，要让两件事都发生，就得各自有队列。" }
+  ]}
+/>

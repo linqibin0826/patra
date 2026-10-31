@@ -1,0 +1,102 @@
+---
+title: 业务规则和技术细节分开放
+summary: 「收藏夹最多几个」是业务规则，「存在哪张表」是技术细节。把前者放进领域层、后者留给基础设施层，改规则不碰 SQL，换存储不碰规则。
+type: concept
+difficulty: intro
+tags: [ddd, backend]
+prerequisites: [ddd-why-layer-code]
+personalEnv: false
+---
+
+<Diagnose
+  question="下面三句话里，哪一句是「业务规则」，而不是「技术细节」？"
+  options={["收藏夹的名字去掉首尾空格后，不能超过 100 个字", "收藏夹存在 PostgreSQL 里", "新收藏夹的 ID 用雪花算法生成"]}
+  answer="A"
+  ifRight="对。名字多长算合法，是产品会提出来、会改的要求；另外两句是工程师怎么实现的选择。这篇讲怎么把两类东西分开放。"
+  ifWrong="答案是 A。判断办法：这句话产品经理会不会主动提？名字多长合法，产品会说；存在哪种数据库、ID 怎么生成，产品通常不关心。上一篇讲了分层的动机，这篇是它的下一步。"
+  suggest="ddd-why-layer-code"
+/>
+
+## 用一个问题把两类东西分开
+
+遇到一段逻辑，问自己：产品经理会不会为它提需求？
+
+- 会：它是**业务规则**。例如「每人最多 200 个收藏夹」「名称最多 100 个字」。
+- 不会：它是**技术细节**。例如「用 `count(*)` 数个数」「连接池开多大」。
+
+规则是业务本身，换了数据库它还在。细节是实现手段，换了手段它就没了。
+
+<Callout kind="lead">
+
+业务规则放进领域层，技术细节放进基础设施层。两边之间只隔一个接口。
+
+</Callout>
+
+## Patra 里规则长什么样
+
+「收藏夹最多几个」写成了领域层的一个类，里面只有数字：
+
+<CodeRef at="patra-api/patra-interaction/patra-interaction-domain/src/main/java/dev/patra/interaction/domain/collection/policy/CollectionLimits.java@3cf6fa5757b3be54c3b030e4cace871f53e2599c" lines="1-23" />
+
+名称怎么算合法，写成了 `CollectionName.parse`：去首尾空白、不能为空、最多 100 个字素。
+
+<CodeRef at="patra-api/patra-interaction/patra-interaction-domain/src/main/java/dev/patra/interaction/domain/collection/model/vo/CollectionName.java@3cf6fa5757b3be54c3b030e4cace871f53e2599c" lines="22-29" />
+
+这两处有个共同点：不 import 数据库、不 import Spring、不知道 HTTP。它们是纯 Java，所以不用起任何服务就能测。
+
+## 细节留在另一边
+
+「现在这个用户有几个收藏夹」，需要查数据库。这件事在领域层只是一个接口方法，真正的 SQL 在基础设施层：
+
+<CodeRef at="patra-api/patra-interaction/patra-interaction-domain/src/main/java/dev/patra/interaction/domain/collection/port/repository/CollectionRepository.java@3cf6fa5757b3be54c3b030e4cace871f53e2599c" lines="16-21" />
+
+<CodeRef at="patra-api/patra-interaction/patra-interaction-infra/src/main/java/dev/patra/interaction/infra/collection/persistence/CollectionRepositoryAdapter.java@3cf6fa5757b3be54c3b030e4cace871f53e2599c" lines="30-37" />
+
+接口那边读得出「数个数」这个意思，适配器那边才知道是 `SELECT count(*)`。
+
+<Quiz
+  title="把它们分开"
+  questions={[
+    {
+      question: "「一次导出最多 5000 个文献」属于哪一类？",
+      options: ["业务规则", "技术细节"],
+      answer: "A",
+      explain: "产品会定这个上限，所以是规则。Patra 把它写成 CollectionLimits.MAX_EXPORT。"
+    },
+    {
+      question: "「用 JdbcClient 执行 SQL」属于哪一类？",
+      options: ["业务规则", "技术细节"],
+      answer: "B",
+      explain: "用哪个类访问数据库是实现手段，产品不关心，放在 infra 层。"
+    },
+    {
+      question: "「收藏夹简介不能含控制字符」属于哪一类？",
+      options: ["业务规则", "技术细节"],
+      answer: "A",
+      explain: "什么字符不合法是产品要求，属于规则。在 Patra 里由领域层的 TextRules 判断。"
+    }
+  ]}
+/>
+
+## 灰区：规则的数字在领域层，比较写在应用层
+
+看新建收藏夹的 Handler，会发现一处不那么干净的地方：
+
+<CodeRef at="patra-api/patra-interaction/patra-interaction-app/src/main/java/dev/patra/interaction/app/collection/usecase/collection/CreateCollectionHandler.java@3cf6fa5757b3be54c3b030e4cace871f53e2599c" lines="44-47" />
+
+`MAX_COLLECTIONS` 这个数字和 `CollectionLimitReachedException` 这个异常都在领域层，但「数出来的个数大于等于上限」这个比较写在应用层的 Handler 里。原因是它要先查库拿到个数，Handler 负责把查到的值和领域层的数字凑到一起。
+
+<Callout kind="insight">
+
+现在这样够用，因为判断只有一行。如果规则变复杂，比如「普通用户 200 个、认证用户 500 个」，就该把判断收进领域层的一个类里，Handler 只传入个数，不再自己比较。判断规则的是领域层，Handler 只负责排顺序。
+
+</Callout>
+
+<Transfer
+  prompt="下面四条需求，哪些是业务规则，哪些是技术细节？(a)昵称不许含换行 (b)头像文件存对象存储 (c)导出一次最多 5000 条 (d)导出的文件用 UTF-8 编码。说出你的分法，再说说规则该放哪一层。"
+  points={[
+    { label: "规则", text: "(a) 和 (c)：产品会提的要求。放领域层，写成 TextRules 和 CollectionLimits 这样的纯 Java 类。" },
+    { label: "细节", text: "(b) 和 (d)：怎么存、怎么编码是实现手段，放基础设施层或适配器层。" },
+    { label: "拿不准的", text: "(d) 如果产品明确要求「必须 UTF-8 才能用 Excel 打开」，它就带了业务意图；判断标准始终是产品会不会为它提需求。" }
+  ]}
+/>

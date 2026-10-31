@@ -1,0 +1,117 @@
+---
+title: 工具模块按技术能力分
+summary: Patra 的共享代码原来按「通用 / 专属」分，结果没人说得清什么算通用。v0.10 改成按「技术能力 / 业务」分：技术能力进 patra-tool，模块名就是能力名；依赖规则写进构建，由 ./gradlew check 守。
+type: decision
+difficulty: practice
+tags: [ddd, spring, java]
+prerequisites: [spring-boot-auto-configuration, ddd-architecture-guards]
+topics: [service-boundaries]
+sources:
+  - version: v0.10
+    issue: PAP-79
+    pr: 239
+  - version: v0.10
+    issue: PAP-80
+    pr: 239
+personalEnv: false
+---
+
+<Diagnose
+  question="工具模块 jpa 想在「项目里也有 Web 时」顺带注册一个错误映射，要用到工具模块 web 里的类。按 Patra 的规则，jpa 该怎么依赖 web？"
+  options={["api：直接传递给所有使用方", "implementation：自己用，不传递", "compileOnly，加上 @ConditionalOnClass：类路径上有 web 才生效", "完全不许依赖"]}
+  answer="C"
+  ifRight="对。工具之间的硬依赖只允许指向 core，其余协作一律「编译时可见、运行时看有没有」。下面讲这条规则是怎么来的。"
+  ifWrong="答案是 C。用 compileOnly 编译，再用 @ConditionalOnClass 让这段自动配置只在类路径上有 web 时才生效，jpa 就不会把 web 强塞给不用 Web 的服务。这题考的是自动配置的条件注解。"
+/>
+
+## 背景：共享区成了杂物间
+
+v0.10 之前，后端的共享代码分在 `linqibin-commons`、`patra-starters`、`patra-common` 几处，按「通用 / Patra 专属」划分。2026-10-13 到 10-15 盘点出的事实：
+
+- 共享区 22 个模块、约 4 万行，其中 1.65 万行只有 ingest 一个服务在用。
+- 8 条依赖声明了，源码从没引用过；一个 Redisson 的 starter 没有任何使用方。
+- 自动配置的包名有 5 种写法、配置前缀 3 种，14 个 starter 只有 5 个有契约测试。
+- 6 个服务都扫描整个旧包根，9 个工具 bean 靠扫描进容器，其中 6 个又被自动配置注册了一遍。
+- 边界检查 `checkBoundary` 早就写好了，却一直没挂进 `check`；domain 层的纯净性用的是黑名单。
+
+「这段代码算通用还是算专属」本身就没有答案，`commons-core` 就是这样慢慢成了杂物间。
+
+## 决策 A：按什么分
+
+<DecisionOptions
+  options={[
+    { name: "保留「通用 / 专属」，只补规则", summary: "两层结构不动，补上依赖检查。", pros: "改动最小。", cons: "分类标准本身答不上来，规则补得再全，代码还是会往说不清的那一层堆。" },
+    { name: "拆成独立仓库", summary: "把工具代码搬出去，单独发版。", pros: "边界最硬。", cons: "没有仓库外的使用方，多一套发版流程却换不来好处。" },
+    { name: "按「技术能力 / 业务」分", summary: "技术能力全部进 patra-tool/，模块名就是能力名；业务代码按归属放回服务。", pros: "每段代码都有唯一答案：它是哪种技术能力，或者属于哪个服务。", cons: "要一次性搬家、改包名，牵动几乎所有文件。", chosen: true }
+  ]}
+/>
+
+<Callout kind="lead" label="选了什么">
+
+技术能力进 `patra-tool/`，一个能力一个模块：`core`（纯 Java 的 DDD 基类与错误类型）、`cqrs`、`web`、`jpa`、`batch`、`http-client`、`object-storage`、`observability`、`security`、`openapi`、`launch`、`test`，共 12 个。引入一个模块，只带来它那一种能力。业务代码按归属放：某服务的对外契约放该服务；只有一个服务用的留在该服务。说不出属于哪种能力的零散工具类不进 `patra-tool`，按业务代码的规则放。
+
+</Callout>
+
+同时立了统一写法：每个模块一个 `autoconfigure` 包、一份 imports 文件；配置类是 record，前缀 `patra.<能力>`；总开关 `patra.<能力>.enabled`；配一个同名的 `ApplicationContextRunner` 契约测试。
+
+## 决策 C：规则写进构建
+
+否决「规则写在文档里」的理由就是盘点出的事实：`checkBoundary` 写了半年没挂进 `check`，8 条死依赖没人发现。所以五条规则全部挂在 `./gradlew check` 上：
+
+| 规则 | 守什么 |
+|---|---|
+| R1 | 工具模块不依赖 `patra-api/` 下的任何业务模块 |
+| R2 | 工具之间的硬依赖（`api` / `implementation` / `runtimeOnly`）只能指向 core，白名单仅 security → web；其余协作只能 `compileOnly` 加 `@ConditionalOnClass` |
+| R3 | domain 层的编译类路径用白名单 |
+| R4 | 自动配置写法：和 imports 文件双向一致、在 `autoconfigure` 包里、`public final`、有同名契约测试、不许用 `@Component` 一类注解、不许裸数字 `@Order` |
+| R5 | 声明了的模块依赖必须真的被 import |
+
+<CodeRef at="build-logic/src/main/kotlin/ToolDependencyRules.kt@cfec9c9f30270dcf03f5cd7b6e54a0cd3b59296b" lines="5-40" />
+
+```kotlin
+/// 工具间允许的硬依赖白名单：security 要用 web 的 ProblemDetail 适配器。
+val HARD_WHITELIST: Map<String, Set<String>> = mapOf(
+    ":patra-tool:patra-tool-security" to setOf(":patra-tool:patra-tool-web"),
+)
+
+/// R2：工具间硬依赖只允许指向 core（白名单例外）；compileOnly 任意；……
+fun r2Violations(project: String, declared: List<Declared>): List<String> {
+    // ……
+    dependency.configuration == "compileOnly" -> true
+    dependency.configuration in HARD_CONFIGURATIONS -> target == CORE || target in whitelist
+    // ……
+}
+```
+
+规则都写成纯函数，用 JUnit 测；收尾验收时每条规则都故意违反过一次（比如给 web 加一条指向 catalog 的依赖、删掉一个契约测试），`check` 都失败并报出规则名，撤销后恢复通过。
+
+<Quiz
+  questions={[
+    {
+      question: "R5 原计划用一个现成的依赖分析插件。试跑后它报了「未使用 575 条、未声明 2207 条」。最后怎么处理的？",
+      options: ["照单全收，逐条修", "按预案退回自写检查：只查「声明的模块依赖必须被 import」", "放弃 R5"],
+      answer: "B",
+      explain: "噪音太大压不下来，按计划里写好的预案换成自写的 checkDeclaredDependencies，全仓扫出 8 条死依赖并清掉。"
+    }
+  ]}
+/>
+
+## 代价与后来
+
+<Callout kind="cost">
+
+- 一次换完：改了 2,278 个文件，其中 1,983 个 Java 文件换了包根，只能放在一个版本、一个 PR 里合并，中间状态没法单独上线。
+- 工具模块之间多了一层「条件生效」：`compileOnly` 加 `@ConditionalOnClass` 写法比直接依赖绕。收尾核对时还查出四处依赖 `MeterRegistry` 的组件因为自动配置顺序不对，从来没生效过，补上顺序声明才修好。
+
+</Callout>
+
+这套分法后来经受了两次变动：删除 ingest 时（v0.16 通知中心开工前），只剩 catalog 在用的 `patra-common` 并进了 catalog，这个模块不复存在；v0.16 又按同样的规则新增了 `patra-tool-events`（跨服务事件），工具模块变成 13 个。新模块照样只硬依赖 core，规则一条没改。
+
+<Transfer
+  prompt="你要给 Patra 加一个「接口限流」能力。按 v0.10 的规则，你先要回答什么问题？如果它确实该进 patra-tool，模块、配置键和依赖要怎么写？"
+  points={[
+    { label: "先问归属", text: "先看有几个服务要用：只有网关一个服务用，就留在网关里；多个服务都要，才是一种技术能力，进 patra-tool。" },
+    { label: "模块与配置", text: "模块叫 patra-tool-<能力名>，配置前缀 patra.<能力>，总开关 patra.<能力>.enabled，配置类用 record。" },
+    { label: "依赖规则", text: "只硬依赖 core；要用 Redis 或 Web 的部分用 compileOnly 加 @ConditionalOnClass；自动配置放 autoconfigure 包并配同名契约测试，否则 check 不过。" }
+  ]}
+/>

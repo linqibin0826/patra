@@ -1,0 +1,77 @@
+---
+title: 格式化工具把 /// 文档注释折成了 //
+summary: Java 23 起可以用 /// 写 Markdown 文档注释。google-java-format 把它当普通行注释折行，超过 100 列时续行前缀是 // 而不是 ///，文档注释被截成两段，后半句掉出文档。编译和检查都不报。
+type: pitfall
+difficulty: practice
+tags: [java]
+prerequisites: [ops-commit-conventions]
+sources:
+  - version: v0.7
+    issue: PAP-52
+    pr: 192
+personalEnv: false
+---
+
+<Diagnose
+  question="一行 `///` 文档注释写到了 130 列。提交时钩子跑 google-java-format 自动格式化，它会把这一行怎么办？"
+  options={["不动，注释不归格式化管", "折成两行，第二行也以 `///` 开头", "折成两行，第二行以 `//` 开头"]}
+  answer="C"
+  ifRight="对。它把 `///` 当成普通的行注释折行，续行补的是 `// `。第二行从此不再是文档注释。"
+  ifWrong="答案是 C。格式化工具会把超长的行注释折开，但它不认 `///` 是文档注释，续行补的是普通注释的 `// `。这题考的是提交时钩子会自动改你的代码，先读提交规范那篇。"
+  suggest="ops-commit-conventions"
+/>
+
+<Callout kind="lead" label="坑在哪">
+
+Patra 规定所有方法都写 `///` 风格的 Markdown 文档注释，提交钩子里的 spotless 用 google-java-format 格式化。一行 `///` 超过 100 列，格式化后变成这样（示意）：
+
+```java
+/// 按 ORCID 批量查作者，详见
+// [dev.patra.catalog.domain.author.port.repository.AuthorRepository#findByOrcids]
+```
+
+第二行成了普通注释，文档里只剩前半句，链接丢了。
+
+</Callout>
+
+## 为什么没人发现
+
+- **编译不报**：`//` 也是合法注释，代码照样编。
+- **检查不报**：格式化后的代码本来就「符合格式」，`spotlessCheck` 通过。
+- **看 diff 也容易漏**：只差一个斜杠。
+
+v0.7 的 PR #192 里一次出了 4 处，都是带全限定名链接的长行，最后是 AI 评审指出来的。单纯把 `//` 改回 `///` 没用，下次格式化还会再折一次。
+
+<Quiz
+  questions={[
+    {
+      question: "怎么写，才能让下次格式化也不再折断？",
+      options: ["把 `//` 改回 `///` 就行", "自己在 100 列以内换行，每行都以 `///` 开头", "在这一行前面加一句关掉格式化的注释"],
+      answer: "B",
+      explain: "格式化只折超过 100 列的行。每行都在 100 列以内、都以 `///` 开头，它就没有理由动。改回 `///` 但行还是太长，下次照样被折。"
+    }
+  ]}
+/>
+
+## 怎么避开
+
+- 写含长链接的 `///` 行时，自己在 100 列以内换行；全限定名的链接单独占一行。
+- `@param` 等标签的续行缩进 4 格，每行仍以 `///` 开头。
+- 提交前可以扫一遍：上一行以 `/// ` 开头、本行以 `// ` 开头的，就是被折断的地方。
+
+```java
+/// 按 ORCID 批量查作者，详见
+/// [dev.patra.catalog.domain.author.port.repository.AuthorRepository#findByOrcids]
+///
+/// @param orcids 要查的 ORCID，
+///     为空时返回空列表
+```
+
+<Transfer
+  prompt="你的项目用 Prettier 格式化 TypeScript，`printWidth` 是 80。你在 JSDoc 里写了一行很长的 `@see` 链接。会不会遇到类似的问题？换成 Python 的 black 格式化长注释呢？你会怎么确认？"
+  points={[
+    { label: "先看工具认不认这种注释", text: "格式化工具对文档注释和普通注释的处理可能不同；它不认识的注释语法，折行时就按普通注释处理。" },
+    { label: "动手试一次", text: "写一行超长的注释，跑格式化，看续行前缀和原来是不是一样。" },
+    { label: "让行别超长", text: "最稳的做法是自己控制在限宽以内，格式化就不会去折。" }
+  ]}
+/>

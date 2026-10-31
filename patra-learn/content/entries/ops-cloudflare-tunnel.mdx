@@ -1,0 +1,139 @@
+---
+title: 不开端口也能上公网：Cloudflare Tunnel
+summary: 家里的机器没有公网地址，路由器也不开端口转发。Patra 让部署机主动连出去，建一条通到 Cloudflare 的隧道，公网的请求沿着这条隧道进来，而且只放行门户（和学习站），数据库等基础设施一概不出门。
+type: concept
+difficulty: advanced
+tags: [deployment, network, security]
+prerequisites: [ops-cd-deploy-loop, web-reverse-proxy-and-gateway, http-https-and-certificates]
+sources:
+  - version: v0.17
+    issue: PAP-162
+personalEnv: false
+---
+
+<Diagnose
+  question="Patra 跑在家里的一台机器上，没有固定的公网地址，路由器也没有开端口转发。陌生人在外面用域名打开门户，请求最可能是怎么到达这台机器的？"
+  options={["路由器把外面来的连接自动转给这台机器", "这台机器先主动连出去，外面的请求沿着这条已建好的连接送进来", "域名直接指向这台机器的内网地址"]}
+  answer="B"
+  ifRight="对。大多数家庭网络不允许外面主动连进来，但允许里面连出去。隧道利用的就是这一点。"
+  ifWrong="答案是 B。家里的网络通常不允许外面的人主动连进来，却允许里面的设备连出去。隧道的做法是让机器先连出去，之后的请求沿着这条连接送回来。这题考的是入站与出站的区别。"
+  suggest="web-reverse-proxy-and-gateway"
+/>
+
+<Callout kind="lead">
+
+Patra 的门户自 2026 年 10 月 28 日起，经 Cloudflare Tunnel 对公网开放。部署机上常驻一个叫 `cloudflared` 的小程序，主动连到 Cloudflare；公网用户访问域名，请求到 Cloudflare，再沿着这条隧道转到部署机上的门户。**部署机一个入站端口也没开。**
+
+</Callout>
+
+## 入站与出站
+
+<Callout kind="analogy">
+
+想象一家公司没有前台，访客也找不到办公室的门牌号。办法是：公司的人先打电话给一个总机，并且一直保持通话。访客打总机的号码，总机就沿着这条通话线把访客转进来。公司始终是「打出去」的那一方。
+
+</Callout>
+
+对应到网络上：
+
+- **入站**：外面主动连进来。家庭宽带通常不让，要开就得在路由器上配端口转发，同时暴露一个对着公网的端口。
+- **出站**：里面主动连出去。几乎总是被允许的。
+
+隧道把「公网请求进来」变成了「已有的出站连接上的往返」。
+
+## 一次请求怎么走
+
+<Structure
+  title="打开门户首页的请求路径"
+  nodes={[
+    { id: "user", label: "公网用户", sub: "浏览器", col: 1, desc: "用域名访问。域名在 Cloudflare 的 DNS 里，指向 Cloudflare 的边缘节点，不指向你家。" },
+    { id: "cf", label: "Cloudflare", sub: "边缘节点", col: 2, desc: "终结 HTTPS，使用它签发的证书。按域名在后台配好的转发规则决定把请求交给哪条隧道的哪个地址；没有匹配的域名，直接返回 404。" },
+    { id: "cloudflared", label: "cloudflared", sub: "部署机上的常驻进程", code: true, col: 3, desc: "启动时用一个令牌向 Cloudflare 证明身份，主动建起出站连接并保持住。收到请求后，转交给本机地址。" },
+    { id: "portal", label: "门户", sub: "本机 4000 端口", col: 4, desc: "Next.js 服务，只对本机提供服务。外面的人不会直接连到它，每个请求都经过隧道。" }
+  ]}
+  edges={[
+    { from: "user", to: "cf", label: "HTTPS" },
+    { from: "cloudflared", to: "cf", label: "出站，常驻", dashed: true, desc: "这条连接是 cloudflared 主动建起来的，不是 Cloudflare 连进来的。" },
+    { from: "cf", to: "cloudflared", label: "沿隧道转发" },
+    { from: "cloudflared", to: "portal", label: "http://localhost:4000" }
+  ]}
+  traces={[
+    {
+      button: "访问门户首页",
+      packet: "GET /",
+      hops: [
+        { at: "user", caption: "浏览器用域名发起 HTTPS 请求。" },
+        { at: "cf", caption: "Cloudflare 终结 HTTPS，按转发规则找到对应的隧道。" },
+        { at: "cloudflared", caption: "请求沿着 cloudflared 早已建好的连接到达部署机。" },
+        { at: "portal", caption: "cloudflared 把请求交给本机的门户，门户渲染页面，响应原路返回。" }
+      ]
+    },
+    {
+      button: "访问一个没配置的域名",
+      packet: "GET /",
+      hops: [
+        { at: "user", caption: "有人换了一个子域名来碰运气。" },
+        { at: "cf", caption: "转发规则里没有这个域名，兜底规则返回 404。请求到不了部署机。", drop: true }
+      ]
+    }
+  ]}
+/>
+
+## 配置放在哪
+
+这套东西有三块，只有一块在仓库里：
+
+| 部分 | 在哪里 | 说明 |
+|---|---|---|
+| 转发规则 | Cloudflare 后台 | 远程管理：域名 `patra.linqibin.dev` 转到部署机本地的门户，其余一律 404。不在仓库里 |
+| DNS 记录 | Cloudflare 后台 | 一条代理的 CNAME，把子域名指向这条隧道 |
+| 常驻进程 | 部署机 | `cloudflared` 由 macOS 的 LaunchAgent 常驻，崩了自动拉起；它的运行说明写在基础设施的 README 里 |
+
+隧道的**令牌**相当于这条隧道的钥匙，谁拿到谁就能冒充这台机器接入。它保存在部署机上仓库之外的 `~/.patra/secrets/` 目录里，权限只允许本人读写，不进 git，也不进 Nacos。泄露后的做法是到 Cloudflare 后台轮换令牌，再覆盖这个文件。
+
+<CodeRef at="patra-infra/docker/README.md@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="337-343" />
+
+要暂停对外开放也很干脆：停掉这个常驻进程，隧道断开，外面立即访问不到；恢复时重新加载它。
+
+## 只开放该开放的
+
+隧道把「能不能被外面访问」变成了转发规则里的一行配置。Patra 的做法是**只放门户**：数据库、Redis、Nacos、MinIO、RabbitMQ 这些基础设施端口，仍然只在局域网和 tailnet（作者自己的私有虚拟网络）里可达。
+
+为什么这条界线要守得这么紧？基础设施的开发默认账号密码有意随仓库提交，方便部署机靠 `git pull` 同步；它们安全的前提是端口压根不暴露。一旦往隧道里加了别的服务，这个前提就失效了。
+
+<Quiz
+  title="考考自己"
+  questions={[
+    {
+      question: "同事想在外面看 RabbitMQ 的管理页面，提议在 Cloudflare 的转发规则里加一条指向它管理端口的规则。该怎么回答？",
+      options: ["可以，隧道本身是加密的，很安全", "先别加：它的开发默认账号密码是公开在仓库里的，一旦暴露，等于把大门钥匙贴在门上", "可以，只要换一个不常见的子域名"],
+      answer: "B",
+      explain: "隧道加密的是传输，管不了谁来访问。基础设施依赖的是「不对公网暴露端口」这个前提；加一条规则，前提就没了。"
+    }
+  ]}
+/>
+
+学习站也采用了同样的做法：v0.17 决定给它一个独立的域名 `learn.linqibin.dev`，放进同一条隧道，同时去掉原来在内网直接访问它端口的入口，让容器的端口只绑定在部署机本机。选一级子域而不是 `learn.patra.linqibin.dev`，是因为 Cloudflare 免费证书只覆盖一级子域。代价也要认下：学习站从内网工具变成公开站点，此后每次发布都对公网生效。
+
+## 它的已知局限
+
+<Callout kind="cost">
+
+- **没有加 Cloudflare 的访问控制**：谁都能打开门户，访问控制只靠 Patra 自己的登录。
+- **没有人机验证**：注册邮件以自己的域名发出，被人刷注册会影响这个域名的发信信誉。
+- **速度**：免费版的节点离得较远。2026 年 10 月 28 日实测，首页首次打开 5～6 秒，连接复用后每个请求约 1 秒。
+- **来源地址看不到真实的**：外网访问也经容器网络的端口转发进来，门户看到的来源是内部网关地址，登录设备列表里外网用户同样显示为「内网」。
+
+</Callout>
+
+这些都是写在 README 里的已知限制，当时的决定是：给少数人体验和测试用，这个门槛够了。
+
+<Transfer
+  prompt="你想让朋友在外面也能看 Grafana 的监控页面。你会怎么做，要先想清楚什么？"
+  points={[
+    { label: "先问受众", text: "谁要看、看什么？如果只有自己看，用 tailnet 连进去就行，不需要走公网。" },
+    { label: "要加就加访问控制", text: "先查它的账号密码是不是写在公开仓库里的开发默认值。是的话，对公网开放前至少要换掉，或者在 Cloudflare 一侧加访问控制，不让匿名用户到达。" },
+    { label: "最小范围", text: "只加这一个主机名的转发规则，不改成转发整个网段；其余域名仍然落到兜底的 404。" },
+    { label: "用完收回", text: "临时开放用完就删掉规则，或停掉隧道进程。" }
+  ]}
+/>

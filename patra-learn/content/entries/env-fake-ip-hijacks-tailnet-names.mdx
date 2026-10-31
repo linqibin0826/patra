@@ -1,0 +1,93 @@
+---
+title: 代理软件把内网主机名解析成假地址，每次打开都卡 6 秒
+summary: 离家时浏览器打开部署机上的页面，每次都要等好几秒才出来，连上之后又很快。根因是代理软件的 fake-ip 模式接管了 DNS，把 VPN 里的主机名解析成假地址；浏览器先拿假地址走代理，等 6 秒超时才换回真地址。
+type: troubleshooting
+difficulty: practice
+tags: [network]
+prerequisites: [web-what-happens-opening-a-page, web-reverse-proxy-and-gateway]
+personalEnv: true
+---
+
+<Diagnose
+  question="浏览器打开一台内网机器上的页面，每次要等约 6 秒才出来；页面里点查询很快，一刷新又要等 6 秒。在那台机器本机上打开同一页面，瞬间就开。慢更可能在哪一步？"
+  options={["服务器处理请求慢", "建立连接之前或建立连接的那一步", "页面的 JavaScript 执行慢"]}
+  answer="B"
+  ifRight="对。服务本身快、连上之后的请求也快，只有「新建连接」时慢，问题就在查地址和建连接这两步上。往下读到底卡在哪。"
+  ifWrong="答案是 B。服务器本机访问很快，说明处理不慢；页面里的查询复用了已有连接所以快，刷新要重新建连接所以又慢。慢的是查地址、建连接那一段。这题考的是打开网页要先查域名、再建连接，先读打开网页那篇。"
+  suggest="web-what-happens-opening-a-page"
+/>
+
+<Callout kind="lead" label="结论先说">
+
+代理软件开着 fake-ip：它接管了本机的 DNS，查任何名字都先编一个 198.18 段的假地址给你，以便把流量引进代理。部署机的 VPN 主机名也被编了假地址；浏览器拿假地址交给代理，代理到不了部署机，等约 6 秒超时，浏览器才换回真地址直连。
+
+- **怎么修**：把 VPN 的域名后缀和部署机的主机名加进代理软件的 fake-ip 过滤名单，让它们解析成真地址；再加一条直连规则兜底
+- **值得记住**：假地址在查地址那一步就产生了，只在路由规则里写「直连」不够
+
+</Callout>
+
+背景：作者离家时用笔记本经 Tailscale 访问家里的部署机，笔记本上同时开着代理软件。这个组合之外的读者多半碰不到，但「先查名字解析成了什么」这一步到处适用。
+
+## 现象
+
+- 浏览器打开部署机上的 Nacos 控制台等页面，每次都要等好几秒，不是打不开；
+- 连上之后页面里的查询很快，一刷新又慢；
+- 部署机本机用 localhost 打开，一切正常。
+
+## 怎么查
+
+<DebugTrail
+  steps={[
+    { hypothesis: "是部署机上的服务慢？", result: "部署机本机用 localhost 访问一直很快。不是服务。", verdict: "ruled-out" },
+    { hypothesis: "是 VPN 链路（中继、MTU、UDP 被封）慢？", result: "一度用 curl 带主机名测「直连」也慢，以为是网络坏了。后来发现那条 curl 其实也进了代理：shell 的 `no_proxy` 写的是网段，只匹配 IP 字面量，不匹配主机名。中继、MTU、UDP 探测查下来都正常。", verdict: "ruled-out" },
+    { hypothesis: "是代理在中间绕了路？", result: "三条 curl 对照：`curl --noproxy '*'` 用主机名，62 毫秒、200；经代理用主机名，6.2 秒、失败；经代理但直接给真实 IP 并带 Host 头，60 毫秒、200。慢只发生在「经代理 + 用主机名」。", verdict: "closer" },
+    { hypothesis: "主机名被解析成了什么？", result: "`dscacheutil -q host -a name <部署机主机名>` 返回两条：一条是真实地址，另一条是带 VPN 域名后缀的全名，解析成 `::ffff:198.18.0.94`。198.18 段是代理软件 fake-ip 用的假地址。", verdict: "found" }
+  ]}
+/>
+
+## 根因
+
+<Sequence
+  title="那 6 秒花在了哪"
+  actors={[
+    { id: "browser", label: "浏览器" },
+    { id: "dns", label: "DNS", sub: "被代理软件接管" },
+    { id: "proxy", label: "代理" },
+    { id: "mini", label: "部署机" }
+  ]}
+  messages={[
+    { from: "browser", to: "dns", label: "部署机的地址是？", time: "0 ms", caption: "浏览器要先知道部署机的地址，去问 DNS。" },
+    { from: "dns", to: "browser", label: "假地址 + 真地址", time: "1 ms", caption: "代理软件开着 fake-ip：先编一个假地址给你，真地址排在后面。" },
+    { from: "browser", to: "proxy", label: "先连假地址", time: "2 ms", caption: "浏览器拿第一个地址去连，假地址的流量交给了代理。" },
+    { from: "proxy", to: "mini", label: "拨号，6 秒没通", time: "6.0 s", bad: true, dashed: true, caption: "这条路到不了部署机，代理一直等到约 6 秒超时。" },
+    { from: "proxy", to: "browser", label: "连接失败", time: "6.0 s", caption: "代理告诉浏览器：连不上。" },
+    { from: "browser", to: "mini", label: "换真地址直连", time: "6.06 s", caption: "浏览器换下一个地址直连部署机，60 毫秒就回来了。" }
+  ]}
+  summary={{ time: "6.06 s", caption: "一共 6 秒：几乎全部在等一条到不了的路。" }}
+/>
+
+「查询快、刷新慢」也就说得通了：首次连接吃一次 6 秒超时，之后的查询复用这条长连接（keep-alive），所以快；刷新要重新建连接，又吃一次。
+
+<Callout kind="insight" label="顺带想通的">
+
+Nacos 控制台冷加载要下载约 31.6 MB 的脚本，经代理的那部分资源先失败再回退，比直连慢了约 9 倍；而 VPN 中继本身的吞吐只有几百 kB/s，冷加载本来就要一分多钟。当时浏览器开发者工具里又勾着「停用缓存」，每次刷新都全量重下，把前两条放大了。关掉停用缓存，热刷新就秒开。
+
+</Callout>
+
+## 修法
+
+改的是代理软件的配置（作者自己操作）：
+
+1. 把 VPN 的域名后缀和部署机的主机名加进 **fake-ip 过滤名单**，这些名字解析成真实地址。这一条是关键。
+2. 再加两条路由规则，让这些名字走直连，兜底。
+
+只写第 2 条不够：假地址在 DNS 那一步就已经发出去了，路由规则看到的是假地址，认不出它原来是谁。改完后，即使经代理给真实地址，也只要 60 毫秒。
+
+<Transfer
+  prompt="公司电脑装了一个开 fake-ip 的代理客户端。你在本机起了一个开发服务，绑定在 `dev.test`（写在 hosts 文件里）。浏览器打开 `http://dev.test:3000` 时快时慢，curl 却一直很快。你会怎么查？"
+  points={[
+    { label: "先看解析结果", text: "查 `dev.test` 在浏览器和 curl 眼里分别解析成什么，有没有 198.18 段这类假地址。" },
+    { label: "对照 curl", text: "直连、经代理用名字、经代理给真实地址三条对照，锁定慢在哪一种组合上。" },
+    { label: "修在 DNS 那一步", text: "把这个名字加进 fake-ip 过滤名单，让它解析成真实地址；只加直连路由规则不够。" }
+  ]}
+/>

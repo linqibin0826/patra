@@ -1,0 +1,140 @@
+---
+title: 发件箱：先记进本地表，再发出去
+summary: 把「要发的消息」和业务数据写进同一个库、同一个事务，提交后由后台发出；发不出去的留在表里，定时补投。它用数据库自己的事务，绕开了存库和发消息没法一起成功的问题。
+type: concept
+difficulty: advanced
+tags: [backend, messaging, database]
+prerequisites: [msg-dual-write-problem]
+topics: [event-delivery]
+sources:
+  - version: v0.16
+    issue: PAP-137
+    pr: 343
+personalEnv: false
+---
+
+<Diagnose
+  question="评论已经提交成功，要通知别人的消息也登记在了同一个数据库里。这时 RabbitMQ 恰好停着，发不出去。用户发表评论的请求会怎样？"
+  options={["评论发表失败，事务回滚", "评论发表成功，要发的消息留在数据库里，等 RabbitMQ 恢复后补发", "评论发表成功，但消息永久丢失"]}
+  answer="B"
+  ifRight="对。发表评论成不成功，只取决于数据库；消息发不发得出去，是后台的事。这篇讲这个“登记”是怎么做的。"
+  ifWrong="答案是 B。消息已经和评论一起提交进数据库了，发不出去只是让它停在表里，没有丢，也不影响用户。上一篇讲了先存后发会丢消息，这里的做法正是为了解决那一个问题。"
+  suggest="msg-dual-write-problem"
+/>
+
+## 核心做法：把消息当成一行数据
+
+上一篇的结论是：数据库和 RabbitMQ 没法一起提交。那就换个思路：**别在事务里去发消息，而是在事务里往数据库里多写一行，记着「这条消息还没发」**。
+
+这一行和评论是同一个事务写的，所以它们要么一起存在，要么一起消失。之后，一个后台流程负责把表里的这些行发到 RabbitMQ，发成功才把它们标成完成。
+
+<Callout kind="analogy">
+
+像寄挂号信：先在登记簿上记一笔「某某号信件待寄」，再去邮局寄。信寄丢了，登记簿还在，第二天照着登记簿再寄一次。如果在登记簿上记完、还没去邮局之前你被叫走了，登记簿也在，回来还是知道有封信要寄。
+
+</Callout>
+
+这个模式叫**发件箱**（Transactional Outbox）。Patra 没有自己造表，而是用 Spring Modulith 的「事件发布登记」：事务里 `publishEvent(...)` 时，它自动往 `event_publication` 表写一行。
+
+<CodeRef at="patra-tool/patra-tool-events/src/integrationTest/resources/db/migration/V1__create_event_publication.sql@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="3-14" />
+
+表里有序列化的事件内容、发布时间、完成时间、状态、尝试次数。你不用手写这张表的读写，只需要 `events.publishEvent(领域事件)`，其余由 Modulith 和 Patra 的 `patra-tool-events` 模块接管。
+
+## 一行登记的一生
+
+<StateMachine
+  title="一行 event_publication 的一生"
+  subject="event_publication"
+  states={[
+    { id: "in-tx", label: "事务中", sub: "还没提交", col: 1, desc: "业务数据和登记行都写了，但事务还没提交。这时崩了，两样一起消失。" },
+    { id: "pending", label: "待外送", sub: "登记行在表里", col: 2, desc: "事务已提交，登记行安全落库。消息还没发，但崩了也不怕：后台会找到它。" },
+    { id: "failed", label: "未完成", sub: "FAILED，留着", col: 3, desc: "发送失败（broker 不可达、被拒、没有队列可投、等不到确认）。行留在表里，等补投。" },
+    { id: "deleted", label: "已删除", sub: "发成功了", col: 4, desc: "broker 确认收下，登记行被删掉。Patra 把完成模式设成「发完即删」，表里只剩积压。" },
+    { id: "gone", label: "从未存在", col: 1, row: 2, dashed: true, desc: "事务回滚，登记行和业务数据一起没了。没有业务就没有消息。" }
+  ]}
+  start="in-tx"
+  events={[
+    { id: "commit", label: "提交事务" },
+    { id: "rollback", label: "事务回滚" },
+    { id: "send-ok", label: "外送成功（收到确认）" },
+    { id: "send-fail", label: "外送失败" },
+    { id: "resubmit", label: "补投任务到点" }
+  ]}
+  transitions={[
+    { from: "in-tx", event: "commit", to: "pending", label: "提交" },
+    { from: "in-tx", event: "rollback", to: "gone", label: "回滚" },
+    { from: "pending", event: "send-ok", to: "deleted", label: "确认" },
+    { from: "pending", event: "send-fail", to: "failed", label: "失败" },
+    { from: "failed", event: "resubmit", to: "pending", label: "补投" }
+  ]}
+/>
+
+两个关键点：
+
+- **回滚时登记行一起没了**，不会出现“说谎的消息”。
+- **发送失败时登记行还在**，不会出现“丢消息”。
+
+这两句正好解决上一篇的两种问题。
+
+## 走一遍：RabbitMQ 停了会怎样
+
+<Stepper
+  title="一条评论的提醒，从登记到送达"
+  nodes={[
+    { id: "interaction", label: "interaction", sub: "写评论" },
+    { id: "db", label: "PostgreSQL", sub: "评论 + 登记行" },
+    { id: "mq", label: "RabbitMQ", sub: "交换机" },
+    { id: "notify", label: "notification", sub: "写提醒" }
+  ]}
+  links={[
+    { from: "interaction", to: "db" },
+    { from: "db", to: "mq" },
+    { from: "mq", to: "notify" }
+  ]}
+  steps={[
+    { caption: "用户回复了一条评论。interaction 开事务，写评论，并调 events.publishEvent。Modulith 在同一个事务里多写了一行登记。", focus: ["interaction", "db"], links: ["interaction>db"], tokens: [{ id: "evt", label: "事件 #7f3a", at: "db" }], notes: [{ at: "db", text: "评论 1 + 登记 1（未提交）", tone: "wait" }] },
+    { caption: "事务提交：评论和登记行一起落库。用户拿到“发表成功”。到这里，用户这一侧已经完成了。", focus: ["db"], tokens: [{ id: "evt", label: "事件 #7f3a", at: "db" }], notes: [{ at: "db", text: "评论 1 + 登记 1（已提交）", tone: "ok" }] },
+    { caption: "提交后，后台尝试把登记行发到 RabbitMQ。这时 RabbitMQ 正好停着，发送失败，登记行标成 FAILED，留在表里。", focus: ["db", "mq"], links: ["db>mq"], tokens: [{ id: "evt", label: "事件 #7f3a", at: "db" }], notes: [{ at: "mq", text: "不可达", tone: "bad" }, { at: "db", text: "登记 1 行 · FAILED", tone: "wait" }] },
+    { caption: "RabbitMQ 恢复后，补投任务（每分钟一次）扫到这一行，重新外送。RabbitMQ 收下消息，登记行被删除。", focus: ["db", "mq"], links: ["db>mq"], tokens: [{ id: "evt", label: "事件 #7f3a", at: "mq" }], notes: [{ at: "db", text: "登记 0 行", tone: "ok" }, { at: "mq", text: "收到 1 条", tone: "ok" }] },
+    { caption: "通知服务从队列取走消息，给被回复的人写一条提醒。从发表到送达，中间 RabbitMQ 停过，但没有丢任何东西。", focus: ["mq", "notify"], links: ["mq>notify"], tokens: [{ id: "evt", label: "事件 #7f3a", at: "notify" }], notes: [{ at: "notify", text: "提醒 1 条", tone: "ok" }] }
+  ]}
+  guesses={[
+    { before: 3, question: "评论已经提交，这时 RabbitMQ 停着。用户那次“发表评论”的请求会怎样？", options: ["成功：评论已提交，消息留在登记表等补发", "失败，评论回滚", "成功，但消息永久丢失"], answer: "A", explain: "发表成不成功，只由数据库事务决定。发消息是提交之后的事，失败了只是登记行留着。" },
+    { before: 4, question: "RabbitMQ 恢复后，是谁把停在表里的消息补发出去？", options: ["通知服务主动来拉", "补投任务：按时扫登记表，把没完成的重新外送", "interaction 重启时才会补发"], answer: "B", explain: "Patra 的 XXL-Job 任务每分钟把发布时间早于 1 分钟、还没完成的登记行重新外送一遍。" }
+  ]}
+/>
+
+补投的代码在这里：它每轮只处理发布时间早于 `minAge`（默认 1 分钟）的行，避免和刚提交、正在异步发送的事件抢。
+
+<CodeRef at="patra-tool/patra-tool-events/src/main/java/dev/patra/tool/events/resubmit/EventPublicationResubmitter.java@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="51-76" />
+
+## 代价
+
+<Callout kind="cost">
+
+发件箱保证的是**不丢**，不保证**不重**。消息发出去了、broker 也收下了，可确认在回来的路上丢了，登记行就还留着，下一轮补投会再发一遍。所以消费方一定要能识别重复的消息，这是后面「至少一次与去重」那篇的主题。
+
+另外，每个发布事件的服务多了一张表、一个补投任务；只有真有队列订阅的事件才该外送，否则消息投不出去，登记行会被无限补投。
+
+</Callout>
+
+<Quiz
+  questions={[
+    {
+      question: "事务因为别的错误回滚了，之前 publishEvent 登记的那一行会怎样？",
+      options: ["留在表里，之后被补投", "和业务数据一起回滚，不存在了"],
+      answer: "B",
+      explain: "登记行是在同一个数据库事务里写的，和业务数据同成同败。所以不会出现消息描述的是一件没发生的事。"
+    }
+  ]}
+/>
+
+<Transfer
+  prompt="一个报名系统：用户报名成功后，要给课程方的服务发一个 webhook 通知（HTTP 调用）。请用发件箱的思路设计：表里存什么？谁来发？发失败了怎么办？接收方要注意什么？"
+  points={[
+    { label: "同一事务写一行", text: "报名记录和一行“待发通知”（目标地址、内容、状态）在同一个事务里写入。" },
+    { label: "后台发送", text: "事务提交后，由后台任务把待发行发出去；收到对方成功响应才标记完成或删除。" },
+    { label: "失败留着重试", text: "发失败的行保留，定时扫描重发，不会丢。" },
+    { label: "接收方去重", text: "重试和确认丢失会让同一个通知到达多次，课程方要按通知 ID 判断是不是处理过。" }
+  ]}
+/>

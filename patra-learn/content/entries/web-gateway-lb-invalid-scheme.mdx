@@ -1,0 +1,90 @@
+---
+title: 网关报 Invalid scheme [lb]
+summary: 网关里新建的服务间客户端调 lb://patra-identity 时报 Invalid scheme [lb]，别的服务用同样的写法却一直没事。根因是网关框架把底层 HTTP 客户端换成了 Reactor，而它不认负载均衡没换掉的 lb 协议；修法是调整客户端工厂的设置顺序。
+type: troubleshooting
+difficulty: practice
+tags: [backend, spring]
+prerequisites: [web-reverse-proxy-and-gateway, spring-service-discovery]
+sources:
+  - version: v0.12
+    issue: PAP-106
+    pr: 274
+personalEnv: false
+---
+
+<Diagnose
+  question="同一套代码给两个服务各建一个 RestClient，地址都写 lb://patra-identity。服务 A 调得通，服务 B 报 Invalid scheme [lb]。你最先怀疑什么？"
+  options={["服务 B 的注册中心里没有 identity", "两个服务底下实际用的 HTTP 客户端不一样", "lb:// 写错了，应该写 http://"]}
+  answer="B"
+  ifRight="对。lb:// 本来要在发请求前被换成真实地址；没换干净时，宽松的客户端照样能连，严格的直接拒绝。"
+  ifWrong="答案是 B。注册中心里没有实例会报「找不到实例」，不是协议错误。lb:// 是负载均衡的写法，发请求前要换成 http://主机:端口，这题考的是服务发现怎么改写地址，先读服务发现那篇。"
+  suggest="spring-service-discovery"
+/>
+
+## 现象
+
+把会话查询改成「网关调 identity 的内部接口」的那次改动里，网关第一次有了自己的服务间客户端：用项目的 `RestClientFactory` 建一个 `RestClient`，地址 `lb://patra-identity`，再生成 HTTP Interface 代理。
+
+<CodeRef at="patra-api/patra-gateway-boot/src/main/java/dev/patra/gateway/config/IdentityClientConfiguration.java@5073ab1358404ecd989e722373cd9f7edafe238b" lines="18-29" />
+
+测试里一调就报 `Invalid scheme [lb]`。可 identity、catalog 调别的服务用的都是同一个工厂、同样的 `lb://` 写法，一直没出过问题。
+
+## 怎么查
+
+<DebugTrail
+  steps={[
+    { hypothesis: "负载均衡根本没生效，地址没被改写？", result: "改写发生了，但不完整。LoadBalancerUriTools.reconstructURI 拼新地址时，协议优先取 ServiceInstance.getScheme()。测试用的 SimpleDiscoveryClient 给出的实例（DefaultServiceInstance）没覆写这个方法，返回 null，于是沿用原地址的 lb。主机和端口换成了真实值，协议还是 lb。", verdict: "closer" },
+    { hypothesis: "既然地址都带着 lb，为什么别的服务能连？", result: "别的服务底下是 Apache HttpClient，它不挑协议，照样按主机和端口连上；Reactor Netty 的客户端会拒绝不认识的协议。差别在客户端，不在地址。", verdict: "closer" },
+    { hypothesis: "网关为什么用的是 Reactor？工厂明明会设 Apache 的请求工厂。", result: "Spring Cloud Gateway 有个 gatewayRestClientCustomizer，会把容器里的 ClientHttpRequestFactory（网关是 Reactor Netty）设到每个 RestClient.Builder 上。RestClientFactory 原来先设分组的 Apache 工厂，再跑所有 customizer，Apache 工厂就被它盖掉了。", verdict: "found" }
+  ]}
+/>
+
+<Callout kind="insight">
+
+同一个原因还藏着另一个问题：分组的 Apache 工厂上带着这个分组单独配的超时（查会话的 identity 分组配了连接 1 秒、读 2 秒）。工厂被盖掉，超时也跟着没了，网关里的这个客户端用的是全局超时。报错之前，这个问题是看不见的。
+
+</Callout>
+
+## 根因
+
+<Quiz
+  questions={[
+    {
+      question: "工厂里有两步：A 设分组的请求工厂，B 依次跑容器里的所有 RestClientCustomizer。两步都会设请求工厂。想让分组配置说了算，顺序应该是？",
+      options: ["先 A 后 B", "先 B 后 A", "顺序无所谓，Builder 会合并两个工厂"],
+      answer: "B",
+      explain: "Builder 上的 requestFactory 只有一个，后设的覆盖先设的。分组配置要说了算，就得最后设。"
+    }
+  ]}
+/>
+
+两件事叠在一起才会报错：
+
+1. 负载均衡改写地址时保留了 `lb` 协议（实例没提供协议）。
+2. 网关框架把每个 Builder 的请求工厂都换成了 Reactor，而 Reactor 不接受 `lb`。
+
+只有第 1 件，Apache 不在乎；只有第 2 件，地址是 `http://`，Reactor 也没事。
+
+## 修法
+
+把分组请求工厂挪到 customizer 之后设：
+
+<CodeRef at="patra-tool/patra-tool-http-client/src/main/java/dev/patra/tool/httpclient/factory/RestClientFactory.java@cfec9c9f30270dcf03f5cd7b6e54a0cd3b59296b" lines="109-120" />
+
+这样网关和其他服务走同一条路：有分组超时，就是 Apache 工厂；分组超时也回来了。
+
+<Callout kind="warn">
+
+修完还剩一个口子：工厂只在分组超时和全局超时**不同**时才建分组工厂。两者一样时不建，网关里的客户端仍会落到 Reactor 上。这种情况要么给分组显式配一个不同的超时，要么把地址写成 `http://服务名`。
+
+</Callout>
+
+<Transfer
+  prompt="你在网关里又加了一个调 catalog 的客户端，分组超时和全局超时恰好一样，地址写 lb://patra-catalog。上线前你会担心什么？怎么验证？"
+  points={[
+    { label: "会落到 Reactor", text: "超时相同就不建分组工厂，网关框架的 customizer 设的 Reactor 工厂生效。" },
+    { label: "协议可能留着 lb", text: "实例不提供协议时改写后仍是 lb，Reactor 会拒绝；要看实际用的发现客户端给不给协议。" },
+    { label: "用测试钉住", text: "写一条集成测试真实调一次，或者断言这个 RestClient 用的请求工厂类型。" },
+    { label: "两种绕法", text: "给分组配一个不同的超时，或者地址写 http://服务名。" }
+  ]}
+/>

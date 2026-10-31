@@ -1,0 +1,67 @@
+---
+title: 拖拽库不给 id 就水合不一致
+summary: dnd-kit 的 DndContext 不传 id 时，用一个全局计数器生成读屏说明的 id。服务端渲染和浏览器各数各的，数出来不一样，就报水合不一致。用 React 的 useId 给它一个稳定的 id。
+type: pitfall
+difficulty: practice
+tags: [frontend]
+prerequisites: [fe-hydration]
+sources:
+  - version: v0.12
+    issue: PAP-101
+personalEnv: false
+---
+
+<Diagnose
+  question="一个组件用模块里的全局计数器生成 id：每渲染一次加 1。页面先在服务端渲染一次，再在浏览器里水合。两边给同一个元素算出的 id 一定相同吗？"
+  options={["一定相同，代码是同一份", "不一定：服务端进程里计数器可能已经被别的请求、别的组件加过好几次", "一定不同，浏览器从 0 开始"]}
+  answer="B"
+  ifRight="对。服务端是一个长期运行的进程，计数器的值取决于之前渲染过什么；浏览器是从头开始数的。下面讲在 Patra 里撞上的那一次。"
+  ifWrong="答案是 B。全局计数器的值取决于这个进程之前渲染过多少东西：服务端进程渲染过别的页面、别的组件，浏览器则刚开始。水合要求两边渲染出的属性一致，id 对不上就报错。这题考的是水合的前提：服务端和浏览器要渲染出同样的结果。"
+  suggest="fe-hydration"
+/>
+
+## 坑
+
+v0.12 用户中心那一版做资料页的「关注领域」选择器时，用 dnd-kit 让用户拖动排序。`DndContext` 不传 `id` 时，内部用全局计数器给读屏说明（无障碍描述）生成 id。服务端渲染和浏览器数到的值不一样，开发模式就报水合不一致。
+
+## 怎么避开
+
+用 React 的 `useId()` 生成一个 id 传给 `DndContext`。`useId` 按组件在树里的位置生成，服务端和浏览器算出来是同一个值。
+
+<CodeRef at="patra-portal/src/components/settings/profile/MeshInterestPicker.tsx@fe4c6bb68c591a9c9b5fe80f76bbfbbbc6aeae75" lines="74-101" />
+
+```tsx
+// DndContext 默认用全局计数器生成读屏说明的 id，服务端与浏览器数到的不一样会水合不一致；给它稳定的 id
+const dndId = useId();
+// ……
+// 传感器始终是同一组：窄屏只是让每个胶囊的 useSortable 关掉拖动，DndContext 的依赖不能随宽度变长短
+const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
+// ……
+<DndContext id={dndId} sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
+```
+
+## 同一个组件里的第二个坑
+
+窄屏上不需要拖动。最直接的写法是「窄屏时不注册传感器」，让 `sensors` 数组随屏宽变长变短。这会触发 React 的警告：依赖数组的长度变了（deps changed size）。
+
+修法是传感器始终是同一组，窄屏时改为让每个可排序的项通过 `useSortable` 关掉拖动。
+
+<Quiz
+  questions={[
+    {
+      question: "下面哪种 id 在服务端渲染和浏览器水合时一定一致？",
+      options: ["`Math.random()` 生成的", "模块级计数器自增生成的", "React `useId()` 生成的"],
+      answer: "C",
+      explain: "随机数和全局计数器的值都取决于运行环境和之前发生过什么；useId 只取决于组件在树里的位置，两边一致。"
+    }
+  ]}
+/>
+
+<Transfer
+  prompt="你引入了一个日期选择组件库，开发模式下也报水合不一致，差异在一个 aria-labelledby 属性上。你会怎么确认原因、怎么修？如果库不接受外部传入的 id 呢？"
+  points={[
+    { label: "确认原因", text: "看库的源码或文档，确认 id 是不是全局计数器或随机数生成的；对比服务端 HTML 和浏览器里的值。" },
+    { label: "能传就传", text: "库支持传入 id 或前缀时，用 useId 生成一个传进去。" },
+    { label: "不能传", text: "让这个组件只在浏览器里渲染（客户端挂载后再显示），或者换一个支持稳定 id 的库；不要用屏蔽警告的办法盖住。" }
+  ]}
+/>

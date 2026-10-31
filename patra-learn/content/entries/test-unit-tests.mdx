@@ -1,0 +1,172 @@
+---
+title: 单元测试：JUnit 与 AssertJ
+summary: 单元测试只检查一个小零件：准备、执行、断言三步；一个测试只测一件事；名字要读得通。
+type: concept
+difficulty: basic
+tags: [testing, java]
+prerequisites: [test-why-write-tests, java-classes-objects-interfaces]
+---
+
+<Diagnose
+  question="一个测试方法里连写了三个断言，分别检查三件不同的事。如果第 2 个断言失败了，第 3 个断言会被检查到吗？"
+  options={["会，三个断言每次都会全部检查", "不会，测试在第一个失败的断言处就停了", "看运气，有时会有时不会"]}
+  answer="B"
+  ifRight="对。断言一旦失败，这个测试方法就当场结束。这个细节决定了「一个测试该写几个断言」，下面会用到。"
+  ifWrong="答案是 B：断言失败会让测试方法立刻结束，后面的断言不会执行。所以后面藏着的问题，要等你修好前一个才看得到。这个细节在「断言」一节会用到；如果「测试是什么」还不清楚，可以先读前置的那篇。"
+  suggest="test-why-write-tests"
+/>
+
+## 单元测试检查「一个小零件」
+
+造自行车时，不会等整辆车组装好才发现链条断了，而是先把链条单独拉一拉、刹车单独捏一捏。
+
+**单元测试**也是这样：每次只检查程序里的一个小零件（通常是一个类里的一个方法），而且**不碰外面的世界**——不连数据库、不发网络请求、不读文件。零件的输入给定，输出就应该固定，所以它又快又稳：一个测试通常是几毫秒。
+
+Patra 的构建配置里给单元测试设了一个很松的上限：单个测试超过 15 秒就判失败。
+
+<CodeRef at="build-logic/src/main/kotlin/patra.java-base.gradle.kts@b6e01875bb5692356021c8a19562f557f319fc54" lines="81-96" />
+
+这是兜底，不是预期。纯内存的单元测试，正常应该在毫秒到几十毫秒之间。
+
+## 每个测试三步：准备、执行、断言
+
+几乎所有测试都是同一个形状：
+
+1. **准备**（Arrange / Given）：造出被测的对象，摆好输入。
+2. **执行**（Act / When）：做那一个动作。
+3. **断言**（Assert / Then）：说出你期望的结果，让电脑去核对。
+
+看 Patra 里一个真实的测试，再对号入座。被测的是一个手动拨动的时钟：
+
+<CodeRef at="patra-tool/patra-tool-test/src/test/java/dev/patra/tool/test/clock/MutableClockTest.java@af8cd13c3ec367ccba78615b72e6ff19535cef90" lines="18-26" />
+
+```java
+@Test
+@DisplayName("从指定时刻开始，固定 UTC，换时区返回自己")
+void should_start_at_given_instant_in_utc() {
+  MutableClock clock = MutableClock.startingAt(START);   // 准备
+
+  assertThat(clock.instant()).isEqualTo(START);          // 断言
+  assertThat(clock.getZone()).isEqualTo(ZoneOffset.UTC); // 断言
+  assertThat(clock.withZone(ZoneId.of("Asia/Shanghai"))).isSameAs(clock);
+}
+```
+
+这个例子很简单：「准备」就是造时钟，「执行」就是读它的状态，几行断言放在一起。更常见的是三步各占一块、中间空一行，读的人一眼看出分界。
+
+`@Test` 告诉 JUnit（Java 最常用的测试框架）：这是一个要跑的测试。`@DisplayName` 是给人看的中文名，测试报告里显示它。
+
+<Quiz
+  title="找出三步"
+  questions={[
+    {
+      question: "下面这个测试里，哪一行是「执行」？ 第一行：MutableClock clock = MutableClock.startingAt(START)； 第二行：clock.advance(Duration.ofDays(30))； 第三行：assertThat(clock.instant()).isEqualTo(START.plus(Duration.ofDays(30)))",
+      options: ["第一行", "第二行", "第三行"],
+      answer: "B",
+      explain: "第一行是准备（造时钟），第二行是执行（往前拨 30 天），第三行是断言（核对结果）。执行就是「被测的那个动作」。"
+    }
+  ]}
+/>
+
+## 断言：用 AssertJ 把期望写成一句话
+
+断言就是「我期望是这样，请核对」。Patra 用 AssertJ 写断言，它的写法读起来像英语：
+
+```java
+assertThat(实际值).isEqualTo(期望值);
+```
+
+失败时它会把两边都打印出来，大致是：
+
+```text
+Expecting actual:
+  2026-10-20T08:00:00Z
+to be equal to:
+  2026-11-19T08:00:00Z
+```
+
+看一眼就知道哪边错了，不用再自己加打印。
+
+想检查「应该抛出异常」，也有对应写法，例如 `assertThatThrownBy(...).isInstanceOf(...)`。
+
+## 一个测试只测一件事
+
+回到开头那道题：断言失败，方法立刻结束。看看把三件事塞进一个测试会怎样。
+
+<Compare
+  title="三个断言塞一起，还是各写一个测试"
+  variants={[
+    {
+      label: "一个测试，三个断言",
+      steps: ["断言：邮箱格式要对", "断言：用户名长度要够", "断言：密码强度要够"],
+      results: [{ label: "报告里的失败", value: "1 条（卡在第 2 个断言）", tone: "bad" }, { label: "实际有问题的地方", value: "2 处（第 3 个没被检查）", tone: "bad" }],
+      verdict: { tone: "bad", head: "只看到一半。", text: "第 2 个断言失败后，第 3 个根本没跑。修好第 2 个重跑，才发现第 3 个也错了，白白多跑一轮。" }
+    },
+    {
+      label: "三个测试，各一个断言",
+      steps: ["测试：邮箱格式要对", "测试：用户名长度要够", "测试：密码强度要够"],
+      results: [{ label: "报告里的失败", value: "2 条，各写着名字", tone: "wait" }, { label: "实际有问题的地方", value: "2 处，一次全看到", tone: "ok" }],
+      verdict: { tone: "ok", head: "一次看全。", text: "每个测试独立运行，一个失败不影响另外两个；报告里直接是失败的测试名，看名字就知道坏了什么。" }
+    }
+  ]}
+/>
+
+这就是「一个测试只测一件事」的理由：失败时，它的名字就是诊断书。
+
+一件事不等于一行断言。检查「时钟从指定时刻开始、时区固定」这类同一个结论的几个侧面，放在一起没问题。判断标准是：**这个测试失败时，你能不能只看名字就知道哪个行为坏了。**
+
+## 名字要读得通
+
+Patra 对测试方法的命名有明确约定，写在 `.claude/rules/testing/conventions.md` 里：
+
+<CodeRef at=".claude/rules/testing/conventions.md@cfec9c9f30270dcf03f5cd7b6e54a0cd3b59296b" lines="1-30" />
+
+几条最常用的：
+
+| 维度 | 约定 |
+|---|---|
+| 位置 | `src/test/java/`，包路径与生产代码一一镜像 |
+| 类名 | `{被测类}Test`，如 `MutableClock` 对应 `MutableClockTest` |
+| 方法名 | snake_case，`should_期望行为` 或 `行为_when_条件`，直接读得通 |
+| 工具 | JUnit 5（`@Test`）+ AssertJ（`assertThat`）+ Mockito（下一篇讲） |
+
+对比一下：`test1` 失败时你要打开代码才知道在测什么；`should_advance_and_set` 失败时，名字已经告诉你是「往前拨与直接设置」出了问题。
+
+测试多了之后，同一个类可以用 `@Nested` 按场景分组，每组一个内部类，报告里就是一棵树：
+
+<CodeRef at="patra-tool/patra-tool-web/src/test/java/dev/patra/tool/web/error/engine/DefaultErrorResolutionEngineTest.java@b6e01875bb5692356021c8a19562f557f319fc54" lines="86-90" />
+
+<Callout kind="warn">
+
+不要为了让测试通过去改生产代码里的访问权限、加只给测试用的 `setXxx()`，也不要用反射去摸私有方法。测试只通过对象公开的方法检查它，这样内部怎么重构都不会让测试无故变红。
+
+</Callout>
+
+<Quiz
+  title="考考自己"
+  questions={[
+    {
+      question: "下面哪个测试名最符合 Patra 的约定？",
+      options: ["testClock", "should_advance_clock_by_given_duration", "测试时钟能不能往前拨"],
+      answer: "B",
+      explain: "snake_case，以 should_ 开头，说出期望的行为。中文说明放进 @DisplayName。"
+    },
+    {
+      question: "单元测试为什么通常又快又稳？",
+      options: ["因为它测的代码特别少", "因为它不碰数据库、网络这些外部的东西，输入固定则输出固定", "因为它不写断言"],
+      answer: "B",
+      explain: "快和稳都来自「不碰外面的世界」。一旦要连数据库或网络，速度和稳定性都会下降，那就是后面几篇讲的集成测试了。"
+    }
+  ]}
+/>
+
+<Transfer
+  prompt="假设有一个方法 isStrongPassword(密码)：长度至少 8 位，并且至少含一个数字才算强密码。请写出你会写的 3 个测试的名字（用 should_ 形式），并说明每个测试在三步里「准备什么、执行什么、断言什么」。"
+  points={[
+    { label: "分开测", text: "至少把「太短」「没有数字」「合格」拆成不同的测试，每个只测一件事。" },
+    { label: "名字读得通", text: "例如 should_reject_password_shorter_than_8、should_reject_password_without_digit、should_accept_password_with_8_chars_and_digit。" },
+    { label: "三步清楚", text: "准备：一个具体的密码字符串；执行：调用 isStrongPassword；断言：结果应为 false 或 true。" },
+    { label: "边界值", text: "长度刚好 7 和刚好 8 的两个密码最容易暴露「大于还是大于等于」写错了。" }
+  ]}
+  placeholder="比如：我会写 should_reject_……"
+/>

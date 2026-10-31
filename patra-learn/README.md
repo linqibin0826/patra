@@ -1,12 +1,12 @@
 # patra-learn
 
-Patra 学习站 —— 把你的系统，一条线一条线学明白。
+Patra 学习站：借 Patra 这个真实项目学后端，从「HTTP 请求是什么」读到「发件箱怎么保证消息不丢」。
 
-内部学习站（onboarding + 回顾）：把本仓库的 CI / CD / 巡检体系做成「地铁线路图」式课程——3 条开通线 13 站正文，配套词条图鉴、事故档案、运维小抄。纯静态站（SSG + localStorage 打卡进度），无后端依赖。
+条目是 MDX，平铺在 `content/entries/`，每篇标难度（入门 / 基础 / 进阶 / 实战）、写明前置；路线、主题、标签由 YAML 组织，构建时生成索引。纯静态站（SSG），无后端依赖。
 
-- **技术栈**：Next.js 16 App Router · React 19 · TypeScript strict · Tailwind v4 · Biome · Vitest · Playwright
+- **技术栈**：Next.js 16 App Router · React 19 · MDX · zod · TypeScript strict · Tailwind v4 · Biome · Vitest · Playwright
 - **Node**：24（`.nvmrc` 锁定）+ pnpm 10
-- **访问**：部署在 Mac mini，仅 tailscale 内网 —— `http://linqibins-mac-mini:4001`
+- **访问**：https://learn.linqibin.dev（公网，不用登录）；部署在 Mac mini，容器端口 4001 只绑 mini 本机回环，经 Cloudflare Tunnel 对外
 
 ## 快速开始
 
@@ -22,7 +22,9 @@ pnpm dev          # http://localhost:4001
 | `pnpm dev` | 开发服务器（:4001） |
 | `pnpm build` | 生产构建 |
 | `pnpm typecheck` | `next typegen && tsc --noEmit` |
-| `pnpm test` | `vitest run`（内容 integrity + 纯逻辑单测） |
+| `pnpm test` | `vitest run`：内容校验（真实内容零问题）+ 纯逻辑单测 |
+| `pnpm content:check-file <路径…>` | 单篇校验（给维护技能的模板用） |
+| `pnpm -s content:report` | 体检报告 JSON（校验问题 + 代码引用钉住后的状态） |
 | `pnpm test:e2e` | Playwright smoke（仅本地，不进 CI；基座用 :4010——本机 QQ 占 127.0.0.1:4001） |
 | `pnpm lint` | `biome check .` |
 | `pnpm format` | `biome format --write .` |
@@ -30,37 +32,38 @@ pnpm dev          # http://localhost:4001
 ## 目录结构
 
 ```
+content/
+├── entries/<slug>.mdx        # 条目（frontmatter + 正文）
+├── routes/<slug>.yaml        # 路线：标题、简介、展示顺序、按阅读顺序排的条目
+├── topics/<slug>.yaml        # 主题：标题、简介（成员由条目的 topics 决定）
+└── tags.yaml                 # 标签表
+scripts/
+├── content-report.ts         # pnpm content:report
+└── content-check-file.ts     # pnpm content:check-file
 src/
 ├── app/
-│   ├── page.tsx                        # / 首页（MetroMap 学习网络图 + 继续通勤卡）
-│   ├── lines/[line]/[station]/page.tsx # 课程文章页（SSG，13 站）
-│   ├── glossary/page.tsx               # /glossary 词条图鉴（10 条，可搜索）
-│   ├── archive/page.tsx                # /archive 事故档案（6 份）
-│   ├── cheatsheet/page.tsx             # /cheatsheet 运维小抄（3 张操作卡）
-│   ├── api/health/route.ts             # GET /api/health（容器健康检查）
-│   ├── layout.tsx                      # 根布局：字体（正文系统字体 + JetBrains Mono）+ TopBar
-│   └── globals.css                     # Tailwind v4 @theme 设计 token
-├── content/                            # 内容层（内容即代码，无 CMS）
-│   ├── types.ts                        # Line / Station / StationRef / GlossaryEntry / Incident / OpsCard
-│   ├── lines.ts                        # LINES 拓扑 + TRANSFER_NODE（线路 5 色也在这）
-│   ├── articles/                       # 13 站正文组件 + index.ts 静态注册表
-│   ├── glossary.ts / incidents.ts / cheatsheet.ts
-│   └── integrity.test.ts               # 内容防线：引用完整性 + 数量校验
-├── components/                         # metro-map / article-layout / check-in-button / …
-├── lib/
-│   ├── content.ts                      # 拓扑查询（openStationRefs / adjacentStations / firstUnvisited）
-│   └── progress.ts                     # localStorage 打卡进度（key: patra-learn.progress.v1）
-└── types/globals.d.ts                  # ambient 声明
-
-tests/smoke.spec.ts                     # Playwright e2e（仅本地）
+│   ├── page.tsx              # 首页（最小占位）
+│   ├── entries/[slug]/       # 条目页：构建期用 @mdx-js/mdx 编译
+│   ├── api/health/route.ts   # GET /api/health（容器健康检查）
+│   ├── layout.tsx / globals.css
+├── lib/content/              # 内容模型：类型、schema、解析、校验规则、索引、加载、体检报告
+├── teaching/registry.ts      # 组件登记表（参数 schema、子内容、教学角色）
+├── teaching/placeholders.tsx # 诊断题 / 复述题 / 迁移题占位实现
+├── components/code-ref.tsx   # 代码引用 → GitHub 永久链接
+└── mdx-components.tsx        # 组件名 → 实现
+tests/smoke.spec.ts           # Playwright e2e（仅本地）
 ```
 
 ## 内容模型
 
-- **`Line`**（`lines.ts` 的 `LINES`）：3 条开通线——l1 质检线（CI，4 站）/ l2 上线线（CD，5 站）/ l3 守夜线（巡检，4 站），共 13 站；另有 2 条规划线（l4 架构线 / l5 数据线，`status: "planned"`，首页灰色虚线不可点）。
-- **`Station`**：`id / name / summary`；每个开通站在 `articles/index.ts` 注册一篇文章组件，路由 `/lines/<line>/<station>`。
-- **`StationRef`**（`` `${LineId}/${string}` ``）：全站互链的统一引用——词条的 `appearsAt`、档案的 `relatedStation`、小抄的 `lineId` 都指回站/线，`integrity.test.ts` 保证引用真实存在、注册表与拓扑一一对应。
-- **换乘节点** `TRANSFER_NODE`：l1 终点「合并进 main」→ l2 起点的视觉连接，不计入 13 站、无文章（MetroMap 中坐标硬编码，改拓扑需同步 `metro-map.tsx`）。
+- **条目类型**：概念 `concept`、排查 `troubleshooting`、决策 `decision`、坑 `pitfall`。
+- **难度**：入门 `intro`、基础 `basic`、进阶 `advanced`、实战 `practice`；路线里不能倒排。
+- **前置**：必须存在、不成环；同一路线里前置排在本篇之前。
+- **教学结构**：正文开头是诊断题，结尾是复述题或迁移题。
+- **代码引用**：`路径@提交SHA`，页面链到 GitHub 上那次提交；体检报告列出钉住之后改过的引用。
+- **公开边界**：内容里不许出现凭据、tailnet / 内网地址与本机主机名。
+
+完整格式与规则 id 见 `docs/patra/specs/2026-10-31-learn-content-model-design.md`。
 
 ## CI
 
@@ -70,11 +73,12 @@ learn 在 `.github/workflows/ci.yml` 有专属 job（`learn_changed` 门控，�
 
 - **镜像**：`patra-learn/Dockerfile` 三阶段构建（deps → `next build` → standalone runner），产物是 Next.js standalone Node server，监听 4001。
 - **CD**：merge 到 main 且命中 `patra-learn/**` 等 paths → `.github/workflows/learn-cd.yml` 在 Mac mini runner 原生 arm64 `docker build` → `patra-infra/cd/deploy.sh` 部署（健康检查 `/api/health` + 部署后验证 + 不健康自动回滚）→ GHCR 归档推送（best-effort）。回滚：`workflow_dispatch` 填旧 sha 的 `image_tag`。
-- **容器**：Mac mini `patra-apps` 栈，compose 服务名 `learn` / 容器 `patra-learn`，env 只读 `.env.learn`（纯静态站，不读 `.env.common`）。
+- **容器**：Mac mini `patra-apps` 栈，compose 服务名 `learn` / 容器 `patra-learn`，env 只读 `.env.learn`（纯静态站，不读 `.env.common`）。端口只绑 `127.0.0.1:4001`，tailnet 上不能直接访问。
+- **公网入口**：门户那条 Cloudflare Tunnel 加了 `learn.linqibin.dev` → `http://localhost:4001`（见 `patra-infra/docker/README.md`「门户的公网入口」）。对线上的 Playwright 回归走这个域名。
 - **Bootstrap 提示**：首次合入 main 后需等 learn-cd 首跑完成产出镜像；在那之前 Mac mini 整栈 `compose-all.sh up` 会因拉不到 learn 镜像报错，属预期——等首跑绿了再 up 即可。
 
 ## 设计文档
 
-- spec：`docs/patra/specs/2026-08-27-patra-learn-design.html`
-- plan：`docs/patra/plans/2026-08-27-patra-learn-site.html`
-- 设计画布：Claude Design `e2bb7c08`（六类页面高保真稿 + Tokens / Components 页）
+- 内容模型工程 spec：`docs/patra/specs/2026-10-31-learn-content-model-design.md`
+- 实施计划：`docs/patra/plans/2026-10-31-learn-content-model.md`
+- 版本 spec：`docs/patra/release-specs/v0.17-learn.md`

@@ -1,0 +1,145 @@
+---
+title: 领域异常：错误也有业务含义
+summary: 「已有同名收藏夹」不是一个普通的 RuntimeException，而是一个带语义特征的领域异常。领域层只说出错的含义，由 Web 层统一翻译成 HTTP 状态码。
+type: concept
+difficulty: basic
+tags: [ddd, backend, java, spring]
+prerequisites: [ddd-aggregates, java-exceptions]
+personalEnv: false
+---
+
+<Diagnose
+  question="用户新建收藏夹时重名了。领域层抛出异常。你希望领域层的代码里出现「返回 HTTP 409」吗？"
+  options={["希望，这样一眼知道会回什么", "不希望，领域层只说「重名冲突」，状态码是 Web 层的事", "无所谓"]}
+  answer="B"
+  ifRight="对。HTTP 是 Web 层的协议，领域层不该认识它。领域层只说清楚发生了什么，怎么翻译成状态码由别处统一决定。"
+  ifWrong="答案是 B。上一篇说过，领域层不依赖框架，也不该知道 HTTP。如果这里写 409，同一个规则被定时任务、消息消费者调用时，就带着一个毫无意义的 HTTP 状态。这里要用到「异常是怎么抛、怎么接」，不熟先读那篇。"
+  suggest="java-exceptions"
+/>
+
+## 先看直接抛 RuntimeException 的问题
+
+最省事的写法是遇到重名就 `throw new RuntimeException("已有同名收藏夹")`。它的问题是异常只带一句话，没有含义：
+
+- 调用方没法判断这是「业务冲突」还是「系统出错」。
+- Web 层想翻译成状态码，只能去解析那句话，字一改就失灵。
+- 前端想针对「重名」给出提示，没有稳定的标记可认。
+
+<Compare
+  title="同一个重名错误，两种抛法"
+  variants={[
+    {
+      label: "抛普通 RuntimeException",
+      steps: ["Handler 发现重名", "throw new RuntimeException(「已有同名收藏夹」)", "异常一路往上，到了 Web 层"],
+      results: [
+        { label: "错误引擎能认出含义吗", value: "不能，只有一句字符串", tone: "bad" },
+        { label: "调用方看到什么", value: "按兜底规则处理，看不出是「重名」", tone: "bad" }
+      ],
+      verdict: { tone: "bad", head: "含义丢了。", text: "要么到处写 try-catch 自己翻译，要么让用户看到一个模糊的错误。" }
+    },
+    {
+      label: "抛带特征的领域异常",
+      steps: ["Handler 发现重名", "throw new CollectionNameTakenException()，里面带着特征 CONFLICT 和 COLLECTION_NAME_TAKEN", "异常原样往上，到了 Web 层的错误引擎"],
+      results: [
+        { label: "错误引擎能认出含义吗", value: "能：特征 CONFLICT 对应 409", tone: "ok" },
+        { label: "调用方看到什么", value: "409，响应里带着具体原因 COLLECTION_NAME_TAKEN", tone: "ok" }
+      ],
+      verdict: { tone: "ok", head: "含义跟着异常走。", text: "领域层只说「冲突」，不碰 HTTP；Web 层统一把「冲突」翻译成 409。" }
+    }
+  ]}
+/>
+
+## 异常里带的东西：语义特征
+
+Patra 的领域异常都继承 `DomainException`。它有个硬性要求：**构造时必须至少给一个语义特征**，否则直接报错。
+
+<CodeRef at="patra-tool/patra-tool-core/src/main/java/dev/patra/tool/core/error/DomainException.java@b6e01875bb5692356021c8a19562f557f319fc54" lines="64-85" />
+
+特征分两类：
+
+- **标准特征** `StandardErrorTrait`：全站通用的八种含义，如 `NOT_FOUND`、`CONFLICT`、`RULE_VIOLATION`、`QUOTA_EXCEEDED`、`DEP_UNAVAILABLE`。
+- **业务特征**：服务自己定义的原因码，如 `CollectionErrorTrait.COLLECTION_NAME_TAKEN`。
+
+<CodeRef at="patra-tool/patra-tool-core/src/main/java/dev/patra/tool/core/error/trait/StandardErrorTrait.java@b6e01875bb5692356021c8a19562f557f319fc54" lines="23-63" />
+
+重名的异常两类都带：
+
+<CodeRef at="patra-api/patra-interaction/patra-interaction-domain/src/main/java/dev/patra/interaction/domain/collection/exception/CollectionNameTakenException.java@3cf6fa5757b3be54c3b030e4cace871f53e2599c" lines="9-28" />
+
+<CodeRef at="patra-api/patra-interaction/patra-interaction-domain/src/main/java/dev/patra/interaction/domain/collection/exception/CollectionErrorTrait.java@3cf6fa5757b3be54c3b030e4cace871f53e2599c" lines="1-25" />
+
+标准特征 `CONFLICT` 回答「这是哪一类错」，业务特征 `COLLECTION_NAME_TAKEN` 回答「具体是哪个原因」。
+
+## 状态码是 Web 层统一翻译的
+
+<Stepper
+  title="一个重名异常怎么变成 409"
+  nodes={[
+    { id: "handler", label: "Handler", sub: "app 层" },
+    { id: "exception", label: "领域异常", sub: "CollectionNameTakenException" },
+    { id: "engine", label: "错误解析引擎", sub: "patra-tool-web" },
+    { id: "response", label: "HTTP 响应", sub: "给前端" }
+  ]}
+  links={[
+    { from: "handler", to: "exception" },
+    { from: "exception", to: "engine" },
+    { from: "engine", to: "response" }
+  ]}
+  steps={[
+    { caption: "Handler 查到这个用户已有同名收藏夹，决定拒绝。", focus: ["handler"], tokens: [{ id: "e", label: "重名", at: "handler" }] },
+    { caption: "它抛出 CollectionNameTakenException。异常构造时带上两个特征：CONFLICT 和 COLLECTION_NAME_TAKEN。", focus: ["exception"], links: ["handler>exception"], tokens: [{ id: "e", label: "重名", at: "exception" }], notes: [{ at: "exception", text: "CONFLICT + COLLECTION_NAME_TAKEN", tone: "wait" }] },
+    { caption: "应用层不包装、不 catch，领域异常原样往上传，到了 Web 层的错误解析引擎。", focus: ["engine"], links: ["exception>engine"], tokens: [{ id: "e", label: "重名", at: "engine" }] },
+    { caption: "引擎查它自己的映射表：CONFLICT 对应 0409，COLLECTION_NAME_TAKEN 不在表里，被跳过。", focus: ["engine"], tokens: [{ id: "e", label: "0409", at: "engine" }], notes: [{ at: "engine", text: "CONFLICT → 0409", tone: "ok" }] },
+    { caption: "响应是 HTTP 409。响应体里带着 traits，前端靠 COLLECTION_NAME_TAKEN 显示「已有同名收藏夹」。", focus: ["response"], links: ["engine>response"], tokens: [{ id: "e", label: "409", at: "response" }], notes: [{ at: "response", text: "409 · COLLECTION_NAME_TAKEN", tone: "ok" }] }
+  ]}
+  guesses={[
+    { before: 4, question: "引擎要决定回哪个 HTTP 状态码。它主要靠什么判断？", options: ["Controller 里的 try-catch", "异常携带的语义特征", "异常消息里的文字"], answer: "B", explain: "引擎看异常的特征，用一张映射表把标准特征翻译成状态码。Controller 里不需要写 try-catch。" }
+  ]}
+/>
+
+映射表就是引擎里的一个 Map：
+
+<CodeRef at="patra-tool/patra-tool-web/src/main/java/dev/patra/tool/web/error/engine/DefaultErrorResolutionEngine.java@b6e01875bb5692356021c8a19562f557f319fc54" lines="62-71" />
+
+所以你在领域层写 `StandardErrorTrait.QUOTA_EXCEEDED`，响应就是 429；写 `NOT_FOUND`，响应就是 404。换协议（比如以后加一个消息入口）时，领域异常一个字都不用改。
+
+## 各层怎么处理异常
+
+| 层 | 做法 |
+|---|---|
+| domain | 继承 `DomainException`，带语义特征，不依赖任何框架 |
+| app | 领域异常直接往上传；只有意外的 `RuntimeException` 才用 `ApplicationException` 包装并给错误码 |
+| Web 层 | 错误解析引擎统一翻译，Controller 里不写 try-catch |
+
+<Callout kind="warn">
+
+不要在应用层 catch 了领域异常再抛一个新的 RuntimeException。那样特征就丢了，引擎只能按兜底处理，用户看到的是模糊的错误。
+
+</Callout>
+
+<Quiz
+  title="想一想"
+  questions={[
+    {
+      question: "要新加一个业务错误「文献库已满」，应该怎么做？",
+      options: ["在 Controller 里判断后返回 409", "在领域层新建一个继承 DomainException 的异常，带 CONFLICT 和一个业务特征", "抛 IllegalStateException"],
+      answer: "B",
+      explain: "Patra 里 LibraryFullException 就是这样：带标准特征 CONFLICT 和业务特征 LIBRARY_FULL，由引擎翻译成 409。"
+    },
+    {
+      question: "DomainException 的构造器如果不传任何特征，会怎样？",
+      options: ["正常创建，特征为空", "直接抛 IllegalArgumentException", "自动给一个默认特征"],
+      answer: "B",
+      explain: "这是有意的约束：每个领域异常都必须表达明确的含义，不允许没有语义的异常被创建。"
+    }
+  ]}
+/>
+
+<Transfer
+  prompt="要做「每个用户一天最多发 10 条评论，超了就拒绝」。请设计这个异常：该放在哪一层、带哪个标准特征？前端怎么知道是「超限」而不是别的 429？"
+  points={[
+    { label: "放哪层", text: "领域层，继承 DomainException，和规则（数字 10）放在同一个子域里。" },
+    { label: "标准特征", text: "QUOTA_EXCEEDED，引擎会翻译成 429。" },
+    { label: "业务特征", text: "再带一个说明具体原因的业务特征，放进响应的 traits，前端靠它区分是哪种限流。Patra 里的 PublishRateLimitedException 就是这样：QUOTA_EXCEEDED 加一个原因特征。" }
+  ]}
+/>

@@ -1,0 +1,170 @@
+---
+title: Next.js：文件就是路由
+summary: 在 app 目录里放一个 page.tsx 就多一个网址；方括号文件夹从网址里取值，layout、loading、error、not-found 几个约定文件管外壳、加载、出错和找不到。
+type: concept
+difficulty: basic
+tags: [frontend]
+prerequisites: [fe-react-components-and-state]
+personalEnv: false
+---
+
+<Diagnose
+  question="门户里只有一个文件 `src/app/u/[username]/page.tsx`。浏览器分别打开 `/u/alice` 和 `/u/bob`，用的是哪个文件？"
+  options={["要各有一个文件，否则打不开", "都是这一个文件：方括号那一段从网址里取值，传给页面组件", "只有名字叫 username 的用户能打开"]}
+  answer="B"
+  ifRight="对。一个文件就是一类网址，网址里变的那一段当参数传进来。这篇讲文件和网址怎么对应，以及外壳、加载、出错各放在哪个文件里。"
+  ifWrong="答案是 B。`page.tsx` 导出的就是一个 React 组件，`[username]` 这一段的值作为它的 props 传进来，同一个组件按不同的值画出不同的主页。组件和 props 是前置篇的内容。"
+  suggest="fe-react-components-and-state"
+/>
+
+## 文件夹就是网址
+
+门户用 Next.js 的 App Router。规则只有一条：`src/app/` 下的文件夹对应网址的一段，文件夹里放一个 `page.tsx`，这一段才能被打开。`page.tsx` 默认导出一个 React 组件，就是这个网址的页面。
+
+门户里几个真实的例子：
+
+| 文件 | 网址 |
+|---|---|
+| `app/page.tsx` | `/` |
+| `app/u/[username]/page.tsx` | `/u/alice`、`/u/bob` |
+| `app/u/[username]/collections/page.tsx` | `/u/alice/collections` |
+| `app/papers/[id]/page.tsx` | `/papers/<文献编号>` |
+| `app/journals/(list)/page.tsx` | `/journals` |
+
+最后一行的圆括号文件夹叫路由分组，只用来整理文件，不出现在网址里。文件夹里没有 `page.tsx` 的（比如只放了组件），从网址上打不开。
+
+## 方括号：从网址里取值
+
+`[username]` 这样的文件夹叫动态段。打开 `/u/alice` 时，Next.js 把 `alice` 放进 `params` 交给页面。在 Next.js 16 里，`params` 是一个 Promise，要先 `await` 才能拿到值：
+
+<CodeRef at="patra-portal/src/app/u/[username]/page.tsx@6ead12db647bcd3e56f651af791d56e418cb79ff" lines="15-17" />
+
+```tsx
+interface UserPageProps {
+  params: Promise<{ username: string }>;
+}
+```
+
+<CodeRef at="patra-portal/src/app/u/[username]/page.tsx@6ead12db647bcd3e56f651af791d56e418cb79ff" lines="48-52" />
+
+```tsx
+export default async function UserPage({ params }: UserPageProps) {
+  const [lookup, session] = await Promise.all([
+    fetchPublicProfile((await params).username),
+    lookupSession(),
+  ]);
+```
+
+页面组件前面有 `async`：它在服务器上运行，可以直接等数据回来再画。这一点下一篇细讲。
+
+网址问号后面的查询参数（`?sort=recent&page=2`）走另一个参数 `searchParams`，同样是 Promise。公开收藏夹页两样都要：
+
+<CodeRef at="patra-portal/src/app/collections/[id]/page.tsx@6ead12db647bcd3e56f651af791d56e418cb79ff" lines="64-67" />
+
+```tsx
+export default async function CollectionPage({ params, searchParams }: CollectionPageProps) {
+  const [{ id }, search] = await Promise.all([params, searchParams]);
+  const sort = parseLibrarySort(search.sort);
+  const page = parsePage(search.page);
+```
+
+## 几个约定文件：外壳、加载、出错、找不到
+
+除了 `page.tsx`，同一个文件夹里还能放几个名字固定的文件，Next.js 会自动把它们套在页面外面：
+
+| 文件 | 管什么 |
+|---|---|
+| `layout.tsx` | 外壳。下面所有页面共用；在这些页面之间切换时，外壳不重新渲染、里面的状态保留 |
+| `loading.tsx` | 页面数据还没回来时先显示的骨架 |
+| `error.tsx` | 下面的页面渲染出错时显示的内容，带「重试」 |
+| `not-found.tsx` | 页面调用 `notFound()` 时显示的内容 |
+
+根目录的 `app/layout.tsx` 是必须有的根布局，`<html>` 和 `<body>` 只在这里写。提醒列表的三个页面共用一个布局，导航栏和页脚写一次：
+
+<CodeRef at="patra-portal/src/app/notifications/layout.tsx@4a13287485468f2c489027f1aac0bb6174643e8d" lines="9-17" />
+
+```tsx
+export default function NotificationsLayout({ children }: { children: ReactNode }) {
+  return (
+    <>
+      <TopNav />
+      <main>{children}</main>
+      <Footer />
+    </>
+  );
+}
+```
+
+`children` 就是当前网址对应的那个页面。出错页 `app/error.tsx` 第一行是 `"use client"`：出错边界要在浏览器里运行，「重试」按钮才能点。
+
+打开一篇文献 `/papers/<编号>` 时，这几个文件是一层套一层的。点任意一块看它管什么：
+
+<Structure
+  title="打开一篇文献时，谁包着谁"
+  nodes={[
+    { id: "root", label: "app/layout.tsx", sub: "根布局", code: true, col: 1, desc: "最外层。写 html 与 body、字体、全站共用的提供者。整个站点只有一个。" },
+    { id: "error", label: "app/error.tsx", sub: "出错边界", code: true, col: 2, desc: "包着根布局以下的所有页面。里面任何一处渲染出错，就换成这一屏，带重试。" },
+    { id: "loading", label: "papers/[id]/loading.tsx", sub: "加载骨架", code: true, col: 3, desc: "页面还在等数据时先显示骨架；数据回来后换成真正的页面。" },
+    { id: "notfound", label: "papers/[id]/not-found.tsx", sub: "找不到", code: true, col: 4, desc: "页面调用 notFound() 时显示它。" },
+    { id: "page", label: "papers/[id]/page.tsx", sub: "页面本身", code: true, col: 5, desc: "这个网址真正的内容。" }
+  ]}
+  edges={[
+    { from: "root", to: "error", label: "包着" },
+    { from: "error", to: "loading", label: "包着" },
+    { from: "loading", to: "notfound", label: "包着" },
+    { from: "notfound", to: "page", label: "包着" }
+  ]}
+/>
+
+文献页的骨架很简单，就是一组灰色的块：
+
+<CodeRef at="patra-portal/src/app/papers/[id]/loading.tsx@5df24d90973c86cd2fb1ac513bbfc4bd88fab80c" lines="7-11" />
+
+```tsx
+export default function Loading() {
+  return (
+    <>
+      <TopNav />
+      <main aria-busy="true">
+```
+
+## 不是每个动态页都该有 loading.tsx
+
+文献页有骨架，公开收藏夹页 `collections/[id]` 却故意没有。它的注释写着原因：
+
+<CodeRef at="patra-portal/src/app/collections/[id]/page.tsx@6ead12db647bcd3e56f651af791d56e418cb79ff" lines="61-63" />
+
+```tsx
+/// 公开收藏夹页（简报 §3.14）：头部与第一页条目同时取，访客已登录就带会话（决策 H）。不存在、私有、所有者
+/// 主页对访客不可见一律 404，在流式之前判（真的 404，所以不建 loading.tsx）；interaction 不可用是错误块，
+/// 不是 404
+```
+
+<Quiz
+  questions={[
+    {
+      question: "如果给公开收藏夹页加上 `loading.tsx`，访客打开一个私有收藏夹，浏览器收到的 HTTP 状态码会是什么？",
+      options: ["404，和现在一样", "200：骨架先发出去了，状态码跟着第一批内容一起发出，之后才发现不存在，已经改不了", "500"],
+      answer: "B",
+      explain: "有了骨架，Next.js 会先把骨架连同 200 状态码发给浏览器，再接着送页面内容。等页面里调用 `notFound()` 时，状态码早已发出。屏幕上照样显示「没有找到」，但搜索引擎看到的是 200。所以这一页宁可不要骨架，也要先判断再回应。"
+    },
+    {
+      question: "门户想加一个网址 `/journals/<期刊编号>/experiences`，文件应该放在哪？",
+      options: ["`app/journals/experiences.tsx`", "`app/journals/[id]/experiences/page.tsx`", "`app/experiences/[id]/page.tsx`"],
+      answer: "B",
+      explain: "一段网址一层文件夹，变的那段用方括号，最后放 `page.tsx`。"
+    }
+  ]}
+/>
+
+页面之间跳转用 Next.js 的 `Link` 组件。点链接时浏览器不整页刷新，外层布局原样保留，只换里面的页面。它还会提前把链接指向的页面取回来，这件事和页面是「静态」还是「动态」有关，放在后面讲渲染的那篇。
+
+<Transfer
+  prompt="门户要加一个「某个收藏夹里的某篇文献批注」页，网址是 `/collections/<收藏夹编号>/notes/<文献编号>`。说说：文件放在哪、页面组件怎么拿到两个编号、要不要加 loading.tsx。"
+  points={[
+    { label: "文件位置", text: "`app/collections/[id]/notes/[paperId]/page.tsx`：两段会变，各用一个方括号文件夹，名字不能重复。" },
+    { label: "拿参数", text: "`params` 是 Promise，`await` 之后得到 `id` 和 `paperId` 两个字段。" },
+    { label: "loading.tsx 看需求", text: "如果「不存在或无权看」要回真正的 404，就和收藏夹页一样不加骨架，先判断再回应；能接受先出骨架，就加。" },
+    { label: "外壳复用", text: "`collections/[id]` 下若有 `layout.tsx`，批注页会自动套在里面。" }
+  ]}
+/>

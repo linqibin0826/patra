@@ -1,0 +1,81 @@
+---
+title: "@StepScope 代理别碰字段"
+summary: 标了 @StepScope 的 Bean，注入到别处的是一个 CGLIB 代理。调方法会转给这次 Step 的真实对象，直接读写字段却读写的是代理自己那份从没初始化过的字段。共享状态一律只经方法访问。
+type: pitfall
+difficulty: practice
+tags: [spring, java]
+prerequisites: [spring-batch-jobs, spring-proxies-and-transactional]
+sources:
+  - version: v0.11
+    issue: PAP-84
+    pr: 246
+personalEnv: false
+---
+
+<Diagnose
+  question="一个 @StepScope 的计数器 Bean 被注入到处理器和写入器里。写入器里写的是 counters.created.addAndGet(n)（直接访问字段），处理器里写的是 counters.addCreated(n)（调方法）。哪一边会出问题？"
+  options={["都没问题，注入的是同一个 Bean", "直接访问字段的那一边", "调方法的那一边"]}
+  answer="B"
+  ifRight="对。注入进来的是代理，方法调用会被转给真实对象，字段访问不会。"
+  ifWrong="答案是 B。@StepScope 注入的不是计数器本身，而是一个代理；代理只拦截方法调用。这题考的是 Spring 代理怎么工作，先读代理与 @Transactional 那篇。"
+  suggest="spring-proxies-and-transactional"
+/>
+
+## 坑
+
+`@StepScope` 让 Bean 的生命周期跟着一次 Step 执行走：每次 Step 开始才创建，还能注入这次的 Job 参数。可容器启动、给别的 Bean 注入依赖时，Step 还没开始，真实对象还不存在。
+
+Spring 的办法是先注入一个 **CGLIB 代理**：它是计数器类的一个子类实例，每次有方法被调用，就去当前 Step 的作用域里找到（或创建）真实对象，把调用转过去。
+
+方法调用能被拦截，**字段访问不能**。直接读写字段时，读写的是代理这个子类实例自己继承来的那份字段，它从来没被初始化过。
+
+<Stepper
+  title="一次方法调用和一次字段访问，各去了哪里"
+  nodes={[
+    { id: "writer", label: "写入器", sub: "持有注入的引用" },
+    { id: "proxy", label: "CGLIB 代理", sub: "计数器的子类" },
+    { id: "real", label: "真实计数器", sub: "本次 Step 的实例" }
+  ]}
+  links={[
+    { from: "writer", to: "proxy" },
+    { from: "proxy", to: "real" }
+  ]}
+  steps={[
+    { caption: "写入器拿到的引用指向代理，不是真实计数器。", focus: ["writer", "proxy"], notes: [{ at: "proxy", text: "字段未初始化", tone: "wait" }, { at: "real", text: "created = 0" }] },
+    { caption: "写入器调 counters.addCreated(5)。代理拦截这次方法调用，找到本次 Step 的真实计数器，把调用转过去。", focus: ["proxy", "real"], links: ["writer>proxy", "proxy>real"], tokens: [{ id: "call", label: "addCreated(5)", at: "real" }], notes: [{ at: "proxy", text: "字段未初始化", tone: "wait" }, { at: "real", text: "created = 5", tone: "ok" }] },
+    { caption: "写入器又直接读字段 counters.created。字段访问是 JVM 直接取对象里的值，代理拦不住：读到的是代理自己那份。", focus: ["writer", "proxy"], links: ["writer>proxy"], tokens: [{ id: "field", label: "读 created", at: "proxy" }], notes: [{ at: "proxy", text: "created = null", tone: "bad" }, { at: "real", text: "created = 5", tone: "ok" }] }
+  ]}
+  guesses={[
+    { before: 3, question: "真实计数器里 created 已经是 5。写入器直接读 counters.created，会读到什么？", options: ["5", "代理自己那份字段：从没初始化，是 null（换成基本类型就是 0）", "抛异常，代理不允许读字段"], answer: "B", explain: "代理是计数器的子类实例，构造时不会跑你写的字段初始化；字段访问不经过代理的拦截逻辑，读到的就是它自己的那份。计数字段是 AtomicInteger 时，直接读会是 null，一调用就空指针。" }
+  ]}
+/>
+
+## 为什么
+
+v0.11 全文阅读那一版的 PubMed 增量同步里，一个 Step 的处理器、写入器、跳过监听器要共用一组计数（新建、更新、跳过……）。这组计数注册成 `@StepScope` Bean，保证每次 Step 一份、互不串：
+
+<CodeRef at="patra-api/patra-catalog/patra-catalog-infra/src/main/java/dev/patra/catalog/infra/publication/batch/PubmedImportJobConfig.java@5073ab1358404ecd989e722373cd9f7edafe238b" lines="212-219" />
+
+CGLIB 代理的原理是生成一个子类，覆写所有可覆写的方法，在方法里做转发。字段不是方法，没有东西可覆写；Java 读写字段也不会经过任何方法调用。所以代理对字段完全无能为力。
+
+## 怎么避开
+
+共享状态一律经方法访问。计数器的字段全设成 `private`，对外只给 `addCreated`、`incrementSkipErrors`、`snapshot` 这样的方法，并在类注释里写清原因：
+
+<CodeRef at="patra-api/patra-catalog/patra-catalog-infra/src/main/java/dev/patra/catalog/infra/publication/batch/update/PubmedImportCounters.java@5073ab1358404ecd989e722373cd9f7edafe238b" lines="6-36" />
+
+<Callout kind="warn">
+
+不写访问修饰符的字段是包级可见的，同一个包里的处理器、写入器都能写出 `counters.created`，编译照样通过。把字段设成 `private`，让编译器替你挡住。
+
+</Callout>
+
+<Transfer
+  prompt="还有哪些 Spring 的 Bean 注入进来的也是代理？在它们身上直接访问字段，会不会踩同一个坑？"
+  points={[
+    { label: "@RefreshScope", text: "刷新作用域的 Bean 注入的也是作用域代理，直接读它的字段会读到代理自己那份。" },
+    { label: "@Transactional、@Async 的类", text: "用 CGLIB 代理时，注入的同样是子类代理；字段访问拿不到真实对象的值。" },
+    { label: "@Lazy 注入", text: "懒加载注入的是代理，第一次调方法才创建真实对象；读字段永远读不到。" },
+    { label: "通用规矩", text: "从容器拿到的 Bean，只通过它的 public 方法打交道，不碰字段。" }
+  ]}
+/>

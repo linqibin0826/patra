@@ -1,0 +1,117 @@
+---
+title: 进程内事件：Spring 的发布与监听
+summary: 同一个服务里，一处代码发布「某件事发生了」，另一处代码订阅它，双方互不引用。Spring 的 @EventListener 默认在发布方的线程、同一个事务里同步执行，监听器抛异常会让发布方一起回滚。
+type: concept
+difficulty: basic
+tags: [backend, messaging, spring]
+prerequisites: [msg-why-async, spring-dependency-injection]
+topics: [event-delivery]
+sources:
+  - version: v0.14
+    issue: PAP-123
+  - version: v0.15
+personalEnv: false
+---
+
+<Diagnose
+  question="删除评论的代码在事务里发布了一个「评论已删除」事件。订阅它的监听器执行时抛了异常，没有任何特别配置。评论的删除会怎样？"
+  options={["评论照常删除，监听器的失败只是一条日志", "监听器和发布方在同一个事务里，异常传回去，整个删除一起回滚", "监听器在另一个线程里重试，评论照常删除"]}
+  answer="B"
+  ifRight="对。Spring 的事件默认不是「发出去就不管」，而是一次同步的方法调用。这篇讲清它的运行方式，以及什么时候这恰好是你想要的。"
+  ifWrong="答案是 B。默认的事件监听器就在发布方的线程里被调用，用的是同一个事务；异常会沿着调用栈传回发布方。后面用一个真实例子一步步走一遍。"
+  suggest="msg-why-async"
+/>
+
+## 先解决一个耦合问题
+
+删除评论时，还要顺带做一件事：把这条评论收到的所有「有帮助」也删掉，并扣回作者的获赞数。
+
+最直接的写法，是删评论的代码直接去调「有帮助」的代码。可是这样，评论模块就得认识「有帮助」模块；以后每多一件「评论删除时要做的事」，删评论的代码就多一行。
+
+事件换了一个写法：删评论的代码只说一句「评论 123 已删除」（**发布**事件），不管谁听。想响应的模块自己**订阅**。双方都只认识那个事件，不认识彼此。
+
+Spring 自带这个机制：`ApplicationEventPublisher` 负责发布，`@EventListener` 负责订阅。你在上一篇「依赖注入」里见过，发布方只要把 `ApplicationEventPublisher` 声明成构造器参数，Spring 就会递给它。
+
+<Callout kind="lead">
+
+进程内事件，指发布方和订阅方在**同一个进程**里，靠 Spring 把事件交过去。和后面讲的跨服务消息队列不同，这里没有网络，没有 RabbitMQ。
+
+</Callout>
+
+## 默认是同步的
+
+很多人以为「发布事件」像往队列里扔消息：扔完就走，对方随后处理。Spring 默认不是。`publishEvent(...)` 这一行，实际上是**逐个调用**订阅者的方法，调用完才返回。
+
+Patra 里有一个真实的订阅者：评论或投稿经验被删除时，同一个事务里清掉它收到的全部「有帮助」。
+
+<CodeRef at="patra-api/patra-interaction/patra-interaction-app/src/main/java/dev/patra/interaction/app/reaction/listener/HelpfulTargetDeletedListener.java@b554d996121f219ca9dc8a6ea08baf4f93648f5a" lines="14-34" />
+
+注意它类上的注释：**同步 `@EventListener`：与发布方同一线程、同一事务；抛出异常时删除一起回滚**。下面一步步走一遍。
+
+<Stepper
+  title="删除一条评论，同步事件怎么走"
+  nodes={[
+    { id: "handler", label: "删除评论", sub: "Handler，持有事务" },
+    { id: "bus", label: "Spring", sub: "事件发布器" },
+    { id: "listener", label: "HelpfulTargetDeletedListener", sub: "订阅者" },
+    { id: "db", label: "PostgreSQL", sub: "同一个事务" }
+  ]}
+  links={[
+    { from: "handler", to: "bus" },
+    { from: "bus", to: "listener" },
+    { from: "listener", to: "db" }
+  ]}
+  steps={[
+    { caption: "删除评论的 Handler 开了事务，把评论标成已删除。事务还没有提交。", focus: ["handler", "db"], tokens: [{ id: "evt", label: "评论已删除", at: "handler" }], notes: [{ at: "db", text: "事务进行中", tone: "wait" }] },
+    { caption: "Handler 调 publishEvent，把「评论已删除」交给 Spring。Spring 找出所有订阅这个事件的方法。", focus: ["handler", "bus"], links: ["handler>bus"], tokens: [{ id: "evt", label: "评论已删除", at: "bus" }] },
+    { caption: "Spring 就在这个线程上直接调用监听器的方法。Handler 停在 publishEvent 这一行，等它返回。", focus: ["bus", "listener"], links: ["bus>listener"], tokens: [{ id: "evt", label: "评论已删除", at: "listener" }], notes: [{ at: "listener", text: "执行中，Handler 在等", tone: "wait" }] },
+    { caption: "监听器在同一个事务里删除这条评论收到的全部「有帮助」，并扣回作者的获赞。", focus: ["listener", "db"], links: ["listener>db"], tokens: [{ id: "evt", label: "评论已删除", at: "listener" }], notes: [{ at: "db", text: "删评论 + 删有帮助 + 扣获赞，都还没提交", tone: "wait" }] },
+    { caption: "监听器返回，publishEvent 返回，Handler 继续往下走并提交。三件事一起生效。", focus: ["handler", "db"], tokens: [{ id: "evt", label: "评论已删除", at: "handler", state: "faded" }], notes: [{ at: "db", text: "已提交，三件事同时生效", tone: "ok" }] }
+  ]}
+  guesses={[
+    { before: 3, question: "publishEvent 这一行执行的时候，监听器是在哪个线程、什么时候被调用的？", options: ["另一个线程，稍后才执行", "就在当前线程里，publishEvent 返回之前就执行完", "要等事务提交之后才执行"], answer: "B", explain: "默认的 @EventListener 是同步调用。要稍后、要提交后再执行，都得额外声明，后面一篇会讲。" },
+    { before: 4, question: "如果监听器在这一步抛出异常，评论的删除会怎样？", options: ["评论照常删除，有帮助留着", "异常传回 Handler，整个事务回滚，评论也没删", "评论删除，监听器之后重试"], answer: "B", explain: "同一个线程、同一个事务：异常沿调用栈传回 Handler，事务回滚，三件事一起不生效。" }
+  ]}
+/>
+
+## 同成同败，是特点也是限制
+
+默认同步给了你一个很有用的性质：发布方和订阅者的写入**同成同败**。评论删了，有帮助一定也删了；订阅者出错，就一起回滚。不会出现「评论没了、有帮助还挂着」。
+
+Patra 的事务规范把这写成了规则：**需要同成同败的事件，用同步 `@EventListener`**。
+
+但同步也有代价：
+
+<Callout kind="cost">
+
+订阅者慢，发布方就慢；订阅者出错，发布方也失败。所以事务里的订阅者只能做数据库操作，不能在里面调远程服务、发邮件。事务要尽量短。
+
+</Callout>
+
+## Patra 曾经这样做提醒
+
+v0.14 做讨论功能时，评论发表后「给被回复的人写提醒」，用的就是这套：讨论子域在写入评论的同一个事务里发布「评论已发表」，提醒子域订阅它，在同一个事务里写提醒。当时的理由是，规则留在提醒子域，评论和提醒同成同败，不会丢提醒。
+
+<CodeRef at="docs/patra/release-specs/v0.14-discussion.md@3fd471406f41788d57fdd322d5ba6c678f91a407" lines="167-173" />
+
+后来 v0.16 把提醒搬进了独立的通知服务。两个服务各有各的数据库，装不进同一个事务，这套同成同败的办法就用不了了。这就是这条路线接下来要讲的：跨服务怎么靠消息保证提醒不丢。
+
+<Quiz
+  questions={[
+    {
+      question: "订单事务里发布了「订单已创建」。订阅者 A 要扣库存（必须和下单同成同败），订阅者 B 要调外部短信服务发通知。都用默认的同步 @EventListener，会有什么问题？",
+      options: ["没问题，同步就是最安全的", "B 在事务里调外部服务：慢会拖住下单，失败还会让下单回滚", "A 和 B 会各开一个事务"],
+      answer: "B",
+      explain: "同步监听器在发布方的事务里。数据库操作可以放心放进来，远程调用不行。B 需要换成「提交后再做」的写法。"
+    }
+  ]}
+/>
+
+<Transfer
+  prompt="论坛里删除一个帖子时，要同时 (1) 删除帖子下的所有评论，(2) 把作者的发帖数减 1，(3) 通知版主「帖子被删」。三件事分别该用同步的 @EventListener 吗？为什么？"
+  points={[
+    { label: "(1) 和 (2) 适合", text: "都是同一个数据库里的写入，要和删帖同成同败：删了帖子却没删评论、没扣数，数据就对不上。" },
+    { label: "(3) 要想一想", text: "通知版主可能要发邮件或调别的服务，放在删帖的事务里，慢或失败都会拖累删帖。它更适合放到事务提交之后。" },
+    { label: "引向下一步", text: "「提交之后再做」怎么写，提交后崩了怎么办，是接下来两三篇要讲的。" }
+  ]}
+/>

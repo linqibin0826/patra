@@ -1,0 +1,100 @@
+---
+title: 取消自研的 RefreshableProperties
+summary: v0.9 原计划自研一个「不可变快照 + 原子替换 + 校验失败保留旧值」的刷新组件。调研后发现业界普遍直接用 Spring Cloud 自带的可变配置类重新绑定，于是取消自研，接受它的几个已知代价。
+type: decision
+difficulty: practice
+tags: [spring, java]
+prerequisites: [spring-nacos-config-and-refresh]
+topics: [config-refresh]
+sources:
+  - version: v0.9
+    issue: PAP-73
+    pr: 231
+personalEnv: false
+---
+
+<Diagnose
+  question="配置类写成 Java record（不可变），字段由构造器绑定。配置中心推了新值，Spring Cloud 触发刷新。这个 record 里的值会变吗？"
+  options={["会，Spring Cloud 会重新构造一个 record", "不会，Spring Cloud 刷新时跳过构造器绑定的配置类", "会，但要加 @RefreshScope 之外的特殊注解"]}
+  answer="B"
+  ifRight="对。Spring Cloud 官方文档写明：构造器绑定（含 record）的配置类无法刷新。这篇讲 Patra 怎么在这个限制下做选择。"
+  ifWrong="答案是 B。Spring Cloud 的原地重新绑定靠调 setter 改字段，record 没有 setter，刷新时被跳过。这题考的是配置刷新的机制，先读配置刷新那篇。"
+  suggest="spring-nacos-config-and-refresh"
+/>
+
+## 背景
+
+v0.9 配置中心那一版，把各服务的配置搬进 Nacos，有几个参数要能在线调（比如登录失败上限）。当时项目里 28 个配置类有 5 个是 record。
+
+Spring Cloud 自带的刷新有三个缺口，都是真实存在的：
+
+1. record（构造器绑定）刷新不了。
+2. 原地重新绑定时先把字段重置成默认值、再绑新值，这期间并发的读者可能读到默认值。
+3. 新值不合法时，校验在写入之后才跑，坏值已经进了对象，旧值回不来。
+
+原计划是自研 `RefreshableProperties<T>`：配置保持 record，刷新时校验通过才原子替换整个快照，校验失败保留旧值。三个缺口一次补齐。
+
+## 选项
+
+<DecisionOptions
+  options={[
+    { name: "自研 RefreshableProperties<T>", summary: "不可变快照，校验通过才原子替换，失败保留旧值。", pros: "三个缺口都补上：record 能刷新，读不到中间状态，坏值进不来。", cons: "要在共享工具库里新建并维护一个组件，所有用到可刷新配置的地方都得学这套写法；业界没找到广泛采用的同类方案。" },
+    { name: "可变配置类 + Spring Cloud 重新绑定", summary: "需要刷新的配置写成带默认值的可变 @ConfigurationProperties 类，由 ConfigurationPropertiesRebinder 原地重新绑定。", pros: "Spring Cloud 自带，和别人用的是同一套；不需要刷新的配置继续用 record。", cons: "三个缺口原样留着。", chosen: true },
+    { name: "@RefreshScope", summary: "刷新时销毁并重建 Bean。", pros: "也是 Spring Cloud 自带。", cons: "引入代理；新值不合法时 Bean 重建失败，异常直接抛给业务调用方。" }
+  ]}
+/>
+
+## 选择
+
+<Quiz
+  title="你猜会怎样"
+  questions={[
+    {
+      question: "三个缺口都真实存在，自研组件也确实能补上。最后为什么还是没做？",
+      options: ["实现太难，做不出来", "对单人项目、几个互相独立的参数来说，缺口的实际影响都能接受，不值得在共享库里多养一个组件", "Spring Cloud 下个版本会修"],
+      answer: "B",
+      explain: "决定性的不是「缺口在不在」，而是「缺口的实际影响有多大，值不值得为它维护一套自家的东西」。"
+    }
+  ]}
+/>
+
+选可变配置类加 Spring Cloud 重新绑定，2026-10-14 改定，原定的自研任务取消。
+
+调研了 Spring Cloud、Spring Cloud Alibaba、Apollo、Micronaut、Archaius：业界普遍用可变类自动重新绑定，或者 `@RefreshScope`，没有广泛采用的「不可变快照 + 原子替换 + 校验失败保留旧值」方案。
+
+缺口逐个看：Patra 是单人项目，当时还没有真实用户，要在线调的只是几个互相独立的参数，读到一瞬间的默认值、坏值进对象，都可以接受；而 Nacos 配置文件放在 git 里、改动要过评审，坏值进来的机会本来就少。
+
+为此定下几条写法：
+
+- 需要在线刷新的配置写成带默认值的可变类，使用方**每次用时再读**，不缓存到字段或构造器里。
+- 默认值写在字段上，jar 的 `application.yml` 里不写这些键；要调就在 Nacos 文件里加。
+- 加 `@Validated`：不合法的值让刷新报错、健康检查转 DOWN。
+- 不需要刷新的配置（数据源、端口、密钥）继续用 record，Spring Cloud 刷新时会跳过它们。
+
+<CodeRef at="patra-api/patra-identity/patra-identity-boot/src/main/java/dev/patra/identity/config/LoginThrottleProperties.java@b6e01875bb5692356021c8a19562f557f319fc54" lines="11-41" />
+
+使用方每次登录时按当前值构造策略对象，不把它缓存起来：
+
+<CodeRef at="patra-api/patra-identity/patra-identity-boot/src/main/java/dev/patra/identity/config/IdentityConfiguration.java@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="57-70" />
+
+## 代价
+
+<Callout kind="cost">
+
+- **重新绑定期间可能读到默认值**：字段先被重置再绑新值，那一瞬间的并发读者看到的是字段上的默认值。
+- **坏值进得来，旧值回不去**：校验失败只让健康检查转 DOWN。恢复靠 git revert 后重新推送（还有一个坑，见「配置推回原文，服务却不刷新」）。
+- **一个配置类刷新失败，会中断它后面配置类的重新绑定**：`ConfigurationPropertiesRebinder` 不吞异常。
+
+</Callout>
+
+什么时候该重新考虑：有了真实用户，某个参数调错一瞬间就会造成实际损失；或者要在线刷新的参数多到互相有约束、必须一起生效。
+
+<Transfer
+  prompt="一个电商系统要在线调「单笔订单最大金额」，调错成 0 会让所有下单失败，而且系统有真实用户。你还会选可变类重新绑定吗？会加什么保护？"
+  points={[
+    { label: "影响变了，结论可能变", text: "调错的代价从「几分钟不可用」变成真实损失，「坏值进得来」不再能接受。" },
+    { label: "推送前校验", text: "在发布配置之前就跑一遍校验（评审流水线里加检查），不让坏值到达服务。" },
+    { label: "使用方兜底", text: "读值时判断明显不合法的值（比如 0），回退到安全的默认值并告警。" },
+    { label: "仍先找主流做法", text: "考虑配置中心自带的灰度发布、配置校验能力，最后才是自研。" }
+  ]}
+/>

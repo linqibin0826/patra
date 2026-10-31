@@ -1,0 +1,136 @@
+---
+title: Docker 镜像与容器
+summary: 镜像是把程序连同运行环境一起打好的包，容器是用镜像跑起来的一个实例。镜像放在镜像仓库里，用提交号当版本。
+type: concept
+difficulty: basic
+tags: [docker, deployment]
+prerequisites: [ops-code-to-production]
+personalEnv: false
+---
+
+<Diagnose
+  question="你把一个 Java 程序打成 jar 发给同事，他电脑上的 Java 版本更低，跑不起来。怎样才能让它在哪台机器上都能照原样跑？"
+  options={["要求每个人都升级到同一个 Java 版本", "把 jar 连同 Java 运行环境和需要的系统库，一起打成一个整体来分发", "把源码发过去，让对方自己编译"]}
+  answer="B"
+  ifRight="对。把运行环境一起打进去，就不再依赖对方机器上装了什么。这个整体就叫镜像。"
+  ifWrong="答案是 B。要求别人改环境既麻烦又不可靠。更好的办法是把运行环境也一起带上，这个整体就是镜像。"
+  suggest="ops-code-to-production"
+/>
+
+## 镜像：把环境一起打包
+
+程序能不能跑，不只取决于程序本身，还取决于机器：Java 版本、系统库、字体、时区……“在我电脑上明明能跑”就是这么来的。
+
+**Docker 镜像**把这些全部打进同一个包：程序、它需要的运行环境、一套精简的操作系统文件。任何装了 Docker 的机器，拿到这个包都能原样跑。
+
+<Callout kind="analogy">
+
+对 Java 程序员，最好的类比是：镜像像一个 class，容器像用它 new 出来的对象。一个镜像可以同时启动多个容器，每个容器各自独立、互不影响。
+
+</Callout>
+
+- **镜像（image）**：只读的模板，打包好就不变。
+- **容器（container）**：从镜像启动出来的一个运行中的实例，有自己的进程、网络和文件空间。
+- **Dockerfile**：写给 Docker 的“配方”，一行一行说明这个镜像怎么一步一步造出来。
+
+## 镜像是分层的
+
+Dockerfile 里每条指令（`COPY`、`RUN`）会生成一层。Docker 会把每一层缓存起来：**如果这一层的输入没变，下次构建就直接复用，不重新做**。
+
+这条规则决定了 Dockerfile 怎么写才快：把很少变的放前面，经常变的放后面。Patra 的后端服务就是这么做的。Spring Boot 的可执行 jar 先被拆成几层，再依次拷进镜像：
+
+<CodeRef at="patra-infra/docker/service.Dockerfile@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="36-44" />
+
+| 层 | 内容 | 变化频率 |
+|---|---|---|
+| `dependencies` | 第三方 jar，约 80 MB | 依赖不变就几乎不变 |
+| `spring-boot-loader` | 启动器类 | 很少 |
+| `snapshot-dependencies` | 快照依赖 | 当前没有 |
+| `application` | 你自己的代码 | 每次构建都变 |
+
+先猜一猜，再动手试：
+
+<Params
+  title="动手试试：改了什么，要重新传多少"
+  guess={{ question: "你只改了一行业务代码，没有动依赖。重新打镜像时，哪些层需要重新构建？", options: ["全部层都要重新构建", "只有 application 这一层", "一层都不用，直接复用旧镜像"], answer: "B", explain: "依赖层的输入没变，直接命中缓存；只有放在最后的 application 层变了。这就是把它放在最后的原因。" }}
+  controls={[
+    { type: "switch", id: "deps", label: "改了依赖（比如升级了第三方库）", default: false },
+    { type: "switch", id: "code", label: "改了业务代码", default: true }
+  ]}
+  cases={[
+    { when: { deps: true }, results: [{ label: "dependencies 层", value: "重新构建，约 80 MB", tone: "bad" }, { label: "application 层", value: "重新构建，几百 KB", tone: "wait" }], verdict: { tone: "bad", head: "最慢的情形。", text: "依赖层变了，就要重建并重新传输一大块。好在依赖不是天天变。" } },
+    { when: { code: true }, results: [{ label: "dependencies 层", value: "命中缓存，跳过", tone: "ok" }, { label: "application 层", value: "重新构建，几百 KB", tone: "ok" }], verdict: { tone: "ok", head: "日常的情形。", text: "只重做最后一层。每次部署只需传几百 KB，在慢网速下也能很快完成。" } },
+    { results: [{ label: "所有层", value: "全部命中缓存", tone: "ok" }], verdict: { tone: "ok", head: "什么都没变。", text: "镜像完全复用，几乎瞬间完成。" } }
+  ]}
+/>
+
+## 同一个目标，两种写法
+
+Patra 里有两类镜像，造法不同。把它们并排看：
+
+<Compare
+  title="后端服务与学习站，镜像是怎么造出来的"
+  variants={[
+    {
+      label: "后端服务",
+      steps: ["在仓库里先用 Gradle 把服务打成 jar（bootJar）", "把 jar 拷进 Docker 构建上下文", "Dockerfile 里把 jar 拆成四层，再拷进精简的运行镜像", "镜像里只有运行时，不含编译器"],
+      results: [{ label: "构建发生在哪", value: "镜像之外（先 Gradle，再 Docker）", tone: "wait" }, { label: "六个后端服务", value: "共用同一份 Dockerfile", tone: "ok" }],
+      verdict: { tone: "ok", head: "先构建，后装箱。", text: "六个服务的 jar 结构完全一致，所以一份 Dockerfile 通用，只有端口不同。" }
+    },
+    {
+      label: "学习站（前端）",
+      steps: ["第一阶段 deps：只拷依赖清单，安装依赖", "第二阶段 builder：拷入源码，执行 pnpm build", "第三阶段 runner：只带上构建产物，精简运行", "镜像里没有源码和构建工具"],
+      results: [{ label: "构建发生在哪", value: "镜像之内（多阶段）", tone: "ok" }, { label: "依赖变化时", value: "依赖阶段才重做", tone: "ok" }],
+      verdict: { tone: "ok", head: "构建全在 Dockerfile 里。", text: "流水线只需要一条 docker build，从源码直接得到镜像。" }
+    }
+  ]}
+/>
+
+学习站的 Dockerfile 三个阶段，一眼就能看出来：
+
+<CodeRef at="patra-learn/Dockerfile@5b8549e5bca17e8c760e45097ff866918646edec" lines="5-29" />
+
+两者共同的好习惯：**不用 root 运行**（专门建了低权限的用户），并且只把运行需要的东西留在最终镜像里。
+
+## 镜像放哪里，叫什么
+
+做好的镜像要有地方存，这就是**镜像仓库**。可以把它想成镜像世界的 Maven Central。Patra 用的是 GitHub 提供的 GHCR，镜像名长这样：
+
+```text
+ghcr.io/linqibin0826/patra-learn:<提交号>
+```
+
+冒号后面是 **tag**，也就是版本号。Patra 的 tag 是这次构建对应的 **commit 提交号**，同时再打一个 `latest`。这样“回滚到某一版”就是“换回某个提交号的镜像”，没有歧义。
+
+| 命令 | 作用 |
+|---|---|
+| `docker build -f Dockerfile 目录` | 按配方造镜像 |
+| `docker images` | 看本机有哪些镜像 |
+| `docker ps` | 看有哪些容器在跑 |
+| `docker logs 容器名` | 看容器输出的日志 |
+
+<Quiz
+  questions={[
+    {
+      question: "一个镜像可以同时启动几个容器？",
+      options: ["只能一个", "多个，彼此独立"],
+      answer: "B",
+      explain: "镜像是只读模板，可以启动任意多个容器，每个容器各有自己的运行状态。"
+    },
+    {
+      question: "Dockerfile 里为什么要把“拷依赖”放在“拷业务代码”之前？",
+      options: ["只是习惯", "依赖不常变，放前面可以命中缓存，业务代码变了也不用重做依赖"],
+      answer: "B",
+      explain: "越不常变的放越前面，缓存命中率最高。"
+    }
+  ]}
+/>
+
+<Transfer
+  prompt="你只改了学习站里一篇条目的文字，没动 package.json 和 pnpm-lock.yaml，然后重新 docker build。三个阶段里，哪些会命中缓存，哪些要重做？"
+  points={[
+    { label: "deps 阶段命中", text: "它只依赖 package.json 和锁文件，这两个文件没变，安装依赖的这一层直接复用，省下最慢的一步。" },
+    { label: "builder 重做", text: "它把全部源码拷进去再 pnpm build，源码变了，这一层必须重做。" },
+    { label: "runner 也变", text: "最终镜像里的构建产物变了，所以最后一阶段也会产生新的层，但体积很小。" }
+  ]}
+/>

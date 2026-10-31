@@ -1,0 +1,60 @@
+---
+title: SSH 上去启动 OrbStack，CD 却连不上 docker
+summary: 在部署机上经 SSH 执行 orbctl start，OrbStack 以后台模式启动，容器照常跑，却不会创建 /var/run/docker.sock。CD 用了自定义的 DOCKER_CONFIG，读不到 OrbStack 的 context，只能找默认的 socket，于是报连不上 docker。
+type: pitfall
+difficulty: practice
+tags: [docker, deployment]
+prerequisites: [ops-docker-images-and-containers, ops-self-hosted-runner]
+personalEnv: true
+---
+
+<Diagnose
+  question="部署机上 `docker ps` 能看到容器都在跑。CD 任务里执行 docker 命令，却报 `failed to connect to the docker API … no such file or directory`。CD 任务和你手动敲命令，最可能差在哪？"
+  options={["CD 任务用的 docker 版本更旧", "两者连的不是同一个 docker 入口", "CD 任务没有 root 权限"]}
+  answer="B"
+  ifRight="对。docker 命令只是个客户端，它要先决定连哪个 socket。你手动敲的和 CD 里跑的，选到的入口不一样。往下读为什么。"
+  ifWrong="答案是 B。容器在跑，说明 docker 引擎是好的；报「找不到文件」，是客户端去连的那个 socket 文件不存在。这题要先知道 docker 命令是客户端、引擎是另一个进程，先读 Docker 镜像与容器那篇。"
+  suggest="ops-docker-images-and-containers"
+/>
+
+<Callout kind="lead" label="坑在哪">
+
+在部署机上经 SSH 执行 `orbctl start`，OrbStack 以后台模式（`--internal-cli-background`）启动。容器都能跑，但它**不会**通过特权助手创建 `/var/run/docker.sock` 这个软链。平时手动敲 `docker` 用的是 OrbStack 自己的 context，不受影响；CD 却只认默认的 `/var/run/docker.sock`，于是连不上。
+
+</Callout>
+
+背景：作者的部署机是一台 Mac mini，docker 由 OrbStack 提供，CD 跑在机器上的自托管 runner 里。用别的 docker 发行版的人不会碰到这个具体问题，但「客户端连的是哪个入口」到处适用。
+
+## docker 命令怎么决定连谁
+
+docker 命令行先看 `DOCKER_HOST`，再看当前 context（记在 `DOCKER_CONFIG` 目录下的配置里），都没有才连默认的 `/var/run/docker.sock`。
+
+Patra 的门户和学习站 CD 给 docker 设了一个自定义的 `DOCKER_CONFIG` 目录，用来绕开 macOS 钥匙串。这个目录里没有 OrbStack 的 context，于是 CD 里的 docker 一律去连默认 socket：
+
+| 谁在执行 | 读哪份配置 | 连到 |
+|---|---|---|
+| 你在终端里敲 `docker ps` | `~/.docker`，当前 context 是 OrbStack | OrbStack 自己的 socket，能连 |
+| CD 任务 | 自定义 `DOCKER_CONFIG`，没有 context | `/var/run/docker.sock`，软链不存在 |
+
+## 什么时候会这样
+
+2026-09-23 发现：OrbStack 大约在 09-05 停过一次，之后是经 SSH 用 `orbctl start` 拉起来的。从那以后门户和学习站的 CD 一直失败，到 09-23 才查清原因。
+
+## 怎么避开
+
+以图形界面方式重启 OrbStack，十几秒后软链就出现了：
+
+```bash
+ssh mini 'osascript -e "quit app \"OrbStack\""; orbctl stop; sleep 5; open -a OrbStack'
+```
+
+然后重跑失败的 CD。以后在部署机上要重启 OrbStack，都用 `open -a OrbStack`，不用 `orbctl start`。
+
+<Transfer
+  prompt="你在一台 Linux 服务器上用 rootless docker，自己登录时 `docker ps` 正常，cron 里定时跑的备份脚本却报连不上 docker。你会先检查什么？"
+  points={[
+    { label: "两边的入口不同", text: "rootless docker 的 socket 在用户目录下，靠 `DOCKER_HOST` 或 context 指过去；cron 的环境里多半没有这些变量。" },
+    { label: "先打印出来", text: "在脚本里打印 `DOCKER_HOST`、`docker context ls`，和交互式登录时对照。" },
+    { label: "显式指定", text: "脚本里显式设 `DOCKER_HOST` 或 `--context`，别依赖运行环境碰巧继承的配置。" }
+  ]}
+/>

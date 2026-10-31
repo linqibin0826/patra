@@ -1,0 +1,239 @@
+---
+title: "异常：出错了怎么往外报"
+summary: 方法做不下去时抛出异常，异常沿着调用链往外走，直到有人接住。Patra 规定领域异常必须带上「错在哪一类」的语义，框架据此自动回 409、503 这样的状态码。
+type: concept
+difficulty: basic
+tags: [java]
+prerequisites: [java-classes-objects-interfaces]
+personalEnv: false
+---
+
+<Diagnose
+  question="新建收藏夹时发现重名，Patra 的代码执行了 throw new CollectionNameTakenException();。这一行后面的那句「把收藏夹存进数据库」还会执行吗？"
+  options={["会，异常只是记一笔，代码接着往下走", "不会，方法立刻中断，异常交给调用它的地方，一层层往外走", "不会，整个服务进程直接退出"]}
+  answer="B"
+  ifRight="对。throw 之后这个方法就结束了，异常往外走，直到有人接住。下面跟着一个真实的异常走一遍，看它最后怎么变成用户看到的错误。"
+  ifWrong="答案是 B：throw 让当前方法立刻结束，异常沿着「谁调用了我」一层层往外交，进程不会因此退出。要看懂「谁调用了谁」，先得清楚对象和方法是怎么回事。"
+  suggest="java-classes-objects-interfaces"
+/>
+
+<Callout kind="lead">
+
+**异常**是方法说「我做不下去了」的方式。`throw` 一出，当前方法立刻中断，异常沿着调用链往外走，直到遇到一个 `catch` 把它接住；一路都没人接，就由框架把它变成一个错误响应。好的异常要说清**错在哪一类**，接住它的人才知道该怎么办。
+
+</Callout>
+
+## throw：做不下去就喊停
+
+建收藏夹的处理器里有这么一段：
+
+<CodeRef at="patra-api/patra-interaction/patra-interaction-app/src/main/java/dev/patra/interaction/app/collection/usecase/collection/CreateCollectionHandler.java@3cf6fa5757b3be54c3b030e4cace871f53e2599c" lines="42-52" />
+
+```java
+    return transactions.execute(
+        status -> {
+          library.lockOwner(userId);
+          if (collections.countCollections(userId) >= CollectionLimits.MAX_COLLECTIONS) {
+            throw new CollectionLimitReachedException();
+          }
+          if (collections.nameTaken(userId, name.value(), null)) {
+            throw new CollectionNameTakenException();
+          }
+          return collections.create(userId, name, description, clock.instant());
+        });
+```
+
+收藏夹数量到上限，抛一个异常；重名，抛另一个。只要抛了，最后那句 `collections.create(…)` 就不会执行。`throw new …` 和平常造对象一样，先 `new` 出一个异常对象，再把它「扔」出去。
+
+## 异常往外走，直到有人接住
+
+方法 A 调用 B，B 调用 C。C 抛出异常而自己没接，C 就结束了，异常交回给 B；B 也没接，就交回给 A……这条「谁调用了谁」的链叫**调用栈**。接住的写法是 `try { … } catch (某种异常 e) { … }`：`try` 里的代码抛了这种异常，就跳进 `catch` 处理。
+
+跟着重名的那个异常走一遍：
+
+<Stepper
+  title="一次重名的新建请求"
+  nodes={[
+    { id: "browser", label: "浏览器", sub: "用户点「新建」" },
+    { id: "controller", label: "MyCollectionController", sub: "接收请求" },
+    { id: "handler", label: "CreateCollectionHandler", sub: "查重名" },
+    { id: "engine", label: "错误解析引擎", sub: "patra-tool-web" }
+  ]}
+  links={[
+    { from: "browser", to: "controller" },
+    { from: "controller", to: "handler" },
+    { from: "handler", to: "controller" },
+    { from: "controller", to: "engine" },
+    { from: "engine", to: "browser" }
+  ]}
+  steps={[
+    { caption: "用户已经有一个叫「组会」的收藏夹，又提交了一个名字「 组会 」（前后带空格）。", focus: ["browser"], tokens: [{ id: "req", label: "POST", at: "browser" }] },
+    { caption: "Controller 收到请求，把它交给处理器。它没有写任何 try-catch。", focus: ["controller", "handler"], links: ["browser>controller", "controller>handler"], tokens: [{ id: "req", label: "新建", at: "handler" }] },
+    { caption: "处理器去掉空格后得到「组会」，查到已经有了，throw new CollectionNameTakenException()。create 那一句没有执行。", focus: ["handler"], tokens: [{ id: "err", label: "异常", at: "handler" }], notes: [{ at: "handler", text: "方法中断", tone: "bad" }] },
+    { caption: "处理器没接，异常交回给 Controller；Controller 也没接，异常继续往外走。", focus: ["controller"], links: ["handler>controller"], tokens: [{ id: "err", label: "异常", at: "controller" }] },
+    { caption: "最外层由 Patra 的错误解析引擎接住。它看异常带的语义是「冲突」，回给浏览器 409。", focus: ["engine", "browser"], links: ["controller>engine", "engine>browser"], tokens: [{ id: "err", label: "409", at: "browser" }], notes: [{ at: "browser", text: "已有同名收藏夹", tone: "wait" }] }
+  ]}
+  guesses={[
+    { before: 4, question: "处理器和 Controller 都没写 try-catch。这个异常最后会怎样？", options: ["服务崩溃，用户看到连接断开", "被最外层的框架接住，变成一个错误响应", "被悄悄吞掉，用户看到创建成功"], answer: "B", explain: "一路没人接的异常，会被 Web 框架在最外层接住。Patra 在那里放了一个错误解析引擎，按异常的语义决定回什么状态码。" }
+  ]}
+/>
+
+集成测试里正好有这一幕：先建「组会」，再提交「 组会 」，断言收到 409 和 `COLLECTION_NAME_TAKEN`：
+
+<CodeRef at="patra-api/patra-interaction/patra-interaction-boot/src/integrationTest/java/dev/patra/interaction/collection/CollectionFlowIT.java@6d96ac9d6c2b8463cddf24d8b3461215b4ff8f4c" lines="297-301" />
+
+## 受检异常与非受检异常
+
+Java 的异常分两大类，区别在于编译器管不管：
+
+- **受检异常**：编译器强制你处理。调用一个声明了会抛它的方法，要么 `catch` 住，要么在自己的方法上也声明 `throws`，否则编译不过。
+- **非受检异常**：继承自 `RuntimeException` 的那些，编译器不管，想不处理就不处理。
+
+Patra 里有一个很典型的受检异常。登录限次要算邮箱的 SHA-256，Java 的 `MessageDigest.getInstance` 声明了会抛受检的 `NoSuchAlgorithmException`（「没有这种算法」）：
+
+<CodeRef at="patra-api/patra-identity/patra-identity-infra/src/main/java/dev/patra/identity/infra/account/throttle/LoginThrottleAdapter.java@5073ab1358404ecd989e722373cd9f7edafe238b" lines="158-165" />
+
+```java
+  private static String sha256Hex(String value) {
+    try {
+      MessageDigest digest = MessageDigest.getInstance("SHA-256");
+      return HexFormat.of().formatHex(digest.digest(value.getBytes(StandardCharsets.UTF_8)));
+    } catch (NoSuchAlgorithmException e) {
+      throw new IllegalStateException("JDK 缺少 SHA-256", e);
+    }
+  }
+```
+
+SHA-256 是每个 Java 运行环境都必须带的算法，这个异常实际上不会发生；真发生了，说明运行环境本身坏了，调用方也救不回来。所以这里接住它，换成非受检的 `IllegalStateException` 再抛，并把原来的异常 `e` 作为**原因**（cause）一起带上，排查时还能看到最初是哪里出的错。
+
+Patra 自己定义的异常全是非受检的。业务出错（重名、没权限、找不到）大多数调用方都处理不了，只能交给最外层统一回错误；用受检异常，每一层都得写一遍 `throws`，却没人真去处理。
+
+## 带上「错在哪一类」
+
+光说「出错了」不够：最外层要决定回 404 还是 409，日志要能看出是用户填错了还是下游挂了。Patra 的领域异常有一个共同的基类：
+
+<CodeRef at="patra-tool/patra-tool-core/src/main/java/dev/patra/tool/core/error/DomainException.java@b6e01875bb5692356021c8a19562f557f319fc54" lines="64-85" />
+
+```java
+public abstract class DomainException extends RuntimeException implements HasErrorTraits {
+
+  /// 与此异常关联的语义特征集合（不可变）。
+  private final Set<ErrorTrait> traits;
+
+  /// 使用提供的消息和语义特征创建领域异常。
+  ///
+  /// **核心构造函数** - 所有领域异常必须提供至少一个语义特征。
+  ///
+  /// @param message 异常消息（应包含足够的上下文信息用于调试）
+  /// @param traits 语义特征（至少提供一个，推荐使用 {@link StandardErrorTrait}）
+  /// @throws IllegalArgumentException 如果未提供任何 trait
+  protected DomainException(String message, ErrorTrait... traits) {
+    super(message);
+    if (traits == null || traits.length == 0) {
+      throw new IllegalArgumentException(
+          "DomainException 必须提供至少一个 ErrorTrait。"
+              + "这确保了异常的业务语义完整性。"
+              + "请使用 StandardErrorTrait 或自定义 trait。");
+    }
+    this.traits = Set.of(traits);
+  }
+```
+
+它继承 `RuntimeException`（非受检），并且构造时**必须**给至少一个**语义特征**（trait），比如 `NOT_FOUND`（找不到）、`CONFLICT`（冲突）、`DEP_UNAVAILABLE`（依赖的服务不可用）。不给就造不出来。重名异常给的是「冲突」：
+
+<CodeRef at="patra-api/patra-interaction/patra-interaction-domain/src/main/java/dev/patra/interaction/domain/collection/exception/CollectionNameTakenException.java@3cf6fa5757b3be54c3b030e4cace871f53e2599c" lines="11-19" />
+
+```java
+public final class CollectionNameTakenException extends DomainException
+    implements HasFieldViolations {
+
+  private static final String MESSAGE = "已有同名收藏夹";
+
+  /// 创建异常。
+  public CollectionNameTakenException() {
+    super(MESSAGE, StandardErrorTrait.CONFLICT, CollectionErrorTrait.COLLECTION_NAME_TAKEN);
+  }
+```
+
+最外层的错误解析引擎里有一张对照表，把语义翻成 HTTP 状态码：
+
+<CodeRef at="patra-tool/patra-tool-web/src/main/java/dev/patra/tool/web/error/engine/DefaultErrorResolutionEngine.java@b6e01875bb5692356021c8a19562f557f319fc54" lines="61-71" />
+
+```java
+  private static final Map<ErrorTrait, String> TRAIT_TO_CODE_MAP =
+      Map.ofEntries(
+          Map.entry(StandardErrorTrait.NOT_FOUND, "0404"),
+          Map.entry(StandardErrorTrait.CONFLICT, "0409"),
+          Map.entry(StandardErrorTrait.RULE_VIOLATION, "0422"),
+          Map.entry(StandardErrorTrait.QUOTA_EXCEEDED, "0429"),
+          Map.entry(StandardErrorTrait.UNAUTHORIZED, "0401"),
+          Map.entry(StandardErrorTrait.FORBIDDEN, "0403"),
+          Map.entry(StandardErrorTrait.TIMEOUT, "0504"),
+          Map.entry(StandardErrorTrait.DEP_UNAVAILABLE, "0503"));
+```
+
+写业务代码的人只管说「这是冲突」，不用关心 HTTP；领域层因此不依赖任何 Web 框架。
+
+## 别的服务出错了：翻译成自己的话
+
+Patra 的服务之间会互相调用。被调的服务回了错误，调用方拿到的是一个统一的 `RemoteCallException`，里面带着对方的状态码、错误码和追踪号。它只该在最靠近网络的那一层出现，要翻译成本服务自己的领域异常再往外抛。
+
+<CodeRef at="patra-tool/patra-tool-core/src/main/java/dev/patra/tool/core/error/remote/RemoteCallException.java@cfec9c9f30270dcf03f5cd7b6e54a0cd3b59296b" lines="40-62" />
+
+interaction 取用户名片时是这样做的：
+
+<CodeRef at="patra-api/patra-interaction/patra-interaction-infra/src/main/java/dev/patra/interaction/infra/subject/user/UserDirectoryAdapter.java@5073ab1358404ecd989e722373cd9f7edafe238b" lines="43-56" />
+
+```java
+    try {
+      summaries = users.summaries(UserSummariesReq.of(List.copyOf(userIds), viewerUserId)).users();
+    } catch (RemoteCallException ex) {
+      log.warn(
+          "identity 用户摘要接口返回错误: users={}, httpStatus={}, errorCode={}",
+          userIds.size(),
+          ex.getHttpStatus(),
+          ex.getErrorCode());
+      throw new UserDirectoryUnavailableException(ex);
+    } catch (ResourceAccessException | IllegalStateException ex) {
+      log.warn(
+          "identity 用户摘要接口不可用: users={}, cause={}", userIds.size(), ex.getClass().getSimpleName());
+      throw new UserDirectoryUnavailableException(ex);
+    }
+```
+
+接住、记一条带状态码的日志、换成 `UserDirectoryUnavailableException` 再抛，原来的 `ex` 作为原因带上。这个新异常的语义是 `DEP_UNAVAILABLE`，最外层就回 503（服务暂时不可用）：
+
+<CodeRef at="patra-api/patra-interaction/patra-interaction-domain/src/main/java/dev/patra/interaction/domain/subject/exception/UserDirectoryUnavailableException.java@6d96ac9d6c2b8463cddf24d8b3461215b4ff8f4c" lines="7-15" />
+
+<Callout kind="warn">
+
+接住异常却什么都不做（`catch (Exception e) {}`），是最难查的写法：出了错，日志里一个字没有，代码还当没事继续跑。要么处理，要么换成更有意义的异常再抛，并带上原因。
+
+</Callout>
+
+<Quiz
+  questions={[
+    {
+      question: "新写一个「文献不存在」的领域异常，继承 DomainException，构造时没传任何语义特征。会怎样？",
+      options: ["编译报错", "能造出来，最外层回 500", "一造就抛 IllegalArgumentException，提醒你必须给语义特征"],
+      answer: "C",
+      explain: "DomainException 的构造器里检查了 traits，一个都没有就直接抛 IllegalArgumentException。这里应该给 NOT_FOUND，最外层就回 404。"
+    },
+    {
+      question: "UserDirectoryAdapter 换成新异常时，为什么要把 ex 传进去？",
+      options: ["不传编译不过", "保留最初的原因：日志里的异常链能看到是哪次远程调用、怎么失败的", "为了让最外层回 503"],
+      answer: "B",
+      explain: "回 503 是 DEP_UNAVAILABLE 这个语义决定的。传 ex 是为了不丢原因，排查时能顺着异常链找到源头。"
+    }
+  ]}
+/>
+
+<Transfer
+  prompt="catalog 导入文献时，会调 registry 服务把「China」这类原始写法解析成标准的国家代码。如果 registry 这时挂了，你会让导入抛异常失败，还是继续导入？各自要注意什么？"
+  points={[
+    { label: "先看是不是必需", text: "解析只是锦上添花，没有它文献照样能入库，就可以降级继续；缺了它数据就错，才必须失败。" },
+    { label: "Patra 的选择", text: "catalog 的 DictionaryResolverAdapter 接住 RemoteCallException 后返回空结果、继续导入，因为字典解析被定为可选的增强。" },
+    { label: "降级也要留痕", text: "降级时记 warn 日志，带上状态码、错误码、追踪号，事后能查到哪些数据没解析上。" },
+    { label: "要失败就翻译", text: "如果是必需的依赖，就像 UserDirectoryAdapter 那样，换成带 DEP_UNAVAILABLE 的领域异常往外抛，并带上原因。" }
+  ]}
+/>

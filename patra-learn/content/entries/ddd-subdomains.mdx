@@ -1,0 +1,160 @@
+---
+title: 子域：一个服务里再切一刀
+summary: 一个服务里的业务还能再按领域切成几块，叫子域。Patra 让每一层的包先按子域分，子域之间只经公开的入口交互，将来要拆服务时，边界早已画好。
+type: concept
+difficulty: advanced
+tags: [ddd, backend]
+prerequisites: [ddd-patra-six-modules]
+personalEnv: false
+---
+
+<Diagnose
+  question="interaction 服务里同时有收藏夹、讨论、有帮助三块业务，都在同一个服务、同一套代码里。讨论的代码可以随便 import 有帮助里的任何类吗？"
+  options={["可以，反正在同一个服务里", "不可以，只能经对方公开的入口，而且这条依赖要事先声明", "不可以，必须先拆成三个服务"]}
+  answer="B"
+  ifRight="对。同一个服务不等于可以随便互相引用。Patra 在服务内部再画边界，让每块业务只通过公开的入口接触别人。"
+  ifWrong="答案是 B。同一个服务里也要画边界，否则时间一长各块互相缠绕，想拆也拆不开；但也不必一上来就拆成三个服务。这篇讲的子域就是服务内部的这层边界。"
+  suggest="ddd-patra-six-modules"
+/>
+
+## 子域：按业务切，而不是按技术切
+
+上一篇把服务按技术层切成六个模块。但一个服务里往往不止一件事。interaction 的业务就能再切成五块：
+
+| 子域 | 管什么 |
+|---|---|
+| `subject` | 对象底座：每个被互动过的对象（文献、期刊、投稿经验）登记一行，其他子域都引用它 |
+| `collection` | 文献库与收藏夹 |
+| `discussion` | 评论与回复 |
+| `post` | 投稿经验 |
+| `reaction` | 「有帮助」 |
+
+通知服务同样有自己的子域：`kernel`（底座）、`inbox`（站内信箱）、`preference`（提醒偏好）、`mail`（邮件）、`realtime`（实时推送）。
+
+<Callout kind="analogy">
+
+一家医院有内科、外科、药房、挂号处。它们在同一栋楼里，共用一个后勤，但各有各的业务，科室之间转诊要走固定流程，不会随便闯进对方的手术室。子域就是服务内部的科室。
+
+</Callout>
+
+## 先按子域分包，再按技术分
+
+子域和六层不冲突，而是交叉：**每一层里面先按子域分，再按组件类型分**。
+
+```
+dev.patra.interaction.{domain|app|infra|adapter|api}.{subject|collection|discussion|post|reaction}
+```
+
+所以「新建收藏夹」相关的类，在每一层都能在 `collection` 这个目录下找到：domain 里的 `collection`，app 里的 `collection`，infra、adapter 里的 `collection`。
+
+<CodeRef at=".claude/rules/tech/package-layout.md@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="9-20" />
+
+数据库也跟着切：同一个库，每个子域一个 schema，schema 名就是子域名（`collection.collection`、`discussion.comment`）。
+
+## 子域之间怎么往来
+
+规则很简单，都由架构测试守住：
+
+1. **每个子域只公开三个包**：`port.read`（读端口）、`model.read`（读模型）、`event`（事件）。别的包，聚合、仓库、app、infra 的类，别的子域看不见。
+2. **底座例外**：它对其他子域完全公开，所有子域都可以用。代价是底座只能放真正被两个以上子域共用的东西，而且它自己不能反过来依赖任何子域。
+3. **其他的跨子域依赖要先声明**：在架构测试里写一行。
+4. **子域之间不许成环**。
+5. **跨子域写，不调对方的仓库**：发本子域的事件，对方订阅。
+
+真实的声明就这两行：
+
+<CodeRef at="patra-api/patra-interaction/patra-interaction-boot/src/test/java/dev/patra/interaction/architecture/InteractionArchitectureTest.java@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="39-56" />
+
+<Structure
+  title="interaction 的子域与声明过的依赖"
+  nodes={[
+    { id: "collection", label: "collection", sub: "文献库与收藏夹", code: true, col: 1, row: 1, desc: "只依赖底座，和其他普通子域没有声明过的往来。" },
+    { id: "discussion", label: "discussion", sub: "评论与回复", code: true, col: 3, row: 1, desc: "被 reaction 依赖：reaction 经它的读端口取评论、订阅它的删除事件。" },
+    { id: "subject", label: "subject", sub: "底座", code: true, col: 2, row: 2, desc: "对象登记表、用户名片、发表守卫。对所有子域完全公开，自己不依赖任何子域。" },
+    { id: "post", label: "post", sub: "投稿经验", code: true, col: 1, row: 3, desc: "被 reaction 依赖：reaction 订阅它的删除事件，读端口取经验的结果与正文。" },
+    { id: "reaction", label: "reaction", sub: "有帮助", code: true, col: 3, row: 3, desc: "唯一声明了跨子域依赖的子域：依赖 discussion 和 post。" }
+  ]}
+  edges={[
+    { from: "collection", to: "subject", dashed: true },
+    { from: "discussion", to: "subject", dashed: true },
+    { from: "post", to: "subject", dashed: true },
+    { from: "reaction", to: "subject", dashed: true },
+    { from: "reaction", to: "discussion", label: "声明过的依赖", desc: "测试里的 allowingDependency(reaction, discussion)。" },
+    { from: "reaction", to: "post", label: "声明过的依赖", desc: "测试里的 allowingDependency(reaction, post)。" }
+  ]}
+  traces={[
+    {
+      button: "reaction 直接用评论聚合",
+      packet: "import",
+      hops: [
+        { at: "reaction", caption: "reaction 的代码想直接 import discussion 里的 CommentAggregate。" },
+        { at: "discussion", caption: "聚合不在公开包里（公开的只有读端口、读模型、事件）。架构测试失败。", drop: true }
+      ]
+    },
+    {
+      button: "reaction 经读端口取评论",
+      packet: "读端口",
+      hops: [
+        { at: "reaction", caption: "reaction 通过 discussion 公开的读端口取评论。" },
+        { at: "discussion", caption: "读端口在公开包里，并且 reaction 到 discussion 的依赖已经声明过。检查通过。" }
+      ]
+    }
+  ]}
+/>
+
+虚线是默认就允许的（任何子域都可以用底座），实线是在测试里事先写明的。要新增一条实线，必须去改架构测试，这个动作本身就是一次「我要让这两块业务产生联系」的决定。
+
+## 跨子域写：发事件，别伸手
+
+最容易越界的是写。比如投稿经验被删了，有帮助里点在它上面的记录也要清掉。post 子域不能自己去调 reaction 的仓库删数据，规矩是：post 发布自己的事件，reaction 订阅。
+
+<CodeRef at=".claude/rules/tech/package-layout.md@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="47-53" />
+
+真实情况正是如此：投稿经验删除时发布 `PostDeletedEvent`，reaction 订阅它，在同一个事务里清掉被删目标的有帮助。post 不知道 reaction 的存在，reaction 要不要接这个事件，只有 reaction 自己决定。
+
+## 子域为什么值得
+
+<Callout kind="insight">
+
+读 interaction 的架构测试，就能知道哪些业务块之间有联系：只有 reaction 依赖 discussion 和 post，其余互相无关。哪天要把 discussion 拆成独立服务，只需处理这两条声明过的边，不需要在代码里到处找谁偷偷引用了它。
+
+</Callout>
+
+## 业界的说法：核心、支撑、通用
+
+DDD 的原著把子域按「对业务有多重要」分成三类：
+
+| 类别 | 意思 | 一般怎么对待 |
+|---|---|---|
+| 核心子域 | 让产品与众不同的部分 | 最好的人、最多的设计投入 |
+| 支撑子域 | 业务必需，但不是差异所在 | 够用就行 |
+| 通用子域 | 哪家都一样，如登录、发邮件 | 能买现成的就买现成的 |
+
+这是业界通用的分类。Patra 自己在服务内部用的是另一种区分：**底座**与**普通子域**，看的是依赖关系（谁被所有人用），不是业务重要性。两种分法回答不同的问题，不必强行对上。
+
+<Quiz
+  title="想一想"
+  questions={[
+    {
+      question: "有人想把「用户名片」这个类放进 subject 底座，因为 collection 和 discussion 都要用。合适吗？",
+      options: ["合适，底座就是放被两个以上子域共用的东西", "不合适，应该每个子域各抄一份", "不合适，应该放进 collection"],
+      answer: "A",
+      explain: "底座的准入条件是被两个以上子域共用。Patra 里用户名片端口和 UserCard 就放在 subject 底座。"
+    },
+    {
+      question: "reaction 子域想读 discussion 里评论的作者，应该用哪种方式？",
+      options: ["直接调用 CommentRepository", "经 discussion 公开的读端口，并在架构测试里声明依赖", "把 discussion 的表复制一份到 reaction"],
+      answer: "B",
+      explain: "仓库不是公开包。公开的是 port.read、model.read、event，并且依赖边要事先声明。"
+    }
+  ]}
+/>
+
+<Transfer
+  prompt="要在 interaction 里新增「关注」功能：用户可以关注别的用户，关注的人发了新投稿经验时要能生成动态。请说说关注应该是新子域还是挂在已有子域里？它和投稿经验之间的往来该怎么设计？"
+  points={[
+    { label: "新子域", text: "「关注」是独立的业务块，有自己的数据和规则，适合做新子域。新增子域要先改架构测试的子域清单。" },
+    { label: "不伸手", text: "关注子域不直接读 post 的仓库，也不让 post 去调关注的仓库。" },
+    { label: "订阅事件", text: "关注子域订阅 post 公开的事件（声明一条订阅边），收到新投稿经验的事件后自己生成动态。" }
+  ]}
+/>

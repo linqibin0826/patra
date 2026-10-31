@@ -1,0 +1,86 @@
+---
+title: 收件地址：随事件带，还是发送时现查
+summary: 通知服务发邮件要知道收件地址。安全邮件（找回密码、换邮箱）由 identity 把地址和链接写进事件；提醒邮件只带用户 ID，发送那一刻再找 identity 现查。两条路各防一种错。
+type: decision
+difficulty: practice
+tags: [messaging, ddd]
+prerequisites: [msg-transactional-outbox]
+topics: [event-delivery]
+sources:
+  - version: v0.16
+    issue: PAP-104
+    pr: 343
+  - version: v0.16
+    issue: PAP-146
+    pr: 343
+personalEnv: false
+---
+
+<Diagnose
+  question="用户 A 在 9:00 把账号邮箱从旧地址换成新地址。identity 要发两封信：一封「确认信」到新地址，一封「你的邮箱已更改」到旧地址。通知服务要是在 9:01 发信时才去 identity 查 A 的邮箱，会怎样？"
+  options={["两封都能发对", "查到的已经是新地址，发到旧地址的那封找不到人了", "查不到，因为 A 正在改邮箱"]}
+  answer="B"
+  ifRight="对。「发到哪个地址」有时只有发生那一刻的 identity 知道，事后现查只能查到现在的值。"
+  ifWrong="答案是 B。现查拿到的是查的那一刻的值。换邮箱之后，库里只剩新地址，旧地址只在换的那一刻知道。这题考的是事件里该带什么，先读发件箱那篇。"
+  suggest="msg-transactional-outbox"
+/>
+
+## 背景
+
+v0.16 通知中心那一版，所有邮件都改由新建的通知服务发：identity 的 13 类安全邮件，加上新的提醒邮件（有人回复了你、@ 了你）。发信方要知道收件地址，可地址只在 identity 里：
+
+- interaction 发出的「评论已发表」事件里没有邮箱，interaction 自己也不知道任何人的邮箱。
+- 安全邮件还有特殊情况：换邮箱时，确认信发新地址，变更通知发**旧地址**，这只有 identity 在当时知道。
+
+## 选项
+
+<DecisionOptions
+  options={[
+    { name: "全部随事件带地址", summary: "发布方把收件地址写进事件，通知服务照着发。", pros: "通知服务不用回头查，identity 挂了也能发；地址就是发生那一刻的地址。", cons: "interaction 不知道任何人的邮箱，做不到；用户在排队期间改了邮箱，信还是发到旧地址。" },
+    { name: "全部发送时现查", summary: "事件只带用户 ID，通知服务发信那一刻按 ID 调 identity 查。", pros: "永远用当前的地址和状态：已注销、邮箱没验证的，当场就能不发。", cons: "表达不了「发到当时那个地址」，换邮箱的变更通知没法发对；identity 挂了邮件跟着推迟。" },
+    { name: "通知服务存一份用户副本", summary: "订阅 identity 的用户变更，自己存邮箱（Novu 把它叫 subscriber）。", pros: "发信不依赖 identity 在线。", cons: "要订阅用户变更来保持同步；邮箱多存了一份。" },
+    { name: "按邮件种类分两路", summary: "安全邮件随事件带地址和链接；提醒邮件发送时按用户 ID 现查。", pros: "各自拿到需要的那个时刻的值；通知服务不存邮箱副本。", cons: "两套取地址的写法；提醒邮件依赖 identity 在线。", chosen: true }
+  ]}
+/>
+
+## 选择：两路各取所需
+
+<Compare
+  title="同一件事：A 在发信前刚改了邮箱"
+  variants={[
+    { label: "安全邮件：随事件带", steps: ["identity 在改邮箱的事务里写一行登记：「邮箱已更改」，收件人 = 旧地址，附撤销链接", "事件经登记表、RabbitMQ 送到通知服务", "通知服务照事件里的地址发"], results: [{ label: "收件地址", value: "旧地址", tone: "ok" }], verdict: { tone: "ok", head: "要的就是旧地址。", text: "这封信的意义是「通知旧邮箱的主人」，地址必须是发生那一刻的。" } },
+    { label: "提醒邮件：发送时现查", steps: ["interaction 发出「B 回复了 A」，事件里只有用户 ID", "通知服务排队，10 分钟后到点", "到点时按 A 的用户 ID 调 identity，查当前地址、是否已验证、账号状态"], results: [{ label: "收件地址", value: "A 现在的地址", tone: "ok" }, { label: "A 已注销或没验证邮箱", value: "不发", tone: "ok" }], verdict: { tone: "ok", head: "要的是现在的状态。", text: "提醒和「当时的地址」无关；10 分钟里 A 可能改了邮箱、注销了账号，现查才不会发错。" } }
+  ]}
+/>
+
+安全邮件的事件写明「发到旧邮箱」，并且不把地址和链接打进日志：
+
+<CodeRef at="patra-api/patra-identity/patra-identity-api/src/main/java/dev/patra/identity/api/account/event/EmailChangedNoticeMailEvent.java@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="8-30" />
+
+提醒邮件这一路，identity 新加了一个按用户 ID 批量取收件信息的内部接口。它是单独的一个接口，没有把邮箱加进已有的「用户摘要」接口：摘要接口给很多地方用，没必要让它们都拿到邮箱。
+
+<CodeRef at="patra-api/patra-identity/patra-identity-api/src/main/java/dev/patra/identity/api/account/dto/UserRecipientResp.java@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="5-20" />
+
+<CodeRef at="patra-api/patra-notification/patra-notification-domain/src/main/java/dev/patra/notification/domain/kernel/port/identity/RecipientPort.java@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="10-22" />
+
+不存邮箱副本，和「用户名只存在 identity，用的时候按 ID 现查」是同一个思路：真相只存一处，改了不用回刷别人。
+
+## 代价
+
+<Callout kind="cost">
+
+- **identity 挂了，提醒邮件推迟**：这一条推迟，本轮停下（别的也会一样失败），等下一轮重试补上。
+- **一次性令牌链接会经过登记表和消息队列**：安全邮件的链接拿到就能操作账号。对策是登记表设成发送完成即删除，RabbitMQ 只在内网可达，通知服务的发送记录不存邮件正文。
+- **新接口返回邮箱原文**：只在服务之间调用，网关的拒绝名单挡住了外部访问；内网里能直连它的人，本来也能直连存着全部邮箱的数据库，所以这一版没再收紧。
+
+</Callout>
+
+<Transfer
+  prompt="电商系统里，订单服务要在发货时给买家发「已发货」短信。手机号在用户服务里。你会让订单服务把手机号带进事件，还是让通知服务发送时现查？如果是「退款到账」通知，又会怎么选？"
+  points={[
+    { label: "先问要哪个时刻的值", text: "提醒类消息要的是用户现在的联系方式，现查；「通知当时那个号码的主人」这类安全通知，才必须随事件带。" },
+    { label: "已发货短信", text: "现查更合适：用户下单后换了手机号，应该发到新号码；注销了就不发。" },
+    { label: "退款到账", text: "通常也现查；但如果是「你的绑定手机号被改了」这类通知，要发到旧号码，就得随事件带。" },
+    { label: "现查的代价", text: "用户服务挂了，通知要能推迟重试，不能直接丢。" }
+  ]}
+/>

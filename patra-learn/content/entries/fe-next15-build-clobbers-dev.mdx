@@ -1,0 +1,65 @@
+---
+title: Next 15 及以前，next build 会弄坏正在跑的 next dev
+summary: Next 15 及以前的版本里，开发服务器和生产构建共用同一个 .next 目录。dev 开着时跑一次 build，dev 正在用的文件被覆盖，页面所有静态资源 404、退化成没有样式的裸 HTML。Next 16 起两者的输出分开了。
+type: pitfall
+difficulty: practice
+tags: [frontend]
+prerequisites: [fe-nextjs-pages-and-routing]
+sources:
+  - version: v0.8
+    issue: PAP-59
+personalEnv: false
+---
+
+<Diagnose
+  question="项目用 Next 15。一个终端里 `pnpm dev` 正开着，你在另一个终端里跑 `pnpm build` 想确认能不能构建过。构建成功后，刷新开发页面，会看到什么？"
+  options={["一切正常，build 和 dev 互不相干", "页面没了样式和交互，控制台一片 `_next/static` 404", "dev 服务器自动重启"]}
+  answer="B"
+  ifRight="对。两者写的是同一个 `.next` 目录，build 把 dev 正在用的文件换掉了。往下读为什么、哪个版本起不再这样。"
+  ifWrong="答案是 B。Next 15 及以前，dev 和 build 的输出都放在 `.next`，build 会覆盖 dev 正在用的文件，页面引用的脚本和样式找不到了。这题要先知道 Next 把页面编译成 `.next` 里的文件再交给浏览器，先读 Next.js 路由那篇。"
+  suggest="fe-nextjs-pages-and-routing"
+/>
+
+<Callout kind="lead" label="坑在哪">
+
+Next 15 及以前，`next dev` 和 `next build` 共用 `.next` 目录。dev 开着的时候跑 build（或者 `rm -rf .next`），会覆盖或删掉 dev 正在用的文件（`app/layout.js`、`main-app.js`、`app/layout.css` 等）。浏览器控制台一片：
+
+```text
+GET http://localhost:4000/_next/static/chunks/…js 404
+GET http://localhost:4000/_next/static/…/layout.css 404
+```
+
+页面退化成没有样式、没有交互的裸 HTML。这不是代码的 bug。
+
+</Callout>
+
+## 为什么
+
+开发服务器启动后，把每页编译成脚本和样式放在 `.next` 里，浏览器按文件名来取。生产构建也往 `.next` 里写，而且会先清理、再写自己的一套产物。build 结束后，dev 服务器手里那份「哪些文件在哪」的记录还是旧的，浏览器按旧名字去取，全部 404。
+
+控制台里如果同时有浏览器扩展报的错（比如翻译扩展的 `contentScript.js`），那是噪音，和这件事无关。
+
+## 哪个版本起不再这样
+
+2026-10-04 在 Next 16.3.8 上实测：dev 的输出放在 `.next/dev`，build 的输出放在 `.next`，dev 开着时跑 `pnpm build` 不影响 dev，webpack 和 Turbopack 两种打包都试过。Patra 的门户在 PAP-59 升到了 Next 16，学习站随后也升了，现在两个前端项目都不会再踩到这个坑。
+
+<Callout kind="warn">
+
+Next 16 里 `rm -rf .next` 仍然会连 dev 的产物一起删掉，dev 开着时别这么做。
+
+</Callout>
+
+## 怎么避开（还在 Next 15 及以前时）
+
+- dev 服务器开着时别跑 build；要验证构建，先停掉 dev，或者在另一个检出（git worktree）里跑。
+- 已经弄坏了：删掉 `.next`，重启 dev 服务器。dev 服务器是你自己终端里的进程，由你自己 Ctrl+C 重启。
+- 只想确认代码对不对时，类型检查、lint 和单元测试就够了，不一定非要 build。
+
+<Transfer
+  prompt="你们的 Vite 项目开着 `vite dev`，同事说「跑一下 `vite build` 看看产物大小」。你会担心同样的问题吗？怎么判断一个工具的 dev 和 build 会不会互相踩？"
+  points={[
+    { label: "看输出目录", text: "关键是两者写不写同一个目录：dev 产物放在内存或单独目录，build 写 `dist/`，就不会互相覆盖。" },
+    { label: "看文档或试一次", text: "查工具文档里 dev 与 build 的输出位置；不确定就在 dev 开着时 build 一次，看 dev 页面还正不正常。" },
+    { label: "通用规律", text: "两个进程写同一个目录，后写的会把先写的那个正在用的文件换掉。" }
+  ]}
+/>

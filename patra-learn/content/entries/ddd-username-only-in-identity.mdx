@@ -1,0 +1,120 @@
+---
+title: 用户名只存在 identity 一处
+summary: Patra 允许改用户名，所以别的表、索引、读模型只存 user_id，展示时按 ID 现查当前名。改名只改一行，这条规则由构建扫描迁移脚本守住。
+type: decision
+difficulty: practice
+tags: [ddd, database]
+prerequisites: [ddd-bounded-contexts, db-keys-and-relations]
+topics: [service-boundaries]
+sources:
+  - version: v0.12
+    issue: PAP-93
+    pr: 273
+personalEnv: false
+---
+
+<Diagnose
+  question="Patra 允许用户改用户名。讨论区的评论表要在每条评论旁显示作者，表里存什么最不容易出错？"
+  options={["存作者的用户名，显示时直接用", "存作者的 user_id，显示时按 ID 查当前用户名", "用户名和 user_id 都存一份"]}
+  answer="B"
+  ifRight="对。user_id 永远不变，用户名会变；存不变的那个，显示时再查。下面讲 Patra 为什么把这条做成全站规则，又是怎么守住的。"
+  ifWrong="答案是 B。用户名会变，存进评论表就要在每次改名时回刷；user_id 永不变，用它当外键、显示时现查当前名，改名就只动一处。这题考的是主键与外键：关联关系该挂在不变的键上。"
+  suggest="db-keys-and-relations"
+/>
+
+## 背景：用户名可以改
+
+v0.12 用户中心那一版给每个账号加了用户名，主页地址是 `/u/用户名`。产品上定了「可以改名」：改名后有 30 天冷却，旧名保留 90 天，访问旧地址会跳到新地址（v0.12 release spec 决策 L）。
+
+可以改名，就会冒出一个担心：用户名要是被复制进很多张表（评论作者、收藏夹主人、搜索索引……），每次改名都得把这些地方一起回刷，漏掉一处，页面上就显示旧名。
+
+拍板时（2026-10-21）核对过现状：整个仓库只有 identity 的建表脚本里有用户名列，审计字段、网关签给下游的身份断言、Redis 里的会话都只带用户 ID。这时候定规矩，没有任何历史数据要迁。
+
+## 选项
+
+<DecisionOptions
+  options={[
+    { name: "不许改名", summary: "注册时定下用户名，之后锁死。", pros: "没有任何改名带来的复杂度，冗余到哪里都不怕。", cons: "注册时手滑、或者以后想换成真名的医生，只能删号重来。" },
+    { name: "可以改名，各处冗余用户名", summary: "评论、收藏等表直接存一份用户名，显示时不用再查。", pros: "列表页少一次查询。", cons: "改名要回刷所有冗余的地方，漏一处就显示旧名；以后每加一张表，这份回刷清单就多一项。" },
+    { name: "可以改名，只存 user_id", summary: "用户名只存在 identity；其他地方一律存 user_id，展示时按 ID 批量取当前名。", pros: "改名只改 identity 一行，不用回刷任何地方。", cons: "展示时要多一次按 ID 取名字的调用。", chosen: true }
+  ]}
+/>
+
+允许改名的产品（GitHub、Instagram、X、微信号）共同的做法就是第三种：用户名只是一个路由键，关联关系挂在不变的用户 ID 上。
+
+## 选择：用户名只是路由键
+
+<Callout kind="lead" label="选了什么">
+
+用户名只存在 identity 的两张表：`idn_user`（当前用户名）和 `idn_user_former_username`（改名前用过的名字，用来做跳转和防抢注）。其他表、搜索索引、读模型引用用户，一律存 `user_id`，展示时按 ID 现读当前名。
+
+</Callout>
+
+这条规则落到几个具体地方：
+
+- **@ 提及**：正文里存的是用户 ID 标记 `<@用户ID>`，不是 `@用户名`。用户改名后，历史评论里的 @ 自动显示新名字。
+- **对象存储**：头像等文件的对象键按用户 ID 命名。
+- **只有 URL 路由用用户名**：`/u/用户名` 是给人看、给人分享的地址。
+
+<Structure
+  title="谁存用户名，谁只存 user_id"
+  nodes={[
+    { id: "identity", label: "identity", sub: "idn_user · idn_user_former_username", col: 1, desc: "全站唯一存用户名的地方。改名只改 idn_user 的一行，旧名记进 idn_user_former_username。" },
+    { id: "interaction", label: "interaction", sub: "评论、收藏、讨论", col: 2, row: 1, desc: "表里只有 user_id。显示作者时，按一页里出现的 ID 批量向 identity 取当前名。" },
+    { id: "notification", label: "notification", sub: "站内提醒、邮件", col: 2, row: 2, desc: "提醒里只存 user_id。打开提醒列表、发邮件时再按 ID 现查名字，所以改名后旧提醒显示的也是新名字。" },
+    { id: "portal", label: "门户", sub: "/u/用户名", col: 3, desc: "只有 URL 路由用用户名：它是给人看、给人分享的地址。" }
+  ]}
+  edges={[
+    { from: "interaction", to: "identity", label: "按 ID 取名字" },
+    { from: "notification", to: "identity", label: "按 ID 取名字" },
+    { from: "portal", to: "identity", label: "按用户名找人" }
+  ]}
+/>
+
+<Quiz
+  questions={[
+    {
+      question: "用户 E 收到一条三天前的提醒「陈宇回复了你」。昨天陈宇改了用户名。E 现在打开提醒列表，看到的是哪个名字？",
+      options: ["陈宇三天前的旧名字", "陈宇现在的新名字", "只显示用户 ID"],
+      answer: "B",
+      explain: "提醒里只存 user_id，列表展示时现查 identity，拿到的就是当前名。v0.16 通知中心验收时就是这么核对的。"
+    }
+  ]}
+/>
+
+## 把规则写进构建：R6
+
+规则只写在文档里，迟早有人在新表里顺手加一个 `username` 列。所以这条规则做成了构建检查 `checkMigrationColumns`（Patra 构建规则的第 6 条，简称 R6），挂在 `./gradlew check` 上：扫描每个服务的 Flyway 迁移脚本，看到 `CREATE TABLE` 或 `ALTER TABLE ... ADD` / `RENAME ... TO` 里出现了 `username` 或 `user_name` 列，而表不是 identity 那两张，构建就失败。
+
+<CodeRef at="build-logic/src/main/kotlin/MigrationColumnRules.kt@af8cd13c3ec367ccba78615b72e6ff19535cef90" lines="1-23" />
+
+```kotlin
+object MigrationColumnRules {
+    private val FORBIDDEN_COLUMNS = setOf("username", "user_name")
+    private val ALLOWED_TABLES = setOf("idn_user", "idn_user_former_username")
+    // ……把 SQL 切成词，逐条语句看建表与改表
+}
+```
+
+失败时的提示直接写出了规则本身：用户名只存 identity 的两张表，其他表引用用户一律存 user_id，展示时按 ID 现读当前名。
+
+<CodeRef at="build-logic/src/main/kotlin/MigrationColumnCheck.kt@af8cd13c3ec367ccba78615b72e6ff19535cef90" lines="29-41" />
+
+## 代价
+
+<Callout kind="cost">
+
+- 每次展示用户名都要按 ID 向 identity 取一次。列表页按一页里出现的 ID 批量取，不是一条一次。
+- identity 不可用时，依赖它取名字的地方跟着受影响。v0.16 的提醒邮件就是在发送那一刻现查收件人信息，identity 挂了，邮件推迟到重试时再发。
+- R6 只认 `username`、`user_name` 这两个列名，也只扫 Flyway 脚本。换个列名冗余用户名、或者冗余进搜索索引，它拦不住，靠的仍是写的人记得这条规则。
+
+</Callout>
+
+<Transfer
+  prompt="Patra 的机构字段（用户填的工作单位）存的是 ROR 编号加一份机构名称快照，而不是只存编号、展示时现查。这和「用户名只存 user_id」矛盾吗？你会怎么判断一个名字该现查还是该存快照？"
+  points={[
+    { label: "看名字该不该跟着变", text: "用户名改了，所有地方都应该显示新名，所以只存 ID、现查。" },
+    { label: "快照记的是当时的事实", text: "名称快照记下的是用户填写那一刻的机构名，源头改名时它不会自动跟着变；订单收货人、发票抬头也属于「记当时」这一类。" },
+    { label: "代价不同", text: "现查要多一次调用、依赖对方可用；快照不用调用，但改了源头不会同步。" }
+  ]}
+/>

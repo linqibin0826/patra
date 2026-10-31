@@ -1,0 +1,149 @@
+---
+title: 浏览器里的 JavaScript：DOM 与事件
+summary: 浏览器把 HTML 读成一棵树（DOM），脚本在树上找节点、改节点；用户按键、点击时浏览器发出事件，事先登记过的代码才会被叫到。拿门户的 ⌘K 快速检索走一遍。
+type: concept
+difficulty: intro
+tags: [frontend]
+prerequisites: [fe-what-makes-a-web-page]
+personalEnv: false
+---
+
+<Diagnose
+  question="门户顶栏有个「快速检索」按钮，点了会弹出检索框。浏览器是怎么知道「点这个按钮要弹框」的？"
+  options={["按钮的 HTML 标签自带弹框功能", "页面里的脚本事先登记了：这个按钮被点时，执行某段代码", "浏览器每隔一会儿检查一遍，看有没有人点过按钮"]}
+  answer="B"
+  suggest="fe-what-makes-a-web-page"
+  ifRight="对。浏览器只负责在「被点了」的那一刻喊一声，做什么由事先登记的代码决定。这篇讲脚本怎么找到页面上的东西、怎么登记、怎么撤销。"
+  ifWrong="答案是 B：按钮本身只会被点，不会弹框。脚本事先告诉浏览器「这个按钮被点时叫我」，浏览器在被点的那一刻去执行那段代码。往下读会讲这套「登记—通知」是怎么运转的。"
+/>
+
+## 浏览器把 HTML 读成一棵树
+
+浏览器收到 HTML 后，不是把它当一整段文字留着，而是读成一棵**树**：每个标签是一个**节点**，标签里套的标签是它的子节点。这棵树叫 **DOM**（文档对象模型）。脚本操作页面，操作的就是这棵树。
+
+<Callout kind="analogy">
+
+像一本书的目录：书（`html`）下面分章（`head`、`body`），章下面分节（`header`、`main`），节下面是一段段内容。想改第三章第二节的一句话，先按目录找到它，再动笔。
+
+</Callout>
+
+门户首页的树，顶上几层大致是这样（名字取自 `layout.tsx` 与首页 `page.tsx` 里的真实标签）。点一个节点看它是什么：
+
+<Structure
+  title="门户首页的 DOM 树（顶上几层）"
+  intro="箭头从父节点指向子节点。点任意一块看它是什么。"
+  nodes={[
+    { id: "html", label: "html", sub: "lang=zh-CN", code: true, col: 1, row: 2, desc: "整棵树的根，一页只有一个。" },
+    { id: "body", label: "body", code: true, col: 2, row: 2, desc: "页面上看得见的东西都在它下面。" },
+    { id: "header", label: "header", sub: "顶栏 TopNav", code: true, col: 3, row: 1, desc: "吸在页面顶上的导航栏，由 TopNav 组件生成。" },
+    { id: "main", label: "main", sub: "页面主体", code: true, col: 3, row: 3, desc: "首页的主体：检索区、主题、期刊、文献流。" },
+    { id: "button", label: "button", sub: "快速检索", code: true, col: 4, row: 1, desc: "顶栏里的「快速检索」按钮。脚本给它登记了点击处理。" },
+    { id: "input", label: "input", sub: "id=hero-input", code: true, col: 4, row: 3, desc: "首页检索框里的输入框。有 id，脚本可以按 id 直接找到它。" }
+  ]}
+  edges={[
+    { from: "html", to: "body" },
+    { from: "body", to: "header" },
+    { from: "body", to: "main" },
+    { from: "header", to: "button" },
+    { from: "main", to: "input", label: "中间还隔着几层" }
+  ]}
+/>
+
+## 脚本先找到节点，再改它
+
+脚本里有一个现成的对象 `document`，代表整棵树。最直接的找法是按 `id` 找：HTML 里给某个标签写上 `id="…"`，脚本用 `document.getElementById("…")` 就能拿到那个节点。
+
+门户的快速检索框打开时，要让光标直接落进输入框，免得你再点一下。它就是这么找的：
+
+<CodeRef at="patra-portal/src/components/portal/QuickSearch.tsx@11f9efb07fd75ad12c2e22d7758c71a8680f37f4" lines="24-25" />
+
+```tsx
+        <Dialog.Popup
+          initialFocus={() => document.getElementById(INPUT_ID)}
+```
+
+`INPUT_ID` 是同一个文件第 9 行定义的 `"quick-search-input"`，检索框里那个输入框的 `id` 正是它。找到节点以后，脚本就能改它：让它获得焦点、改里面的文字、加一个样式、整个删掉。浏览器看到树变了，就重新画页面。
+
+## 事件：浏览器喊一声，登记过的才听得到
+
+用户的每个动作——按键、点击、滚动、在输入框里打字——浏览器都会生成一个**事件**，交给关心它的代码。哪段代码关心，要事先**登记**：`addEventListener("事件名", 处理函数)`。
+
+门户的 ⌘K（Windows 上是 Ctrl+K）就是这样做的。顶栏组件在整个窗口上登记了「有键按下时叫我」：
+
+<CodeRef at="patra-portal/src/components/portal/TopNav.tsx@d0ca49caf72d9d9aacd7459c1054cf9131b3759e" lines="73-83" />
+
+```tsx
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setSearchLoaded(true);
+        setSearchOpen((open) => !open);
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
+```
+
+读法：
+
+- `"keydown"` 是「有键被按下」这个事件。浏览器每次叫 `onKeyDown`，都会递给它一个事件对象 `e`，里面写着按的是哪个键（`e.key`）、有没有同时按着 ⌘（`e.metaKey`）或 Ctrl（`e.ctrlKey`）。
+- 不是 ⌘K 就什么都不做：登记了 `keydown`，你按的每一个键都会叫到它，它得自己挑。
+- `e.preventDefault()`：有些按键浏览器自己有默认动作（有的浏览器拿 ⌘K 去聚焦地址栏或搜索栏）。这一句是说「这次别做你的默认动作」。
+- `setSearchOpen((open) => !open)`：把「检索框开着吗」这个状态翻过来。改状态以后，页面由 React（门户用的界面框架）去改 DOM 树，对话框随之出现或消失。
+
+点「下一步」，看一次按键从键盘走到页面：
+
+<Stepper
+  title="按下 ⌘K 之后"
+  nodes={[
+    { id: "key", label: "键盘", sub: "你按下 ⌘K" },
+    { id: "browser", label: "浏览器", sub: "生成 keydown 事件" },
+    { id: "handler", label: "onKeyDown", sub: "TopNav 登记的" },
+    { id: "dom", label: "DOM 树", sub: "页面" }
+  ]}
+  links={[
+    { from: "key", to: "browser" },
+    { from: "browser", to: "handler" },
+    { from: "handler", to: "dom" }
+  ]}
+  steps={[
+    { caption: "你按下 ⌘ 和 K。", focus: ["key"], tokens: [{ id: "ev", label: "⌘K", at: "key" }] },
+    { caption: "浏览器生成一个 keydown 事件，查有谁登记过 keydown：TopNav 在 window 上登记过，于是叫它。", focus: ["browser"], links: ["key>browser"], tokens: [{ id: "ev", label: "keydown", at: "browser" }] },
+    { caption: "onKeyDown 检查：按着 ⌘，键是 k，条件成立。先 preventDefault，拦下浏览器自己的默认动作。", focus: ["handler"], links: ["browser>handler"], tokens: [{ id: "ev", label: "keydown", at: "handler" }], notes: [{ at: "handler", text: "⌘ + k · 成立", tone: "ok" }] },
+    { caption: "把「检索框开着吗」从否翻成是。React 据此往 DOM 树里加上对话框，光标落进输入框。", focus: ["dom"], links: ["handler>dom"], tokens: [{ id: "ev", label: "开", at: "dom" }], notes: [{ at: "dom", text: "检索框 · 开着", tone: "ok" }] },
+    { caption: "检索框开着，你又按了一次 ⌘K。事件照样走一遍：浏览器 → onKeyDown → 条件成立。", focus: ["browser", "handler"], links: ["key>browser", "browser>handler"], tokens: [{ id: "ev2", label: "⌘K", at: "handler" }], notes: [{ at: "dom", text: "检索框 · 开着", tone: "ok" }] },
+    { caption: "状态从是翻回否，React 把对话框从树上拿掉。同一组键，开着时按是关，关着时按是开。", focus: ["dom"], links: ["handler>dom"], tokens: [{ id: "ev2", label: "关", at: "dom" }], notes: [{ at: "dom", text: "检索框 · 关了", tone: "wait" }] }
+  ]}
+  guesses={[
+    { before: 6, question: "检索框已经开着，再按一次 ⌘K，会怎样？", options: ["再弹出一个检索框", "检索框关掉", "什么都不发生，因为已经开着了"], answer: "B", explain: "处理函数写的是 `(open) => !open`：把当前状态翻过来。开着时按，就翻成关。" }
+  ]}
+/>
+
+## 登记了，就要记得撤销
+
+上面代码最后一行 `return () => window.removeEventListener("keydown", onKeyDown)` 是撤销登记：顶栏从页面上移除时，把这次登记取消。
+
+<Callout kind="warn">
+
+不撤销的话，顶栏没了，`onKeyDown` 还挂在 window 上，每次按键照样被叫到；顶栏再出现一次，又登记一份，按一次 ⌘K 就会被处理两次。登记和撤销要成对写。
+
+</Callout>
+
+## 按钮上的 onClick 也是同一套
+
+「快速检索」按钮上写的是 `onClick={openSearch}`，看起来和 `addEventListener` 不一样。这是 React 的写法：你在标签上写 `onClick`，React 替你向浏览器登记点击事件、组件移除时替你撤销。背后仍然是「事件发生 → 叫登记过的函数」这一套。
+
+门户的代码大多这样写，很少直接 `getElementById` 去改节点：代码只改状态（开着还是关着），让 React 去改 DOM 树。直接操作 DOM 的地方，是 React 管不到的：整个窗口上的快捷键、把光标放进某个输入框。
+
+<Transfer
+  prompt="假设要给门户加一个快捷键：在任何页面按 / 键，光标直接跳进首页那个检索输入框（它的 id 是 hero-input）。你会登记什么事件、挂在谁身上、处理函数里先判断什么？有没有什么时候不该响应？"
+  points={[
+    { label: "登记什么", text: "在 window 上登记 keydown，处理函数里看 `e.key` 是不是 /。" },
+    { label: "找到输入框", text: "用 `document.getElementById(\"hero-input\")` 拿到节点，再让它获得焦点；找不到（不在首页）就什么都不做。" },
+    { label: "拦默认动作", text: "条件成立时 `preventDefault()`，免得 / 被打进别的地方。" },
+    { label: "不该响应时", text: "用户正在别的输入框里打字时，/ 只是一个字符，不能抢走焦点。" },
+    { label: "撤销", text: "页面或组件移除时 removeEventListener，登记和撤销成对。" }
+  ]}
+/>

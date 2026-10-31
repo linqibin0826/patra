@@ -1,0 +1,122 @@
+---
+title: 静态生成与动态渲染
+summary: 一页的 HTML 可以在构建时生成好（静态），也可以每次请求时现做（动态）。读 Cookie、请求头、查询参数或不缓存的请求，会让一页变成动态；静态与动态还决定了链接预取取回多少。
+type: concept
+difficulty: advanced
+tags: [frontend]
+prerequisites: [fe-server-and-client-components]
+personalEnv: false
+---
+
+<Diagnose
+  question="两页都由服务端组件渲染：一页是讲 React 的教程，谁打开都一模一样；另一页是「我的收藏夹」，每个人看到的不一样。哪一页可以在构建时就把 HTML 生成好、之后直接发给所有人？"
+  options={["教程页", "「我的收藏夹」页", "两页都可以", "两页都不行"]}
+  answer="A"
+  ifRight="对。HTML 跟「谁在看」无关，就能提前做好。这篇讲 Next.js 怎么判断一页属于哪种，以及这会影响什么。"
+  ifWrong="答案是 A。服务端组件在服务器上把页面画成 HTML；画的时候用不到访客的任何信息，结果对所有人都一样，就能提前画好。「我的收藏夹」要先知道是谁在看。服务端组件的概念在前置篇。"
+  suggest="fe-server-and-client-components"
+/>
+
+## HTML 在两个时间点之一生成
+
+服务端组件把页面画成 HTML，这件事可以发生在两个时间点：
+
+- **构建时**（静态生成，也叫预渲染）：`next build` 时就把 HTML 画好存下来，之后每个访客拿到的都是同一份，服务器不用再画。
+- **请求时**（动态渲染）：每来一个请求，服务器现画一次，可以按这个请求的情况画出不同的内容。
+
+这个学习站本身就是纯静态站：构建时把每一篇条目都预渲染成 HTML，运行时只把现成的文件发出去，不再去读条目的源文件。读者是谁、什么时候来，看到的都一样，所以没有理由每次现做。
+
+门户就不一样了。用户主页要知道「来看的人是不是主页的主人」，只能等请求到了才知道。
+
+## 什么让一页变成动态
+
+Next.js 不需要你声明一页是静态还是动态，它看页面渲染时用了什么。下面这些只有请求到了才有答案，用到任何一个，这一页就改成请求时渲染：
+
+- `cookies()`、`headers()`：读这个请求带的 Cookie、请求头；
+- `searchParams`：读网址问号后面的查询参数；
+- 带 `cache: "no-store"` 的 `fetch`：明说这份数据不许缓存，每次都要现取。
+
+用户主页一上来就调用 `lookupSession()` 查当前用户。顺着它往下找，最终读的是 Cookie：
+
+<CodeRef at="patra-portal/src/lib/auth/session-cookie.ts@fe4c6bb68c591a9c9b5fe80f76bbfbbbc6aeae75" lines="35-39" />
+
+```ts
+/// 读会话令牌；没有 Cookie 或值为空时返回 null。
+export async function readSessionToken(): Promise<string | null> {
+  const value = (await cookies()).get(sessionCookie().name)?.value;
+  return value ? value : null;
+}
+```
+
+另外，门户调网关的请求都走 `gateway.ts`，这里发出的请求一律不缓存：
+
+<CodeRef at="patra-portal/src/lib/gateway.ts@4a13287485468f2c489027f1aac0bb6174643e8d" lines="52-55" />
+
+```ts
+  return fetch(`${baseUrl}${path}`, {
+    method: init.method ?? "GET",
+    headers,
+    cache: "no-store",
+```
+
+公开收藏夹页和文献详情页还读了 `searchParams`（排序、页码）。这几页每一条都踩中了，都是动态的。
+
+Next.js 判断动态的办法，是在静态生成的过程中让这些 API 抛出一个特殊的信号。门户代码里好几处 `try/catch` 都要先把这个信号原样抛回去，这是另一篇坑的主题。
+
+先猜，再动手试：
+
+<Params
+  title="这一页会在什么时候生成 HTML"
+  guess={{ question: "一页只读了查询参数 `?sort=`，没读 Cookie，也没调网关。它是静态还是动态？", options: ["静态：没读 Cookie 就是静态", "动态：查询参数也只有请求到了才知道", "看构建时网络通不通"], answer: "B", explain: "查询参数每个请求都可能不同，构建时不知道是什么，所以只能请求时渲染。" }}
+  controls={[
+    { type: "switch", id: "cookies", label: "读 Cookie 或请求头", default: true },
+    { type: "switch", id: "search", label: "读 `searchParams`", default: false },
+    { type: "switch", id: "nostore", label: "有 `cache: no-store` 的请求", default: true }
+  ]}
+  cases={[
+    { when: { cookies: true }, results: [{ label: "HTML 什么时候生成", value: "每次请求时", tone: "wait" }, { label: "不同访客看到的", value: "可以不同", tone: "ok" }], verdict: { tone: "ok", head: "动态。", text: "要读这个请求带的 Cookie，构建时没有请求可读。用户主页就是这种。" } },
+    { when: { search: true }, results: [{ label: "HTML 什么时候生成", value: "每次请求时", tone: "wait" }, { label: "不同访客看到的", value: "可以不同", tone: "ok" }], verdict: { tone: "ok", head: "动态。", text: "查询参数每个请求都可能不同。" } },
+    { when: { nostore: true }, results: [{ label: "HTML 什么时候生成", value: "每次请求时", tone: "wait" }, { label: "不同访客看到的", value: "可以不同", tone: "ok" }], verdict: { tone: "ok", head: "动态。", text: "数据声明了不许缓存，页面也就不能做好一份一直用。" } },
+    { results: [{ label: "HTML 什么时候生成", value: "构建时，只做一次", tone: "ok" }, { label: "不同访客看到的", value: "完全相同", tone: "ok" }], verdict: { tone: "ok", head: "静态。", text: "渲染时什么请求信息都没用到，构建时就能画好，之后直接发现成的文件。学习站的每一篇都是这样。" } }
+  ]}
+/>
+
+## 静态页里的客户端组件，读查询串要包一层
+
+客户端组件也能读查询参数，用的是 `useSearchParams`。静态页在构建时生成，那时没有查询参数，所以用到它的那一块只能等到浏览器里再画。门户的导航栏放在很多页面里，其中有不读请求的静态页；它里面读查询串的组件，各包了一层 `Suspense`：
+
+<CodeRef at="patra-portal/src/components/portal/TopNav.tsx@d0ca49caf72d9d9aacd7459c1054cf9131b3759e" lines="248-251" />
+
+```tsx
+      {/* 读查询串拼 next，包一层 Suspense，不让整个导航栏退出静态渲染 */}
+      <Suspense fallback={null}>
+        <PendingDeletionRedirect />
+      </Suspense>
+```
+
+`Suspense` 圈出「这一块到浏览器里再画」的范围，外面的部分照样在构建时画好。不包的话，构建会直接报错。
+
+## 静态还是动态，决定了预取取回多少
+
+页面里的 `Link` 一进入可视区域，Next.js 就在后台把它指向的页面先取一部分回来，这叫预取。取多少，要看目标页是静态还是动态、有没有 `loading.tsx`。预取只在生产构建里自动发生，开发模式看不到。切换下面三种情况比一比：
+
+<Compare
+  title="链接进入视野之后，点下去之前"
+  variants={[
+    { label: "静态页", steps: ["链接进入可视区域", "预取：把整页取回来，在浏览器里存 5 分钟", "点击：直接显示，不再问服务器"], results: [{ label: "点下去以后", value: "立刻显示整页", tone: "ok" }], verdict: { tone: "ok", head: "最快。", text: "页面本来就是现成的，提前取回不费服务器什么事。" } },
+    { label: "动态页 · 有 loading.tsx", steps: ["链接进入可视区域", "预取：只取到加载骨架为止", "点击：马上显示骨架", "向服务器要这次请求的页面，到了换上"], results: [{ label: "点下去以后", value: [{ text: "骨架", tone: "wait" }, { text: "页面", tone: "ok" }] }], verdict: { tone: "ok", head: "马上有反应。", text: "门户的文献详情页是这样：点了先看到骨架，内容随后到。" } },
+    { label: "动态页 · 没有 loading.tsx", steps: ["链接进入可视区域", "不预取", "点击：等服务器把整页渲染完", "整页换上"], results: [{ label: "点下去以后", value: "停在原页等一会儿", tone: "wait" }], verdict: { tone: "ok", head: "慢一点，换来真的 404。", text: "公开收藏夹页故意不建骨架：先判断收藏夹存不存在，再回应，状态码才能是 404。" } }
+  ]}
+/>
+
+动态页默认不整页预取，是因为它的内容每次都要服务器现做；访客看到的链接很多，真点的很少，全都提前做一遍太浪费。
+
+<Transfer
+  prompt="假如想在学习站的每篇条目顶上显示「欢迎回来，某某」，名字存在 Cookie 里。如果直接在条目页（服务端组件）里读 Cookie，学习站会变成什么样？有没有不牺牲静态的做法？"
+  points={[
+    { label: "整站变动态", text: "条目页读了 `cookies()`，每篇都要在请求时渲染，构建时预渲染的 HTML 用不上了。" },
+    { label: "运行时要能读内容", text: "请求时现做页面，服务器就得在运行时读得到条目内容，部署方式也跟着变。" },
+    { label: "问候放到浏览器里", text: "条目页保持静态，问候做成一个小的客户端组件，在浏览器里读出名字再显示；首次画出的 HTML 里先不显示名字。" },
+    { label: "预取也受影响", text: "变成动态后，链接不再整页预取，换页会慢一些。" }
+  ]}
+/>

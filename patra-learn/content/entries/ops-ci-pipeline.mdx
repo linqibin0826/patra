@@ -1,0 +1,129 @@
+---
+title: CI 流水线：workflow、job 与 runner
+summary: 仓库一有动静，GitHub 就按剧本开工。剧本是 workflow，里面分成一个个 job，由 runner 这台机器去执行。
+type: concept
+difficulty: advanced
+tags: [ci-cd]
+prerequisites: [ops-pull-requests]
+personalEnv: false
+---
+
+<Diagnose
+  question="仓库里的 ci.yml 只写了 pull_request、push 到 main、定时和手动这几种触发方式。你把代码推送到自己的 feat/xxx 分支，但没有开 PR。这份 CI 会开工吗？"
+  options={["会，每次 push 都会触发", "不会，它只在被列出的那几种时刻开工", "只在深夜开工"]}
+  answer="B"
+  ifRight="对。workflow 只在触发条件满足时才开工，推送到 feature 分支本身不在其中。"
+  ifWrong="答案是 B。workflow 开工与否只看触发条件。ci.yml 没有把“推送到任意分支”列进去，所以只推 feature 分支不会触发它，开了 PR 才会。"
+  suggest="ops-pull-requests"
+/>
+
+## 四个词，一张图
+
+GitHub Actions 是 GitHub 提供的自动化平台。它有四个核心概念，先分清它们：
+
+- **事件（event）**：触发的原因，比如“有人开了 PR”。
+- **workflow（工作流）**：一份写在 `.github/workflows/` 下的 yml 文件，是整套剧本。
+- **job（任务）**：剧本里的一个任务，里面有一串**步骤（step）**。没有特别说明时，各个 job 同时开工。
+- **runner（执行机器）**：真正执行 job 的那台机器。
+
+<Structure
+  title="从事件到机器：谁指挥谁"
+  intro="点任意一块看它管什么"
+  nodes={[
+    { id: "event", label: "事件", sub: "什么时候开工", col: 1, desc: "开 PR、推送到 main、定时、手动点按钮，都是事件。" },
+    { id: "workflow", label: "ci.yml", sub: "workflow 剧本", code: true, col: 2, desc: "一份 yml 文件，写明被什么事件触发、有哪些 job。" },
+    { id: "job", label: "backend / portal / …", sub: "job 任务", col: 3, desc: "剧本里的一个任务，里面是按顺序执行的步骤。" },
+    { id: "runner", label: "ubuntu-latest", sub: "runner 机器", code: true, col: 4, desc: "由 runs-on 指定。GitHub 租用的云端机器，用完即销毁。" }
+  ]}
+  edges={[
+    { from: "event", to: "workflow", label: "触发" },
+    { from: "workflow", to: "job", label: "拆成" },
+    { from: "job", to: "runner", label: "runs-on 指定" }
+  ]}
+  traces={[
+    {
+      button: "开一个 PR",
+      packet: "pull_request",
+      hops: [
+        { at: "event", caption: "你开了一个指向 main 的 PR，GitHub 收到 pull_request 事件。" },
+        { at: "workflow", caption: "GitHub 找到哪些 workflow 订阅了这个事件，ci.yml 在列。" },
+        { at: "job", caption: "ci.yml 里的各个 job 开始排队，没有互相依赖的会同时开工。" },
+        { at: "runner", caption: "每个 job 各领一台干净的云端机器，执行完就销毁。" }
+      ]
+    }
+  ]}
+/>
+
+## 触发器：什么时候开工
+
+Patra 的 ci.yml 订阅了四种事件：
+
+<CodeRef at=".github/workflows/ci.yml@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="6-18" />
+
+| 事件 | 含义 |
+|---|---|
+| `pull_request`（目标是 main） | 有人开了或更新了指向 main 的 PR，**这是日常最主要的一种** |
+| `push` 到 main | 代码合并进了 main 之后再验证一次 |
+| `schedule` | 每天定点跑一次全量检查兜底，写的是 UTC 18:00，换成北京时间是次日凌晨 2 点 |
+| `workflow_dispatch` | 在 GitHub 页面上手动点按钮触发 |
+
+## 一个 job 长什么样
+
+detect-changes 是最简单的一个 job，通过它能认出一个 job 的所有部件：
+
+<CodeRef at=".github/workflows/ci.yml@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="28-45" />
+
+- `runs-on`：这个 job 去哪种机器上跑。
+- `timeout-minutes`：超过这个时间就强行终止，防止卡死一直占着机器。
+- `steps`：按顺序执行。`uses:` 是引用别人写好的现成步骤（action），`run:` 是直接执行 shell 命令。
+- `outputs`：job 把结果传给后面依赖它的 job。
+
+第一步 checkout 是把仓库代码拉到这台机器上，因为云端机器一开始是空的。
+
+<Callout kind="insight">
+
+看 `uses:` 的写法：版本号后面跟着的是一长串 40 位字符，并在末尾用注释标出版本。这是把第三方 action 钉在**确切的提交**上，而不是一个可以被移动的标签。后面讲流水线安全时会解释为什么。
+
+</Callout>
+
+## 排队、取消与并行
+
+两个小设置，值得认识：
+
+- `needs`：声明一个 job 要等另一些 job 完成才开工。没有 `needs` 的 job 之间同时开工。
+- `concurrency`：同一组里同一时间只留一个。Patra 的写法是：同一个 PR 又推送新提交时，**取消**还在跑的旧检查，反正它检查的是过时的代码；但推送到 main 的那次不取消。
+
+<CodeRef at=".github/workflows/ci.yml@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="15-17" />
+
+<Quiz
+  questions={[
+    {
+      question: "你给同一个 PR 连续推送了两次。第一次触发的检查还没跑完，会怎样？",
+      options: ["两次检查都跑完", "旧的那次被取消，只跑最新的", "新的那次排队等旧的跑完"],
+      answer: "B",
+      explain: "ci.yml 设了 cancel-in-progress，PR 上的旧检查在新提交到来时被取消。"
+    },
+    {
+      question: "一个 job 设了 timeout-minutes: 30，到时间还没结束。会怎样？",
+      options: ["继续跑，直到结束", "被强行终止并标记失败"],
+      answer: "B",
+      explain: "超时保护防止一个卡住的任务无限占用机器。"
+    }
+  ]}
+/>
+
+## 云端机器是一次性的
+
+`ubuntu-latest` 是 GitHub 租给你的云端机器。每次 job 开工，它都是一台全新的干净机器，用完就销毁。这既是优点（不会被上次的残留干扰），也意味着：
+
+- 缓存要主动配置，否则每次都从零开始下载依赖。
+- 它在云端，摸不到你家里的服务器。需要在自己机器上执行的任务，要用自己的 runner。这是下面几篇之一的主题。
+
+<Transfer
+  prompt="你想给学习站加一项只在 patra-learn 目录有改动时才跑的检查。从本篇的概念出发，你预计需要在 ci.yml 里准备哪几样东西？"
+  points={[
+    { label: "一个 job", text: "新 job 里写 runs-on、步骤：拉代码、装依赖、跑检查。" },
+    { label: "一个开关", text: "要先有人判断“learn 有没有改动”，并通过 outputs 传出来，再让新 job 靠 needs 和条件决定要不要开工。" },
+    { label: "并入汇总", text: "它的结果要被汇总检查认得，这样才能挡住坏的 PR。后面的篇目会讲这两件事。" }
+  ]}
+/>

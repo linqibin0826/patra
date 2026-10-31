@@ -1,0 +1,127 @@
+---
+title: REST 接口怎么设计
+summary: 路径表示资源、方法表示动作；哪些操作该幂等，什么时候用 PUT、什么时候用 PATCH。以 Patra 的收藏夹接口为例。
+type: concept
+difficulty: basic
+tags: [backend, network]
+prerequisites: [http-status-codes, http-json-and-content-type]
+personalEnv: false
+---
+
+<Diagnose
+  question="网络不稳，客户端把同一个「把收藏夹改名为『我的综述』」的请求发了两次。一个设计得好的接口，两次之后收藏夹应该是什么状态？"
+  options={["名字是「我的综述」，和只发一次一样", "第二次请求要报错，因为已经改过了", "名字被改了两次，变成「我的综述我的综述」"]}
+  answer="A"
+  ifRight="对，改名这个动作重发应该无害。往下读会讲怎样的设计才能做到。"
+  ifWrong="答案是 A：把名字设成某个值，设两次还是那个值。这种性质叫幂等，选对方法就能得到它。"
+  suggest="http-status-codes"
+/>
+
+## 路径是名词，方法是动词
+
+REST 风格的核心是一个分工：
+
+- **路径**指向一个**资源**（一样东西）：`/me/collections` 是「我的收藏夹们」，`/me/collections/42` 是其中编号 42 的那一个。
+- **方法**说明**对它做什么**：读、新建、替换、删除。
+
+所以接口里不会出现 `/deleteCollection`、`/updateName` 这种把动词写进路径的写法。动词交给 HTTP 方法，路径只负责指明东西。
+
+下面是 Patra 里「我的收藏夹」的路径。点一点每块，看能对它做什么。
+
+<Structure
+  title="收藏夹的资源关系"
+  intro="箭头表示「包含」。点任意一块看它支持哪些方法。"
+  nodes={[
+    { id: "list", label: "/me/collections", sub: "我的收藏夹们", code: true, col: 1, row: 2, desc: "POST 新建一个收藏夹，成功返回 201。重名返回 409。" },
+    { id: "one", label: "/me/collections/id", sub: "其中一个", code: true, col: 2, row: 2, desc: "PUT 用整份新内容替换名称和简介；DELETE 删除它，幂等，成功返回 204。" },
+    { id: "items", label: "…/id/items", sub: "里面的文献", code: true, col: 3, row: 1, desc: "GET 读一页（带 sort、page、size 查询参数）；POST 放进去一批文献；DELETE 移出，不在夹里的忽略。" },
+    { id: "visibility", label: "…/id/visibility", sub: "可见性", code: true, col: 3, row: 2, desc: "PUT 设置公开或私有。它是收藏夹的一个属性，所以放在它下面。" },
+    { id: "keys", label: "…/id/keys", sub: "导出用的编号", code: true, col: 3, row: 3, desc: "GET 取出可以导出的文献编号。" }
+  ]}
+  edges={[
+    { from: "list", to: "one", label: "包含" },
+    { from: "one", to: "items" },
+    { from: "one", to: "visibility" },
+    { from: "one", to: "keys" }
+  ]}
+/>
+
+这个控制器的全部路径与方法都在一个类里：
+
+<CodeRef at="patra-api/patra-interaction/patra-interaction-adapter/src/main/java/dev/patra/interaction/adapter/collection/rest/MyCollectionController.java@3cf6fa5757b3be54c3b030e4cace871f53e2599c" lines="36-132" />
+
+## 重发之后会怎样：选方法就是选幂等性
+
+先猜，再展开比较。
+
+<Compare
+  title="同一个请求因为超时被重发了一次"
+  variants={[
+    {
+      label: "POST 新建收藏夹",
+      steps: ["客户端发 POST，名字叫「我的综述」", "响应在网络上丢了，客户端以为失败", "客户端重发同一个 POST"],
+      results: [{ label: "第二次得到", value: "409 重名", tone: "wait" }, { label: "收藏夹数量", value: "1 个", tone: "ok" }],
+      verdict: { tone: "ok", head: "靠重名检查挡住了。", text: "POST 本身不幂等，这里是业务规则（名字不能重）兜了底。客户端要能看懂这个 409：它其实说明第一次已经成功。" }
+    },
+    {
+      label: "PUT 替换名称",
+      steps: ["客户端发 PUT，把名称设为「我的综述」", "响应丢了，客户端重发", "服务端再设一次"],
+      results: [{ label: "第二次得到", value: "200，同一份内容", tone: "ok" }, { label: "最终名称", value: "我的综述", tone: "ok" }],
+      verdict: { tone: "ok", head: "天然幂等。", text: "替换的结果只取决于请求里的内容，不取决于发了几次。重发完全无害。" }
+    },
+    {
+      label: "DELETE 删除收藏夹",
+      steps: ["客户端发 DELETE", "响应丢了，客户端重发", "服务端发现已经没有了"],
+      results: [{ label: "第二次得到", value: "204，仍然成功", tone: "ok" }, { label: "收藏夹", value: "已不存在", tone: "ok" }],
+      verdict: { tone: "ok", head: "刻意做成幂等。", text: "删一个已经不存在的东西，不报错，仍然是 204。这样客户端重发不用担心。" }
+    }
+  ]}
+/>
+
+<Callout kind="insight">
+
+幂等不等于「每次返回一模一样」。DELETE 第一次真的删了，第二次什么也没做；返回都是 204，结果状态相同，这就够了。
+
+</Callout>
+
+## PUT 和 PATCH
+
+两者都是「修改」，区别在发什么：
+
+- **PUT**：发整份新内容，整体替换。没写的字段会被当作「没有」。
+- **PATCH**：只发要改的几个字段，其余保持不变。
+
+Patra 的收藏夹改名接口用 PUT，请求里名称和简介两个字段都要带，整体替换。优点是语义简单、天然幂等；代价是调用方得带上不想改的字段。如果一个资源有几十个字段、经常只改一两个，PATCH 更合适。
+
+<Quiz
+  questions={[
+    {
+      question: "「设置收藏夹为公开」设计成 PUT /me/collections/42/visibility，请求体是 {\"visibility\": \"PUBLIC\"}。重发两次的结果？",
+      options: ["收藏夹会被设置两次，出错", "还是公开，结果和一次相同", "第二次变回私有"],
+      answer: "B",
+      explain: "它是「把可见性设为某个值」，不是「切换一下」。设值是幂等的，切换不是。设计接口时尽量用设值。"
+    },
+    {
+      question: "下面哪个路径更符合 REST 的分工？",
+      options: ["POST /me/collections/42/delete", "DELETE /me/collections/42", "GET /me/collections/42/remove"],
+      answer: "B",
+      explain: "路径只写资源，动作交给方法。用 GET 做删除更糟，浏览器预取链接就可能触发它。"
+    }
+  ]}
+/>
+
+## 几个小约定
+
+- 一次只读取、不改变东西的接口用 GET；需要分页的，页码和每页条数放查询参数，并给默认值、限定上限（收藏夹的每页 1 到 100，默认 50）。
+- 返回状态码要精确：新建用 201，没有内容的成功用 204，异步接受用 202。
+- 不属于当前用户的资源，对外和「不存在」一样返回 404，不暴露它是否存在。
+
+<Transfer
+  prompt="设计「把一批文献放进收藏夹」和「把一批文献移出收藏夹」两个接口：写出方法、路径、请求里要带什么，以及移出时那篇文献本来就不在夹里怎么办。"
+  points={[
+    { label: "放进去", text: "POST /me/collections/{id}/items，请求体带文献编号列表。" },
+    { label: "移出", text: "DELETE /me/collections/{id}/items，编号用查询参数传（DELETE 通常不带正文）。成功 204。" },
+    { label: "本来就不在", text: "忽略它，不报错。这样重发移出请求是幂等的。" },
+    { label: "夹满了", text: "放进去时夹满不要整体报错，把成功和被拒绝的篇数分类放在返回结果里（Patra 的做法）。" }
+  ]}
+/>

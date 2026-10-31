@@ -1,0 +1,71 @@
+---
+title: 配置刷新时枚举写法不对就失败
+summary: 启动时 Spring Boot 认 dont-follow 这种横线小写的枚举写法，配置刷新时某些后处理器却只认常量原名 DONT_FOLLOW。网关因此每次收到配置变更都刷新失败，日志里还看不到原因。
+type: pitfall
+difficulty: practice
+tags: [spring]
+prerequisites: [spring-nacos-config-and-refresh]
+topics: [config-refresh]
+sources:
+  - version: v0.9
+    issue: PAP-77
+    pr: 231
+personalEnv: false
+---
+
+<Diagnose
+  question="application.yml 里写 spring.http.clients.redirects: dont-follow，对应的枚举常量叫 DONT_FOLLOW。服务正常启动、运行都没问题。配置中心推一次变更触发刷新时，这个值还读得出来吗？"
+  options={["读得出来，启动时能读，刷新时一样", "不一定：刷新时有的代码用的转换规则更严格，只认 DONT_FOLLOW", "读不出来时会回退到默认值，不影响刷新"]}
+  answer="B"
+  ifRight="对。启动和刷新不是同一套环境，转换规则也可能不同。这个坑就出在这里。"
+  ifWrong="答案是 B。启动时 Spring Boot 用宽松的转换规则，横线小写能对上枚举；刷新时有的后处理器在一个新建的环境上用默认转换，只认常量原名。这题考的是配置刷新时 Spring 做了什么，先读配置刷新那篇。"
+  suggest="spring-nacos-config-and-refresh"
+/>
+
+## 坑
+
+Spring Boot 读配置时，枚举值的写法很宽松：`dont-follow`、`dont_follow`、`DONT_FOLLOW` 都能对上 `DONT_FOLLOW`。
+
+可配置刷新时，有的第三方组件会在一个新建的 `StandardEnvironment` 上重新执行它的环境后处理器，用的是 Spring 默认的转换服务，**只认常量原名**。jar 里写的是横线小写，启动没事，每次刷新都失败。
+
+## 为什么
+
+v0.9 配置中心那一版验收时发现：网关收到 Nacos 的配置变更，客户端通知监听器失败、重试 5 次后放弃，网关继续用旧配置，容器状态照样是 healthy。
+
+原因在 Spring Cloud Gateway（Server MVC 版）的一个环境后处理器 `GatewayHttpClientEnvironmentPostProcessor`。它用 `environment.getProperty(键, 枚举.class)` 读两项 HTTP 客户端设置：`spring.http.clients.redirects` 和 `spring.http.clients.imperative.factory`。
+
+<Compare
+  title="同一行配置，启动时和刷新时"
+  variants={[
+    { label: "正常启动", steps: ["Spring Boot 准备环境，装上宽松的转换服务", "后处理器读 redirects: dont-follow", "宽松转换把 dont-follow 对上 DONT_FOLLOW"], results: [{ label: "结果", value: "读出 DONT_FOLLOW", tone: "ok" }], verdict: { tone: "ok", head: "一切正常。", text: "所以本地跑、上线启动都看不出问题。" } },
+    { label: "配置刷新", steps: ["ConfigDataContextRefresher 新建一个 StandardEnvironment", "在新环境上重跑后处理器，用默认转换服务", "默认转换只认常量原名，dont-follow 转换失败"], results: [{ label: "结果", value: "抛异常，这次刷新失败", tone: "bad" }], verdict: { tone: "bad", head: "每一次刷新都失败。", text: "网关一直停在旧配置上，之后改什么都推不进去。" } }
+  ]}
+/>
+
+<Callout kind="warn">
+
+这个坑难查，是因为看不到原因：Nacos 客户端通知失败时只打 4 层堆栈，不打异常消息，翻日志找不到「哪个值转换失败」。
+
+复现办法：本机起网关，加上 `--spring.cloud.nacos.discovery.register-enabled=false --management.endpoints.web.exposure.include=health,refresh`，然后 `POST /actuator/refresh` 手动触发刷新，响应和日志里有完整的异常。
+
+</Callout>
+
+## 怎么避开
+
+jar 里的枚举类配置写常量原名，并在配置文件里注明原因：
+
+<CodeRef at="patra-api/patra-gateway-boot/src/main/resources/application.yml@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="33-43" />
+
+再用一条单元测试钉住：像刷新时那样新建一个 `StandardEnvironment`，加载 `application.yml`，直接调用这个后处理器，断言不抛异常。
+
+<CodeRef at="patra-api/patra-gateway-boot/src/test/java/dev/patra/gateway/ApplicationConfigTest.java@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="51-80" />
+
+<Transfer
+  prompt="你的服务里也有几个枚举类配置项（日志格式、重试策略），都用横线小写写在 Nacos 里。怎么判断它们会不会在刷新时踩同一个坑？"
+  points={[
+    { label: "看谁在刷新时读它", text: "由 @ConfigurationProperties 重新绑定的，走的是 Boot 的宽松绑定，横线写法没问题；在后处理器里用 getProperty(键, 枚举.class) 读的，刷新时可能只认原名。" },
+    { label: "手动触发一次刷新", text: "本机开 refresh 端点，POST /actuator/refresh，看响应里有没有异常。" },
+    { label: "最省事的规矩", text: "新增枚举类配置统一写常量原名，宽松和严格两种转换都认。" },
+    { label: "别只看健康检查", text: "刷新失败时服务可能照样 healthy，要看配置有没有真的生效。" }
+  ]}
+/>

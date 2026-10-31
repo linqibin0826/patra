@@ -1,0 +1,78 @@
+---
+title: 第一个用例偶发超时
+summary: 一个测试类里第一个起上下文的用例，要承担首次初始化的全部开销，本来就贴着超时线。机器负载一高或 CI 慢一点就超时，重跑又过。模块没改动时，先看负载，别急着改代码。
+type: troubleshooting
+difficulty: practice
+tags: [testing, java]
+prerequisites: [test-flaky-tests]
+sources:
+  - version: v0.15
+    pr: 311
+personalEnv: false
+---
+
+<Diagnose
+  question="一个 PR 的 CI 里，某个工具模块的单元测试报 TimeoutException。这个模块这次一行没改，重跑一次就过了。你第一步做什么？"
+  options={["打开那个测试，把超时时间调大", "看当时机器的负载，再单独重跑这一个任务", "回滚这个 PR"]}
+  answer="B"
+  ifRight="对。模块没改、重跑能过，更可能是环境的问题。下面是这次怎么一步步确认的。"
+  ifWrong="答案是 B。没改动、重跑能过，是偶发失败的典型表现，先排除环境（负载、CI 机器慢）再动代码；直接调大超时会把真正的问题也一起盖住。这题考的是怎么对待不稳定的测试。"
+/>
+
+## 现象
+
+`patra-tool-jpa` 的 `JpaAutoConfigurationTest` 里，用例 `should_skip_error_mapping_without_web_on_classpath` 报 `TimeoutException`。2026-10-29 一个 PR（#311）在本地和 CI 上各撞了一次，两次都是重跑就过。同一天本机还撞过 `patra-tool-batch` 里 `BatchAutoConfigurationTest` 的同类超时。
+
+最容易把人带偏的方向，是以为 JPA 的自动配置被改坏了。
+
+## 怎么查
+
+<DebugTrail
+  steps={[
+    { hypothesis: "这次的改动弄坏了 JPA 自动配置？", result: "这个模块在 PR 里没有改动，重跑同一个任务就通过了。不是代码回归。", verdict: "ruled-out" },
+    { hypothesis: "这个用例本来就慢？", result: "本地低负载时单独跑，它要约 4 秒；同一个类里的其他用例都是几十毫秒。慢的只有它。", verdict: "closer" },
+    { hypothesis: "为什么偏偏是它慢？", result: "它是类里第一个起上下文的用例：Mockito inline mock 的首次字节码增强、Spring 和 Jackson 的首次初始化，全落在它身上。后面的用例复用这些成果。", verdict: "closer" },
+    { hypothesis: "4 秒怎么会超时？", result: "单元测试的默认超时是 15 秒。本机负载到 160 以上、或 CI 机器慢的时候，4 秒的活就被拖过了 15 秒。", verdict: "found" }
+  ]}
+/>
+
+## 根因
+
+首次初始化的开销集中在第一个用例上，本来就离超时线不远；机器一忙，它就越线。这和代码对不对无关。
+
+单元测试的默认超时写在构建插件里：
+
+<CodeRef at="build-logic/src/main/kotlin/patra.java-base.gradle.kts@b6e01875bb5692356021c8a19562f557f319fc54" lines="89-91" />
+
+```kotlin
+maxParallelForks = (Runtime.getRuntime().availableProcessors() / 2).coerceAtLeast(1)
+forkEvery = 50
+systemProperty("junit.jupiter.execution.timeout.testable.method.default", "15s")
+```
+
+这个类的每次上下文启动都要 mock 一个 Spring Data JPA 的类；第一次 mock 时 Mockito 要做字节码增强，这笔开销落在最先执行的那个用例上：
+
+<CodeRef at="patra-tool/patra-tool-jpa/src/test/java/dev/patra/tool/jpa/autoconfigure/JpaAutoConfigurationTest.java@b6e01875bb5692356021c8a19562f557f319fc54" lines="22-31" />
+
+## 修法
+
+没有改代码。以后再碰到这两个用例单独超时、所在模块又没改动时：
+
+1. 先看负载：macOS 上 `sysctl -n vm.loadavg`，Linux 上 `uptime`。负载远高于核数，就是它。
+2. CI 上只重跑那一个任务：`gh run rerun --job <任务 ID>`，不用整条流水线重来。
+3. 只有在没有负载时也稳定复现，才去根治首次 mock 的开销。
+
+<Callout kind="warn">
+
+不要顺手把超时调大。超时是用来发现「测试卡住了」的，调大以后真卡住的测试也要等更久才报。
+
+</Callout>
+
+<Transfer
+  prompt="另一个模块的集成测试里，每次失败的都是「第一个类的第一个用例」，而且只在 CI 上，失败信息是连不上测试容器。你会怎么判断这是同一类问题，还是真的有 bug？"
+  points={[
+    { label: "看是不是首次开销", text: "第一个用例要等容器启动、上下文初始化；先看它的耗时和超时线的距离，以及 CI 当时的负载。" },
+    { label: "看能不能稳定复现", text: "低负载下单独跑也失败，就不是环境问题；只在忙的时候失败、重跑能过，才归为偶发。" },
+    { label: "对症处理", text: "确属首次开销，可以把容器启动挪到所有测试之前（共享容器、预热），而不是放宽每个用例的超时。" }
+  ]}
+/>

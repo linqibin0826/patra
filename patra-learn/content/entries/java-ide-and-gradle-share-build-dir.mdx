@@ -1,0 +1,68 @@
+---
+title: IDE 和命令行 Gradle 同时写 build 目录
+summary: IDE 在后台编译，命令行里同时跑 ./gradlew，两边删写同一个 build 目录，就会冒出 bad class file、NoSuchFileException、「包不存在」这类毫无道理的编译错误。不是代码问题，先看有没有第二个编译进程。
+type: pitfall
+difficulty: practice
+tags: [java]
+prerequisites: [java-build-with-gradle]
+personalEnv: false
+---
+
+<Diagnose
+  question="命令行跑 `./gradlew check`，javac 报 `package dev.patra.xxx does not exist`，可这个包就在 src/main 里，昨天还编得过，今天也没动它。你先做什么？"
+  options={["检查依赖版本是不是被升级了", "看看此刻有没有别的进程也在编译这个项目", "把这个包的 import 全部重写一遍"]}
+  answer="B"
+  ifRight="对。源码明明在、报错却说不存在，多半是编译输出在编译过程中被别人删了或改了。往下读那个「别人」通常是谁。"
+  ifWrong="答案是 B。源码没变、错误又说不通的时候，先怀疑编译环境：Gradle 编译后面的模块时要读前面模块的 class 文件，这些文件要是被另一个进程同时删写，就会冒出这种错。这题考的是 Gradle 按模块顺序编译、后面的模块读前面模块的输出，先读 Gradle 那篇。"
+  suggest="java-build-with-gradle"
+/>
+
+<Callout kind="lead" label="坑在哪">
+
+IDE（这里是 IntelliJ IDEA）的编译输出和 Gradle 是同一个 `build/` 目录。IDE 在后台编译的同时你在命令行跑 `./gradlew`，两个进程同时删写 class 文件，命令行这边就报：
+
+- javac：`bad class file … java.nio.file.NoSuchFileException`，或者 `package … does not exist`（包明明在）
+- SpotBugs：`java.io.IOException: No files to analyze could be opened`
+
+</Callout>
+
+## 谁在后台编译
+
+Patra 先后撞上过两种情况：
+
+1. **IDE 自己的编译器写进了 `build/classes`**。当时 IDEA 开着「自动构建项目」，又没有单独的 `out/` 目录，它自带的编译器（JPS，进程参数里带 `-Djps.*`）直接写 Gradle 的 `build/classes`。2026-09-24 升级依赖时，命令行的 `check` 和它撞在一起，报的就是上面那几种错。换到 IDEA 不监视的另一个 git worktree 里重跑，全绿。
+2. **构建脚本被「外部」改了，IDE 自动重新同步**。后来 IDEA 改成委托 Gradle 构建，JPS 不再写 `build/classes`，可「构建脚本有外部更改时自动重新加载」还开着。Agent 用编辑工具改 `build.gradle.kts`，对 IDEA 来说就是外部更改，它立刻起一次 Gradle 同步、编译 `build-logic`，和紧接着的命令行 `./gradlew` 抢同一个 `build-logic/build/`。症状一样。
+
+后一种更隐蔽：你自己什么都没在 IDE 里点，是改文件这个动作把它叫起来的。
+
+<Quiz
+  questions={[
+    {
+      question: "下面哪种情况最符合「两个进程抢 build 目录」？",
+      options: ["每次都在同一个文件、同一行报错", "报错位置每次不一样，单独重跑一次又过了", "只有在 CI 上报错，本地从来不报"],
+      answer: "B",
+      explain: "抢目录是时序问题：谁先删、谁先读每次不同，所以报错飘忽，没人抢的时候重跑就过。CI 上没有 IDE，不会有这种抢法。"
+    }
+  ]}
+/>
+
+## 怎么避开
+
+- 看到上面的症状，先 `ps` 查有没有 JPS 进程或者第二个 Gradle 进程，别急着改代码或依赖。
+- 让 IDE 委托 Gradle 构建，关掉「自动构建项目」和「构建脚本外部更改后自动重新加载」；改完构建脚本，自己在 IDE 里手动点一次加载。
+- 关掉之后主检出里还能复现，就在一个 IDE 不监视的临时 worktree 里跑一次全量验证，用完删掉。
+
+<Callout kind="warn">
+
+也有不是抢目录的孤例：一次全量 check 里某个模块报找不到另一个模块的类，那段时间只有这一个构建在跑，单独重编就过，原因没查明。再遇到先按孤例重跑一次；复现了再加 `--info` 看 javac 的 classpath。另一种「源码里有、class 文件里没有」的情况，先 clean 那个模块再查。
+
+</Callout>
+
+<Transfer
+  prompt="一个前端项目，你开着 `next dev` 在写页面，又在另一个终端里跑 `next build` 想看看能不能构建过。结果开发页面突然没了样式、一片 404。这和本篇是同一类问题吗？还能举出别的例子吗？"
+  points={[
+    { label: "同一类", text: "两个进程共用同一个输出目录（Next 15 及以前 dev 和 build 都写 `.next`），一个覆盖了另一个正在用的文件。" },
+    { label: "通用的判断", text: "报错说不通、和代码改动无关、重跑或重启就好，先看有没有第二个进程在写同一个目录。" },
+    { label: "别的例子", text: "两个终端同时跑同一个项目的 `npm install`、两个测试进程共用一个临时目录、IDE 和命令行同时跑 Maven。" }
+  ]}
+/>

@@ -1,0 +1,61 @@
+---
+title: try/catch 吞掉了动态渲染信号
+summary: Next.js 在静态渲染时遇到 cookies()、headers()，靠抛一个特殊的错误切到动态渲染。服务端组件里用 try/catch 包住取数，就把这个信号当普通错误吞掉了。单测全绿，只有构建时才暴露。
+type: pitfall
+difficulty: practice
+tags: [frontend]
+prerequisites: [fe-rendering-static-and-dynamic]
+sources:
+  - version: v0.12
+    issue: PAP-101
+personalEnv: false
+---
+
+<Diagnose
+  question="一个服务端组件在取数函数里读了 cookies()，外面包了 try/catch：出错就记日志、返回默认值。Next 构建时想先把这个页面静态渲染，碰到 cookies() 会怎样？"
+  options={["cookies() 返回空，照常静态渲染", "Next 抛一个特殊错误，表示「这页要动态渲染」；被 catch 住的话，这个信号就丢了", "构建直接报语法错误"]}
+  answer="B"
+  ifRight="对。Next 用抛错来打断静态渲染，catch 一包，它就以为你处理好了。下面讲在 Patra 里这是怎么暴露的。"
+  ifWrong="答案是 B。静态渲染时用到了只有请求时才有的东西（Cookie、请求头），Next 会抛一个特殊错误，借此把这页切成动态渲染。这题考的是静态与动态渲染：是什么让一个页面变成动态的。"
+/>
+
+## 坑
+
+服务端组件的取数函数里，`try/catch` 包住了会调 `cookies()` 或 `headers()` 的代码。Next 在静态渲染阶段用抛错（`DYNAMIC_SERVER_USAGE`）来表示「这里用到了请求信息，切到动态渲染」，这个错被 catch 当成普通失败吞掉，走了降级分支。
+
+单元测试全绿，因为单测里没有静态渲染这一步。v0.12 用户中心那一版写门户页面时，只有跑 `pnpm build` 预渲染时才报出来，报出来的还是「网关不可用」，看上去像一次普通的取数失败。
+
+## 为什么
+
+Next 的不少控制流都是用抛错实现的：静态渲染时用到动态数据、`redirect()`、`notFound()`，都会抛一个框架认识的错误，一路冒泡到框架自己去处理。中间任何一层 `catch` 只要不加区分地吞掉错误，框架就收不到信号。
+
+## 怎么避开
+
+在 `catch` 里第一行先调 `unstable_rethrow(error)`：是框架自己的信号就原样抛出去，不是才走你的错误处理。
+
+<CodeRef at="patra-portal/src/app/u/[username]/page.tsx@6ead12db647bcd3e56f651af791d56e418cb79ff" lines="32-43" />
+
+```tsx
+async function readProfessionalSelfOnly(): Promise<boolean> {
+  try {
+    const privacy = await fetchMyPrivacy();
+    return privacy !== "signed-out" && privacy.professionalVisibility === "SELF";
+  } catch (error) {
+    // 静态渲染时 Next 用抛错切到动态渲染，这个信号必须原样抛出去
+    unstable_rethrow(error);
+    logRequestError("/patra-identity/me/privacy", error);
+    return false;
+  }
+}
+```
+
+改了服务端组件的取数代码，就跑一次 `pnpm build`：这类问题只有构建时的预渲染能暴露。
+
+<Transfer
+  prompt="一个服务端组件里，取数函数在找不到数据时调 notFound()，外层有个通用的 try/catch 把所有错误转成「加载失败」提示。会出什么问题？还有哪些地方需要同样的处理？"
+  points={[
+    { label: "notFound 也被吞", text: "notFound() 同样是抛一个框架认识的错误；被吞掉后页面显示「加载失败」而不是 404，搜索引擎和用户都拿不到正确的状态。" },
+    { label: "redirect 同理", text: "redirect() 也靠抛错，被吞掉就不跳转。" },
+    { label: "统一做法", text: "所有包住服务端取数的 catch，第一行都先 unstable_rethrow；Patra 门户里读 identity、interaction、通知服务的几个请求封装都这样写了。" }
+  ]}
+/>

@@ -1,0 +1,97 @@
+---
+title: runner 离线太久被除名
+summary: 项目搁置期间，部署机上的 runner 掉线没人发现。GitHub 对离线满 30 天的自托管 runner 会自动删除它的注册，回来时它连名字都没了，只能重装。
+type: pitfall
+difficulty: practice
+tags: [ci-cd, deployment]
+prerequisites: [ops-self-hosted-runner]
+personalEnv: false
+---
+
+<Diagnose
+  question="一台自托管 runner 因为关机或断网离线了，之后很长时间没人管它。你回来时，它最可能是什么状态？"
+  options={["它会自动重连，一切照常", "离线时间太长，GitHub 已经自动删除了它的注册，需要重新安装", "任务还在排队，等它回来"]}
+  answer="B"
+  ifRight="对。GitHub 对长期离线的自托管 runner 会自动清理注册。回来后它不是「离线」，而是「不存在」。"
+  ifWrong="答案是 B。自托管 runner 离线超过 30 天，GitHub 会自动删除它的注册，所以回来时它已经不在列表里了，需要重新注册。这题考的是 runner 与平台之间靠注册关系维系。"
+  suggest="ops-self-hosted-runner"
+/>
+
+<Callout kind="lead" label="坑在哪">
+
+自托管 runner 离线超过 30 天，GitHub 会自动删除它的注册。2026 年 8 月，Patra 的部署机在项目搁置期里掉了线，一掉就是两个月，没有任何东西负责发现，回来时 runner 的注册已经被删除。
+
+</Callout>
+
+## 一条单行道
+
+离线不是终点，注册被删才是。而且这个过程只有一个方向：
+
+<StateMachine
+  title="runner 的三种状态"
+  subject="自托管 runner"
+  states={[
+    { id: "online", label: "在线", sub: "正常领任务", col: 1, desc: "和 GitHub 保持着长连接，随时可以被派发任务。" },
+    { id: "offline", label: "离线", sub: "注册还在", col: 2, desc: "连接断了，任务会一直排队。这时重启一下就能回来。" },
+    { id: "gone", label: "注册被删除", sub: "需要重装", col: 3, desc: "离线满 30 天，GitHub 自动删除了它的注册。重连不再有用，要重新拿一个注册令牌，重新安装。" }
+  ]}
+  start="online"
+  events={[
+    { id: "drop", label: "掉线（关机、断网）" },
+    { id: "back", label: "重新连上" },
+    { id: "wait", label: "离线满 30 天" },
+    { id: "reinstall", label: "重新注册安装" }
+  ]}
+  transitions={[
+    { from: "online", event: "drop", to: "offline", label: "掉线" },
+    { from: "offline", event: "back", to: "online", label: "重连" },
+    { from: "offline", event: "wait", to: "gone", label: "30 天" },
+    { from: "gone", event: "reinstall", to: "online", label: "重装" }
+  ]}
+/>
+
+最危险的是第二个状态到第三个状态之间的沉默：没有报错，没有告警。项目搁置的时候，没有人推送代码，自然也没有任务排队让你看出它不在了。
+
+## 怎么避开
+
+**每天点名。** 每日巡检的第一步就是问 GitHub：名叫 macmini 的 runner 在线吗？不在线当场红灯。发现窗口从两个月压到一天，远够不着 30 天的红线。详细做法见定时巡检那一篇。
+
+**让安装脚本即运维手册。** 真到了要重装的那一步，操作全部收在一个脚本里：
+
+<CodeRef at="patra-infra/scripts/install-github-runner.sh@20f30c3a3a0b2f6b0bd6716ee66034c499ed6f65" lines="1-22" />
+
+脚本区分了两种情形：
+
+| 情形 | 做法 |
+|---|---|
+| 首次安装，或注册已被删除 | 先删掉 runner 目录里的 `.runner`、`.credentials`、`.credentials_rsaparams`，再带上一个新的注册令牌重跑脚本 |
+| 已注册，只想升级 | 不带参数重跑，跳过注册，只更新程序 |
+
+注册令牌在仓库设置的 Runners 页面里生成，约一小时有效，用一次就换。脚本里还有一道保护：已注册的 runner 如果又给了令牌，脚本会拒绝并告诉你该怎么做，免得手滑覆盖现有注册。
+
+<CodeRef at="patra-infra/scripts/install-github-runner.sh@20f30c3a3a0b2f6b0bd6716ee66034c499ed6f65" lines="34-41" />
+
+升级前还有一条红线：不要在任务执行的时候重启 runner，会把正在跑的任务杀掉，任务会显示成「已取消」。先用 `gh run list --status in_progress` 确认没有进行中的运行，再动手。
+
+另一条相关的规则：这台 runner 关掉了自动更新，GitHub 要求新版本发布后 30 天内手动升级，否则也会停止给它派任务。巡检里的版本检查就是为它设的。
+
+<Quiz
+  title="考考自己"
+  questions={[
+    {
+      question: "你要重装 runner，去仓库设置里取了一个注册令牌，放着没用，一周后才跑安装脚本。会怎样？",
+      options: ["没问题，令牌永久有效", "令牌大约一小时就过期，要重新取一个", "令牌过期后脚本会自动换新的"],
+      answer: "B",
+      explain: "注册令牌是一次性、短时效的，用之前再取，取到就用。"
+    }
+  ]}
+/>
+
+<Transfer
+  prompt="另一个情形：你的仓库里有一个每天早上跑的定时任务，仓库长期没人动，GitHub 把这个定时任务自动停用了。它和这次的坑有什么共同点？怎么防？"
+  points={[
+    { label: "共同点", text: "都是平台按「不活跃」自动收回某样东西，而且没有任何红灯，沉默地发生。" },
+    { label: "怎么防", text: "靠另一个不会沉默的东西定期点名：平时有提交会重置不活跃计时；真被停用了，回来到 Actions 页面手动启用。" },
+    { label: "通用做法", text: "凡是平台会自动清理的东西，都要问：「它被清理的时候，谁会知道？」答不上来就加一条检查。" }
+  ]}
+/>

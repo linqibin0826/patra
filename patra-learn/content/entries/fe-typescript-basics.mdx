@@ -1,0 +1,182 @@
+---
+title: TypeScript：给 JavaScript 加上类型
+summary: TypeScript 让你先写清「这个值是什么形状」，写错字段名、忘了处理空值，编辑器在你写代码时就标红，而不是等用户点到那里才出错。看门户怎么写类型、为什么开严格模式，以及类型管不到的地方。
+type: concept
+difficulty: basic
+tags: [frontend]
+prerequisites: [fe-dom-and-events]
+personalEnv: false
+---
+
+<Diagnose
+  question={'脚本执行 `document.getElementById("hero-input")`，可当前页面上根本没有 id 为 hero-input 的节点。这一句会拿到什么？'}
+  options={["直接报错，脚本停下", "拿到 null（什么都没有）", "拿到一个空的输入框"]}
+  answer="B"
+  ifRight="对。找不到就是 null，脚本不会提醒你。接着写 `.focus()` 才会在运行时出错。TypeScript 要解决的，就是在写代码时提前告诉你「这里可能是 null」。"
+  ifWrong="答案是 B：按 id 找不到节点时返回 null，不报错。这题考的是 DOM 的基本操作——脚本在树上找节点。下一步如果对 null 调 `.focus()`，才会在用户面前出错。"
+  suggest="fe-dom-and-events"
+/>
+
+## JavaScript 要等跑起来才发现写错
+
+JavaScript 不检查你拿到的值长什么样。下面这句拼错了字段名，它不会报错，只是悄悄得到 `undefined`，页面上那一块就空着：
+
+```ts
+const paper = await fetchPaper();
+showTitle(paper.titel); // 想写 title，拼成了 titel
+```
+
+这类错误要等用户真的打开那一页、走到那一行才暴露。**TypeScript**（简称 TS）是在 JavaScript 上加了一层「类型」：你先声明一个值是什么形状，编辑器和编译器在你写代码时就逐行对照，对不上就标红。浏览器最后跑的仍是 JavaScript：TS 在构建时被翻译过去，类型全部擦掉。
+
+## 类型是对数据形状的约定
+
+门户从后端拿到的每种数据，都在 `src/types/` 里写了形状。比如一篇文献：
+
+<CodeRef at="patra-portal/src/types/portal.ts@5073ab1358404ecd989e722373cd9f7edafe238b" lines="145-153" />
+
+```ts
+export interface Paper {
+  id: string;
+  title: string;
+  journal: string | null;
+  year: number | null;
+  /** 出版日期，ISO 降精度：`2019` / `2019-03` / `2019-03-15`，长度即精度；没有时为 null */
+  publishedDate: string | null;
+  authors: string[];
+  cites: number | null;
+```
+
+- `interface Paper` 说：叫 Paper 的东西有这些字段。
+- `title: string` 是一定有、而且是文字；`authors: string[]` 是一串文字。
+- `journal: string | null` 里的竖线读作「或」：可能是文字，也可能是 null（没有期刊）。
+
+有了它，写 `paper.titel` 会立刻被标红（Paper 上没有 titel）；写 `paper.journal.length` 也会被标红，因为 journal 可能是 null，你得先判断。
+
+## 联合类型：值只能是这几种之一
+
+竖线不只用在「或 null」。门户的检索框有四种模式，类型直接列出全部可能：
+
+```ts
+export type ComposerMode = "keyword" | "pmid" | "doi" | "author";
+```
+
+这是 `src/types/portal.ts` 第 5 行。写成 `"keywrod"` 会被标红，因为它不在这四个里。
+
+更有用的是给几种**不同形状**的结果起一个总名字。检索框提交后，门户先判断这次输入算什么：
+
+<CodeRef at="patra-portal/src/lib/portal-api/paper-search.ts@f7ac9f60e8ef610772128b294c8845488f97f33c" lines="486-489" />
+
+```ts
+export type ComposerTarget =
+  | { kind: "empty" }
+  | { kind: "invalid"; message: string }
+  | { kind: "ok"; href: string };
+```
+
+三种结果各带各的东西：空输入什么都不带，不合法的带一句提示 `message`，合法的带要跳去的地址 `href`。用的地方先看 `kind`，再拿对应的字段：
+
+<CodeRef at="patra-portal/src/components/portal/QuickSearch.tsx@11f9efb07fd75ad12c2e22d7758c71a8680f37f4" lines="32-42" />
+
+```tsx
+            onSubmit={({ mode, value }) => {
+              const target = composerTarget(mode, value);
+              if (target.kind === "invalid") {
+                toast(target.message);
+                return;
+              }
+              if (target.kind === "ok") {
+                onOpenChange(false);
+                router.push(target.href);
+              }
+            }}
+```
+
+TS 会跟着 `if` 走：进了 `target.kind === "invalid"` 这个分支，它就知道 target 是带 message 的那一种，所以 `target.message` 不会标红。这叫**收窄**。
+
+<Quiz
+  questions={[
+    {
+      question: "在两个 if 的外面，直接写 `router.push(target.href)`，会怎样？",
+      options: ["没问题，target 总有 href", "TS 标红：target 可能是 empty 或 invalid，它们没有 href", "TS 不管，运行时才知道"],
+      answer: "B",
+      explain: "没判断 kind 之前，target 可能是三种里的任何一种，只有 ok 那一种有 href。这正是联合类型的用处：逼你把每种情况想到。"
+    }
+  ]}
+/>
+
+## 严格模式：让 TS 认真对待「可能没有」
+
+TS 的检查松紧可以调。门户把两项开到最严：
+
+<CodeRef at="patra-portal/tsconfig.json@fe4c6bb68c591a9c9b5fe80f76bbfbbbc6aeae75" lines="7-8" />
+
+```json
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+```
+
+- `strict`：一组严格检查的总开关。最要紧的一项是：可能为 null 的值，用之前必须先判断。
+- `noUncheckedIndexedAccess`：按下标从数组里取值（`list[0]`）时，TS 也当它可能没有——数组可能是空的。
+
+下面两行是示意代码，`SEARCH_MODES` 是门户里四种检索模式的数组。拨一拨开关，看 TS 会怎么说：
+
+```ts
+SEARCH_MODES[0].label;                         // ① 取第一个模式的名字
+document.getElementById("hero-input").focus(); // ② 找到输入框，放进光标
+```
+
+<Params
+  title="两个开关，两行代码"
+  guess={{ question: "两项都关掉，这两行在编辑器里会被标红吗？", options: ["两行都标红", "只有 ② 标红", "都不标红"], answer: "C", explain: "不开 strict，TS 默认 null 和 undefined 能当任何类型用，它不提醒。要等运行时真的取到空，才会出错。" }}
+  controls={[
+    { type: "switch", id: "strict", label: "`strict`", default: true },
+    { type: "switch", id: "index", label: "`noUncheckedIndexedAccess`", default: true }
+  ]}
+  cases={[
+    { when: { strict: false }, results: [{ label: "① 取 [0]", value: "不标红", tone: "wait" }, { label: "② getElementById", value: "不标红", tone: "wait" }], verdict: { tone: "bad", head: "全放过。", text: "不开 strict 时，单开 noUncheckedIndexedAccess 也没用。页面上没有那个输入框时，② 在用户面前报错。" } },
+    { when: { index: false }, results: [{ label: "① 取 [0]", value: "不标红", tone: "wait" }, { label: "② getElementById", value: "标红：可能是 null", tone: "ok" }], verdict: { tone: "bad", head: "放过了 ①。", text: "TS 默认相信数组里有第 0 个。数组为空时，① 在运行时报错。" } },
+    { results: [{ label: "① 取 [0]", value: "标红：可能是 undefined", tone: "ok" }, { label: "② getElementById", value: "标红：可能是 null", tone: "ok" }], verdict: { tone: "ok", head: "门户的设置。", text: "两处「可能没有」都要先处理，才能编译通过。" } }
+  ]}
+/>
+
+这条规则在门户代码里留下了痕迹。检索框要找当前模式，找不到就退回第一个：
+
+<CodeRef at="patra-portal/src/components/portal/Composer.tsx@11f9efb07fd75ad12c2e22d7758c71a8680f37f4" lines="45-46" />
+
+```tsx
+  const current = SEARCH_MODES.find((m) => m.id === mode) ?? SEARCH_MODES[0];
+  if (!current) return null;
+```
+
+`??` 读作「左边没有就用右边」。数组明明写死了四个模式，第二行看起来多余；可开着 `noUncheckedIndexedAccess`，`SEARCH_MODES[0]` 的类型是「模式或 undefined」，不判断一下，后面用 `current.label` 就过不了编译。
+
+## 类型只活在写代码的时候
+
+TS 的类型在构建时被擦掉，运行时没有人再检查。从后端拿来的数据是不是真符合 `Paper`，TS 并不知道。门户在这里写得很坦白：
+
+<CodeRef at="patra-portal/src/lib/portal-api/publications.ts@6ead12db647bcd3e56f651af791d56e418cb79ff" lines="6-12" />
+
+```ts
+/**
+ * 在服务端拉取 portal 文献流。仅 RSC / Route Handler 调用（server-only）。
+ * 通过 gateway 访问 catalog，gateway 地址只在服务端可见。
+ *
+ * 注意：响应用 `as PageResult<Paper>` 裸断言，无运行时校验。
+ * TODO(contract-validation)：API 契约稳定后可用 zod safeParse 替换以防后端字段漂移。
+ */
+```
+
+<Callout kind="warn">
+
+`as Paper` 不是检查，是你对编译器的保证：「相信我，它就是这个形状」。后端哪天把字段改了名，TS 照样不报错，页面上那一块悄悄变空。要在运行时真查一遍，得用专门的校验库（门户的表单用的是 zod，见「表单与校验」一篇）。
+
+</Callout>
+
+<Transfer
+  prompt="后端改了文献接口：`year` 可能整个缺失（不再给 null），还新加了字段 `language: string | null`。前端的 `Paper` 类型先没改。哪些问题 TS 能帮你发现、哪些发现不了？你会怎么改？"
+  points={[
+    { label: "TS 不知道后端变了", text: "类型是前端自己写的约定，后端改了，TS 不会自己察觉；数据是用 `as` 断言进来的，运行时也没人查。" },
+    { label: "先改类型", text: "把 `year` 改成可选或「数字或 null 或 undefined」，加上 `language`。改完以后，所有没处理空值就用 year 的地方都会被标红，一处处修。" },
+    { label: "运行时校验", text: "重要的边界（后端响应、用户输入）用 zod 这类库在运行时真查一遍，对不上就当错误处理，而不是悄悄显示空白。" }
+  ]}
+/>

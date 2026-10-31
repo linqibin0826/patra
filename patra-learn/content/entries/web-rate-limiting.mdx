@@ -1,0 +1,154 @@
+---
+title: 限流：挡住刷接口的人
+summary: 固定窗口与滑动窗口的区别；429 与 Retry-After；为什么计数必须是原子的，Patra 的登录失败限制怎样做到。
+type: concept
+difficulty: advanced
+tags: [backend, security, redis]
+prerequisites: [http-status-codes, db-redis-basics]
+personalEnv: false
+---
+
+<Diagnose
+  question="某账号已经失败 4 次，规则是「失败 5 次就锁定」。有人同时发出 100 个猜密码的请求，每个请求都先读失败次数，发现还没到 5，就放行去校验密码。最后会怎样？"
+  options={["恰好第 5 次被锁，后面的全部被拒绝", "100 个请求都通过了检查，锁定形同虚设", "服务器崩溃"]}
+  answer="B"
+  ifRight="对，先检查后计数，中间有空隙，并发的请求会全部从空隙里溜过去。这篇的核心就是怎么堵住它。"
+  ifWrong="答案是 B：每个请求读到的都是 4，都放行；等它们各自校验完才去加计数，限制早就被绕过了。往下读会一步一步演示。"
+  suggest="db-redis-basics"
+/>
+
+## 为什么要限流
+
+接口一旦对外开放，总有人会重复地、大量地请求它：猜密码、批量注册、刷邮件验证码、拖垮服务。**限流**就是给「单位时间内能做多少次」设一个上限，超过了就拒绝。
+
+被拒绝的请求，规范的回法是：
+
+- 状态码 **429**（Too Many Requests）；
+- 响应头 **Retry-After**：还要等多少秒才可以再来；
+- 响应正文里用统一的错误格式，Patra 还会多带一个 `retryAfterSeconds`，方便前端直接做倒计时。
+
+## 两种窗口：固定和滑动
+
+限流要回答「往前看多久」。有两种常见的看法：
+
+<Compare
+  title="每分钟最多 5 次，怎么数"
+  variants={[
+    {
+      label: "固定窗口",
+      steps: ["把时间切成整分钟：12:00:00 到 12:00:59 是一个窗口", "12:00:50 到 12:00:59 发了 5 次，全部通过", "12:01:00 窗口重置，12:01:00 到 12:01:09 又发 5 次，全部通过", "实际上 20 秒内通过了 10 次"],
+      results: [{ label: "20 秒内通过", value: "10 次，是上限的两倍", tone: "bad" }, { label: "实现难度", value: "很简单：一个计数加过期时间", tone: "ok" }],
+      verdict: { tone: "bad", head: "窗口边界处能被钻空子。", text: "好处是简单便宜；代价是边界上最多能放过两倍的量。对精度要求不高的场景够用。" }
+    },
+    {
+      label: "滑动窗口",
+      steps: ["不切整分钟，每次请求都往前看 60 秒", "12:01:09 的这次请求，往前 60 秒里已经有 5 次", "拒绝", "任意连续 60 秒内都不会超过 5 次"],
+      results: [{ label: "任意 60 秒内通过", value: "不超过 5 次", tone: "ok" }, { label: "实现难度", value: "要记下每次请求的时间", tone: "wait" }],
+      verdict: { tone: "ok", head: "没有边界漏洞。", text: "更精确，但要存更多数据（每次请求的时间戳）。该用哪种，看你有多在乎边界上的突发。" }
+    }
+  ]}
+/>
+
+## 真正的难点：并发下计数不能出错
+
+不管哪种窗口，都有一个更隐蔽的陷阱：**检查和计数是两步，之间有空隙**。点「下一步」，在第三步之前先猜。
+
+<Stepper
+  title="先检查、后计数：两个请求同时到达"
+  nodes={[
+    { id: "a", label: "请求 A", sub: "猜密码" },
+    { id: "b", label: "请求 B", sub: "猜密码" },
+    { id: "redis", label: "Redis", sub: "失败计数" }
+  ]}
+  links={[
+    { from: "a", to: "redis" },
+    { from: "b", to: "redis" }
+  ]}
+  steps={[
+    { caption: "规则：失败 5 次锁定。现在已经失败 4 次。请求 A、B 几乎同时到达。", focus: ["redis"], notes: [{ at: "redis", text: "失败计数：4 / 5", tone: "wait" }] },
+    { caption: "A 先检查：计数是 4，没到 5，放行去校验密码。校验要花一点时间，计数还没变。", focus: ["a", "redis"], links: ["a>redis"], tokens: [{ id: "a", label: "放行", at: "a" }], notes: [{ at: "redis", text: "失败计数：4 / 5", tone: "wait" }] },
+    { caption: "B 也来检查。A 的结果还没出，计数仍然是 4，B 也被放行。", focus: ["b", "redis"], links: ["b>redis"], tokens: [{ id: "a", label: "放行", at: "a" }, { id: "b", label: "放行", at: "b" }], notes: [{ at: "redis", text: "失败计数：4 / 5", tone: "wait" }] },
+    { caption: "两个密码都是错的，A 记一次，B 记一次。计数变成 6：本来只允许再试 1 次，实际试了 2 次。", focus: ["redis"], tokens: [{ id: "a", label: "错", at: "redis", state: "faded" }, { id: "b", label: "错", at: "redis", state: "faded" }], notes: [{ at: "redis", text: "失败计数：6 / 5", tone: "bad" }] }
+  ]}
+  guesses={[
+    { before: 3, question: "A 已经被放行、还在校验密码，计数还是 4。这时 B 来检查，会怎样？", options: ["B 看到的是 4，也被放行", "B 被拒绝，因为 A 在处理", "B 会等 A 处理完"], answer: "A", explain: "检查只看计数，不知道还有一个请求在路上。并发越高，溜过去的越多。" }
+  ]}
+/>
+
+这就是「先检查、再计数」不安全的原因。解法有两个方向：
+
+1. **让检查和计数变成不可分割的一步**（原子）。Redis 执行 Lua 脚本时，整段脚本不会被别的命令打断，正好用来做这件事。
+2. **把「已经放行但还没出结果」的请求也算进去**。
+
+Patra 的登录失败限制两个都用了。
+
+## Patra 的做法：开始时登记，结算时再计数
+
+整个登录尝试分两段，各是一段 Lua 脚本：
+
+- **开始**（校验密码之前）：看有没有锁；清掉过期的在途登记；如果「失败次数 + 在途数」已经到上限，直接拒绝；否则登记自己为「在途」。
+- **结算**（校验之后）：把自己的在途登记删掉；成功就清零计数；失败就把失败数加一，加到上限则上锁。
+
+<CodeRef at="patra-api/patra-identity/patra-identity-infra/src/main/resources/redis/login-throttle-begin.lua@2c72f64fa87141c8e1f23d4ba583c052e6800212" lines="1-20" />
+
+关键在于**第二个请求来检查时，第一个请求的在途登记已经在了**。失败 4 次加上 1 个在途，等于 5，已经到上限，第二个请求不用等第一个出结果就能被拦下。
+
+自己试一下。先猜：
+
+<Params
+  title="还能放行吗"
+  guess={{ question: "规则：失败 5 次锁定。现在已经失败 4 次，另有 1 个登录请求在途（还没出结果）。第二个请求来了，会怎样？", options: ["放行，因为失败才 4 次", "拒绝，因为失败数加在途数已经到 5", "排队等第一个请求"], answer: "B", explain: "在途的那个有可能就是失败的第 5 次，所以按「最坏情况」算：4 加 1 等于 5，到上限，拒绝。" }}
+  controls={[
+    { type: "slider", id: "failures", label: "已失败次数", min: 0, max: 4, step: 1, default: 4 },
+    { type: "slider", id: "inflight", label: "在途请求数", min: 0, max: 4, step: 1, default: 1 }
+  ]}
+  cases={[
+    { when: { failures: [4, 4], inflight: [1, 4] }, results: [{ label: "开始返回", value: "拒绝（-1）", tone: "bad" }, { label: "客户端收到", value: "429，Retry-After 1 秒", tone: "wait" }], verdict: { tone: "bad", head: "已失败 {failures}，在途 {inflight}：到上限了。", text: "不必等在途请求出结果，先挡住。Retry-After 只让客户端等 1 秒再试，因为在途的请求很快就会结算。" } },
+    { when: { failures: [3, 3], inflight: [2, 4] }, results: [{ label: "开始返回", value: "拒绝（-1）", tone: "bad" }, { label: "客户端收到", value: "429，Retry-After 1 秒", tone: "wait" }], verdict: { tone: "bad", head: "已失败 {failures}，在途 {inflight}：到上限了。", text: "3 次加 2 个在途就是 5，最坏情况下这 2 个都会失败。" } },
+    { when: { failures: [2, 2], inflight: [3, 4] }, results: [{ label: "开始返回", value: "拒绝（-1）", tone: "bad" }, { label: "客户端收到", value: "429，Retry-After 1 秒", tone: "wait" }], verdict: { tone: "bad", head: "已失败 {failures}，在途 {inflight}：到上限了。", text: "2 次加 3 个在途就是 5。" } },
+    { when: { failures: [1, 1], inflight: [4, 4] }, results: [{ label: "开始返回", value: "拒绝（-1）", tone: "bad" }, { label: "客户端收到", value: "429，Retry-After 1 秒", tone: "wait" }], verdict: { tone: "bad", head: "已失败 {failures}，在途 {inflight}：到上限了。", text: "1 次加 4 个在途就是 5。" } },
+    { results: [{ label: "开始返回", value: "放行（0），登记为在途", tone: "ok" }, { label: "接下来", value: "校验密码，再结算", tone: "ok" }], verdict: { tone: "ok", head: "失败 {failures} 加在途 {inflight}：还没到 5。", text: "放行，并把自己登记为新的在途请求。" } }
+  ]}
+/>
+
+脚本只负责判断。适配器把脚本返回值翻译成异常：正数是锁的剩余毫秒，负数是「忙」。
+
+<CodeRef at="patra-api/patra-identity/patra-identity-infra/src/main/java/dev/patra/identity/infra/account/throttle/LoginThrottleAdapter.java@5073ab1358404ecd989e722373cd9f7edafe238b" lines="61-84" />
+
+异常带上 `Retry-After`，由统一的异常处理器写进响应头：
+
+<CodeRef at="patra-tool/patra-tool-web/src/main/java/dev/patra/tool/web/error/handler/GlobalRestExceptionHandler.java@3cf6fa5757b3be54c3b030e4cace871f53e2599c" lines="121-126" />
+
+<Callout kind="insight">
+
+键名里放的是账号类型加邮箱的 SHA-256，而不是明文邮箱。Redis 里的数据一旦被看到，也不会直接暴露谁在被限制。
+
+</Callout>
+
+## 不同接口，不同限法
+
+登录失败是「按失败计」，其他场景有别的限法。重发验证邮件就是另一种：
+
+<CodeRef at="patra-api/patra-identity/patra-identity-adapter/src/main/java/dev/patra/identity/adapter/account/rest/MeEmailController.java@5073ab1358404ecd989e722373cd9f7edafe238b" lines="35-43" />
+
+429 过于频繁时带 `Retry-After`，成功时返回「下次可重发的时间」，前端据此做倒计时按钮。
+
+<Quiz
+  questions={[
+    {
+      question: "限流的计数放在应用进程的内存里（比如一个 HashMap）。部署了 3 个实例，会发生什么？",
+      options: ["没影响", "每个实例各数各的，实际允许的次数变成上限的 3 倍", "第一个实例会通知其他实例"],
+      answer: "B",
+      explain: "计数要放在所有实例共享的地方，比如 Redis。Patra 的登录限制放在 Redis，所有身份服务实例看到的是同一份。"
+    }
+  ]}
+/>
+
+<Transfer
+  prompt="给「重发验证邮件」接口加限流：同一个用户，60 秒内只能发一次。你会怎么实现？要做到并发点击也不会发出两封；超限时返回什么，前端怎么用？"
+  points={[
+    { label: "原子占位", text: "用一个以用户为键的记录，设置 60 秒过期，写入时判断是否已存在（Redis 的 SET NX EX 是一步完成的），写入成功才允许发信。" },
+    { label: "超限时", text: "返回 429，带 Retry-After 为剩余秒数，正文里的 retryAfterSeconds 同样给出。" },
+    { label: "前端", text: "读到剩余秒数，把按钮置灰并倒计时，倒计时结束才可点击；不要靠前端自己记时间。" }
+  ]}
+/>

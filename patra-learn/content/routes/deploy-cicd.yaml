@@ -1,0 +1,36 @@
+title: 部署与 CI/CD
+summary: 从「代码怎么变成线上服务」读到 CI 流水线、CD 部署、回滚与公网隧道。
+order: 7
+entries:
+  - ops-code-to-production
+  - ops-git-basics
+  - ops-commit-conventions
+  - ops-pull-requests
+  - ops-secrets-out-of-repo
+  - ops-docker-images-and-containers
+  - ops-docker-compose
+  - ops-cpu-architectures
+  - ops-ci-pipeline
+  - ops-ci-changed-only
+  - ops-ci-parallel-and-required-check
+  - ops-ci-security
+  - ops-self-hosted-runner
+  - ops-cd-deploy-loop
+  - ops-health-checks
+  - ops-rollback
+  - ops-scheduled-watchdog
+  - ops-config-as-code
+  - ops-cloudflare-tunnel
+  - ops-native-arm64-build
+  - ops-wrong-arch-image
+  - ops-runner-deregistered
+  - ops-timeout-shown-as-cancelled
+  - ops-localhost-resolves-to-ipv6
+  - ops-bash32-fullwidth-punctuation
+  - ops-typo-reports-success
+  - ops-solo-ops-restraint
+  - ops-proxy-dial-timeout-as-tls-handshake
+  - ops-ssh-controlmaster-forward-exits
+  - ops-precommit-stashes-unstaged
+  - ops-zsh-is-not-bash
+  - ops-public-learning-site-boundary

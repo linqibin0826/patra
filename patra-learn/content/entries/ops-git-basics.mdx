@@ -1,0 +1,128 @@
+---
+title: Git：提交、分支与远端
+summary: 提交是一张快照，分支是一根指针，推送是把你的快照同步到 GitHub。一切改动都从自己的分支开始。
+type: concept
+difficulty: intro
+tags: [git]
+prerequisites: [ops-code-to-production]
+personalEnv: false
+---
+
+<Diagnose
+  question="你在自己电脑上执行了 git commit，改动已经被保存。这时，GitHub 上能看到这次提交吗？"
+  options={["能，commit 会自动同步到 GitHub", "不能，commit 只保存在你电脑上，还要 push 才会同步", "要看 GitHub 有没有开自动同步"]}
+  answer="B"
+  ifRight="对。commit 只发生在本地，push 才把它送到远端。这一篇把提交、分支、推送这三个动作拆开讲。"
+  ifWrong="答案是 B。git commit 只在你电脑上记一笔，GitHub 完全不知道。把它送过去的动作叫 push。"
+  suggest="ops-code-to-production"
+/>
+
+## 提交是一张快照
+
+Git 是一个记录文件变化的工具。你改了一些文件，执行一次**提交（commit）**，Git 就把此刻整个项目的样子拍一张快照，并附上一句说明。
+
+每张快照都有一个编号，是一串 40 位的十六进制字符，比如 `4a1328748…`，日常只看前 9 位就够。快照之间是接龙关系：每一张都记着“我的上一张是谁”。把这条接龙往回数，就是项目的完整历史。
+
+在 Patra 仓库里执行 `git log --oneline`，看到的就是这样：
+
+```text
+4a1328748 feat(portal): 新增通知设置与退订、提醒改接通知服务、实时推送 (v0.16) (#344)
+5b1d855a5 feat(notification): 新建通知中心后端：事件模块、RabbitMQ、通知服务与提醒邮件 (v0.16) (#343)
+1a130a9ec build(deps): 升级 Spring Boot 到 4.1.2、Spring Cloud 到 2025.1.4 (PAP-152) (#342)
+```
+
+左边是快照编号，右边是那句说明。
+
+<Callout kind="analogy">
+
+提交像玩游戏时的存档点。每个存档都完整，随时可以回到任何一个，而且存档之间的先后顺序不会乱。
+
+</Callout>
+
+## 分支是一根指针
+
+如果所有人都往同一条接龙后面接，改到一半的代码就会被别人看到。所以 Git 允许你开**分支（branch）**。
+
+分支听起来像是把项目复制了一份，其实没有复制任何东西。它只是**一根指针**，指着某一张快照。你在这个分支上再做提交，指针就跟着往前走，别的分支的指针不动。
+
+下面一步一步看。先别急着点“下一步”，遇到提问先猜一猜。
+
+<Stepper
+  title="分支和远端，各自站在哪张快照上"
+  nodes={[
+    { id: "main", label: "本地 main", sub: "你电脑上的主分支" },
+    { id: "feat", label: "本地 feat/…", sub: "你的工作分支" },
+    { id: "origin", label: "GitHub", sub: "远端 origin" }
+  ]}
+  links={[
+    { from: "feat", to: "origin", label: "push" }
+  ]}
+  steps={[
+    { caption: "起点：你电脑上的 main 和 GitHub 上的 main 都停在快照 A。", focus: ["main", "origin"], tokens: [{ id: "a-main", label: "A", at: "main" }, { id: "a-origin", label: "A", at: "origin" }] },
+    { caption: "执行 git switch -c feat/journal-search。新分支没有复制任何东西，只是多了一根指向 A 的指针。", focus: ["feat"], tokens: [{ id: "a-main", label: "A", at: "main" }, { id: "a-feat", label: "A", at: "feat" }, { id: "a-origin", label: "A", at: "origin" }], notes: [{ at: "feat", text: "新指针，指向 A", tone: "ok" }] },
+    { caption: "你在 feat 上改代码并提交，产生快照 B。feat 的指针往前走了一步，main 的指针原地不动。", focus: ["feat"], tokens: [{ id: "a-main", label: "A", at: "main" }, { id: "b-feat", label: "B", at: "feat" }, { id: "a-origin", label: "A", at: "origin" }], notes: [{ at: "main", text: "仍是 A，看不到 B", tone: "wait" }, { at: "feat", text: "B 只在本地", tone: "wait" }] },
+    { caption: "执行 git push，把 feat 分支和快照 B 送到 GitHub。此时 GitHub 上多了一个 feat 分支，它的 main 仍是 A。", focus: ["feat", "origin"], links: ["feat>origin"], tokens: [{ id: "a-main", label: "A", at: "main" }, { id: "b-feat", label: "B", at: "feat" }, { id: "b-origin", label: "B", at: "origin" }], notes: [{ at: "origin", text: "多了 feat 分支", tone: "ok" }] },
+    { caption: "你在 GitHub 上把 PR 合并后，GitHub 的 main 变成了 B。但你电脑上的 main 不会自动跟上，仍停在 A，要 git pull 才会更新。", focus: ["main", "origin"], tokens: [{ id: "a-main", label: "A", at: "main" }, { id: "b-feat", label: "B", at: "feat" }, { id: "b-origin", label: "B", at: "origin" }], notes: [{ at: "main", text: "停在 A，落后了", tone: "wait" }, { at: "origin", text: "main 已是 B", tone: "ok" }] }
+  ]}
+  guesses={[
+    { before: 3, question: "你马上要在 feat 上提交快照 B。提交之后，本地 main 上能看到 B 的改动吗？", options: ["能，提交是整个项目共享的", "不能，main 的指针没动，还指着 A", "只能看到一半"], answer: "B", explain: "每个分支各管各的指针。B 只被 feat 指着，main 还指着 A，所以看不到。" },
+    { before: 5, question: "GitHub 上的 PR 合并之后，你电脑上的 main 会自动变成 B 吗？", options: ["会，Git 会自动同步", "不会，要自己 git pull"], answer: "B", explain: "本地和远端是两份独立的记录，从不自动同步。要拿到远端的新快照，必须自己 pull。" }
+  ]}
+/>
+
+## 在 Patra 里，为什么从来不在 main 上直接写
+
+`main` 是随时可以上线的版本，合并进去的那一刻，自动部署就会发车。所以 Patra 给 `main` 设了分支保护：**代码进 `main` 的正常路径是 PR**，要过检查和评审（后面的篇目细讲）。于是写代码的第一步永远是从 `main` 切一条自己的分支：
+
+```bash
+git switch -c feat/journal-search
+```
+
+分支名带类型前缀，比如 `feat/`、`fix/`，一眼就能看出这条分支在干什么。一轮最小的工作流程是：
+
+```bash
+git switch -c feat/journal-search   # 从当前位置切出新分支
+git add 文件名                       # 选出要放进这次快照的改动
+git commit -m "feat(catalog): 新增期刊检索接口"   # 拍快照
+git push -u origin feat/journal-search           # 推到 GitHub，-u 记住对应关系
+```
+
+| 命令 | 作用 |
+|---|---|
+| `git status` | 看哪些文件改了、哪些已经选入快照 |
+| `git log --oneline` | 一行一张快照，看历史 |
+| `git switch 分支名` | 切换到另一个分支 |
+| `git pull` | 把远端的新快照拿到本地 |
+| `git push` | 把本地的新快照送到远端 |
+
+<Callout kind="warn">
+
+`git add` 只是挑选，`git commit` 才是拍快照，`git push` 才是同步。三个动作缺一个，GitHub 上都看不到你的改动。
+
+</Callout>
+
+<Quiz
+  questions={[
+    {
+      question: "新建一个分支，Git 做了什么？",
+      options: ["把整个项目完整复制了一份", "新增一根指向当前快照的指针", "把当前改动立刻上传到 GitHub"],
+      answer: "B",
+      explain: "分支是廉价的：只是一根指针。所以随时开、随时丢，不用心疼。"
+    },
+    {
+      question: "你在 feat 分支提交了三次，却还没有 push。电脑坏了，这三次提交还在吗？",
+      options: ["还在，提交已经保存到云端", "不在，它们只存在你电脑上"],
+      answer: "B",
+      explain: "没有 push 的提交只在本地。养成习惯：做完一段就 push，哪怕只是为了备份。"
+    }
+  ]}
+/>
+
+<Transfer
+  prompt="你在 feat/a 分支上做了一半，线上突然发现一个小 bug 需要马上修。你该怎么用分支处理，才不会把两件事搅在一起？"
+  points={[
+    { label: "先收好手上的活", text: "把 feat/a 上的改动提交（或暂存），保证工作区是干净的。" },
+    { label: "从 main 另切分支", text: "切回 main，必要时先 pull，然后新开 fix/… 分支，只改这个 bug。" },
+    { label: "各走各的 PR", text: "修复单独推送、开 PR、合并。feat/a 以后再回来继续，两件事互不牵连。" }
+  ]}
+/>

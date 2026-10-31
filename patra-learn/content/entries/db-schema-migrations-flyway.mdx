@@ -1,0 +1,174 @@
+---
+title: Flyway：表结构也要版本管理
+summary: 把每次改表结构写成带版本号的脚本，由 Flyway 启动时按序执行、只执行一次；已经执行过的脚本为什么绝对不能改。
+type: concept
+difficulty: advanced
+tags: [database, backend, spring]
+prerequisites: [db-constraints-and-null, db-indexes]
+---
+
+<Diagnose
+  question="你在自己电脑的数据库里给 cat_venue 加了一个新列，代码也用上了它。同事、测试环境、线上的数据库都还没有这一列。怎样做才能保证所有环境的表结构一致，且不靠人手工同步？"
+  options={["在每个环境里手工执行同一句 ALTER TABLE，并在群里约定谁来做", "把这次改动写成带版本号的脚本放进代码仓库，服务启动时自动执行还没执行过的脚本", "让数据库每次启动时对照代码自动改表"]}
+  answer="B"
+  ifRight="对。表结构的变更和代码一样要进版本库、自动执行、可追溯。Flyway 就是做这件事的工具。"
+  ifWrong="答案是 B。手工同步迟早会漏；让数据库对照代码自动改表又太危险，一次误判就可能删列删数据。可靠的做法是把每次变更写成脚本，进仓库，由工具按顺序、只执行一次。"
+  suggest="db-constraints-and-null"
+/>
+
+## 表结构是会变的，变更要像代码一样管理
+
+上线后表结构还会不断变：加列、加索引、加约束、新建表。这些变更和代码要对得上：新版代码用了新列，数据库就得有这一列。
+
+如果靠人手工在各个环境执行 SQL，会遇到三个问题：漏了某个环境、执行顺序错了、没人说得清"现在这个库到底改到哪一步了"。
+
+**Flyway** 的做法是：每次表结构变更写成一个**迁移脚本**，放进代码仓库，文件名带版本号。服务启动时，Flyway 检查数据库里已经执行过哪些脚本，把**没执行过的**按版本号从小到大依次执行。
+
+## 它怎么记账
+
+Flyway 在你的数据库里建一张表 `flyway_schema_history`，每执行一个脚本就记一行：版本号、描述、**校验和**（脚本内容算出的一个指纹）、执行时间、是否成功。
+
+看 Patra 的 catalog 服务，它的迁移目录里是这样一组文件：
+
+```
+V1__create_venue.sql
+V2__create_publication.sql
+...
+V12__add_venue_nlm_unique.sql
+V13__add_venue_instance_unique_key.sql
+R__cat_organization_alias_seed.sql
+```
+
+文件名的规则：`V` + 版本号 + 两个下划线 + 描述。版本号决定执行顺序。
+
+看一个具体的脚本，它给期刊表加一条唯一约束：
+
+<CodeRef at="patra-api/patra-catalog/patra-catalog-infra/src/main/resources/db/migration/V12__add_venue_nlm_unique.sql@6d96ac9d6c2b8463cddf24d8b3461215b4ff8f4c" lines="8-15" />
+
+```sql
+-- 主 NLM：覆盖软删行；允许为空（多个 NULL 互不冲突）
+ALTER TABLE cat_venue
+    ADD CONSTRAINT uk_venue_nlm_id UNIQUE (nlm_id);
+
+-- 标识符表里 NLM 类型的值全表唯一：主 NLM、副 NLM 都只属于一个期刊
+CREATE UNIQUE INDEX uk_venue_identifier_nlm
+    ON cat_venue_identifier (identifier_value)
+    WHERE identifier_type = 'NLM';
+```
+
+脚本里只写"这一版要做的变更"，不是整张表重来。V1 建了 `cat_venue`，V12 就用 `ALTER TABLE` 在原表上加东西。
+
+<Structure
+  title="服务启动时，Flyway 做的事"
+  intro="点一块看它的职责，或者点下面的按钮走一遍启动"
+  nodes={[
+    { id: "scripts", label: "迁移脚本", sub: "V1 … V13", code: true, col: 1, desc: "放在代码仓库里的 SQL 文件，随服务一起打包。文件名里的版本号决定顺序。" },
+    { id: "flyway", label: "Flyway", sub: "服务启动时运行", col: 2, desc: "比较「脚本目录」和「数据库已执行的记录」，只执行新的，并校验旧的没被改动。" },
+    { id: "history", label: "flyway_schema_history", sub: "数据库里的记账表", code: true, col: 3, desc: "每个已执行脚本一行，含版本、校验和。这是 Flyway 判断「执行过没有」的依据。" }
+  ]}
+  edges={[
+    { from: "scripts", to: "flyway", label: "读脚本" },
+    { from: "flyway", to: "history", label: "对账 / 记账" }
+  ]}
+  traces={[
+    {
+      button: "启动：库里已有 V1 到 V12",
+      packet: "V13",
+      hops: [
+        { at: "scripts", caption: "目录里有 V1 到 V13 共 13 个脚本。" },
+        { at: "flyway", caption: "Flyway 去查记账表：V1 到 V12 都执行过了，且校验和和现在的文件一致。" },
+        { at: "history", caption: "只有 V13 是新的：执行它，并在记账表里加一行。V1 到 V12 不会再跑。" }
+      ]
+    }
+  ]}
+/>
+
+## 关键规矩：执行过的脚本，不能改
+
+这是用 Flyway 最重要的一条。已经在某个环境执行过的脚本，**内容一个字符都不要改**。
+
+原因是校验和：Flyway 每次启动都会拿"现在文件的校验和"和"记账表里当时记的校验和"比。对不上就说明有人改了历史，Flyway 认为这个库的状态不可信，**拒绝启动**。
+
+<Stepper
+  title="改了一个已执行的脚本之后，下次启动发生什么"
+  nodes={[
+    { id: "file", label: "V12 脚本", sub: "文件" },
+    { id: "flyway", label: "Flyway" },
+    { id: "history", label: "记账表", sub: "V12 的校验和" }
+  ]}
+  links={[
+    { from: "file", to: "flyway", label: "算校验和" },
+    { from: "history", to: "flyway", label: "读记录" }
+  ]}
+  steps={[
+    { caption: "上周 V12 已经在测试库执行过，记账表里记着它当时的校验和 A。", focus: ["history"], tokens: [{ id: "sum", label: "校验和 A", at: "history" }] },
+    { caption: "有人觉得 V12 里有个注释写错了，顺手改了文件。现在文件的校验和变成了 B。", focus: ["file"], tokens: [{ id: "sum", label: "校验和 B", at: "file" }], notes: [{ at: "file", text: "只改了一个注释", tone: "wait" }] },
+    { caption: "服务启动，Flyway 对账：文件是 B，记账表里是 A。", focus: ["file", "history", "flyway"], links: ["file>flyway", "history>flyway"], tokens: [{ id: "sumb", label: "B", at: "flyway" }, { id: "suma", label: "A", at: "flyway" }] },
+    { caption: "对不上。Flyway 报「Migration checksum mismatch」，服务启动失败。", focus: ["flyway"], tokens: [{ id: "sumb", label: "B 不等于 A", at: "flyway", state: "dropped" }], notes: [{ at: "flyway", text: "拒绝启动", tone: "bad" }] }
+  ]}
+  guesses={[
+    { before: 4, question: "改动的只是一行注释，对表结构没有任何影响。Flyway 还会让服务正常启动吗？", options: ["会，因为实际执行效果一样", "不会，校验和只看文件内容，不看效果", "会，但会在日志里警告"], answer: "B", explain: "Flyway 不去理解 SQL 的效果，只比较文件内容的指纹。一个空格、一行注释都会让校验和变化。" }
+  ]}
+/>
+
+Patra 的上线手册里记着这个坑发生过的样子：开发期间本机连着 mini（作者家里常驻的 Mac mini 部署机，上面跑着开发环境的库）时，最容易发生：已经在 mini 的库上执行过的脚本被改了，服务起不来，日志里是 `Migration checksum mismatch` / `Validate failed`。
+
+当时给出的处理办法是：开发库的数据可以丢，确认没有要留的数据就删库重建；改动无害时也可以用 `flyway repair` 把记账表里的校验和更新成新的。更重要的是以后的纪律：**在 mini 上执行过的脚本不再改，有改动就新增脚本**。
+
+比如 interaction 服务给评论加版本号这件事，就是新增了一个脚本，没去动原来建表的脚本：
+
+<CodeRef at="patra-api/patra-interaction/patra-interaction-infra/src/main/resources/db/migration/discussion/V20261031015300__add_comment_version.sql@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="8-12" />
+
+```sql
+ALTER TABLE discussion.comment
+    ADD COLUMN version INTEGER NOT NULL DEFAULT 1;
+
+ALTER TABLE discussion.comment
+    ADD CONSTRAINT ck_comment_version CHECK (version > 0);
+```
+
+注意 `NOT NULL DEFAULT 1`：表里已经有评论了，新加的 `NOT NULL` 列必须给已有的行一个值，`DEFAULT 1` 让"已有的评论都算版本 1"。给已有数据的表加约束，永远要想一想存量数据怎么办。前面的 V12 也是这样：它加的是唯一约束，开头的注释就写着「上线前须在 mini 核对没有重复」，因为库里要是已经有重复的 NLM 编号，这个脚本执行时会失败。
+
+## 版本号怎么排
+
+Patra 里能看到两种版本号风格：
+
+- catalog：`V1`、`V2`……`V13`，顺序编号。
+- interaction：`V20261031015300__add_comment_version.sql`，用时间戳当版本号，并且按子域放在 `db/migration/discussion/`、`db/migration/reaction/` 这样的子目录里。配置里是 `locations: classpath:db/migration`，Flyway **递归扫描**子目录，整个服务仍然是一份历史、一张记账表。
+
+顺序编号很直观，但两个人同时在各自的分支上新增脚本，容易都取到 `V14`，合并时撞号。时间戳版本号一般不会撞，这是它的好处之一。
+
+除了 `V` 开头的版本化脚本，还有 `R__` 开头的**可重复迁移**，比如 catalog 的 `R__cat_organization_alias_seed.sql`：它没有版本号，**每次内容变了（校验和变了）就重新执行一遍**，并且总在所有版本化脚本之后。适合放"可以反复重新生成"的东西，比如种子数据。脚本开头先删再插，所以改这个文件就是改线上数据。
+
+<Callout kind="warn">
+
+只有 `R__` 脚本允许"改了内容重新执行"。`V` 开头的脚本一旦执行过就是历史，改它等于改写账本。
+
+</Callout>
+
+<Quiz
+  title="考考自己"
+  questions={[
+    {
+      question: "V5 脚本在线上执行过了。后来发现它建的索引名拼错了一个字母。正确的修法是？",
+      options: ["直接改 V5 文件里的名字", "新增一个脚本，用 ALTER INDEX ... RENAME 改名", "在数据库里手工改，不动脚本"],
+      answer: "B",
+      explain: "已执行的脚本不改。新增脚本把差异补上，历史和现状都清楚。手工改库会让环境之间不一致，又是 Flyway 要避免的事。"
+    },
+    {
+      question: "给一张已有 100 万行的表新增一个 NOT NULL 列，脚本里必须注意什么？",
+      options: ["没什么要注意的", "给这一列一个默认值，或者先加可空列、回填数据、再改成 NOT NULL", "先清空这张表"],
+      answer: "B",
+      explain: "已有的行在新列上没有值，直接加 NOT NULL 会失败。要么给默认值，要么分步回填。"
+    }
+  ]}
+/>
+
+<Transfer
+  prompt="你的分支上已经新增了脚本 V15，合并前发现里面少建了一个索引。V15 还没有合并到主分支，也没有在任何共享环境执行过。能直接改 V15 吗？如果 V15 已经在测试环境执行过呢？"
+  points={[
+    { label: "没执行过", text: "可以直接改。校验和是在执行时才记下来的，没有任何环境的记账表里有旧指纹，不会冲突。" },
+    { label: "已在共享环境执行过", text: "不要改。新增 V16 来补索引。改了会让执行过 V15 的环境校验和对不上，服务起不来。" },
+    { label: "本机自己的库", text: "只在自己本机执行过的话，删库重建最干净，或者 flyway repair；但要确认没有别的环境用过这个版本。" }
+  ]}
+/>

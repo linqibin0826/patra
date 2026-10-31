@@ -1,0 +1,152 @@
+---
+title: 模糊搜索：pg_trgm 与 GIN 索引
+summary: LIKE '%词%' 为什么普通索引帮不上忙，pg_trgm 把文字切成三个字符一组的片段，再用 GIN 索引按片段找行；以及它在短关键词上的局限。
+type: concept
+difficulty: advanced
+tags: [database, backend]
+prerequisites: [db-explain-query-plans]
+---
+
+<Diagnose
+  question="机构名称表有二十多万行，name_value 列上有一个普通的 B 树索引。用户边打字边搜，查询是 WHERE name_value LIKE '%大学%'（词在名字中间任意位置）。这个索引能帮上忙吗？"
+  options={["能，只要有索引，LIKE 就能走", "基本帮不上：B 树按开头排序，词在中间时数据库没法定位，只能逐行扫", "能，但只对英文有效"]}
+  answer="B"
+  ifRight="对。B 树像按首字排序的字典，查「以某某开头」很快，查「中间含某某」就不行。pg_trgm 就是为了解决这个。"
+  ifWrong="答案是 B。B 树索引把值按从头到尾的顺序排好，所以能快速找「以大学开头」的值。但词出现在中间时，每个值都有可能匹配，没有「从哪里开始找」的线索，只能一行行扫。"
+  suggest="db-explain-query-plans"
+/>
+
+## 搜"含有某个词"，普通索引没办法
+
+Patra 的机构联想要做到：用户输入「北京大学」，下拉框里立刻出现名字里带这几个字的机构。这种"词出现在名字任意位置"的匹配，在 SQL 里是 `LIKE '%北京大学%'`（或不区分大小写的 `ILIKE`）。
+
+两头都有 `%` 时，B 树索引完全没用：它是按整个值从头到尾排序的，没有"包含某段文字"的捷径。对二十多万行就是全表扫描，边打字边搜时每敲一个键都要扫一遍。
+
+## pg_trgm：把文字切成三个字符一组
+
+PostgreSQL 有一个扩展 `pg_trgm`（trigram，三元组）。它的想法是：**把每个字符串切成所有连续的三个字符的片段**，用这些片段当索引的键。
+
+以"北京大学"为例，它含有的三字片段是：`北京大`、`京大学`（两端还会补空格，凑出更多片段，细节从略）。
+
+查 `LIKE '%北京大学%'` 时，把查询词也同样切成片段（`北京大`、`京大学`），然后问："哪些行同时含有这两个片段？"
+
+存"片段到行号"的这种索引叫**倒排索引**，PostgreSQL 里叫 **GIN 索引**。它像书末的关键词索引：每个关键词（这里是片段）后面跟着一串出现过它的页码（这里是行号）。
+
+<Stepper
+  title="用 pg_trgm 加 GIN 索引查 LIKE '%北京大学%'"
+  nodes={[
+    { id: "q", label: "查询词", sub: "北京大学" },
+    { id: "tri", label: "切成片段", sub: "三字一组" },
+    { id: "gin", label: "GIN 索引", sub: "片段 → 行号" },
+    { id: "cand", label: "候选行" },
+    { id: "check", label: "复查", sub: "真正匹配" }
+  ]}
+  links={[
+    { from: "q", to: "tri" },
+    { from: "tri", to: "gin" },
+    { from: "gin", to: "cand" },
+    { from: "cand", to: "check" }
+  ]}
+  steps={[
+    { caption: "用户输入「北京大学」，数据库要找名字里含这四个字的行。", focus: ["q"], tokens: [{ id: "t", label: "北京大学", at: "q" }] },
+    { caption: "查询词被切成两个三字片段：「北京大」和「京大学」。含有这四个字的名字，一定同时含有这两个片段。", focus: ["tri"], links: ["q>tri"], tokens: [{ id: "t", label: "北京大 + 京大学", at: "tri" }] },
+    { caption: "去 GIN 索引里查：「北京大」出现在哪些行，「京大学」出现在哪些行，两份行号列表求交集。", focus: ["gin"], links: ["tri>gin"], tokens: [{ id: "t", label: "两个行号列表求交集", at: "gin" }], notes: [{ at: "gin", text: "不扫表，只读索引", tone: "ok" }] },
+    { caption: "交集里的行，就是候选：它们同时含两个片段，但这两个片段在名字里不一定紧挨着。", focus: ["cand"], links: ["gin>cand"], tokens: [{ id: "t", label: "少数几行候选", at: "cand" }] },
+    { caption: "把候选行取出来，真的用 LIKE 比一遍，去掉两个片段分开出现的误报，剩下的才是结果。", focus: ["check"], links: ["cand>check"], tokens: [{ id: "t", label: "最终结果", at: "check" }], notes: [{ at: "check", text: "只复查几行", tone: "ok" }] }
+  ]}
+  guesses={[
+    { before: 5, question: "候选行已经同时含「北京大」和「京大学」了，为什么还要回表复查？", options: ["为了更新统计信息", "两个片段可能在名字里不相邻，例如分别出现在前后两处，不一定真含「北京大学」", "索引里的行号可能是错的"], answer: "B", explain: "三字片段只能说明「这个片段出现过」，不能说明几个片段按顺序紧挨着。所以索引只负责快速缩小范围，最后一步要用真正的 LIKE 复查。执行计划里这一步叫 Recheck。" }
+  ]}
+/>
+
+这就是文章开头问题的答案：用了 pg_trgm 的 GIN 索引，`LIKE '%词%'` 不用扫全表，只读索引缩小到几行候选再复查。
+
+## 在 Patra 里怎么建
+
+建索引只有一行：
+
+<CodeRef at="patra-api/patra-catalog/patra-catalog-infra/src/main/resources/db/migration/V9__add_suggest_trigram_indexes.sql@af8cd13c3ec367ccba78615b72e6ff19535cef90" lines="13-14" />
+
+```sql
+CREATE INDEX idx_org_name_value_trgm
+    ON cat_organization_name USING gin (name_value gin_trgm_ops);
+```
+
+`USING gin` 指定索引类型，`gin_trgm_ops` 告诉它"用三元组切分文字"。这个迁移脚本最前面还要先启用扩展：`CREATE EXTENSION IF NOT EXISTS pg_trgm;`。
+
+脚本里另外两个索引更有意思，它们带了 `WHERE`：
+
+<CodeRef at="patra-api/patra-catalog/patra-catalog-infra/src/main/resources/db/migration/V9__add_suggest_trigram_indexes.sql@af8cd13c3ec367ccba78615b72e6ff19535cef90" lines="20-30" />
+
+```sql
+CREATE INDEX idx_mesh_desc_name_trgm
+    ON cat_mesh_descriptor USING gin (name gin_trgm_ops)
+    WHERE descriptor_class = '1' AND active_status;
+
+CREATE INDEX idx_entry_term_term_trgm
+    ON cat_mesh_entry_term USING gin (term gin_trgm_ops)
+    WHERE record_type = 'DESCRIPTOR' AND is_permuted_term = false;
+```
+
+这是「局部索引」（只给满足条件的行建索引）的思路用在 GIN 上：MeSH 词表里很多行（非主题类、已停用、排列入口词）搜索根本不会用到，不把它们放进索引，索引更小、写得更快。代价是**查询的 WHERE 必须包含同样的条件**才能用上这个索引，所以脚本注释写明了"谓词与建议查询的 WHERE 逐字相同"。
+
+## 最大的局限：词太短就凑不出片段
+
+三字片段意味着：查询词里至少要有三个字符，才能切出一个完整片段。只有两个字的词，切不出片段，GIN 索引无从下手，数据库只能退回全表扫描。
+
+<Params
+  title="动手试试：查询词有几个字，索引能帮多大忙"
+  guess={{ question: "查「协和」（两个汉字）和查「北京大学」（四个汉字），哪个更快？", options: ["「协和」，字少匹配得快", "「北京大学」，因为凑得出片段，能走索引", "一样快"], answer: "B", explain: "两个汉字凑不出一个完整的三字片段，GIN 索引用不上，只能全表扫。四个汉字有两个片段可以走索引。Patra 实测前者约 35 毫秒，后者 0.1 毫秒。" }}
+  controls={[
+    { type: "slider", id: "chars", label: "查询词的字符数", min: 1, max: 6, step: 1, default: 4 }
+  ]}
+  cases={[
+    { when: { chars: [1, 2] }, results: [{ label: "能切出的完整片段", value: "0 个", tone: "bad" }, { label: "能否走 GIN 索引", value: "不能，只能全表扫描", tone: "bad" }, { label: "Patra 实测", value: "约 30 到 35 毫秒（二十多万行）", tone: "bad" }], verdict: { tone: "bad", head: "太短，凑不出一个三元组。", text: "{chars} 个字符没有任何完整的三字片段。" } },
+    { when: { chars: [3, 3] }, results: [{ label: "能切出的完整片段", value: "1 个", tone: "wait" }, { label: "能否走 GIN 索引", value: "能，但候选行很多", tone: "wait" }], verdict: { tone: "ok", head: "刚够用。", text: "只有一个片段可以查，含这个片段的行会比较多，复查的工作量大一些。" } },
+    { results: [{ label: "能切出的完整片段", value: "{chars} 个字符，至少 2 个片段", tone: "ok" }, { label: "能否走 GIN 索引", value: "能，求交集后候选很少", tone: "ok" }, { label: "Patra 实测", value: "北京大学约 0.1 毫秒", tone: "ok" }], verdict: { tone: "ok", head: "越长越准。", text: "片段越多，交集越小，需要复查的行越少，速度越快。" } }
+  ]}
+/>
+
+Patra 为此专门做了取舍：两个汉字的联想查询（如「协和」「华西」）接受全表扫，实测约 30 多毫秒，在可接受范围内，所以没有为它们再引入别的方案。这个决定写在设计文档里，用实测的数字作依据，不是拍脑袋。
+
+<Callout kind="insight" label="还有一个更隐蔽的坑">
+
+短关键词的故事还有后续：在数据库驱动把查询转成预编译语句、并改用"通用计划"之后，两个汉字的查询反而会被规划器引向 GIN 索引，变成「扫完整个索引再回表复查几十万行」，比直接全表扫还慢好几倍。这个问题在 Patra 的设计评审中被发现并绕开，过程会在专门的排查文章里细讲。
+
+</Callout>
+
+## GIN 索引的代价
+
+和 B 树一样，GIN 也要为读的快付出代价：
+
+- **体积**：机构名称的这个索引大约 22 MB，对应二十多万行名称。
+- **写入更慢**：每插入一行，要把它切出的所有片段都登记进索引。批量导入大量机构名称之前，要把这个成本算进去。
+- **只适合"含有"类的匹配**：`=`、范围比较、排序它都不管，那些还是 B 树的事。
+
+<Quiz
+  title="考考自己"
+  questions={[
+    {
+      question: "对「内科」（两个汉字）做 LIKE '%内科%' 搜索，在只有 pg_trgm 的 GIN 索引的情况下，数据库会怎么做？",
+      options: ["走 GIN 索引，速度很快", "凑不出完整的三字片段，通常只能退回全表扫描", "报错，提示词太短"],
+      answer: "B",
+      explain: "不报错，只是用不上索引。表不大时全扫也能接受，大表就得想别的办法。"
+    },
+    {
+      question: "GIN 索引找到的候选行，为什么还要回表复查一遍？",
+      options: ["因为索引可能过期", "片段都在不等于它们连续出现，复查才能确认真的含有整个查询词", "为了统计命中次数"],
+      answer: "B",
+      explain: "索引只能说明「这些片段出现过」。真正的 LIKE 匹配在复查这一步完成，EXPLAIN 里能看到 Recheck Cond。"
+    }
+  ]}
+/>
+
+<Transfer
+  prompt="Patra 要给「期刊标题」也做边打边搜的联想，期刊有几十万条。你会怎么做？两个字的中文刊名（例如「内科」）怎么处理？你怎么确认索引真的被用上了？"
+  points={[
+    { label: "怎么建", text: "启用 pg_trgm，对标题列建 GIN 索引（USING gin (title gin_trgm_ops)），查询用 ILIKE '%词%'。" },
+    { label: "短词", text: "两个字凑不出片段，会全表扫。先在真实数据量上量一下耗时，在能接受的范围（几十毫秒）就不另做处理；不能接受再想别的办法，比如前缀索引或专门的搜索引擎。" },
+    { label: "怎么确认", text: "用 EXPLAIN (ANALYZE) 看计划里有没有 Bitmap Index Scan on 那个索引，以及 Recheck Cond；对短词和长词都量一次耗时。" },
+    { label: "要注意", text: "只给搜索真会用到的行建索引（局部索引），查询的 WHERE 要和索引的 WHERE 一致。" }
+  ]}
+/>

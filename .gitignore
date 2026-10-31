@@ -135,16 +135,6 @@ __pycache__/
 # Claude Code 本地偏好（不入版本）
 .claude/settings.local.json
 .claude/launch.json
-# design-sync 机器状态（脚本暂存/构建产物/缓存）
-.ds-sync/
-ds-bundle/
-.design-sync/.cache/
-.design-sync/learnings/
-.design-sync/node_modules
-# design-sync 资产生成物（由 patra-learn/.design-sync-assets/prepare.sh 生成）
-patra-learn/.design-sync-assets/entry.css
-patra-learn/.design-sync-assets/tailwind.css
-patra-learn/.design-sync-assets/process-shim.js
 
 # Playwright MCP 调试产物（控制台日志、页面快照）
 .playwright-mcp/

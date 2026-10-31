@@ -1,0 +1,161 @@
+---
+title: 乐观更新：先改界面再等结果
+summary: 点了按钮先把界面改成「应该成功」的样子，请求在后台跑；成功了按服务端的数校正，失败了退回原样并提示。以 Patra 门户的「有帮助」按钮为例，讲回滚怎么做、什么样的操作适合这么做。
+type: concept
+difficulty: advanced
+tags: [frontend]
+prerequisites: [fe-react-hooks-and-effects, fe-async-and-fetch]
+sources:
+  - version: v0.15
+    issue: PAP-134
+    pr: 322
+personalEnv: false
+---
+
+<Diagnose
+  question="你点了一条评论的「有帮助」，数字立刻从 3 变成 4，请求这时还在路上。几百毫秒后服务器回：失败，你今天点的次数用完了。按钮现在应该显示几？"
+  options={["4，已经显示出去了就不改", "3，退回点之前的样子，并告诉你为什么", "0，出错了先清空"]}
+  answer="B"
+  ifRight="对。先改界面是一种「赌它会成功」，赌输了就要退回去。往下看门户怎么做到退得干净。"
+  ifWrong="答案是 B：界面提前显示的只是猜测，服务器说失败，就要退回到真实的样子并给出原因。这题考的是异步请求「发出去」和「有结果」之间那段时间，界面该显示什么。"
+  suggest="fe-async-and-fetch"
+/>
+
+## 等结果再改，用户会觉得卡
+
+一次点击要经过门户、网关、interaction，再原路回来。网络好时几百毫秒，差时一两秒。如果等结果回来再改数字，用户点完要盯着一个没反应的按钮，常常会再点一下。
+
+乐观更新换了个顺序：先按「应该会成功」改界面，再发请求。两种写法在顺利时都是对的，区别出在失败的时候：
+
+<Compare
+  title="两种写法，请求失败时会怎样"
+  failureLabel="请求失败（比如今天的次数用完了）"
+  variants={[
+    { label: "等结果再改", steps: ["点击", "等请求回来，按钮这段时间不动", "按服务端结果改数字"], results: [{ label: "按钮", value: "隔一会儿才变成 4", tone: "wait" }], verdict: { tone: "ok", head: "对，但慢。", text: "每次点击都要等一个来回。" }, failure: { after: 2, results: [{ label: "按钮", value: "一直是 3", tone: "ok" }, { label: "提示", value: "次数用完了", tone: "wait" }], verdict: { tone: "ok", head: "不用回滚。", text: "界面本来就没动过，只要显示提示。" } } },
+    { label: "乐观更新", steps: ["点击，数字立刻变成 4", "请求在后台跑", "按服务端结果校正"], results: [{ label: "按钮", value: "立刻变成 4", tone: "ok" }], verdict: { tone: "ok", head: "对，而且快。", text: "用户感觉不到这个来回。" }, failure: { after: 2, results: [{ label: "按钮", value: "退回 3", tone: "ok" }, { label: "提示", value: "次数用完了", tone: "wait" }], verdict: { tone: "ok", head: "要回滚。", text: "界面提前改过了，失败时要能准确退回原来的样子。" } } }
+  ]}
+/>
+
+乐观更新的难点全在最后那一步：退回去，而且要退得准。
+
+## 回滚靠的是不动原值
+
+最直接的写法是把数字改成 4，失败了再改回 3。问题是：请求在路上的时候，原来的 3 可能已经被别的东西更新过了，「改回去」改的是哪个值说不准。
+
+门户的做法是不碰原值。服务端给的值（组件的 props）原样留着，乐观值另放在一个单独的状态 `pending` 里：
+
+<CodeRef at="patra-portal/src/lib/helpful/use-helpful-toggle.ts@a81a667d8b65f517028d6e7305893a8d562eee26" lines="60-61" />
+
+```ts
+  /// 请求中的乐观值
+  const [pending, setPending] = useState<HelpfulValue | null>(null);
+```
+
+按钮显示哪个，按顺序挑：有乐观值显示乐观值；没有就显示上一次请求成功时服务端返回的值；都没有就是 props。
+
+<CodeRef at="patra-portal/src/lib/helpful/use-helpful-toggle.ts@a81a667d8b65f517028d6e7305893a8d562eee26" lines="79-83" />
+
+```ts
+  const shown: HelpfulValue =
+    pending ??
+    (settled && settled.viewer === viewer && sameValue(settled.base, server)
+      ? settled.value
+      : server);
+```
+
+点击时设好乐观值，再发请求（`setHelpful` 是一个 Server Action）：
+
+<CodeRef at="patra-portal/src/lib/helpful/use-helpful-toggle.ts@a81a667d8b65f517028d6e7305893a8d562eee26" lines="123-131" />
+
+```ts
+    const on = !shown.helpful;
+    const base = server;
+    const clickedBy = viewer;
+    inFlight.current = true;
+    setHint(null);
+    setPending({ helpful: on, count: Math.max(0, shown.count + (on ? 1 : -1)) });
+    void orUnavailable(setHelpful(target, on)).then((result) => {
+      inFlight.current = false;
+      setPending(null);
+```
+
+注意最后一行：结果一回来，不论成败，先把乐观值清掉。失败时什么都不用「改回去」，`shown` 自然落回原来的值，再显示一条提示就完了。这就是回滚。
+
+成功时也不是留着自己算的 4，而是用服务端返回的数：
+
+<CodeRef at="patra-portal/src/lib/helpful/use-helpful-toggle.ts@a81a667d8b65f517028d6e7305893a8d562eee26" lines="139-145" />
+
+```ts
+      if (result.ok) {
+        const { helpful: marked, helpfulCount } = result.result;
+        setSettled({ base, value: { helpful: marked, count: helpfulCount }, viewer: clickedBy });
+        patchHelpful(client, target, result.result);
+        markHelpfulStale(client, target);
+        return;
+      }
+```
+
+你点的这几百毫秒里，别人可能也点了，服务端回的可能是 5。以服务端为准，按钮就和真实情况对上了。`patchHelpful` 把新数写进页面上所有缓存了这条内容的列表，`markHelpfulStale` 把它们标成过期但不立刻重取，免得列表在你眼前重新排序。
+
+几个顺带的防护：
+
+- `inFlight` 是一个 ref，请求在路上时再点直接忽略，不会连发两次。
+- 点的时候记下是谁点的（`clickedBy`）。请求在路上时如果换了账号（另一个标签页退出了），结果属于上一位，直接丢掉。
+- 登录状态还没取回来时，按钮不响应：这时判断不了你有没有登录、邮箱验证没有。
+
+## 什么样的操作适合乐观更新
+
+v0.15 定下「有帮助」用乐观更新，理由是：它是高频的轻操作，等服务端返回会显得卡；计数晚几秒对上也不影响使用。拆开来看，适合的操作有几个共同点：
+
+| 条件 | 有帮助 | 注册账号 |
+|---|---|---|
+| 几乎总会成功 | 是，失败只有次数用完、内容被删等少数情况 | 否，邮箱被占、格式不对都常见 |
+| 成功后的样子能提前算出来 | 是，加一或减一 | 否，要等服务端分配 |
+| 猜错了代价小、退得回去 | 是，数字退回去就好 | 否，用户会以为已经注册成功、关掉页面 |
+
+不满足这些条件的，老老实实等结果，按钮上显示「提交中」。
+
+同样的思路也用在不改数据的地方。门户的文献检索页切筛选条件时，地址栏才是真正的状态，可页面跳转要等服务端渲染。`BrowseQueryProvider` 先把新的查询条件当乐观值显示出来，服务端的查询一变就清掉它：
+
+<CodeRef at="patra-portal/src/components/portal/browse/BrowseQueryProvider.tsx@f7ac9f60e8ef610772128b294c8845488f97f33c" lines="67-75" />
+
+```tsx
+  const serverKey = serialize(query);
+  const [optimistic, setOptimistic] = useState<Q | null>(null);
+  const [seenServerKey, setSeenServerKey] = useState(serverKey);
+  // 服务端查询变化：渲染期清空乐观值（派生状态写法，本次渲染即用服务端查询）
+  if (serverKey !== seenServerKey) {
+    setSeenServerKey(serverKey);
+    setOptimistic(null);
+  }
+  const current = optimistic !== null && serverKey === seenServerKey ? optimistic : query;
+```
+
+两处是同一个模式：真实值不动，乐观值另放，真实值一来乐观值就让位。
+
+<Quiz
+  questions={[
+    {
+      question: "你点了「有帮助」，按钮立刻显示 4。请求成功，服务端回的 `helpfulCount` 是 6（这期间另外两个人也点了）。按钮最后显示几？",
+      options: ["4，自己算的", "6，以服务端返回的为准", "5，取中间值"],
+      answer: "B",
+      explain: "成功后门户用服务端返回的值校正，乐观值只是请求在路上时的过渡。"
+    },
+    {
+      question: "如果把写法改成「点击时直接把 props 的数字加一，失败时再减一」，会出什么问题？",
+      options: ["没问题，效果一样", "请求在路上时原值可能已被别处更新，减一会减错；而且 props 是父组件给的，子组件不该改它", "会多发一次请求"],
+      answer: "B",
+      explain: "回滚靠「改回去」时，要知道改回到哪个值。乐观值另放就不用回答这个问题：清掉它，就是真实值。"
+    }
+  ]}
+/>
+
+<Transfer
+  prompt="讨论区要加「删除我的评论」：点了评论立刻从列表里消失。你会用乐观更新吗？如果用，失败时怎么回滚，成功后又该做什么？"
+  points={[
+    { label: "先看失败率和后果", text: "删自己的评论通常会成功，但它不可撤销；如果服务端拒绝（比如已被管理员处理），用户要能看到评论还在。" },
+    { label: "列表不动，另记待删的 ID", text: "缓存里的列表原样保留，另放一个「正在删除」的 ID，显示时把它过滤掉。" },
+    { label: "失败就清掉这个 ID", text: "评论自然重新出现，再给一条提示说明原因。" },
+    { label: "成功以服务端为准", text: "从缓存里真正删掉这条，或标过期等下次重取，楼层数、回复数也跟着更新。" }
+  ]}
+/>

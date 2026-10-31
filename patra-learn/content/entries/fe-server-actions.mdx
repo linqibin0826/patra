@@ -1,0 +1,130 @@
+---
+title: Server Action：表单直接调服务端
+summary: 在文件顶上写一行 `"use server"`，浏览器里的组件就能像调普通函数一样调服务端代码，不用自己写接口。它适合提交表单、改数据，不适合拿来取数。以 Patra 门户的登录为例。
+type: concept
+difficulty: advanced
+tags: [frontend]
+prerequisites: [fe-server-and-client-components, fe-forms-and-validation]
+personalEnv: false
+---
+
+<Diagnose
+  question="门户的登录表单是一个客户端组件，它 import 了 `login` 函数并调用它；`login` 所在的文件第一行写着 `use server`。用户点「登录」时，`login` 函数体里的代码在哪里执行？"
+  options={["在浏览器里，和表单组件一起", "在门户的服务器上，浏览器只是发了一个请求过去", "在网关上"]}
+  answer="B"
+  ifRight="对。函数体留在服务器上，浏览器拿到的只是一个能发请求的「替身」。往下看这个替身发的是什么请求，以及为什么任何人都能直接调它。"
+  ifWrong="答案是 B：标了 `use server` 的函数只在服务器上运行，浏览器那边只有一个替身，调用它等于发一个 POST。这题考的是服务端代码和客户端代码的边界，也就是哪些代码会被打包发到浏览器。"
+  suggest="fe-server-and-client-components"
+/>
+
+## 看起来是调函数，其实是发了一个 POST
+
+在一个文件的第一行写 `"use server"`，这个文件导出的所有 async 函数就成了 Server Function。Next 把它们用在提交表单、改数据这类场合时，叫 Server Action。
+
+门户的登录、注册、登出都写在这样一个文件里：
+
+<CodeRef at="patra-portal/src/lib/auth/actions.ts@fe4c6bb68c591a9c9b5fe80f76bbfbbbc6aeae75" lines="148-159" />
+
+```ts
+/// 登录：成功（200）时写入 Cookie、返回用户。422 返回字段错误，401 是邮箱或密码不对，
+/// 403 是账号被封禁，429 是尝试次数过多；其余状态码、超时和网络错误都是 `unavailable`。
+export async function login(input: Credentials): Promise<LoginResult> {
+  const reply = await submitCredentials(LOGIN_ENDPOINT, credentialsSchema, input);
+  if (!reply) {
+    return UNAVAILABLE;
+  }
+  const { status } = reply.res;
+  if (status === 200) {
+    const user = await signIn(LOGIN_ENDPOINT, reply);
+    return user ? { ok: true, user } : UNAVAILABLE;
+  }
+```
+
+构建时，Next 把客户端打包里的 `login` 换成一个替身：一个加密过的动作 ID，加一段「把参数发回服务器」的代码。函数体从来不会发到浏览器。
+
+客户端组件这边就是普通的 import 和调用。登录表单把 `login` 交给提交逻辑，提交时 `await` 它：
+
+<CodeRef at="patra-portal/src/components/auth/LoginForm.tsx@fe4c6bb68c591a9c9b5fe80f76bbfbbbc6aeae75" lines="56-59" />
+
+```tsx
+  const { submitting, submit } = useAuthSubmit({
+    next,
+    action: login,
+    successToast: TOAST_MESSAGES.loggedIn,
+```
+
+点一下「下一条」，看一次登录在网络上实际走了什么：
+
+<Sequence
+  title="调一次 login，网络上发生了什么"
+  actors={[
+    { id: "browser", label: "浏览器", sub: "登录表单" },
+    { id: "portal", label: "门户服务器", sub: "login 的函数体" },
+    { id: "gateway", label: "网关" }
+  ]}
+  messages={[
+    { from: "browser", to: "portal", label: "POST 当前页（动作 ID + 邮箱、密码）", caption: "代码里写的是 `await login(values)`，Next 替你发了一个 POST 到当前页面的地址，请求里带着动作 ID 和参数。只能是 POST。" },
+    { from: "portal", to: "gateway", label: "POST /patra-identity/auth/login", caption: "门户服务器上跑真正的 login：先校验参数形状，再带上设备标识去请求网关。" },
+    { from: "gateway", to: "portal", label: "200 + 会话令牌 + 用户", caption: "账号密码对了，identity 建好会话，把令牌交回门户。" },
+    { from: "portal", to: "browser", label: "Set-Cookie + 返回值", caption: "令牌写进 HttpOnly Cookie 由浏览器保管；返回给表单的只有 `ok` 和用户信息，浏览器里的脚本碰不到令牌。" }
+  ]}
+  summary={{ caption: "没写一个接口，却完成了一次「浏览器 → 服务器 → 网关」的往返。写 Cookie 这件事也只能在这类服务端代码里做。" }}
+/>
+
+最后一步很关键：在 Next 里，`cookies().set` 只能在 Server Function 或 Route Handler 里调用，服务端组件渲染页面时不能写 Cookie。登录要写 Cookie，所以登录天然适合做成 Server Action。
+
+Next 文档推荐的写法是 `<form action={login}>`，这样脚本还没加载完、表单也能提交。门户没有这样写：它要先用表单库在浏览器里校验一遍、再按返回的 `reason` 决定提示哪条文案，所以在 `onSubmit` 里自己调。表单上另写了 `method="post"`，只是为了脚本没加载完时邮箱和密码不会跑进地址栏。
+
+## 任何人都能直接 POST 它
+
+替身发的是一个普通的 POST。打开浏览器开发者工具就能看到它，复制下来就能自己重发，改掉参数也行。所以每个 Server Action 都得当成一个公开的接口来写：
+
+<CodeRef at="patra-portal/src/lib/auth/actions.ts@fe4c6bb68c591a9c9b5fe80f76bbfbbbc6aeae75" lines="36-38" />
+
+```ts
+/// 入参只校验形状，多余的字段被剥掉；长度和格式由后端校验，失败时回 422 并带原因码
+const credentialsSchema = z.object({ email: z.string(), password: z.string() });
+const registrationSchema = credentialsSchema.extend({ username: z.string() });
+```
+
+TypeScript 的类型只在写代码时有效，请求里实际来的是什么谁也说不准，所以门户在服务端用 zod 再查一遍形状，形状不对就不请求网关。要登录才能做的动作，也要在函数里自己读会话，不能因为「只有登录后的页面才显示这个按钮」就不查。
+
+Next 自己替你做了一道检查：请求的 `Origin` 必须和 `Host` 对得上，别的网站骗你的浏览器发过来的请求会被拒掉。Route Handler 没有这道检查，门户的写操作 Route Handler 都要自己补（`src/lib/same-origin.ts` 的注释写的就是这件事）。
+
+返回值也会原样发给浏览器。门户的 Action 只返回 `ok`、`reason` 和界面要显示的字段，不把网关的原始响应往外传。
+
+## 它适合做什么，不适合做什么
+
+| 场合 | 用不用 Server Action | 原因 |
+|---|---|---|
+| 登录、注册、保存资料、点有帮助 | 用 | 改数据，常要写 Cookie；不用为每个动作单独写接口 |
+| 列表取数、轮询未读数 | 不用 | 浏览器一次只派发一个 Action，取数会排队；取数用服务端组件或 Route Handler |
+| 推送事件流、文件下载 | 不用 | 它返回的是一个值，不是一条可以一直流的响应 |
+| 给别的程序调的接口 | 不用 | 动作 ID 由构建生成、加密过，不是一个稳定的公开地址 |
+
+<Quiz
+  questions={[
+    {
+      question: "用户在一页里快速连点了三个按钮，每个都调一个不同的 Server Action。三个请求会怎样发出？",
+      options: ["三个同时发出", "一个一个来：前一个结束，后一个才发", "只发最后一个"],
+      answer: "B",
+      explain: "Next 在每个客户端上按顺序派发 Server Action，第二个等第一个结束。所以别用它来并行取数。"
+    },
+    {
+      question: "一个保存资料的 Server Action 只在设置页上被调用，而设置页已经要求登录了。函数里还需要自己检查会话吗？",
+      options: ["不用，页面已经挡过了", "要，任何人都能绕过页面直接 POST 这个动作", "看有没有开 CSRF 检查"],
+      answer: "B",
+      explain: "页面只决定显不显示按钮，挡不住直接发请求。门户的 `saveProfile` 经 `callIdentity` 带令牌请求网关，没会话就回 `signed-out`。"
+    }
+  ]}
+/>
+
+<Transfer
+  prompt="门户要加两样东西：一个「修改昵称」的保存按钮，和一个每 60 秒刷新一次的「在线人数」。你会分别用 Server Action 还是 Route Handler？各自要注意什么？"
+  points={[
+    { label: "改昵称用 Server Action", text: "它是一次改数据的提交，返回界面要的结果就行，不用单独写接口。" },
+    { label: "当公开接口写", text: "函数里自己校验参数形状、自己读会话；返回值只给界面要的字段。" },
+    { label: "在线人数用 Route Handler", text: "这是定时取数：Server Action 一次只派发一个，会和别的动作互相排队；取数用 GET 接口更合适。" },
+    { label: "Route Handler 的写操作要防跨站", text: "如果以后要用 Route Handler 改数据，得自己检查 `Origin`，框架不替你查。" }
+  ]}
+/>

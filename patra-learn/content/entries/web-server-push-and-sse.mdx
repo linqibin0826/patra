@@ -1,0 +1,168 @@
+---
+title: 服务器主动推：轮询、SSE 与 WebSocket
+summary: 让页面知道「有新东西了」的三种办法；SSE 的报文格式、心跳与重连，以及 Patra 的未读数推送怎么做。
+type: concept
+difficulty: advanced
+tags: [network, backend, frontend]
+prerequisites: [http-request-and-response, web-reverse-proxy-and-gateway]
+topics: [realtime-push]
+sources:
+  - version: v0.16
+    issue: PAP-145
+personalEnv: false
+---
+
+<Diagnose
+  question="页面每 60 秒问一次服务器「我有几条未读」。别人回复了你，恰好发生在两次询问之间的某个随机时刻。铃铛平均要多久才会变红？"
+  options={["立刻", "平均约 30 秒，最长接近 60 秒", "固定 60 秒"]}
+  answer="B"
+  ifRight="对，回复落在两次询问之间的哪个位置都有可能，平均等半个周期。想让它立刻变红，就得让服务器主动告诉页面。"
+  ifWrong="答案是 B：回复发生的时刻在两次询问之间是随机的，平均要等半个周期，最坏等满一个周期。这就是轮询的延迟。"
+  suggest="http-request-and-response"
+/>
+
+## 普通 HTTP 只能「你问我答」
+
+回顾一下：HTTP 是客户端发请求、服务器回响应。服务器没有办法在没被问的时候，自己开口告诉浏览器什么。
+
+但很多页面需要「有新东西就立刻知道」：铃铛的未读数、聊天消息、构建进度。有三种办法。
+
+<Compare
+  title="三种让页面知道有新东西的办法"
+  variants={[
+    {
+      label: "轮询",
+      steps: ["页面每隔固定时间发一个普通请求：我有几条未读？", "服务器回答当前的数字", "大多数时候答案是「没变」，白问了一次", "间隔越短越及时，也越浪费"],
+      results: [{ label: "延迟", value: "平均半个周期", tone: "bad" }, { label: "没有新东西时", value: "照样每次一个请求", tone: "bad" }, { label: "实现", value: "最简单，普通 HTTP", tone: "ok" }],
+      verdict: { tone: "bad", head: "简单，但又慢又浪费。", text: "用户很多、变化很少的时候，绝大多数请求问到的都是「没变」。" }
+    },
+    {
+      label: "SSE（服务器发送事件）",
+      steps: ["页面发一个普通 GET，请求一条事件流", "服务器不关闭连接，响应一直开着", "有新东西时，服务器往这条连接里写一条事件", "页面收到立刻更新"],
+      results: [{ label: "延迟", value: "几乎立即", tone: "ok" }, { label: "没有新东西时", value: "不发请求，只有偶尔的心跳", tone: "ok" }, { label: "方向", value: "只能服务器到页面", tone: "wait" }],
+      verdict: { tone: "ok", head: "单向推送的合适选择。", text: "基于普通 HTTP，浏览器内置 EventSource，断线自动重连。只推不收，正好是通知这种场景。" }
+    },
+    {
+      label: "WebSocket",
+      steps: ["页面发一个特殊的升级请求", "服务器同意后，连接从 HTTP 变成 WebSocket 协议", "之后双方都可以随时发消息", "需要自己处理心跳、重连、认证"],
+      results: [{ label: "延迟", value: "几乎立即", tone: "ok" }, { label: "方向", value: "双向", tone: "ok" }, { label: "复杂度", value: "最高：协议不再是 HTTP", tone: "bad" }],
+      verdict: { tone: "ok", head: "要双向时才值得。", text: "聊天、协同编辑这类要频繁双向通信的场景用它。只需要服务器推的话，SSE 更省事。" }
+    }
+  ]}
+/>
+
+Patra 的未读数推送选了 SSE：通知只需要服务器告诉页面，页面不需要在这条连接上说话。
+
+## SSE 长什么样
+
+SSE 就是一次 GET 请求，响应的 `Content-Type` 是 `text/event-stream`，而且**响应不结束**。服务器之后想说话，就往里写一段文本。格式极其简单：
+
+```text
+HTTP/1.1 200
+Content-Type: text/event-stream
+Cache-Control: no-cache, no-transform
+
+retry: 3000
+event: unread-count
+data: {"total":2,"replies":1,"mentions":1,"helpful":0}
+
+:ping
+
+event: unread-count
+data: {"total":3,"replies":2,"mentions":1,"helpful":0}
+
+```
+
+规则：
+
+- 每条事件由若干行 `字段: 值` 组成，**以一个空行结束**。
+- `event:` 是事件名，`data:` 是数据（这里是 JSON）。
+- `retry:` 告诉浏览器断线后隔多少毫秒重连。
+- 以冒号开头的行是**注释**，浏览器收到什么也不做，不触发任何事件。
+
+Patra 的发送代码：
+
+<CodeRef at="patra-api/patra-notification/patra-notification-adapter/src/main/java/dev/patra/notification/adapter/realtime/rest/SseUnreadCountStream.java@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="14-78" />
+
+第一条事件带 `retry: 3000`；事件名是 `unread-count`；心跳是一行注释 `:ping`。
+
+## 一条连接的一生
+
+点「下一步」，在第四步和第六步前各有一道题。
+
+<Stepper
+  title="未读数推送连接的生命周期"
+  nodes={[
+    { id: "browser", label: "浏览器", sub: "EventSource" },
+    { id: "gateway", label: "网关", sub: "推送专用路由" },
+    { id: "notify", label: "通知服务" }
+  ]}
+  links={[
+    { from: "browser", to: "gateway" },
+    { from: "gateway", to: "notify" }
+  ]}
+  steps={[
+    { caption: "页面打开，浏览器用 EventSource 连上通知服务的事件流。请求经过网关，连接保持不关。", focus: ["browser", "gateway", "notify"], links: ["browser>gateway", "gateway>notify"], notes: [{ at: "notify", text: "连接数 +1", tone: "ok" }] },
+    { caption: "连上的瞬间，服务器先推一次当前的未读数，这样页面不用再额外查一次。", focus: ["notify", "browser"], links: ["gateway>notify", "browser>gateway"], tokens: [{ id: "ev", label: "unread-count", at: "browser" }] },
+    { caption: "有人回复了你。通知服务在事务提交之后，把新的未读数写进这条连接，页面立刻更新。", focus: ["notify", "browser"], links: ["gateway>notify", "browser>gateway"], tokens: [{ id: "ev", label: "unread-count", at: "browser" }] },
+    { caption: "一段时间没有新提醒。服务器每 25 秒写一行注释 :ping，连接上始终有字节在走。", focus: ["notify", "gateway"], links: ["gateway>notify"], tokens: [{ id: "ping", label: ":ping", at: "gateway" }], notes: [{ at: "browser", text: "不触发任何事件", tone: "wait" }] },
+    { caption: "连接挂满 30 分钟，服务端主动正常结束响应。", focus: ["notify"], notes: [{ at: "notify", text: "连接结束", tone: "wait" }] },
+    { caption: "浏览器按之前收到的 retry: 3000，等 3 秒后自动重连，回到第一步。", focus: ["browser", "gateway"], links: ["browser>gateway"], tokens: [{ id: "re", label: "重连", at: "gateway" }] }
+  ]}
+  guesses={[
+    { before: 4, question: "没有新提醒时，这条连接可能几十分钟一个字节都不发。中间的网关、代理对「很久没数据的连接」，通常怎么处理？", options: ["一直保留，不管多久", "当作死连接掐断", "把它转成轮询"], answer: "B", explain: "每一层代理都有空闲超时，防的是占着资源不干活的僵尸连接。所以服务器要定时发心跳，让它们看到数据在流。" },
+    { before: 6, question: "服务端正常结束了响应。浏览器的 EventSource 接下来会怎样？", options: ["停下来，不再连接", "按 retry 间隔自动重连", "弹出错误让用户刷新"], answer: "B", explain: "EventSource 的设计就是断了自动重连，间隔由服务器的 retry 字段决定。" }
+  ]}
+/>
+
+心跳由一个进程内的定时任务发。不用调度集群，因为连接只存在这个进程的内存里，必须由持有它的进程自己发：
+
+<CodeRef at="patra-api/patra-notification/patra-notification-adapter/src/main/java/dev/patra/notification/adapter/realtime/scheduler/UnreadCountStreamHeartbeatScheduleJob.java@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="9-23" />
+
+## 控制器怎么开这条连接
+
+<CodeRef at="patra-api/patra-notification/patra-notification-adapter/src/main/java/dev/patra/notification/adapter/realtime/rest/UnreadCountStreamController.java@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="15-47" />
+
+值得注意的细节：
+
+- `produces = text/event-stream`，返回 `SseEmitter`，Spring 负责保持连接。
+- 响应头 `Cache-Control: no-cache, no-transform`。`no-transform` 禁止中间层改写内容：压缩中间件会攒满一块再发，事件就卡住了。
+- 连接寿命就是 `SseEmitter` 的超时，到点正常结束；结束、出错、超时都要从连接表里注销，不然会泄漏。
+
+## 网关一侧，和前端的退路
+
+推送连接一借就是 30 分钟，如果和普通请求抢同一个连接池，会把普通请求挤死。所以网关给推送路由单独一个池子，上限 500；满了**立刻**回 503，不排队。
+
+前端的应对写在注释里：
+
+<CodeRef at="patra-portal/src/lib/notifications/stream.ts@4a13287485468f2c489027f1aac0bb6174643e8d" lines="69-72" />
+
+- 已登录且页面可见时才连；页面隐藏、登出就断开（浏览器对同一站点的 HTTP/1.1 连接数有上限，通常 6 条）。
+- 拿到非 200（比如 503），EventSource 不会再重连，页面也看不到状态码。这时前端立刻查一次未读数，60 秒后再试推送，其间回到轮询。
+- 推送是锦上添花，轮询是兜底。推送不可用，页面功能不能坏。
+
+<Quiz
+  questions={[
+    {
+      question: "心跳为什么写成一行以冒号开头的注释，而不是一条普通事件？",
+      options: ["普通事件格式太复杂", "浏览器收到注释不触发任何事件，页面代码不用处理，各层代理却看到了数据在流", "注释比事件更省流量，这是唯一原因"],
+      answer: "B",
+      explain: "心跳的目的是让线路上有字节，不是通知页面。写成注释，对页面是无感的。"
+    },
+    {
+      question: "SSE 能不能让页面通过同一条连接向服务器发消息？",
+      options: ["能，双向", "不能，只有服务器到页面一个方向；页面要发消息就另外发普通请求", "只能发心跳"],
+      answer: "B",
+      explain: "SSE 是单向的。要双向实时通信才考虑 WebSocket。"
+    }
+  ]}
+/>
+
+<Transfer
+  prompt="用户同时开了 3 个门户标签页，每页都想建一条 SSE 连接。浏览器对同一站点的 HTTP/1.1 连接数上限大约是 6。会遇到什么？Patra 前端是怎么缓解的？服务器那一侧又要防什么？"
+  points={[
+    { label: "占掉连接额度", text: "3 条长连接占了一半的并发额度，剩下的普通请求变少，页面可能变卡。" },
+    { label: "前端的缓解", text: "页面隐藏就断开，只在可见的页面保持连接；非 200 时回到轮询，不无限重试。" },
+    { label: "服务器要防", text: "连接数不能无限增长：推送用独立的连接池，上限 500，满了立刻 503，让前端回到轮询，普通请求不受影响。" }
+  ]}
+/>

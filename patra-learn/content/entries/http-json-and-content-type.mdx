@@ -1,0 +1,126 @@
+---
+title: JSON 与 Content-Type
+summary: 接口用 JSON 传数据，头部的 Content-Type 告诉对方怎么解析；出错时用统一的 ProblemDetail 格式，让调用方不用猜。
+type: concept
+difficulty: basic
+tags: [network, backend]
+prerequisites: [http-request-and-response]
+personalEnv: false
+---
+
+<Diagnose
+  question="客户端向服务端发一个 POST，正文是一段 JSON 文本。服务端怎么知道这段正文该当作 JSON 来解析，而不是当作普通文字或文件？"
+  options={["看正文是不是以左花括号开头", "看请求头里的 Content-Type", "看网址是不是以 .json 结尾"]}
+  answer="B"
+  ifRight="对，靠头里的 Content-Type 声明。往下读会看到响应一侧也是这样。"
+  ifWrong="答案是 B：正文本身没有标签，对方只能靠请求头 Content-Type 知道它是什么格式。网址的写法和正文的形状都不可靠。"
+  suggest="http-request-and-response"
+/>
+
+## 为什么需要 Content-Type
+
+正文只是一串字节。同样一串字节，可以是文本、图片、JSON、PDF。发送方必须在头里声明「这是什么」，接收方才知道该怎么读。这个头就叫 **Content-Type**，值是一个「类型/子类型」，叫媒体类型：
+
+| Content-Type | 正文是 |
+|---|---|
+| `application/json` | JSON 数据 |
+| `application/problem+json` | 一种有约定字段的 JSON，专门描述错误 |
+| `text/html` | 网页 |
+| `image/webp` | WebP 图片 |
+| `application/pdf` | PDF 文件 |
+
+请求和响应都用同一个头。反过来，请求里的 `Accept` 头说「我希望收到什么类型」。
+
+## JSON：接口的通用语言
+
+JSON 是一种纯文本的数据写法，只有几种东西：对象（花括号，键值对）、数组（方括号）、字符串、数字、布尔、null。浏览器、手机、各种语言都能读写，所以成了接口的事实标准。
+
+```json
+{
+  "id": "1001",
+  "name": "我的综述",
+  "itemCount": 12,
+  "public": false
+}
+```
+
+<Callout kind="warn">
+
+JSON 里的数字在 JavaScript 里是 64 位浮点数，大整数会丢精度。Patra 的数据库 ID 是很大的整数，所以后端统一把它们输出成字符串（上面 `id` 带引号的原因）。细节在讲 Jackson 的那一篇。
+
+</Callout>
+
+## 出错的时候：统一的 ProblemDetail
+
+最糟的接口是每个出错的接口各用各的格式：有的返回一句话，有的返回 `{msg: ...}`，有的返回 HTML 错误页。调用方没法统一处理。
+
+有一份公开的标准（RFC 7807 / 9457）约定了错误的 JSON 长什么样，Content-Type 是 `application/problem+json`。Patra 的后端服务出错时都用它。下面是一个示意（具体字段随情况而变）：
+
+```json
+{
+  "type": "https://errors.example.com/cat-0404",
+  "title": "CAT-0404",
+  "status": 404,
+  "detail": "找不到这个期刊",
+  "code": "CAT-0404",
+  "path": "/venues/123",
+  "timestamp": "2026-10-31T08:00:00Z",
+  "traceId": "..."
+}
+```
+
+点开看每个字段是干什么的：
+
+<Structure
+  title="一个错误响应里有什么"
+  nodes={[
+    { id: "status", label: "status", sub: "404", code: true, col: 1, desc: "HTTP 状态码，和响应第一行一致。调用方先看它决定大方向。" },
+    { id: "code", label: "code", sub: "CAT-0404", code: true, col: 2, desc: "稳定的错误码：服务前缀加四位后缀。比状态码更精确，程序可以按它写判断。" },
+    { id: "detail", label: "detail", sub: "给人看的说明", code: true, col: 3, desc: "一句人话，用来展示或写日志。不要靠解析它的文字做判断，文案随时会改。" },
+    { id: "traits", label: "traits", sub: "语义标记", code: true, col: 4, desc: "有的错误会带上语义标记（如 NOT_FOUND），服务之间传递错误时用它，不依赖状态码。" },
+    { id: "errors", label: "errors", sub: "字段错误", code: true, col: 1, row: 2, desc: "表单校验失败时列出每个字段哪里错了，前端可以直接标在对应输入框旁边。" },
+    { id: "trace", label: "traceId", sub: "追踪号", code: true, col: 2, row: 2, desc: "这次请求的追踪号。用户报问题时给你这个号，你能在日志里找到整条链路。" },
+    { id: "retry", label: "retryAfterSeconds", sub: "等多久", code: true, col: 3, row: 2, desc: "被限流时告诉调用方还要等几秒，和响应头 Retry-After 对应。" }
+  ]}
+/>
+
+这些字段是在一个构建器里按顺序装配出来的：
+
+<CodeRef at="patra-tool/patra-tool-web/src/main/java/dev/patra/tool/web/error/builder/ProblemDetailBuilder.java@b6e01875bb5692356021c8a19562f557f319fc54" lines="113-128" />
+
+错误码格式和使用规范见项目规则文档：
+
+<CodeRef at=".claude/rules/tech/error-handling.md@cfec9c9f30270dcf03f5cd7b6e54a0cd3b59296b" lines="18-19" />
+
+<Callout kind="insight">
+
+调用方遇到错误，先看 `status` 判断大类，再看 `code` 做精确分支，最后才把 `detail` 展示给人。顺序反了，改一句文案就会让程序出错。
+
+</Callout>
+
+<Quiz
+  questions={[
+    {
+      question: "前端想在「收藏夹名称重复」时给用户一个专门提示。最稳的做法是什么？",
+      options: ["检查 detail 里有没有「已存在」三个字", "检查 code 字段是不是约定好的那个错误码", "检查响应 HTML 里的标题"],
+      answer: "B",
+      explain: "错误码是稳定的契约，文案可能被改。这正是 code 字段存在的原因。"
+    },
+    {
+      question: "一个接口出错时返回 200 状态码，正文里写 {\"success\": false}。这样做的问题是？",
+      options: ["没问题，正文里写清楚就行", "监控、网关、浏览器都只看状态码，会以为这次成功了", "JSON 不能表达失败"],
+      answer: "B",
+      explain: "错误必须同时体现在状态码上。统一格式只是让错误的内容更好读，不是替代状态码。"
+    }
+  ]}
+/>
+
+<Transfer
+  prompt="设计「新建收藏夹时名称已存在」这个错误的响应：用什么状态码，Content-Type 是什么，正文里放哪些字段，哪些东西不该放？"
+  points={[
+    { label: "状态码与类型", text: "409（与现状冲突），Content-Type 是 application/problem+json。" },
+    { label: "稳定的错误码", text: "放一个固定的 code（Patra 里叫 COLLECTION_NAME_TAKEN），前端据此给专门的提示。" },
+    { label: "给人看的 detail", text: "一句清楚的说明，但程序不要依赖它的文字。" },
+    { label: "不该放的", text: "堆栈、内部类名、数据库语句、别人的数据。错误信息会被任何调用方看到。" }
+  ]}
+/>

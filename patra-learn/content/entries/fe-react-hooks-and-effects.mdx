@@ -1,0 +1,148 @@
+---
+title: Hook 与副作用
+summary: 定时器、事件监听、请求这些「渲染之外的事」放进 useEffect：依赖变了才再跑，再跑之前先清理上一次。useId 给元素一个稳定的 id。
+type: concept
+difficulty: basic
+tags: [frontend]
+prerequisites: [fe-react-components-and-state]
+personalEnv: false
+---
+
+<Diagnose
+  question="一个组件在函数体里直接写了一句「往 window 上加一个键盘监听」，从不去掉。用户操作了一会儿，这个组件重新渲染了 10 次。现在按一下键盘，监听函数会被调用几次？"
+  options={["1 次", "10 次左右：每渲染一次就多加了一个", "0 次：重新渲染会把旧的去掉"]}
+  answer="B"
+  ifRight="对。组件函数每次渲染都会从头跑一遍，写在里面的事也跟着做一遍。这篇讲这类事该放在哪、怎么收拾。"
+  ifWrong="答案是 B。状态一变，React 就把组件函数重新跑一遍，函数体里的每一句都会再执行。这题考的是「状态变了就重新渲染」，是前置篇的内容。"
+  suggest="fe-react-components-and-state"
+/>
+
+## Hook 是以 use 开头的函数
+
+`useState` 是一个 Hook。React 提供的这类函数都以 `use` 开头，让组件函数能「记住东西」或「在渲染之外做事」。用的时候有两条规矩：只能在组件函数（或另一个 Hook）的最外层调用，不能放进 `if` 或循环里；每次渲染调用的顺序必须一样。React 靠调用顺序认出「这是第几个状态」。
+
+你也可以把几个 Hook 组合成自己的 Hook，名字照样以 `use` 开头。下面会看到门户里的 `useDebounced`。
+
+## 渲染之外的事叫副作用
+
+组件函数的本分是算出界面。开定时器、给 window 加监听、发请求，这些会碰到组件外面世界的事叫**副作用**。诊断题已经说明了：把它们直接写在函数体里，每渲染一次就做一次。
+
+`useEffect` 是放副作用的地方。传给它的函数不在渲染时跑，而是等 React 把这一轮的结果画到屏幕上之后才跑。第二个参数是依赖数组，决定它什么时候再跑：
+
+| 写法 | 什么时候跑 |
+|---|---|
+| 不写依赖数组 | 每次渲染后都跑 |
+| `[]` | 只在组件第一次出现在页面上之后跑一次 |
+| `[value, delay]` | 第一次之后，`value` 或 `delay` 变了才再跑 |
+
+## 再跑之前，先收拾上一次
+
+传给 `useEffect` 的函数可以返回另一个函数，叫**清理函数**。依赖变了要再跑时，React 先调用上一次返回的清理函数，再跑新的；组件从页面上移除时，也会调用最后一次的清理函数。
+
+门户讨论区的「@ 联想」要等用户停下 200 毫秒再查人，不然每打一个字就请求一次网关。这个「等停手」的逻辑就是一个自定义 Hook：
+
+<CodeRef at="patra-portal/src/components/discussion/MentionSuggest.tsx@d0ca49caf72d9d9aacd7459c1054cf9131b3759e" lines="34-41" />
+
+```tsx
+function useDebounced<T>(value: T, delay: number): T {
+  const [settled, setSettled] = useState(value);
+  useEffect(() => {
+    const timer = setTimeout(() => setSettled(value), delay);
+    return () => clearTimeout(timer);
+  }, [value, delay]);
+  return settled;
+}
+```
+
+`value` 每变一次，effect 就开一个 200 毫秒的定时器；清理函数负责把没到点的定时器取消。点下一步看用户快速打出 `@wan` 时发生了什么：
+
+<Stepper
+  title="快速打出 @wan，查了几次"
+  nodes={[
+    { id: "input", label: "输入框", sub: "@ 后的查询词" },
+    { id: "timer", label: "useDebounced", sub: "定时器" },
+    { id: "query", label: "查询", sub: "请求网关" }
+  ]}
+  links={[
+    { from: "input", to: "timer" },
+    { from: "timer", to: "query" }
+  ]}
+  steps={[
+    { caption: "用户打出 `@w`，查询词是 w。effect 跑了一次：开定时器 1，200 毫秒后到点。", focus: ["input", "timer"], links: ["input>timer"], tokens: [{ id: "t1", label: "定时器 1", at: "timer" }], notes: [{ at: "timer", text: "计时中", tone: "wait" }] },
+    { caption: "50 毫秒后又打了 a，查询词变成 wa。依赖变了，React 先调用上一次的清理函数：定时器 1 被取消。", focus: ["timer"], tokens: [{ id: "t1", label: "定时器 1", at: "timer", state: "dropped" }] },
+    { caption: "然后跑这一次的 effect：开定时器 2。", focus: ["input", "timer"], links: ["input>timer"], tokens: [{ id: "t2", label: "定时器 2", at: "timer" }], notes: [{ at: "timer", text: "计时中", tone: "wait" }] },
+    { caption: "又打了 n，查询词变成 wan。同样：先取消定时器 2，再开定时器 3。", focus: ["input", "timer"], links: ["input>timer"], tokens: [{ id: "t2", label: "定时器 2", at: "timer", state: "dropped" }, { id: "t3", label: "定时器 3", at: "timer" }], notes: [{ at: "timer", text: "计时中", tone: "wait" }] },
+    { caption: "用户停手。200 毫秒后定时器 3 到点，`setSettled` 把结果改成 wan，查询这才发出去。", focus: ["timer", "query"], links: ["timer>query"], tokens: [{ id: "t3", label: "wan", at: "query" }], notes: [{ at: "query", text: "请求 · 1 次", tone: "ok" }] }
+  ]}
+  guesses={[
+    { before: 2, question: "查询词从 w 变成 wa，effect 要再跑。React 先做什么？", options: ["直接开新定时器，定时器 1 照样到点", "先调用上一次返回的清理函数，取消定时器 1", "等定时器 1 到点后再开新的"], answer: "B", explain: "依赖变了，先清理再重跑。清理函数里的 `clearTimeout` 让还没到点的定时器作废。" },
+    { before: 5, question: "用户在 200 毫秒内连打了 w、a、n 三个字。最后一共请求了几次网关？", options: ["3 次", "1 次", "0 次"], answer: "B", explain: "前两个定时器都在到点前被清理掉了，只有停手后的最后一个到点，所以只查一次。" }
+  ]}
+/>
+
+## 监听也一样：加了就要去掉
+
+⌘K 唤起快速检索，靠的是导航栏 `TopNav` 在 window 上加的键盘监听：
+
+<CodeRef at="patra-portal/src/components/portal/TopNav.tsx@d0ca49caf72d9d9aacd7459c1054cf9131b3759e" lines="73-83" />
+
+```tsx
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setSearchLoaded(true);
+        setSearchOpen((open) => !open);
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
+```
+
+依赖是 `[]`，所以导航栏出现在页面上时只加一次。清理函数在导航栏被移除时把监听去掉；少了这一行，导航栏每出现一次就多挂一个监听，旧的还在，按一次 ⌘K 会被处理好几遍。
+
+<Callout kind="warn">
+
+门户的 `next.config.ts` 开着 `reactStrictMode`。开发模式下，React 会故意把每个组件「挂上、卸下、再挂上」一次，effect 因此跑两遍、中间清理一遍。漏写清理的 effect 在这时就会露馅（比如监听翻倍）。这只在开发模式发生，生产构建不会。
+
+</Callout>
+
+## useId：给元素一个稳定的 id
+
+「@ 联想」的候选列表要用 `aria-controls` 告诉读屏软件「输入框控制的是哪个列表」，这需要一个 id。`useId` 给每个组件实例一个唯一、而且每次渲染都不变的 id：
+
+<CodeRef at="patra-portal/src/components/discussion/MentionSuggest.tsx@d0ca49caf72d9d9aacd7459c1054cf9131b3759e" lines="66" />
+
+```tsx
+  const listId = useId();
+```
+
+为什么不随手写一个随机数？随机数每次渲染都不同，而且服务器上算出来的和浏览器里算出来的也不同。后一点在讲水合时还会碰到。
+
+<Quiz
+  questions={[
+    {
+      question: "`useDebounced` 的依赖数组如果写成 `[]`，会怎样？",
+      options: ["一样能用", "只在第一次跑：`settled` 永远停在最初的值，后来打的字都查不到", "每次渲染都跑"],
+      answer: "B",
+      explain: "依赖数组说的是「这些变了才再跑」。写 `[]` 等于告诉 React 永远不用再跑。"
+    },
+    {
+      question: "下面哪件事适合放进 `useEffect`？",
+      options: ["根据 `open` 算出按钮上显示的文字", "给 window 加一个滚动监听", "把两个 props 拼成一个字符串"],
+      answer: "B",
+      explain: "能在渲染时直接算出来的，就直接算。只有要碰组件外面（window、定时器、网络）的事才是副作用。"
+    }
+  ]}
+/>
+
+<Transfer
+  prompt="你要写一个组件：显示「提醒 · N 条未读」，每 30 秒向门户的接口查一次未读数。查询要用到当前用户的 id，这个 id 由 props 传进来，用户切换账号时会变。你会怎么写这个 effect？依赖和清理分别是什么？"
+  points={[
+    { label: "放进 useEffect", text: "开定时器、发请求都是副作用，不写在函数体里。" },
+    { label: "依赖写用户 id", text: "依赖数组写 `[userId]`：id 变了，要按新用户重新开始轮询。" },
+    { label: "清理定时器", text: "返回的清理函数里 `clearInterval`，否则换用户后旧的定时器还在，按旧用户继续查。" },
+    { label: "组件移除时", text: "同一个清理函数在组件离开页面时也会调用，定时器不会留在后台空转。" }
+  ]}
+/>

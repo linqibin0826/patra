@@ -1,0 +1,163 @@
+---
+title: 外部服务的替身：WireMock
+summary: 起一个真正监听端口的假 HTTP 服务，教它收到什么请求就回什么，于是能稳定地测慢响应、错误码、连接失败。
+type: concept
+difficulty: advanced
+tags: [testing, network, spring]
+prerequisites: [test-integration-testcontainers, spring-http-interface-clients]
+---
+
+<Diagnose
+  question="你要测的代码会调用一个外部服务；你想验证「对方返回 503 时我们的代码不崩，并且保留旧数据」。你能在测试里让那个真实的外部服务按需返回 503 吗？"
+  options={["能，找对方协调一下就行", "不能指望：测试要在本地自己造一个会按需返回 503 的服务", "能，多请求几次它总会返回一次 503"]}
+  answer="B"
+  ifRight="对。外部服务不归你管，你没法让它在需要的时候出错。要测错误路径，只能自己造一个「会听话的对方」。这就是 WireMock 的用处。"
+  ifWrong="答案是 B。真实的外部服务不会配合你的测试：它出错是随机的，而且你不该靠多请求几次去碰运气（还可能触发对方的限流）。要稳定复现错误，得在本地造一个听话的假服务。下面讲怎么造。如果还不熟 HTTP 客户端是怎么调别人的，可以先读前置的那篇。"
+  suggest="spring-http-interface-clients"
+/>
+
+## 为什么要「假装」一个外部服务
+
+Patra 要和不少外部服务打交道：从 PMC 下载全文，调用内部的其他服务拿数据。这些对方有四个特点，都让它们不适合出现在测试里：
+
+- **不稳定**：慢、偶发出错，测试会跟着随机红。
+- **不听话**：你没法让它在你需要的时刻返回 503，或者延迟 6 秒。
+- **有成本**：下载大文件、占用对方带宽，还可能触发限流。
+- **数据会变**：今天的响应和明天的不同，断言写不死。
+
+## 两条路：换掉客户端类，还是换掉对方
+
+和前面讲的替身思路一致，对这类依赖也有两种做法。
+
+<Compare
+  title="Mock 掉客户端，还是起一个假的 HTTP 服务"
+  variants={[
+    {
+      label: "用 Mockito 换掉客户端类",
+      steps: ["把「调用对方」的类直接换成假的", "规定它返回什么对象", "测被测代码处理这个对象的逻辑"],
+      results: [{ label: "检查了请求的路径、参数、请求头", value: "没有，根本没发请求", tone: "bad" }, { label: "检查了 JSON 解析、错误体的翻译", value: "没有", tone: "bad" }, { label: "能模拟超时、连接失败", value: "只能「假装抛了个异常」", tone: "wait" }],
+      verdict: { tone: "bad", head: "只测到类的边界。", text: "请求拼得对不对、响应解析得对不对、超时设置有没有生效，都在被换掉的那一层里，没人检查。" }
+    },
+    {
+      label: "用 WireMock 起一个假的 HTTP 服务",
+      steps: ["在本地起一个真正监听端口的 HTTP 服务", "教它：收到这样的请求，就这样回", "把被测代码的地址指向它，真的发 HTTP 请求"],
+      results: [{ label: "检查了请求的路径、参数、请求头", value: "有：没匹配上就收不到响应，还能事后核对", tone: "ok" }, { label: "检查了 JSON 解析、错误体的翻译", value: "有，全套真实代码都跑到了", tone: "ok" }, { label: "能模拟超时、连接失败", value: "能：延迟、断连、没人监听都能造", tone: "ok" }],
+      verdict: { tone: "ok", head: "从 HTTP 开始都是真的。", text: "只有「对方」是假的。你测到了请求怎么发、响应怎么收、出错怎么翻译。" }
+    }
+  ]}
+/>
+
+**WireMock** 就是这样一个工具。它在测试进程里起一个 HTTP 服务，监听一个随机端口。你用代码告诉它「遇到这样的请求，就回这样的响应」。
+
+## 教它说话
+
+Patra 的用户服务有一个适配器，通过 HTTP 去问目录服务要机构名称。它的集成测试里，是这样教 WireMock 的：
+
+<CodeRef at="patra-api/patra-identity/patra-identity-infra/src/integrationTest/java/dev/patra/identity/infra/account/catalog/CatalogReferenceAdapterIT.java@5073ab1358404ecd989e722373cd9f7edafe238b" lines="36-69" />
+
+```java
+stubFor(
+    get(urlEqualTo("/_internal/organizations/04jztag35"))
+        .willReturn(okJson("""
+            {"rorId":"04jztag35","displayName":"Peking Union Medical College Hospital",
+             "zhName":"北京协和医院","countryCode":"CN","types":["healthcare"]}""")));
+
+assertThat(adapter.organizationName(PUMCH)).contains("北京协和医院");
+verify(getRequestedFor(urlEqualTo("/_internal/organizations/04jztag35")));
+```
+
+`stubFor(…)` 登记一条规则（行话叫 stub，桩）：收到针对这个路径的 GET 请求，就回 200 加这段 JSON。`@WireMockTest` 注解会在每个测试前后帮你启停服务，并把它的地址（`wireMock.getHttpBaseUrl()`）交给测试。
+
+最后一行 `verify(getRequestedFor(…))` 是反过来核对：被测代码**真的**向这个路径发过请求。
+
+整个过程里，被测的适配器代码一行没改，唯一的变化是：构造它的时候，把「对方的地址」填成了 WireMock 的地址。
+
+## 它最擅长的：造出各种坏情况
+
+真实世界的外部服务会出的错，WireMock 一个个都能造。这个测试类里有三种，对应三种不同的失败：
+
+| 想模拟的情形 | WireMock 怎么造 | 被测代码应当怎样 |
+|---|---|---|
+| 对方回了错误状态码 | 回一个 500 或 404，响应体用 Spring 标准的错误格式（ProblemDetail） | 把错误体翻译成 identity 自己的异常，或在「查不到」时返回空 |
+| 对方太慢 | `withFixedDelay(6000)`：故意拖 6 秒才回 | 读超时一到就放弃，翻译成「目录服务不可用」 |
+| 对方根本不在 | 不用 WireMock：开一个端口再立刻关掉，让地址指向「没人监听」 | 连接失败，同样翻译成「不可用」 |
+
+超时这一项，值得自己试一下。适配器的读超时设的是 5 秒，WireMock 的延迟由你来定：
+
+<Params
+  title="拖多久才回响应"
+  guess={{ question: "读超时是 5 秒。WireMock 故意延迟 6 秒才回响应，适配器会怎样？", options: ["等到响应，正常返回", "5 秒时放弃，抛出「目录服务不可用」", "一直卡住不返回"], answer: "B", explain: "读超时到点就放弃，不再等。这正是测试要验证的：对方变慢时，我们不会跟着一起卡死。" }}
+  controls={[
+    { type: "slider", id: "delay", label: "WireMock 延迟", min: 0, max: 10, step: 1, default: 6, unit: "秒" }
+  ]}
+  cases={[
+    { when: { delay: [0, 4] }, results: [{ label: "适配器的结果", value: "正常拿到数据", tone: "ok" }], verdict: { tone: "ok", head: "没超时。", text: "延迟 {delay}，在读超时 5 秒之内，请求正常完成。" } },
+    { when: { delay: [5, 5] }, results: [{ label: "适配器的结果", value: "不确定：卡在临界点", tone: "wait" }], verdict: { tone: "bad", head: "别把测试设在边界上。", text: "延迟刚好等于超时时间，到底谁先到取决于机器的瞬时快慢，测试会一会儿绿一会儿红。真实的测试用 6 秒，留足余量。" } },
+    { results: [{ label: "适配器的结果", value: "超时，抛出「目录服务不可用」", tone: "bad" }], verdict: { tone: "ok", head: "触发了超时。", text: "延迟 {delay}，超过读超时 5 秒，适配器放弃等待并报告不可用。" } }
+  ]}
+/>
+
+<Callout kind="insight">
+
+注意那个 5 秒：测试里的注释写着，是因为 CI 负载高时，一个请求偶尔就会超过 1 秒。读超时设得太紧，会让完全正常的测试在 CI 上偶发失败。超时留余量，延迟更要远大于超时。
+
+</Callout>
+
+## 端到端里：把整个外部来源换成 WireMock
+
+同样的做法，放大到端到端测试：全文抓取要从 PMC 下载 XML、PDF、图片。测试里用一个 WireMock 扮演整个 PMC：
+
+<CodeRef at="patra-api/patra-catalog/patra-catalog-boot/src/e2eTest/java/dev/patra/catalog/integration/fulltext/FullTextPipelineE2E.java@5073ab1358404ecd989e722373cd9f7edafe238b" lines="72-81" />
+
+这里有三件事：
+
+1. `WireMockExtension` + `dynamicPort()`：起在随机端口，不会和别的测试撞。
+2. `@DynamicPropertySource`：测试启动前，把应用的配置项 `patra.catalog.fulltext.pmc.base-url` 改写成 WireMock 的地址。**应用代码完全不知道对方是假的**，它照常读配置里的地址。
+3. 一堆 `stubFor`：教它版本列表、元数据 JSON、各个文件该返回什么。
+
+最有意思的是最后一步，故意把对方改成 503：
+
+<CodeRef at="patra-api/patra-catalog/patra-catalog-boot/src/e2eTest/java/dev/patra/catalog/integration/fulltext/FullTextPipelineE2E.java@5073ab1358404ecd989e722373cd9f7edafe238b" lines="199-218" />
+
+重新抓取时，PMC「返回 503」，测试断言：这次抓取算失败（`failed` 为 1），但数据库里那篇文献的状态仍是 `PARSED`，全文接口仍然能读到正文。也就是：**对方出问题，不会抹掉我们已经有的东西。** 这类行为只有靠一个听话的假对方才测得出来。
+
+<Callout kind="warn">
+
+WireMock 默认会接受明文的 HTTP/2（h2c）升级，这在 Patra 里踩过坑：请求的 Host 头会被藏起来。所以 E2E 里配置了 `http2PlainDisabled(true)`，适配器测试则显式用 HTTP/1.1 的客户端。
+
+</Callout>
+
+<Callout kind="analogy">
+
+WireMock 像一个录音机配的「模拟客服」：你事先录好「听到这个问题就这样回答」，再让被测的代码去打这个电话。它不会累、不会出错，除非你要它故意出错。
+
+</Callout>
+
+<Quiz
+  title="考考自己"
+  questions={[
+    {
+      question: "想验证「对方服务根本连不上」时，我们的代码怎么反应。下面哪种方法最合适？",
+      options: ["开一个端口再立刻关掉，让地址指向这个没人监听的端口", "让 WireMock 返回 200 但内容为空", "在测试里直接 throw 一个连接异常"],
+      answer: "A",
+      explain: "只有真的发起了连接、真的被拒绝，才会走到客户端的连接失败处理。直接 throw 只测到了你自己抛的那一层。"
+    },
+    {
+      question: "测试里把对方的地址通过配置项改成 WireMock 的地址。这样做最大的好处是什么？",
+      options: ["不用写任何断言", "被测代码一行都不用改，也不知道对方是假的", "WireMock 能自动生成测试"],
+      answer: "B",
+      explain: "把「依赖的地址」做成配置，是让它可替换的前提。测试走的仍是生产里的那条代码路径。"
+    }
+  ]}
+/>
+
+<Transfer
+  prompt="你的服务要调用一个第三方的天气接口，用户请求天气时我们调它，结果缓存 10 分钟。请设计 4 个用 WireMock 的测试，覆盖这个调用的正常与异常情形，并说说每个测试里「教它说什么」和「断言什么」。"
+  points={[
+    { label: "正常", text: "WireMock 返回一份固定的天气 JSON；断言我们解析出的温度、城市等字段正确。" },
+    { label: "对方 5xx", text: "回 503；断言我们没有崩溃，按设计返回降级结果或友好的错误，而不是把对方的错误原样抛给用户。" },
+    { label: "对方太慢", text: "用 withFixedDelay 拖到超过读超时（并留足余量，不要设在边界上）；断言我们在超时后放弃。" },
+    { label: "缓存", text: "连续请求两次，再用 verify 核对对方只被调用了一次，证明第二次走了缓存。" }
+  ]}
+  placeholder="比如：正常情形里我会教 WireMock……"
+/>

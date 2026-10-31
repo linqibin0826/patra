@@ -1,0 +1,86 @@
+---
+title: 一个全角标点炸了整个脚本
+summary: macOS 自带的 bash 是 3.2 版。脚本里变量后面紧跟中文全角标点时，标点的字节会被并进变量名，在 set -u 下直接报变量不存在。变量一律写成带大括号的形式。
+type: pitfall
+difficulty: practice
+tags: [ci-cd, deployment]
+prerequisites: [ops-scheduled-watchdog]
+personalEnv: false
+---
+
+<Diagnose
+  question={"一个脚本在 macOS 自带的 bash 3.2 下运行，开头有 `set -u`（引用未定义的变量就报错）。其中一行是 `echo \"版本过期（当前 $CURRENT，最新 $LATEST）\"`，`$CURRENT` 后面紧跟着一个全角逗号。会发生什么？"}
+  options={["正常输出，逗号原样显示", "报 unbound variable，脚本在这一行退出", "只是少显示一个逗号"]}
+  answer="B"
+  ifRight="对。变量名后面的全角逗号被当成变量名的一部分，bash 去找一个名字奇怪的变量，找不到，在 `set -u` 下直接报错退出。"
+  ifWrong="答案是 B。在这个环境里，全角逗号的字节被并进了变量名，bash 去找一个不存在的变量，`set -u` 让它直接报 unbound variable。这题考的是变量名的边界在哪里。"
+  suggest="ops-scheduled-watchdog"
+/>
+
+<Callout kind="lead" label="坑在哪">
+
+脚本里写 `$VAR` 后面紧跟中文全角标点（逗号、括号、冒号），在 macOS 自带的 bash 3.2 下，标点的字节会被并进变量名，脚本在 `set -u` 下报「变量不存在」。修法：变量一律写成 `${VAR}`。
+
+</Callout>
+
+## 它是怎么发生的
+
+macOS 自带的 `/bin/bash` 停在 3.2 版（2007 年前后的版本），对不是 ASCII 的字符，边界处理很糙。一个全角逗号占三个字节。部署机上跑脚本的环境不是 UTF-8，bash 看不出这三个字节是一个标点，把它们当成了变量名里允许出现的字符。
+
+<Compare
+  title="同一行，两种写法"
+  variants={[
+    {
+      label: "$CURRENT，最新",
+      steps: ["bash 读到 `$CURRENT`", "后面紧跟全角逗号的三个字节，一并当成变量名的一部分", "去找一个名叫「CURRENT加那三个字节」的变量", "没有这个变量，`set -u` 下报 unbound variable，脚本退出"],
+      results: [{ label: "结果", value: "脚本在这一行炸掉", tone: "bad" }],
+      verdict: { tone: "bad", head: "报错指不到真正的病因。", text: "错误信息说某个奇怪名字的变量不存在，但你的代码里压根没有这个变量。" }
+    },
+    {
+      label: "${CURRENT}，最新",
+      steps: ["bash 读到 `${CURRENT}`", "大括号明确圈出变量名", "取出 CURRENT 的值", "全角逗号只是普通的字符，原样输出"],
+      results: [{ label: "结果", value: "正常输出", tone: "ok" }],
+      verdict: { tone: "ok", head: "边界钉死了。", text: "大括号告诉 bash 变量名到哪里为止，后面是什么字符都不会被并进来。" }
+    }
+  ]}
+/>
+
+写纯英文脚本的人一辈子遇不到这个坑，一写中文文案就撞上，而且报错信息完全不指向真正的病因。
+
+## 前后踩了两次
+
+这个坑 Patra 在两个不同的文件里前后踩了两次：
+
+1. **部署脚本**：部署任务里有一句 `echo` 的文案，`$svc` 后面紧跟中文的全角括号，部署任务瞬间失败。修复把它改成了 `${svc}`，并换成了英文括号。
+2. **巡检的版本检查**：告警文案里 `$CURRENT` 后面紧跟全角逗号，同样炸掉。
+
+第二次踩的时候才确认，这不是手滑，而是环境带来的规律。于是定下规则：带中文文案的脚本，变量一律写大括号。规则和它的案发现场放在同一个地方，巡检文件里这一行的上方留着一句注释，专门解释为什么这里必须带大括号：
+
+<CodeRef at=".github/workflows/runner-watchdog.yml@b17d50a57c6018323b79bf842d06109a9931beda" lines="47-56" />
+
+<Quiz
+  title="考考自己"
+  questions={[
+    {
+      question: "下面哪一行放进部署机上的 bash 3.2 脚本会出问题？",
+      options: ["`echo \"磁盘余量不足：$AVAIL，需要至少 20G\"`", "`echo \"磁盘余量不足：${AVAIL}，需要至少 20G\"`", "`echo \"磁盘余量不足: $AVAIL, 需要至少 20G\"`"],
+      answer: "A",
+      explain: "A 里 `$AVAIL` 后面紧跟全角逗号，会被并进变量名。B 用大括号钉死了边界，C 的标点是 ASCII 字符，不会被并进变量名。"
+    }
+  ]}
+/>
+
+## 怎么避开
+
+- 凡是双引号字符串或 heredoc 里，变量后面紧跟非 ASCII 字符的，一律写 `${VAR}`。
+- 不放心环境版本时，别信「我本机的 bash 能跑」：本机和部署机的 bash 版本、语言环境可能不一样。
+
+<Transfer
+  prompt={"下面这行要放进一个在 macOS 部署机上运行的脚本：`echo \"镜像 $IMG：拉取失败\"`。它会出什么问题？怎么改？还有哪些写法会触发同一个坑？"}
+  points={[
+    { label: "问题", text: "`$IMG` 后面紧跟全角冒号，冒号的字节会被并进变量名，在 `set -u` 下报变量不存在。" },
+    { label: "改法", text: "改成 `${IMG}`，用大括号圈出变量名。" },
+    { label: "同类写法", text: "变量后面紧跟全角括号、全角逗号、中文引号，都会触发；用在 heredoc 里同样。" },
+    { label: "为什么难发现", text: "报错说某个奇怪名字的变量不存在，而代码里根本没有这个名字；英文文案永远不会遇到。" }
+  ]}
+/>

@@ -1,0 +1,145 @@
+---
+title: 局部唯一索引：只在部分行上唯一
+summary: 普通唯一约束管整张表。给唯一索引加上 WHERE，就能只在符合条件的那部分行上要求唯一；软删除和种子数据的唯一性靠它解决。
+type: concept
+difficulty: advanced
+tags: [database, backend]
+prerequisites: [db-indexes, db-constraints-and-null]
+---
+
+<Diagnose
+  question="用户表用 deleted_at 做软删除（删除时填上时间，行还在）。业务希望：活着的用户邮箱不能重复，但已注销用户的邮箱可以被新用户重新注册。只给 email 加普通的 UNIQUE，能做到吗？"
+  options={["能，唯一约束会自动忽略已软删除的行", "不能，已软删除的行还在表里，仍然占着那个邮箱，新用户注册会撞上唯一约束", "能，但要把 deleted_at 也设成唯一"]}
+  answer="B"
+  ifRight="对。唯一约束看的是表里所有的行，它不知道哪些行「算删了」。要让它只管活着的行，就是这一篇的主题。"
+  ifWrong="答案是 B。软删除只是给行打了个标记，行本身还在，邮箱那一格也还在。普通的唯一约束一视同仁地检查所有行，所以新用户用同样的邮箱注册会失败。"
+  suggest="db-constraints-and-null"
+/>
+
+## 普通唯一的盲区：它管整张表
+
+上一篇讲过，`UNIQUE (email)` 保证整个 `email` 列没有重复值。但现实里的规则常常带条件：
+
+- 「活着的」用户邮箱不能重复，已注销的不算；
+- 「类型是 NLM」的标识符不能重复，别的类型的重复也无所谓；
+- 「中文名」的主标签，每家机构只能有一条，别的语言、别的标签类型不受限。
+
+规则里都有"在满足某个条件的行里"这个前提。
+
+## 局部唯一索引：给唯一索引加 WHERE
+
+PostgreSQL 允许在 `CREATE UNIQUE INDEX` 后面加 `WHERE`，写成"只有满足条件的行才进这个索引，也只有它们参与唯一性检查"。这就是**局部（部分）唯一索引**。
+
+```sql
+-- 示意：活着的用户邮箱唯一，已软删除的行不参与
+CREATE UNIQUE INDEX uk_user_email_alive
+    ON users (email)
+    WHERE deleted_at IS NULL;
+```
+
+被软删除的行（`deleted_at` 不为空）压根不在这个索引里，所以新用户可以复用它的邮箱。
+
+## Patra 里的真实例子
+
+catalog 为机构维护了一张别名表 `cat_organization_alias`，补 ROR 里缺的中文名和简称。每条别名有类型：`LABEL` 是可作显示名的全名，`ALIAS` 是简称、旧名这类只参与搜索匹配的。显示中文名时取"中文的 LABEL"，如果同一家机构有两条中文 LABEL，取哪个就说不清了。于是有这条规则：
+
+<CodeRef at="patra-api/patra-catalog/patra-catalog-infra/src/main/resources/db/migration/V9__add_suggest_trigram_indexes.sql@af8cd13c3ec367ccba78615b72e6ff19535cef90" lines="64-68" />
+
+```sql
+-- 一家机构只能有一条中文 LABEL：zhName 取 zh LABEL，两条文字不同的 LABEL 会让「最短者胜出」压掉审过的名字。
+-- 种子（R__cat_organization_alias_seed.sql）按此规则生成：某机构已有手工 LABEL 时，Wikidata 的 LABEL 生成为 ALIAS。
+CREATE UNIQUE INDEX uk_org_alias_zh_label
+    ON cat_organization_alias (ror_id)
+    WHERE alias_type = 'LABEL' AND lang = 'zh';
+```
+
+读法：只有"类型是 LABEL 且语言是 zh"的行才进这个索引；在这些行里 `ror_id` 不许重复。同一家机构可以有任意多条 `ALIAS`，也可以有英文的 `LABEL`，只是不能有第二条中文 `LABEL`。
+
+这张表还有一个普通唯一约束 `uk_org_alias (ror_id, alias)`：同一家机构同样的别名文字不能出现两次。两条规矩各管各的：
+
+<Params
+  title="动手试试：往别名表里再插一行，会被挡住吗"
+  guess={{ question: "某机构 A 已经有一条 LABEL、lang=zh 的行。再给 A 插一条 ALIAS、lang=zh 的行（别名文字不同），能插入吗？", options: ["不能，A 已经有中文名了", "能，这条不是 LABEL，不在 uk_org_alias_zh_label 的约束范围内", "能，但会把原来的 LABEL 改成 ALIAS"], answer: "B", explain: "局部唯一索引只管 alias_type = 'LABEL' 且 lang = 'zh' 的行。新行是 ALIAS，根本不进这个索引，也就不参与唯一检查。" }}
+  controls={[
+    { type: "switch", id: "label", label: "新行的类型是 LABEL（关 = ALIAS）", default: false },
+    { type: "switch", id: "zh", label: "新行的语言是 zh（关 = 其他语言）", default: true }
+  ]}
+  cases={[
+    { when: { label: true, zh: true }, results: [{ label: "是否进入局部索引", value: "是", tone: "wait" }, { label: "和已有的中文 LABEL 冲突", value: "冲突", tone: "bad" }, { label: "插入结果", value: "被拒绝（违反 uk_org_alias_zh_label）", tone: "bad" }], verdict: { tone: "bad", head: "第二条中文 LABEL 被挡住。", text: "这正是这条索引存在的意义：一家机构只能有一条审过的中文显示名。" } },
+    { results: [{ label: "是否进入局部索引", value: "否", tone: "ok" }, { label: "插入结果", value: "允许", tone: "ok" }], verdict: { tone: "ok", head: "不在约束范围内。", text: "只要不同时是 LABEL 和 zh，这一行就不进局部索引。同一机构可以有很多条别名，或英文的 LABEL。" } }
+  ]}
+/>
+
+第二个例子在迁移 V12：要求"NLM 编号全站唯一"。NLM 编号存在期刊标识符表里，这张表还存 ISSN 等别的类型的值，别的类型的值不要求全站唯一：
+
+<CodeRef at="patra-api/patra-catalog/patra-catalog-infra/src/main/resources/db/migration/V12__add_venue_nlm_unique.sql@6d96ac9d6c2b8463cddf24d8b3461215b4ff8f4c" lines="12-15" />
+
+```sql
+-- 标识符表里 NLM 类型的值全表唯一：主 NLM、副 NLM 都只属于一个期刊
+CREATE UNIQUE INDEX uk_venue_identifier_nlm
+    ON cat_venue_identifier (identifier_value)
+    WHERE identifier_type = 'NLM';
+```
+
+## 一个容易误会的写法：WHERE ... IS NOT NULL
+
+catalog 的作者表和 interaction 的对象登记表里各有一条这样写的：
+
+<CodeRef at="patra-api/patra-catalog/patra-catalog-infra/src/main/resources/db/migration/V3__create_author.sql@da049982156cfbb1f3c7bd753948df3a5b9bc06c" lines="132-134" />
+
+```sql
+-- 软关联部分唯一索引：仅 author_id 非空时约束同篇不重复关联同一已消歧作者
+CREATE UNIQUE INDEX uk_pub_author ON cat_publication_author (publication_id, author_id)
+    WHERE author_id IS NOT NULL;
+```
+
+`author_id` 允许为空（作者暂时没匹配上已知作者）。这条索引的 `WHERE author_id IS NOT NULL` 表达了意图："只在 `author_id` 有值时检查"。
+
+细看一下就会发现一个事实：PostgreSQL 的唯一约束本来就不认为两个 NULL 相等（上一篇讲过），所以哪怕去掉这个 `WHERE`，`author_id` 为空的多行也不会互相冲突。这里的 `WHERE` 对**唯一性的结果没有改变**，它的作用是让索引里不存没意义的 NULL 行、少占空间，同时把意图写在了定义里。
+
+对比前面两个例子：中文 LABEL、NLM 类型的 `WHERE` 是真正**改变了规则**——去掉它们就会把不该管的行也管进来。判断一个局部唯一索引的 `WHERE` 是不是真的有用，就问："去掉它，规则还成立吗？"
+
+## 软删除的三种做法
+
+回到开头的问题，软删除后怎么处理唯一性，Patra 里能看到三种思路：
+
+| 做法 | 怎么做 | Patra 里的例子 |
+|---|---|---|
+| 局部唯一 | `UNIQUE ... WHERE deleted_at IS NULL`，已删的行不参与 | 示意（上面的 users 例子） |
+| 清空唯一的那一列 | 注销时把邮箱设成 NULL，NULL 不冲突 | 用户表：`ck_idn_user_email_deleted` 规定已注销用户的邮箱必须为空 |
+| 干脆不放开 | 软删行仍占着名额 | 期刊 NLM 编号 `uk_venue_nlm_id` 的注释写明「覆盖软删行」；用户名「never released」，不再发给别人 |
+
+没有哪种一定对，要看业务想不想让名字被复用。
+
+<Callout kind="warn">
+
+用 `INSERT ... ON CONFLICT` 去配合局部唯一索引时，要在冲突目标后面把同样的条件写出来：`ON CONFLICT (列) WHERE 条件 DO NOTHING`，数据库才能认出你说的是哪个局部索引。
+
+</Callout>
+
+<Quiz
+  title="考考自己"
+  questions={[
+    {
+      question: "uk_org_alias_zh_label 是局部唯一索引，条件是 alias_type = 'LABEL' AND lang = 'zh'。下面哪两行可以同时存在于同一家机构？",
+      options: ["两条 lang=zh 的 LABEL", "一条 lang=zh 的 LABEL 和一条 lang=en 的 LABEL", "两条 lang=zh 的 LABEL，只要别名文字不同"],
+      answer: "B",
+      explain: "英文的 LABEL 不满足 lang = 'zh'，不进这个索引。两条中文 LABEL 无论文字是否相同，都会在索引里撞上同一个 ror_id。"
+    },
+    {
+      question: "给一张表加局部唯一索引 WHERE status = 'ACTIVE'。把某行的 status 从 ACTIVE 改成 ARCHIVED 之后，再插入一条同样键值、status = ACTIVE 的新行，会怎样？",
+      options: ["失败，旧行还在表里", "成功，旧行已经不满足条件，不在索引里了", "取决于旧行是否被删除"],
+      answer: "B",
+      explain: "索引只收满足 WHERE 的行。旧行改成 ARCHIVED 后被移出索引，新行进来时没有冲突对象。"
+    }
+  ]}
+/>
+
+<Transfer
+  prompt="收藏夹表里，同一个用户的收藏夹名字不能重复（Patra 建了 uk_collection_owner_name (user_id, name)）。现在产品想加「回收站」：删除的收藏夹先标记 deleted_at，30 天后才真正清除，期间用户可以建一个同名的新收藏夹。你怎么改这条唯一规则？"
+  points={[
+    { label: "改成局部唯一", text: "把唯一索引改成 CREATE UNIQUE INDEX ... ON collection (user_id, name) WHERE deleted_at IS NULL，回收站里的行不参与唯一检查。" },
+    { label: "怎么改", text: "已执行的迁移脚本不改。新增一个脚本：先 DROP 旧的唯一索引，再 CREATE 新的局部唯一索引。" },
+    { label: "还要想到", text: "恢复回收站里的收藏夹时，可能和新建的同名收藏夹撞名，要定好冲突时怎么办（改名、拒绝恢复）；用到这个名字做冲突判断的 ON CONFLICT 也要带上同样的 WHERE。" }
+  ]}
+/>

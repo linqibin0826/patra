@@ -1,0 +1,188 @@
+---
+title: 自动配置：引一个依赖就能用
+summary: Spring Boot 启动时会读每个 jar 里的一份清单，把清单上的配置类按条件装进容器。Patra 的工具模块都靠它把自己的 Bean 送进服务，服务想换掉默认的那个，自己定义一个就行。
+type: concept
+difficulty: basic
+tags: [spring, java, backend]
+prerequisites: [spring-dependency-injection, java-build-with-gradle]
+sources:
+  - version: v0.10
+personalEnv: false
+---
+
+<Diagnose
+  question="identity 服务的 `LogoutUserHandler` 构造器要一个 `Clock`。identity 自己的代码里没有任何地方造 `Clock`，启动类也只扫描 `dev.patra.identity` 这个包；`Clock` 是工具模块 `patra-tool-launch` 提供的，它的包是 `dev.patra.tool.launch`。这个 `Clock` 是怎么进到 identity 的容器里的？"
+  options={["组件扫描扫到的：扫描会顺带扫所有依赖的 jar", "`patra-tool-launch` 的 jar 里有一份清单，Spring Boot 启动时读清单，把上面的配置类装进来", "进不来，启动会报缺少 `Clock`"]}
+  answer="B"
+  ifRight="对。扫描只管服务自己的包，工具模块的 Bean 走的是另一条路：自动配置。这篇讲那份清单，以及「什么时候装、什么时候不装」。"
+  ifWrong="答案是 B：扫描只扫启动类所在的包，工具模块的 Bean 靠 jar 里的清单文件进来。读懂这篇要先知道「Bean 是容器造好、按类型递给构造器的」，这是依赖注入那篇讲的。"
+  suggest="spring-dependency-injection"
+/>
+
+<Callout kind="lead">
+
+自动配置：一个 jar 在固定位置放一份清单，列出自己的配置类；Spring Boot 启动时读所有 jar 的清单，逐个判断条件，满足就把配置类里的 Bean 装进容器。服务只要在构建脚本里引入这个依赖，不用写一行装配代码。
+
+</Callout>
+
+## 扫描只管服务自己的包
+
+上一篇说过，贴了 `@Component` 的类会被启动时的扫描发现。扫描从哪开始？从启动类所在的包往下。identity 的启动类：
+
+<CodeRef at="patra-api/patra-identity/patra-identity-boot/src/main/java/dev/patra/identity/PatraIdentityApplication.java@b6e01875bb5692356021c8a19562f557f319fc54" lines="9-18" />
+
+```java
+@SpringBootApplication
+public class PatraIdentityApplication {
+
+  /// 经启动器启动应用，服务名 `patra-identity`。
+  ///
+  /// @param args 命令行参数
+  public static void main(String[] args) {
+    PatraApplication.run("patra-identity", PatraIdentityApplication.class, args);
+  }
+}
+```
+
+它在 `dev.patra.identity` 包里，`@SpringBootApplication` 后面什么也没加，所以只扫 `dev.patra.identity` 和它下面的包。`dev.patra.tool.launch` 不在里面。
+
+这是 v0.10 定下的（release spec 决策 G）：启动类改回裸 `@SpringBootApplication`，工具模块的 Bean 一律由自动配置注册。之前启动类写的是 `scanBasePackages` 扫整个项目根包，同一个 Bean 在服务里靠扫描、在切片测试里靠自动配置，来源和顺序都不一样，有 6 个 Bean 实际上被注册了两遍。
+
+<Callout kind="analogy">
+
+扫描像物业挨家挨户登记本楼住户，只登记这栋楼。自动配置像快递柜：外面的包裹（工具模块）贴好了取件单（清单），物业按单子取出来放进楼里，不用挨个敲门。
+
+</Callout>
+
+## 那份清单长什么样
+
+清单的位置是固定的：jar 里的 `META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports`，一行写一个配置类的全名。事件模块 `patra-tool-events` 的清单：
+
+<CodeRef at="patra-tool/patra-tool-events/src/main/resources/META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="1-3" />
+
+```text
+dev.patra.tool.events.autoconfigure.EventsRabbitAutoConfiguration
+dev.patra.tool.events.autoconfigure.EventsResubmitAutoConfiguration
+dev.patra.tool.events.autoconfigure.EventsConsumerAutoConfiguration
+```
+
+三行，三个配置类。每个配置类贴 `@AutoConfiguration`，里面是一个个 `@Bean` 方法。服务的构建脚本引入 `patra-tool-events`，jar 就到了运行时的类路径上，清单也跟着到了。
+
+Patra 的构建会检查这份清单和代码对不对得上（规则 R4）：写了 `@AutoConfiguration` 却没登记进清单、清单登记了却找不到这个类，`./gradlew check` 都会失败；工具模块里也不许出现 `@Component` 这类靠扫描的注解，因为服务根本扫不到它们。
+
+<CodeRef at="build-logic/src/main/kotlin/AutoConfigurationRules.kt@b6e01875bb5692356021c8a19562f557f319fc54" lines="45-63" />
+
+## 条件注解：满足才装
+
+清单上的配置类不是无条件装进来的。每个类、每个 `@Bean` 方法上都可以贴「条件」，Spring Boot 逐个判断，不满足就跳过。Patra 里最常见的四种：
+
+| 条件 | 意思 | Patra 里的例子 |
+|---|---|---|
+| `@ConditionalOnClass(X.class)` | 类路径上有 X 这个类才装 | 有 XXL-Job 才注册补投任务入口 |
+| `@ConditionalOnBean(X.class)` | 容器里已经有 X 这种 Bean 才装 | 有 Modulith 的事件登记才注册补投器 |
+| `@ConditionalOnMissingBean` | 容器里还没有这种 Bean 才装 | 服务没自己定义 `Clock` 才给默认的 |
+| `@ConditionalOnProperty(...)` | 某个配置键是某个值才装 | `patra.launch.enabled` 不是 `false` 才装 |
+
+提供 `Clock` 的那个配置类同时用了两种：
+
+<CodeRef at="patra-tool/patra-tool-launch/src/main/java/dev/patra/tool/launch/autoconfigure/LaunchAutoConfiguration.java@b6e01875bb5692356021c8a19562f557f319fc54" lines="24-31" />
+
+```java
+@AutoConfiguration
+@ConditionalOnProperty(
+    prefix = "patra.launch",
+    name = "enabled",
+    havingValue = "true",
+    matchIfMissing = true)
+@EnableConfigurationProperties(LaunchProperties.class)
+public final class LaunchAutoConfiguration {
+```
+
+同一个类里，造 `Clock` 的方法：
+
+<CodeRef at="patra-tool/patra-tool-launch/src/main/java/dev/patra/tool/launch/autoconfigure/LaunchAutoConfiguration.java@b6e01875bb5692356021c8a19562f557f319fc54" lines="56-60" />
+
+```java
+  @Bean
+  @ConditionalOnMissingBean
+  Clock clock() {
+    return Clock.systemUTC();
+  }
+```
+
+`matchIfMissing = true` 的意思是：配置里压根没写这个键，也当作满足。所以默认就装，要关得明确写 `patra.launch.enabled: false`。
+
+动手试试，看 `LogoutUserHandler` 最后拿到的是哪个 `Clock`：
+
+<Params
+  title="LogoutUserHandler 拿到的是哪个 Clock"
+  guess={{ question: "identity 自己在配置类里写了一个 `@Bean Clock`，返回固定在上海时区的时钟。`patra-tool-launch` 也照常引入。启动后容器里有几个 `Clock`？", options: ["两个，启动报「不知道选谁」", "一个，是 identity 自己写的", "一个，是 `Clock.systemUTC()`"], answer: "B", explain: "自动配置在服务自己的配置之后才处理。轮到 `LaunchAutoConfiguration` 时，容器里已经有 `Clock` 了，`@ConditionalOnMissingBean` 不满足，默认的就不装。" }}
+  controls={[
+    { type: "switch", id: "own", label: "identity 自己定义了一个 `Clock` Bean", default: false },
+    { type: "switch", id: "enabled", label: "`patra.launch.enabled` 没写或写了 `true`", default: true }
+  ]}
+  cases={[
+    { when: { own: true }, results: [{ label: "LaunchAutoConfiguration 的 clock()", value: "跳过", tone: "wait" }, { label: "LogoutUserHandler 拿到", value: "identity 自己的", tone: "ok" }], verdict: { tone: "ok", head: "服务的优先。", text: "默认值只在服务没给时才补上，服务想换，自己定义一个就行。" } },
+    { when: { enabled: false }, results: [{ label: "LaunchAutoConfiguration", value: "整个跳过", tone: "wait" }, { label: "LogoutUserHandler 拿到", value: "什么也没有", tone: "bad" }], verdict: { tone: "bad", head: "启动失败。", text: "整个配置类被关掉，又没人提供 `Clock`，容器造 `LogoutUserHandler` 时缺一个参数。" } },
+    { results: [{ label: "LaunchAutoConfiguration 的 clock()", value: "装上", tone: "ok" }, { label: "LogoutUserHandler 拿到", value: "Clock.systemUTC()", tone: "ok" }], verdict: { tone: "ok", head: "默认情况。", text: "没人提供 `Clock`，自动配置补上一个 UTC 系统时钟。" } }
+  ]}
+/>
+
+## 启动时，一份清单怎么变成 Bean
+
+<Stepper
+  title="patra-tool-events 的三个配置类，启动时各自的命运"
+  nodes={[
+    { id: "jar", label: "patra-tool-events.jar", sub: "带着清单" },
+    { id: "boot", label: "Spring Boot", sub: "读清单、判条件" },
+    { id: "container", label: "identity 的容器" }
+  ]}
+  links={[
+    { from: "jar", to: "boot" },
+    { from: "boot", to: "container" }
+  ]}
+  steps={[
+    { caption: "服务自己的 Bean（扫描到的、自己配置类里的）先全部登记好。", focus: ["container"] },
+    { caption: "Spring Boot 从类路径上每个 jar 里找那份清单，读出三个配置类的名字。", focus: ["jar", "boot"], links: ["jar>boot"], tokens: [{ id: "list", label: "3 个类", at: "boot" }] },
+    { caption: "按 `before` / `after` 排好先后，再逐个判断条件。`EventsRabbitAutoConfiguration` 要求类路径上有 RabbitMQ 的模板类，identity 引了 RabbitMQ，满足。", focus: ["boot"], tokens: [{ id: "list", label: "判条件", at: "boot" }] },
+    { caption: "满足条件的配置类，它的 `@Bean` 方法被调用，返回值放进容器；不满足的整类跳过，一个 Bean 都不留。", focus: ["container"], links: ["boot>container"], tokens: [{ id: "list", label: "Bean", at: "container" }], notes: [{ at: "container", text: "多了事件收发的 Bean", tone: "ok" }] }
+  ]}
+  guesses={[
+    { before: 4, question: "一个服务没有引入 RabbitMQ，`EventsRabbitAutoConfiguration` 的条件不满足。它会怎样？", options: ["启动报错：缺少 RabbitMQ", "整类跳过，服务照常启动", "装进来，用到时再报错"], answer: "B", explain: "条件不满足就是安静地跳过。这正是「引了才生效、不引不打扰」的意思。" }
+  ]}
+/>
+
+## 想换掉默认的：两个层次
+
+**换一个 Bean**：像上面的 `Clock`，自己定义一个同类型的 Bean，默认的那个因为 `@ConditionalOnMissingBean` 让路。工具模块之间也这样配合。`EventsRabbitAutoConfiguration` 指定排在 Spring Boot 自己的 RabbitMQ 自动配置之前，先放进一个「等确认的发送模板」；轮到 Boot 时，它见容器里已经有了，就不再建自己那个：
+
+<CodeRef at="patra-tool/patra-tool-events/src/main/java/dev/patra/tool/events/autoconfigure/EventsRabbitAutoConfiguration.java@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="17-24" />
+
+```java
+/// RabbitMQ 收发的装配：收发共用的 JSON 转换器、`mandatory`、等确认的发送模板。
+///
+/// 排在 Boot 的 `RabbitAutoConfiguration` 之前：Boot 见到已有 `RabbitMessagingTemplate` 就不再建，
+/// Modulith 的 AMQP 外送器拿到的 `RabbitMessageOperations` 就是 {@link ConfirmingRabbitMessagingTemplate}。
+@AutoConfiguration(before = RabbitAutoConfiguration.class)
+@ConditionalOnClass(RabbitMessagingTemplate.class)
+@EnableConfigurationProperties(EventsProperties.class)
+public final class EventsRabbitAutoConfiguration {
+```
+
+**换一个配置值**：工具模块还要给别人的配置键出默认值，比如 `spring.rabbitmq.*`。v0.10 决策 D 的做法是放进优先级最低的一层（`EventsDefaultsPostProcessor` 用 `DefaultPropertiesPropertySource.addOrMerge` 并入），服务的 yml、Nacos、环境变量写同一个键都能盖过它。配置的优先级是下一篇的内容。
+
+<Callout kind="warn">
+
+`@WebMvcTest` 这类切片测试只装和切片相关的那几个自动配置，工具模块的不会自动带上。Patra 里需要的切片测试要自己写 `@ImportAutoConfiguration(...)` 把它导进来。
+
+</Callout>
+
+<Transfer
+  prompt="假设要新加一个工具模块，给所有服务提供一个默认的「敏感词过滤器」`SensitiveWordFilter`。要做到：服务引入依赖就能用；某个服务想用自己的实现时能换掉；某个服务想彻底关掉时能关。你会怎么写这个模块？"
+  points={[
+    { label: "写配置类并登记", text: "写一个贴 `@AutoConfiguration` 的配置类，用 `@Bean` 方法造过滤器，再把类全名写进 `META-INF/spring/...AutoConfiguration.imports`。不用 `@Component`，服务扫不到。" },
+    { label: "让服务能换", text: "`@Bean` 方法上加 `@ConditionalOnMissingBean`，服务自己定义一个 `SensitiveWordFilter` 时默认的让路。" },
+    { label: "让服务能关", text: "配置类上加 `@ConditionalOnProperty`（如 `patra.xxx.enabled`，`matchIfMissing = true`），写 `false` 就整类跳过。" },
+    { label: "用到的人要知道", text: "关掉后依赖它的类会因为缺参数而启动失败，这是好事：问题在启动时就暴露。" }
+  ]}
+/>

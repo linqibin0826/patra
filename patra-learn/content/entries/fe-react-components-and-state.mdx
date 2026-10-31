@@ -1,0 +1,177 @@
+---
+title: React：组件、props 与状态
+summary: 界面是状态的函数：组件记住自己的状态，状态一变就重画；数据经 props 往下传，子组件想改什么，调用父组件给的函数往上报。
+type: concept
+difficulty: basic
+tags: [frontend]
+prerequisites: [fe-typescript-basics]
+personalEnv: false
+---
+
+<Diagnose
+  question="一个组件的参数类型写着 `{ value: string; onChange: (value: string) => void }`。其中 `onChange` 是什么？"
+  options={["一个字符串", "一个函数：接收一个字符串，不返回值", "一个事件对象", "一个布尔开关"]}
+  answer="B"
+  ifRight="对。读得懂这种类型，就看得懂一个组件要别人给它什么。这篇讲组件为什么要收这样一个函数：数据往下传，事件往上报。"
+  ifWrong="答案是 B：`(value: string) => void` 是函数类型。这题考的是 TypeScript 的类型标注；React 组件收什么参数全靠它说明，先读前置会轻松很多。"
+  suggest="fe-typescript-basics"
+/>
+
+## 组件是一个返回界面的函数
+
+React 把页面拆成一块块组件。一个组件就是一个函数：输入一些数据，返回一段界面描述。返回的那段看起来像 HTML 的写法叫 JSX，它最后会变成真正的 DOM 节点。
+
+门户顶部的导航栏是一个组件 `TopNav`，排序按钮组是一个组件 `SortToggle`，折叠区是一个组件 `DisclosureSection`。大组件里摆小组件，拼成整页。
+
+<Callout kind="analogy">
+
+组件像一张表格模板：模板本身不变，填进去的数据不同，印出来的表就不同。React 负责「数据变了就重新印一张」，你只管写模板。
+
+</Callout>
+
+## 状态：组件自己要记住的东西
+
+折叠区要记住「现在是展开还是收起」。这种组件自己记、会变的数据叫状态，用 `useState` 声明：
+
+<CodeRef at="patra-portal/src/components/portal/DisclosureSection.tsx@5df24d90973c86cd2fb1ac513bbfc4bd88fab80c" lines="27-35" />
+
+```tsx
+  const [open, setOpen] = useState(defaultOpen);
+  const bodyId = useId();
+  return (
+    <section className="border-t border-border-default last:border-b">
+      <button
+        type="button"
+        aria-expanded={open}
+        aria-controls={bodyId}
+        onClick={() => setOpen((o) => !o)}
+```
+
+`useState` 给回两样东西：当前值 `open`，和改它的函数 `setOpen`。点按钮时调用 `setOpen`，React 记下新值，再把整个组件函数重新跑一遍。这一遍里 `open` 是新值，下面的内容区就跟着显示或隐藏：
+
+<CodeRef at="patra-portal/src/components/portal/DisclosureSection.tsx@5df24d90973c86cd2fb1ac513bbfc4bd88fab80c" lines="70-76" />
+
+```tsx
+      <div
+        id={bodyId}
+        hidden={!open}
+        className={cn("disclosure-body pb-7", rail && "pl-[160px] @max-[580px]/main:pl-0")}
+      >
+        {children}
+      </div>
+```
+
+代码里没有一行写「找到那个 div，把它藏起来」。你只描述「`open` 是 false 时内容区 `hidden`」，剩下的交给 React。这就是「界面是状态的函数」：同样的状态，永远画出同样的界面。
+
+## props：父组件往下传的数据
+
+组件的参数叫 props，由用它的父组件传进来。排序按钮组 `SortToggle` 自己不记任何状态，当前选中哪项、有哪些选项、点了之后怎么办，全由父组件告诉它：
+
+<CodeRef at="patra-portal/src/components/portal/SortToggle.tsx@598dc3eeb2f5209dcc858393eff510a2a3c8a332" lines="6-16" />
+
+```tsx
+export function SortToggle<T extends string>({
+  value,
+  options,
+  onChange,
+  legend = "排序",
+}: {
+  value: T;
+  options: readonly { value: T; label: string }[];
+  onChange: (value: T) => void;
+  legend?: string;
+}) {
+```
+
+props 对子组件是只读的。`SortToggle` 想换选中项，不能自己改 `value`，只能调用 `onChange` 告诉父组件「用户选了这一项」，由父组件改自己的状态、再把新的 `value` 传下来。
+
+## 子组件想改父组件的状态，怎么办
+
+门户的快速检索对话框 `QuickSearch` 开没开，这个状态不在对话框里，在导航栏 `TopNav` 里。`TopNav` 用 `useState` 记着 `searchOpen`，渲染对话框时把值和改值的函数一起传下去：
+
+<CodeRef at="patra-portal/src/components/portal/TopNav.tsx@d0ca49caf72d9d9aacd7459c1054cf9131b3759e" lines="245" />
+
+```tsx
+        {searchLoaded && <QuickSearch open={searchOpen} onOpenChange={setSearchOpen} />}
+```
+
+对话框这边只收这两个 props，转交给它里面的对话框组件：
+
+<CodeRef at="patra-portal/src/components/portal/QuickSearch.tsx@11f9efb07fd75ad12c2e22d7758c71a8680f37f4" lines="18-21" />
+
+```tsx
+export function QuickSearch({ open, onOpenChange }: QuickSearchProps) {
+  const router = useRouter();
+  return (
+    <Dialog.Root open={open} onOpenChange={onOpenChange}>
+```
+
+点下一步，看按一下 Esc 之后发生了什么：
+
+<Stepper
+  title="按 Esc 关掉快速检索"
+  nodes={[
+    { id: "user", label: "用户", sub: "按键盘" },
+    { id: "quick", label: "QuickSearch", sub: "对话框" },
+    { id: "topnav", label: "TopNav", sub: "导航栏 · 有状态" }
+  ]}
+  links={[
+    { from: "user", to: "quick", label: "Esc" },
+    { from: "quick", to: "topnav", label: "onOpenChange(false)" }
+  ]}
+  steps={[
+    { caption: "对话框开着。TopNav 的状态 `searchOpen` 是 true，它把这个值当作 `open` 传给 QuickSearch。", focus: ["topnav", "quick"], tokens: [{ id: "prop", label: "open = true", at: "quick" }], notes: [{ at: "topnav", text: "searchOpen · true", tone: "ok" }] },
+    { caption: "用户按了 Esc，对话框收到「要关上」的请求。", focus: ["user", "quick"], links: ["user>quick"], tokens: [{ id: "esc", label: "Esc", at: "quick" }], notes: [{ at: "topnav", text: "searchOpen · true", tone: "ok" }] },
+    { caption: "`open` 不归 QuickSearch 管。它里面的对话框组件调用 TopNav 给的 `onOpenChange`，传入 false，把这件事报上去。", focus: ["quick", "topnav"], links: ["quick>topnav"], tokens: [{ id: "esc", label: "false", at: "topnav" }], notes: [{ at: "topnav", text: "searchOpen · true", tone: "wait" }] },
+    { caption: "`onOpenChange` 就是 TopNav 的 `setSearchOpen`。状态变成 false，React 重新运行 TopNav 这个函数。", focus: ["topnav"], tokens: [{ id: "prop", label: "open = false", at: "topnav" }], notes: [{ at: "topnav", text: "searchOpen · false", tone: "wait" }] },
+    { caption: "这一轮渲染里，TopNav 把 `open = false` 传下去，对话框关上。", focus: ["quick"], tokens: [{ id: "prop", label: "open = false", at: "quick" }], notes: [{ at: "topnav", text: "searchOpen · false", tone: "ok" }] }
+  ]}
+  guesses={[
+    { before: 3, question: "按下 Esc 之后，QuickSearch 下一步会怎么做？", options: ["直接把自己收到的 `open` 改成 false", "调用父组件传来的 `onOpenChange(false)`", "刷新整个页面"], answer: "B", explain: "props 对子组件只读。`open` 归 TopNav 管，QuickSearch 只能用 TopNav 给它的函数提出请求。" }
+  ]}
+/>
+
+数据往下传（`open`），事件往上报（`onOpenChange`）。状态只有一份，放在 TopNav 里。
+
+## 状态放在谁那里
+
+为什么不让对话框自己记开没开？因为能打开它的地方不止一处：桌面的「快速检索」按钮、手机菜单里的检索按钮、⌘K 快捷键，全都在 TopNav 里。它们都要改同一个状态，状态就得放在它们共同的上级，也就是 TopNav：
+
+<CodeRef at="patra-portal/src/components/portal/TopNav.tsx@d0ca49caf72d9d9aacd7459c1054cf9131b3759e" lines="92-96" />
+
+```tsx
+  const openSearch = () => {
+    setMenuOpen(false);
+    setSearchLoaded(true);
+    setSearchOpen(true);
+  };
+```
+
+规则可以记成一句：**一份状态放在所有需要它的组件的最近共同父组件里**，再用 props 分下去。只有一个组件用的（比如折叠区的开合），就放在它自己身上。
+
+<Quiz
+  questions={[
+    {
+      question: "把 DisclosureSection 里的 `useState` 换成普通变量 `let open = false`，点击时把它改成 true。内容区会展开吗？",
+      options: ["会展开", "不会：改普通变量 React 不知道，也不会重新渲染；就算重新渲染，函数从头跑，`open` 又是 false", "会报错"],
+      answer: "B",
+      explain: "只有经 `setOpen` 改，React 才知道要重画，并且在下一次运行函数时给出新值。普通变量每次运行都重新初始化。"
+    },
+    {
+      question: "SortToggle 自己没有状态。点了某一项之后，它显示的选中项是怎么变的？",
+      options: ["它自己改了 `value`", "它调用 `onChange`，父组件改了状态，再把新的 `value` 传下来", "浏览器自动高亮被点的按钮"],
+      answer: "B",
+      explain: "选中项由父组件的状态决定。SortToggle 只负责画出来、把点击报上去。"
+    }
+  ]}
+/>
+
+<Transfer
+  prompt="文献详情页上有一个「收藏」按钮在正文区组件里，页头组件里还有一个「已收藏」的小标记，两处要反映同一件事。你会把「收没收藏」这个状态放在哪里？两个组件分别收什么 props？"
+  points={[
+    { label: "放在共同父组件", text: "状态放在同时包着正文区和页头的那个组件里，只存一份。" },
+    { label: "往下传值", text: "页头收一个布尔值显示标记；按钮也收这个值，决定显示「收藏」还是「已收藏」。" },
+    { label: "往上报事件", text: "按钮再收一个回调，例如 `onToggle`，点击时调用它，由父组件改状态。" },
+    { label: "为什么不各存一份", text: "两份状态迟早对不上：按钮改了自己那份，页头那份不知道。" }
+  ]}
+/>

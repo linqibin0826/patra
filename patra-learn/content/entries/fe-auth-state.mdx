@@ -1,0 +1,177 @@
+---
+title: 前端怎么管登录态
+summary: Patra 门户把会话令牌放在浏览器脚本读不到的 Cookie 里，只在服务端读；请求入口的 proxy 做顺路的跳转，真正要登录的页面自己守门。前端从头到尾不知道令牌长什么样。
+type: concept
+difficulty: advanced
+tags: [frontend, security]
+prerequisites: [fe-route-handler-bff, http-cookie-and-session]
+topics: [login-session]
+sources:
+  - version: v0.8
+    issue: PAP-67
+    pr: 230
+  - version: v0.12
+    issue: PAP-101
+    pr: 276
+  - version: v0.12
+    issue: PAP-102
+    pr: 276
+personalEnv: false
+---
+
+<Diagnose
+  question="门户的会话令牌存在一个 HttpOnly Cookie 里。导航栏是客户端组件，要显示「你好，某某」。它怎么知道当前用户是谁？"
+  options={["用 `document.cookie` 读出令牌，自己解出用户名", "请求门户的 `/api/auth/me`，由门户在服务端读 Cookie、问网关", "令牌就是用户名，直接显示"]}
+  answer="B"
+  ifRight="对。HttpOnly 的 Cookie 脚本读不到，浏览器只会在请求时自动带上它。往下看门户里还有哪些地方在读它，各自读了做什么。"
+  ifWrong="答案是 B：Cookie 设了 HttpOnly，浏览器里的脚本读不到，只能在发请求时由浏览器自动带上，交给服务端去读。这题考的是 Cookie 的属性和会话的基本做法。"
+  suggest="http-cookie-and-session"
+/>
+
+## 令牌只在浏览器和门户服务端之间
+
+用户登录成功后，identity 发给门户一个会话令牌。会话本身存在后端，归 identity 一家管，令牌只是一张「凭它来查会话」的号码牌。门户要做的，是让浏览器替它保管这张号码牌，又不让页面上的任何脚本碰到它。
+
+<CodeRef at="patra-portal/src/lib/auth/session-cookie.ts@fe4c6bb68c591a9c9b5fe80f76bbfbbbc6aeae75" lines="21-33" />
+
+```ts
+/// 会话 Cookie 的名称和固定属性。`Secure` 开时名字带 `__Host-` 前缀：浏览器只接受本站经 HTTPS 写入、
+/// `Path=/`、不带 `Domain` 的那一份，同一域名下的其他子站点没法种入或覆盖它。这个前缀要求必须带
+/// `Secure`，所以 HTTP 环境只能用不带前缀的名字。
+function sessionCookie() {
+  const secure = secureEnabled();
+  return {
+    name: secure ? "__Host-patra_session" : "patra_session",
+    httpOnly: true,
+    sameSite: "lax",
+    path: "/",
+    secure,
+  } as const;
+}
+```
+
+每个属性挡一类问题：
+
+| 属性 | 挡住什么 |
+|---|---|
+| `httpOnly` | 页面脚本读不到。就算页面被注入了一段恶意脚本，它也偷不走令牌 |
+| `sameSite: "lax"` | 别的网站发起的跨站请求（除了点链接跳过来）不带这个 Cookie |
+| `secure` + `__Host-` 前缀 | 只走 HTTPS；同域名下别的子站点没法种一个同名 Cookie 来顶替它 |
+
+这个文件第一行是 `import "server-only"`。门户里所有读写会话 Cookie 的代码都在服务端，浏览器端要知道「我是谁」，只能问门户。
+
+## 谁在读，谁在写
+
+在 Next 里，`cookies()` 在服务端组件里只能读；要写，必须在 Server Function 或 Route Handler 里。门户各处的分工正好照着这条规则来：
+
+| 位置 | 做什么 |
+|---|---|
+| 登录、注册的 Server Action | 成功后写入令牌，有效期 30 天 |
+| `/api/auth/me`（Route Handler） | 导航栏来问「我是谁」：读到用户就把 Cookie 有效期顺延回 30 天；网关说令牌无效就清掉 |
+| 登出的 Server Action | 请求网关删会话，不管成败最后都清 Cookie |
+| 服务端渲染的页面 | 只读：拿令牌问网关当前用户是谁 |
+| `proxy.ts`（请求入口） | 只读，而且从不写 |
+
+清 Cookie 有个细节：门户不用 `cookies().delete()`，而是写一个空值、`Max-Age=0`。因为 `delete` 发出去的指令不带 `Secure`，浏览器会拒绝用它删 `__Host-` 开头的 Cookie。
+
+<CodeRef at="patra-portal/src/lib/auth/session-cookie.ts@fe4c6bb68c591a9c9b5fe80f76bbfbbbc6aeae75" lines="60-64" />
+
+```ts
+/// 清除：写入空值，属性和写入时相同，`Max-Age=0`。不用 `cookies().delete()`：它不带 `Secure`，
+/// 浏览器会拒绝用它删除 `__Host-` 开头的 Cookie。
+export async function clearSessionCookie(): Promise<void> {
+  (await cookies()).set({ ...sessionCookie(), value: "", maxAge: 0 });
+}
+```
+
+## 请求入口：proxy.ts 先看一眼
+
+Next 16 里，项目根（或 `src/`）下的 `proxy.ts` 会在每个请求到达页面之前先跑一遍。它以前叫 middleware，功能一样。门户的入口长这样：
+
+<CodeRef at="patra-portal/src/proxy.ts@d0ca49caf72d9d9aacd7459c1054cf9131b3759e" lines="82-87" />
+
+```ts
+export async function proxy(req: NextRequest) {
+  if (AUTH_PAGES.includes(req.nextUrl.pathname)) {
+    return leaveAuthPage(req);
+  }
+  // 冷静期查询先发出去；详情页的存在检查与它并行，结果出来后冷静期跳转优先
+  const pending = pendingDeletionRedirect(req);
+```
+
+它管所有页面，但不管 `/api/` 和静态文件：
+
+<CodeRef at="patra-portal/src/proxy.ts@d0ca49caf72d9d9aacd7459c1054cf9131b3759e" lines="127-130" />
+
+```ts
+/// 全部页面（冷静期跳转要覆盖任何页面），不含 `/api/`、`/_next/` 与带扩展名的静态文件
+export const config = {
+  matcher: ["/((?!api/|_next/|.*\\.[^/]+$).*)"],
+};
+```
+
+和登录态有关的事它只做两件，都是「顺路把人送到该去的地方」：
+
+1. 已经登录的人打开登录页或注册页，直接送回他原本要去的页面。
+2. 账号在注销冷静期的人整页打开任何页面，送到取消注销页。
+
+它不负责「没登录就不许看」。Next 的文档也说得明白：proxy 每个请求都跑，包括预取，只适合做这种乐观的检查，不该当成完整的权限判断。
+
+## 真正的门在页面里
+
+要登录才能看的页面（设置、文献库、提醒），在页面代码里自己调 `requireUser`：
+
+<CodeRef at="patra-portal/src/lib/auth/require-user.ts@fe4c6bb68c591a9c9b5fe80f76bbfbbbc6aeae75" lines="10-22" />
+
+```ts
+export async function requireUser(path: string): Promise<CurrentUser> {
+  const session = await lookupSession();
+  if (session.status === "authenticated") {
+    if (session.user.status === "PENDING_DELETION") {
+      redirect(deletionPendingHref(path));
+    }
+    return session.user;
+  }
+  if (session.status === "unavailable") {
+    throw new Error("登录状态暂时不可用");
+  }
+  redirect(authPageHref("/login", path));
+}
+```
+
+proxy 和 `requireUser` 都是「读 Cookie、问网关我是谁」，平时看不出区别。差别在网关出问题的时候。切到「问网关时网关挂了」看看：
+
+<Compare
+  title="同样是查会话，网关挂了时两边怎么做"
+  failureLabel="问网关时网关挂了"
+  variants={[
+    { label: "proxy：已登录离开登录页", steps: ["读请求里的会话 Cookie", "问网关当前用户是谁（3 秒超时）", "已登录就 307 送回原来要去的页"], results: [{ label: "已登录的人", value: "被送回原页面", tone: "ok" }], verdict: { tone: "ok", head: "顺利时：", text: "已登录的人不会再看到登录表单。" }, failure: { after: 1, results: [{ label: "已登录的人", value: "看到登录表单", tone: "wait" }], verdict: { tone: "ok", head: "放行。", text: "查不到就当没这回事，照常显示登录页。入口不该因为后端慢就把整站卡住。" } } },
+    { label: "requireUser：设置页守门", steps: ["读会话 Cookie", "问网关当前用户是谁", "已登录就渲染设置页，没登录去登录页"], results: [{ label: "已登录的人", value: "看到设置页", tone: "ok" }], verdict: { tone: "ok", head: "顺利时：", text: "已登录的人看到设置页，没登录的人被送去登录。" }, failure: { after: 1, results: [{ label: "已登录的人", value: "看到错误页", tone: "wait" }], verdict: { tone: "ok", head: "报错，不送去登录页。", text: "网关不可用不等于你登出了。送去登录页会让人以为掉线了，登录了也还是进不来。" } } }
+  ]}
+/>
+
+<Quiz
+  questions={[
+    {
+      question: "一个没登录的人在地址栏直接打开 `/settings/profile`。是谁把他送去登录页的？",
+      options: ["proxy.ts", "设置页里的 `requireUser`", "网关"],
+      answer: "B",
+      explain: "在登录态上，proxy 只管已登录离开登录页、冷静期账号这两件事。没登录不许看，是页面自己调 `requireUser` 判断的。"
+    },
+    {
+      question: "导航栏请求 `/api/auth/me`，网关说这个令牌无效（401）。门户这时做了什么？",
+      options: ["什么都不做，返回 401", "清掉会话 Cookie，回 `user: null`，导航栏显示「登录」", "跳转到登录页"],
+      answer: "B",
+      explain: "令牌已经没用了，留着只会让每个请求都白问一次网关。所以这里清掉 Cookie，告诉导航栏你是未登录状态。"
+    }
+  ]}
+/>
+
+<Transfer
+  prompt="有人提议：把会话令牌改存进浏览器的 localStorage，导航栏直接读出来用，还能省掉一次 `/api/auth/me` 请求。这样改会带来哪些问题？"
+  points={[
+    { label: "脚本能偷走它", text: "localStorage 谁的脚本都能读；页面一旦被注入恶意脚本，令牌就被拿走了。HttpOnly Cookie 挡的正是这个。" },
+    { label: "服务端看不见", text: "localStorage 不会随请求发出去，服务端渲染页面时、proxy 里都读不到，页面守门和入口跳转都做不了。" },
+    { label: "又回到跨源问题", text: "浏览器要自己带令牌请求网关，就得让网关放行门户这个来源，网关地址也要暴露给浏览器。" }
+  ]}
+/>

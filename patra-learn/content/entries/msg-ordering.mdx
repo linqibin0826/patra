@@ -1,0 +1,131 @@
+---
+title: 乱序：后发的消息先到了
+summary: 重试、补投、死信重放都会打乱消息到达的顺序，先发的后到、后发的先到。不能指望顺序，要在消费端用版本号判断新旧、用墓碑记住已删除，让任意顺序到达都得到同样的结果。
+type: concept
+difficulty: advanced
+tags: [backend, messaging, database]
+prerequisites: [msg-at-least-once-and-dedup]
+personalEnv: false
+---
+
+<Diagnose
+  question="interaction 先发出“评论已发表”（这一条第一次发送失败，留在发件箱等补投），随后发出“评论已删除”（发送成功）。补投让“已发表”之后才到达通知服务。通知服务按到达顺序处理，会发生什么？"
+  options={["先收到“已删除”，后收到“已发表”，写出一条指向已删除评论的提醒", "RabbitMQ 会按发出的时间重新排好序", "两条消息互相抵消，什么也不发生"]}
+  answer="A"
+  ifRight="对。顺序是靠不住的。这篇讲当顺序靠不住时，消费端怎么让结果仍然正确。"
+  ifWrong="答案是 A。补投是另一个后台任务在另一个时间点重发，它不管别的事件发出去没有。RabbitMQ 也只按到达的顺序存，不会替你按“发生的先后”重排。上一篇讲了重复，这里是它的孪生问题：乱序。"
+  suggest="msg-at-least-once-and-dedup"
+/>
+
+## 顺序为什么靠不住
+
+消息队列在没有任何失败时，通常是先进先出的。问题出在失败和恢复的路径上：
+
+- **补投**：发件箱里发送失败的行等着补投，补投任务每分钟扫一次。这一条等待期间，后面的事件可能已经正常发出了。
+- **消费失败重投 / 死信重放**：一条消息处理失败后重试或进死信，之后的消息继续处理，它再回来时已经“迟到”。
+
+Patra 早先在 ingest 里手写的发件箱靠分区键保证顺序（ingest 已经删除），但 RabbitMQ 一旦重投，就不再保证顺序。所以 Patra 的选择是：**不依赖顺序，在消费端兜底**。
+
+<Callout kind="lead">
+
+消费端的目标：同样的一组事件，不管按什么顺序到达，最后的状态都一样。这叫“可交换”。
+
+</Callout>
+
+## 两种办法：版本号和墓碑
+
+**版本号**：对“编辑”这类会改同一份数据的事件，每个事件带上数据的版本。收到的版本比库里的旧，就不覆盖。
+
+**墓碑**：对“删除”，不能只是删掉记录。如果删除比发表先到，库里本来就没有记录，什么也没删；之后发表到了，又会把评论写进去，等于“复活”。所以删除时要**写一行标记“这条已经删了”**，这就是墓碑。后到的发表看到墓碑，直接丢弃。
+
+通知服务里存评论快照的那一行，同时承担了这两个角色：
+
+<CodeRef at="patra-api/patra-notification/patra-notification-infra/src/main/java/dev/patra/notification/infra/inbox/persistence/CommentContentRepositoryAdapter.java@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="19-70" />
+
+写快照和写墓碑都是 `INSERT ... ON CONFLICT DO UPDATE`：无论这一行存不存在，语句结束时这一行都被当前事务锁住，同一条评论的发表和删除因此串行；“版本比较”写在 `SET` 的 `CASE` 里，一条语句完成“比较并写入”。
+
+## 动手：一条评论的快照
+
+下面是一条评论在通知服务里的快照，从“还没有记录”开始。试着按“故意乱序”的顺序点事件，看它怎么变：
+
+<StateMachine
+  title="评论快照遇上乱序事件"
+  subject="inbox.comment 的一行"
+  states={[
+    { id: "none", label: "没有记录", col: 1, dashed: true, desc: "通知服务还没收到过这条评论的任何事件。" },
+    { id: "v1", label: "正文 v1", sub: "发表时的版本", col: 2, desc: "存着发表时的正文，版本 1。" },
+    { id: "v2", label: "正文 v2", sub: "编辑后的版本", col: 3, desc: "存着编辑后的正文，版本 2。" },
+    { id: "tomb", label: "墓碑", sub: "已删除", col: 2, row: 2, desc: "这条评论已经被删除，正文置空。之后它的发表、编辑事件一律丢弃。" }
+  ]}
+  start="none"
+  events={[
+    { id: "pub", label: "收到 发表（v1）" },
+    { id: "edit", label: "收到 编辑（v2）" },
+    { id: "del", label: "收到 删除" }
+  ]}
+  transitions={[
+    { from: "none", event: "pub", to: "v1", label: "发表" },
+    { from: "none", event: "edit", to: "v2", label: "编辑先到" },
+    { from: "none", event: "del", to: "tomb", label: "删除先到" },
+    { from: "v1", event: "edit", to: "v2", label: "版本更新，覆盖" },
+    { from: "v1", event: "del", to: "tomb", label: "删除" },
+    { from: "v2", event: "pub", to: "v2", label: "v1 更旧，不覆盖" },
+    { from: "v2", event: "del", to: "tomb", label: "删除" },
+    { from: "tomb", event: "pub", to: "tomb", label: "墓碑，丢弃" },
+    { from: "tomb", event: "edit", to: "tomb", label: "墓碑，丢弃" },
+    { from: "tomb", event: "del", to: "tomb", label: "重复删除，保留第一次" }
+  ]}
+/>
+
+试这几条路径，答案都应该和“按发生顺序处理”一样：
+
+1. 删除 → 发表：最后是墓碑，没有“复活”。
+2. 编辑（v2）→ 发表（v1）：最后是 v2，旧版本没盖掉新版本。
+3. 发表 → 删除 → 编辑：最后是墓碑。
+
+<Callout kind="insight">
+
+“编辑先于发表到达”时，处理照常进行，写下 v2；发表随后到达，正文不动，但回复提醒和 @ 提醒照常补上。所以“正文保留较新版本”和“该发的提醒一定发”是两件互不影响的事。
+
+</Callout>
+
+## 在处理器里
+
+“评论已删除”的处理器：先去重，再标墓碑，再删这条评论已有的所有提醒。
+
+<CodeRef at="patra-api/patra-notification/patra-notification-app/src/main/java/dev/patra/notification/app/inbox/usecase/ingest/RecordCommentDeletedHandler.java@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="17-52" />
+
+“已编辑”的处理器见上一篇引用的 `RecordCommentEditedHandler`：看到墓碑或者版本不够新，就返回 `DISCARDED`，什么也不写。
+
+<Callout kind="cost">
+
+乱序处理不是白来的：**每一种事件，都要想“它先到”和“它晚到”两种情况**，并且在测试里覆盖。新增一种事件，就多一轮这样的推演。
+
+</Callout>
+
+<Quiz
+  questions={[
+    {
+      question: "评论被编辑了两次，版本 2 和版本 3 的事件顺序颠倒了：先到 v3，后到 v2。最终库里保留哪一版？",
+      options: ["v2，因为它后到", "v3，因为版本更大，较旧的版本不会覆盖较新的"],
+      answer: "B",
+      explain: "比较的是版本号，不是到达时间。v3 先写入后，v2 的版本更小，不覆盖。"
+    },
+    {
+      question: "为什么“删除”事件到达时，不能只是把评论的记录删掉？",
+      options: ["删除比较慢", "如果它比发表先到，库里没有记录可删；之后发表到达就会把它写进去，等于复活", "数据库不允许删除"],
+      answer: "B",
+      explain: "删除要留下一行墓碑，让后到的发表知道“这条已经没了”。"
+    }
+  ]}
+/>
+
+<Transfer
+  prompt="一个购物车服务消费两种事件：“商品改价”和“商品下架”。因为补投，两种事件可能乱序。请设计：下架先到、改价后到时怎么处理？两条改价事件乱序到达时怎么处理？"
+  points={[
+    { label: "下架当墓碑", text: "下架事件到达时，即使商品记录还不存在，也写一行“已下架”的标记；之后到达的改价看到标记就丢弃。" },
+    { label: "改价带版本", text: "每次改价带一个单调递增的版本号（或更新时间），库里只保留版本最大的价格，较旧的改价到达时不覆盖。" },
+    { label: "写在一条语句里", text: "“比较并写入”最好在一条 SQL 里完成，并锁住这一行，避免两条消息同时处理时互相踩。" },
+    { label: "逐类推演", text: "每种事件都要想“先到”和“晚到”，并写进测试。" }
+  ]}
+/>

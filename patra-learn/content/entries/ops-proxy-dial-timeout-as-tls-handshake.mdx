@@ -1,0 +1,106 @@
+---
+title: 代理拨号超时，被 JVM 报成 TLS 握手被断
+summary: 部署机上 Gradle 下载依赖报 Remote host terminated the handshake，看着像 TLS 问题。真相是 JVM 悄悄走了系统代理，代理先答应连接、再去拨上游，拨号超时就关掉隧道；JVM 在握手中途读到连接关闭，于是报成握手失败，Gradle 还不重试这种异常。
+type: troubleshooting
+difficulty: practice
+tags: [ci-cd, network, java]
+prerequisites: [java-jvm-proxy-no-cidr, http-https-and-certificates]
+sources:
+  - version: v0.13
+personalEnv: false
+---
+
+<Diagnose
+  question="Java 程序经一个 HTTP 代理访问 HTTPS 站点。代理收到 CONNECT 后先回了「200 连接已建立」，然后才去连目标站，5 秒没连上就把连接关了。Java 这边会报什么？"
+  options={["连接超时（connect timed out）", "TLS 握手被对方断开", "代理认证失败（407）"]}
+  answer="B"
+  ifRight="对。对 Java 来说，连接早在收到 200 时就「建立」了，接下来该握手；握手进行到一半连接被关，只能报握手失败。往下读这个错误怎么把排查带偏。"
+  ifWrong="答案是 B。代理先回了 200，Java 认为隧道已通、开始 TLS 握手；这时代理因为连不上目标把连接关了，Java 读到的是「握手中途对方断了」。这题考的是 HTTPS 先建连接、再握手这两步，先读 HTTPS 那篇。"
+  suggest="http-https-and-certificates"
+/>
+
+<Callout kind="lead" label="结论先说">
+
+部署机的 JVM 自动继承了系统代理。代理对 `CONNECT` 先回 200 再去拨上游，拨不通就关隧道，JVM 把这报成 `Remote host terminated the handshake`。Gradle 只对连接类异常重试，不重试握手异常，于是一次就失败。
+
+- **怎么修**：在部署机的 Gradle 配置里让镜像站真正直连，错误就变回真实的超时，Gradle 会重试
+- **值得记住**：报错写着 TLS，不代表问题在 TLS；先弄清连接经过了谁
+
+</Callout>
+
+## 现象
+
+v0.13 后端的 CD 在部署机上连续失败两次，都卡在 Gradle 下载依赖：
+
+```text
+Could not download citeproc-java-3.5.2.jar
+  > Remote host terminated the handshake
+```
+
+依赖来自国内的 Maven 镜像站 `maven.aliyun.com`。错误信息指向 TLS 握手，很容易让人去查证书、TLS 版本、JDK 的加密套件。
+
+## 怎么查
+
+<DebugTrail
+  steps={[
+    { hypothesis: "镜像站或者那个 jar 本身有问题？", result: "失败是间歇的：在 runner 的检出目录里先跑一遍 `./gradlew` 把依赖下到缓存，再重跑失败的 CD，就能过。jar 没坏，镜像站也不是一直不通。", verdict: "ruled-out" },
+    { hypothesis: "JVM 到底是不是直连镜像站？", result: "不是。macOS 上的 JDK 把系统代理读进了 `https.proxyHost` 和 `socksProxyHost`，部署机上跑着代理软件（Clash 系）。哪怕代码里写 `openConnection(Proxy.NO_PROXY)`，底层的 Socket 也还会进 SOCKS。连接实际都经过了代理。", verdict: "closer" },
+    { hypothesis: "失败那一刻，代理那边发生了什么？", result: "对时间：Gradle 在 01:10:40.637 报错，代理日志在 01:10:40.48 正好有 4 条 `dial DIRECT … maven.aliyun.com … i/o timeout`。代理给这个站配的是直连出口，那一刻拨不通。", verdict: "closer" },
+    { hypothesis: "拨号超时为什么会变成握手被断？", result: "代理处理 `CONNECT` 是先回 200、再去拨上游；直连拨号 5 秒没通，它就把隧道关掉。JVM 这时已经在 TLS 握手，读到连接关闭，只能报握手被对方断开。这个过程能稳定复现。", verdict: "found" }
+  ]}
+/>
+
+排查中还有一个误导：一开始在部署机上用 curl 经同一个代理去试，是通的，于是更相信「代理没问题」。后来复现时 curl 经这个代理同样会失败，前面的「curl 正常」只是采样时正好赶上网络好的时候。
+
+## 根因
+
+<Sequence
+  title="一次「握手被断」是怎么来的"
+  actors={[
+    { id: "jvm", label: "Gradle（JVM）" },
+    { id: "proxy", label: "本机代理" },
+    { id: "mirror", label: "maven.aliyun.com" }
+  ]}
+  messages={[
+    { from: "jvm", to: "proxy", label: "CONNECT maven.aliyun.com:443", time: "0 s", caption: "JVM 继承了系统代理，先请代理开一条到镜像站的隧道。" },
+    { from: "proxy", to: "jvm", label: "200 Connection established", time: "0 s", caption: "代理先回 200，表示「隧道好了」。其实它还没去连镜像站。" },
+    { from: "jvm", to: "proxy", label: "TLS ClientHello", time: "0 s", caption: "JVM 以为隧道已通，开始 TLS 握手。" },
+    { from: "proxy", to: "mirror", label: "直连拨号", time: "5 s", bad: true, dashed: true, caption: "代理这才去拨镜像站。那段时间出口网络大面积超时，5 秒没拨通。" },
+    { from: "proxy", to: "jvm", label: "关闭连接", time: "5 s", bad: true, caption: "拨号失败，代理关掉隧道。JVM 在等握手回包，读到的是连接关闭。" }
+  ]}
+  summary={{ time: "5 s", caption: "真正失败的是代理到镜像站的拨号；JVM 看到的只是「握手中途被断」。" }}
+/>
+
+为什么一次就挂：Gradle 下载依赖时会判断异常值不值得重试，只认 `SocketException`、`SocketTimeoutException` 这类连接问题，`SSLHandshakeException` 不在里面。一次网络抖动，就成了整条 CD 失败。
+
+那十几分钟里（01:09～01:25），直连拨号和代理节点同时大面积超时，问题出在部署机之外（路由器、上行或运营商），具体是哪一环没有查到。
+
+## 修法
+
+在部署机的 `~/.gradle/gradle.properties` 里，让镜像站绕过代理、真正直连（三条都要写，下面的值是示意，关键是都含镜像站）：
+
+```properties
+systemProp.http.nonProxyHosts=localhost|127.*|maven.aliyun.com
+systemProp.https.nonProxyHosts=localhost|127.*|maven.aliyun.com
+systemProp.socksNonProxyHosts=localhost|127.*|maven.aliyun.com
+```
+
+这样再遇到网络抖动，JVM 自己拨号超时，报的是 `SocketTimeoutException`，Gradle 会重试。注意 SOCKS 那一项的名字是 `socksNonProxyHosts`，写成 `socks.nonProxyHosts` 不生效；HTTP 那两项也要写，只写一个照样会进代理。
+
+这个配置目前只在部署机上手工加了，还没写进 runner 的安装脚本。临时绕过的办法不变：在 runner 检出里先跑 `./gradlew` 预热缓存，再只重跑失败的任务。
+
+<Callout kind="insight" label="怎么认出它">
+
+JVM 报「握手被断」，先去代理日志里找同一时刻有没有 `dial … i/o timeout`，别先去调 TLS 参数。
+
+</Callout>
+
+<Transfer
+  prompt="公司内网的 CI 机器经 HTTP 代理访问外网。npm install 偶发报 `ECONNRESET`、`socket hang up`，Python 的 pip 偶发报 `SSLError: EOF occurred in violation of protocol`。你会怎么判断是不是同一类问题？怎么确认？"
+  points={[
+    { label: "同一类机制", text: "代理先回 200 再拨上游，拨不通就关连接；客户端在握手或读响应时看到连接被断，各语言报成不同的错。" },
+    { label: "对时间", text: "拿客户端报错的时间去代理日志里找同一时刻的上游拨号失败。" },
+    { label: "绕开代理复测", text: "对可以直连的目标设例外，让失败变回真实的连接超时，客户端的重试逻辑才能接上。" },
+    { label: "看重试条件", text: "确认构建工具对这类异常重不重试；不重试的，一次抖动就会让整条流水线失败。" }
+  ]}
+/>

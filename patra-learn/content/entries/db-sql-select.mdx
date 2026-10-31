@@ -1,0 +1,137 @@
+---
+title: SQL 查询：SELECT、WHERE 与 ORDER BY
+summary: 一句 SELECT 怎么写：取哪些列、过滤哪些行、怎么排序，以及翻页时为什么必须带上 ORDER BY。
+type: concept
+difficulty: basic
+tags: [database, backend]
+prerequisites: [db-keys-and-relations]
+---
+
+<Diagnose
+  question="表 cat_venue 有 200 万行。页面要展示 20 本期刊的标题。下面哪种做法最合理？"
+  options={["程序把整张表查出来，在代码里挑出期刊、取前 20 个标题", "让数据库只返回期刊类型的前 20 行，并且只带标题这一列", "两种一样，反正最后都是 20 个标题"]}
+  answer="B"
+  ifRight="对。能让数据库做的筛选就别搬到程序里做：数据库有索引，网络上也少传几百万行。这一篇就是教你怎么对数据库说这句话。"
+  ifWrong="答案是 B。把 200 万行都通过网络搬回程序再丢掉，既慢又占内存。筛选、排序、取一页，数据库本来就会做，你只需要把条件写进 SQL。"
+  suggest="db-keys-and-relations"
+/>
+
+## 一句 SELECT 回答三个问题
+
+SQL 查询的基本形状只有一个：
+
+```sql
+SELECT id, title
+FROM cat_venue
+WHERE venue_type = 'JOURNAL' AND deleted_at IS NULL
+ORDER BY title
+LIMIT 20;
+```
+
+（示意查询，列名取自 catalog 的期刊表。）逐行读，每一行回答一个问题：
+
+| 子句 | 回答的问题 | 上面这句的意思 |
+|---|---|---|
+| `SELECT` | 要哪几列？ | 只要 `id` 和 `title` |
+| `FROM` | 从哪张表？ | 从 `cat_venue` |
+| `WHERE` | 要哪些行？ | 类型是期刊，并且没有被软删除 |
+| `ORDER BY` | 怎么排？ | 按标题 |
+| `LIMIT` | 要多少行？ | 前 20 行 |
+
+几个新手常踩的细节：
+
+- **只取要用的列**。`SELECT *` 会把一行所有的列都带回来。`cat_venue` 有二十多列，其中还有 JSON 大字段，页面只要标题时全带上是浪费。
+- **判断空值要写 `IS NULL`，不能写 `= NULL`**。`deleted_at = NULL` 永远查不到任何行，原因在「约束与 NULL」那一篇讲。
+- **字符串用单引号**。`'JOURNAL'` 是字符串，双引号在 SQL 里是用来括列名、表名的。
+
+`WHERE` 里常用的条件：
+
+| 写法 | 意思 |
+|---|---|
+| `a = 1`、`a <> 1`、`a >= 10` | 比较 |
+| `a = 1 AND b = 2`、`a = 1 OR b = 2` | 且、或（混着用时加括号） |
+| `a IN (1, 2, 3)` | 值在列表里 |
+| `title LIKE '协和%'` | 以「协和」开头，`%` 代表任意多个字符 |
+| `deleted_at IS NULL` | 这一格是空的 |
+
+## 一句查询是按什么顺序做的
+
+写的时候 `SELECT` 在最前面，但数据库的处理顺序并不是从上到下。先后顺序是：取表，过滤（`WHERE`），排序（`ORDER BY`），取一页（`LIMIT`）。
+
+看一个真实场景：Patra 的文献库（`collection.library_item`）里每一行是「某个用户收藏了某个对象」。要给用户 7 看收藏的第一页，每页 2 条。
+
+<CodeRef at="patra-api/patra-interaction/patra-interaction-infra/src/main/java/dev/patra/interaction/infra/collection/persistence/LibraryReadAdapter.java@3cf6fa5757b3be54c3b030e4cace871f53e2599c" lines="265-270" />
+
+```java
+  private static String librarySql(LibraryView view) {
+    return "SELECT li.subject_id, li.collected_at FROM collection.library_item li"
+        + " WHERE li.user_id = :userId"
+        + filter(view)
+        + " ORDER BY li.collected_at DESC, li.subject_id DESC";
+  }
+```
+
+分页时再接上 `LIMIT :limit OFFSET :offset`。
+
+<Stepper
+  title="一页收藏是怎么一步步挑出来的（示意数据）"
+  nodes={[
+    { id: "table", label: "取表", sub: "FROM" },
+    { id: "where", label: "过滤", sub: "WHERE" },
+    { id: "order", label: "排序", sub: "ORDER BY" },
+    { id: "page", label: "取一页", sub: "LIMIT / OFFSET" }
+  ]}
+  links={[
+    { from: "table", to: "where" },
+    { from: "where", to: "order" },
+    { from: "order", to: "page" }
+  ]}
+  steps={[
+    { caption: "FROM：library_item 里一共有 6 行，来自 3 个用户。数据库手里先有这张表。", focus: ["table"], tokens: [{ id: "rows", label: "6 行（所有用户）", at: "table" }] },
+    { caption: "WHERE user_id = 7：只留下用户 7 的收藏，剩 4 行。别人的收藏在这一步就被丢掉了。", focus: ["where"], links: ["table>where"], tokens: [{ id: "rows", label: "4 行（用户 7）", at: "where" }], notes: [{ at: "where", text: "丢掉 2 行", tone: "wait" }] },
+    { caption: "ORDER BY collected_at DESC：4 行按收藏时间从新到旧排好。时间相同的，再按 subject_id 从大到小。", focus: ["order"], links: ["where>order"], tokens: [{ id: "rows", label: "4 行（已排序）", at: "order" }] },
+    { caption: "LIMIT 2 OFFSET 0：从排好的 4 行里取前 2 行，这是第一页。翻到第二页就是 OFFSET 2，跳过前 2 行再取 2 行。", focus: ["page"], links: ["order>page"], tokens: [{ id: "rows", label: "第 1 页：2 行", at: "page" }], notes: [{ at: "page", text: "第 2 页要 OFFSET 2", tone: "ok" }] }
+  ]}
+  guesses={[
+    { before: 4, question: "如果这句查询没有写 ORDER BY，只写 LIMIT 2 OFFSET 2 去取第二页，会怎样？", options: ["一定取到和排序后一样的第 3、4 行", "数据库不保证行的先后，翻页时可能重复或漏掉某些行", "数据库会报错，因为 LIMIT 必须配 ORDER BY"], answer: "B", explain: "没有 ORDER BY 时，SQL 对行的先后不做任何承诺。表被更新、数据被整理之后，同一句话两次取到的先后可能不同，翻页就会重复或漏行。" }
+  ]}
+/>
+
+## 翻页为什么要写第二个排序键
+
+注意上面真实查询的最后一行写了**两个**排序键：先按 `collected_at DESC`，再按 `subject_id DESC`。
+
+为什么要第二个？因为收藏时间可能相同（一次批量收藏几篇，时间戳一样）。只按时间排，时间相同的几行谁先谁后数据库不保证，翻页时它们可能一次出现在第一页、下一次又出现在第二页。加上 `subject_id` 这个**不会重复**的列做第二个排序键，每一行的位置就是唯一确定的。
+
+<Callout kind="warn">
+
+分页的 `ORDER BY` 必须能把每一行排出唯一的位置。排序键不唯一时，在最后补上主键（或别的唯一列）。
+
+</Callout>
+
+<Quiz
+  title="考考自己"
+  questions={[
+    {
+      question: "想查出「没有被软删除」的期刊，deleted_at 列没删除时是空的。WHERE 该怎么写？",
+      options: ["WHERE deleted_at = NULL", "WHERE deleted_at IS NULL", "WHERE deleted_at = ''"],
+      answer: "B",
+      explain: "NULL 表示「没有值」，不能用等号比较，要写 IS NULL。"
+    },
+    {
+      question: "查询 SELECT id FROM cat_venue ORDER BY title LIMIT 20 OFFSET 40，取到的是第几到第几条（按排序后从 1 数）？",
+      options: ["第 21 到 40 条", "第 41 到 60 条", "第 40 到 59 条"],
+      answer: "B",
+      explain: "OFFSET 40 是跳过前 40 条，LIMIT 20 是再取 20 条，所以是第 41 到 60 条。"
+    }
+  ]}
+/>
+
+<Transfer
+  prompt="我的收藏夹列表页要按「最近更新」排序，每页 10 个，写成 SQL 是什么样？如果有两个收藏夹的更新时间一模一样，你会怎么处理？"
+  points={[
+    { label: "基本写法", text: "SELECT ... FROM collection.collection WHERE user_id = 当前用户 ORDER BY updated_at DESC LIMIT 10 OFFSET 页码乘 10。" },
+    { label: "平局怎么办", text: "在排序键后面补上唯一列，比如 collection_id DESC，保证每个收藏夹有确定的位置。Patra 的收藏夹列表就是 ORDER BY updated_at DESC, collection_id DESC。" },
+    { label: "为什么带 user_id", text: "WHERE 把别人的收藏夹挡在外面，既是业务要求，也让数据库只用看这个用户的行。" }
+  ]}
+/>

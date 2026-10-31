@@ -1,0 +1,192 @@
+---
+title: 定时任务：谁在半夜叫醒服务
+summary: 定时任务有两种做法：进程内的 @Scheduled，时间表跟着服务进程走；调度中心 XXL-Job，时间表在另一个服务里，到点回调各服务的执行器。Patra 两种都用，并在三个层面防止同一个任务撞车。
+type: concept
+difficulty: advanced
+tags: [spring, backend, deployment]
+prerequisites: [spring-dependency-injection]
+sources:
+  - version: v0.11
+  - version: v0.16
+    issue: PAP-145
+personalEnv: false
+---
+
+<Diagnose
+  question="一个服务里用 Spring 的 `@Scheduled` 写了「每天凌晨 4 点清理过期记录」。这个服务部署了 2 个实例。每天 4 点，清理会跑几次？"
+  options={["1 次", "2 次", "看哪个实例先启动，只有它跑"]}
+  answer="B"
+  ifRight="对：每个实例是一个独立的进程，各自建了一套 Bean，各自的定时器都会到点触发。这篇讲 Patra 什么时候用进程内定时、什么时候用调度中心，以及怎么防止撞车。"
+  ifWrong="答案是 2 次。每个实例都是独立的进程，启动时各自创建所有 Bean，`@Scheduled` 的定时器也各有一份，彼此不知道对方存在。这题考的是 Spring 容器在每个进程里各建一套 Bean，前置篇讲过。"
+/>
+
+<Callout kind="lead">
+
+定时任务有两种放法。**进程内定时**：时间表写在代码里，由服务进程自己的定时器到点调方法。**调度中心**：时间表放在单独的调度服务里，到点由它回调某个服务实例去执行。Patra 的调度中心是 XXL-Job。
+
+</Callout>
+
+## 进程内定时：`@Scheduled`
+
+Patra 自己写的定时任务里，只有一处用了进程内定时：通知服务给推送连接发心跳，每 25 秒一轮。
+
+<CodeRef at="patra-api/patra-notification/patra-notification-adapter/src/main/java/dev/patra/notification/adapter/realtime/scheduler/UnreadCountStreamHeartbeatScheduleJob.java@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="8-23" />
+
+```java
+/// 推送连接的心跳（PAP-145）：每 `patra.notification.realtime.heartbeat-interval`（25 秒）一轮。
+///
+/// 用进程内定时器、不用 XXL-Job：连接只在这个进程的内存里，心跳必须由持有连接的进程自己发；XXL-Job 是集群调度，
+/// 粒度和语义都不合适。
+@Component
+@RequiredArgsConstructor
+public class UnreadCountStreamHeartbeatScheduleJob {
+
+  private final UnreadCountStreamRegistry registry;
+
+  /// 给所有推送连接发一次心跳，顺带给在线的人记在站。
+  @Scheduled(fixedRateString = "${patra.notification.realtime.heartbeat-interval}")
+  public void heartbeat() {
+    registry.heartbeat();
+  }
+}
+```
+
+`@Scheduled` 本身只是一个标签。要有人读它才会生效：通知服务的 `RealtimeConfiguration` 上加了 `@EnableScheduling`，Spring 才会给标了 `@Scheduled` 的方法建定时器。
+
+注释里写的理由就是选择的标准：推送连接只存在于**这个进程的内存里**。有几个实例，每个实例都要给自己手上的连接发心跳，正好就是「每个进程各跑各的」。
+
+## 调度中心：XXL-Job
+
+剩下的定时任务（清理过期令牌、清理登录记录、导入 PubMed、事件补投……）都交给 XXL-Job。它分两半：
+
+- **调度中心**（xxl-job-admin）：一个单独的服务，在控制台上为每个任务配时间（CRON 表达式）、参数和策略，记录每次执行的结果。任务都在控制台手工建，代码里没有时间表。
+- **执行器**：嵌在每个 Patra 服务里，启动时把自己登记到调度中心，然后等回调。
+
+identity 的执行器配置：
+
+<CodeRef at="patra-api/patra-identity/patra-identity-boot/src/main/java/dev/patra/identity/config/XxlJobConfig.java@5073ab1358404ecd989e722373cd9f7edafe238b" lines="51-71" />
+
+```java
+  @Bean
+  public XxlJobSpringExecutor xxlJobExecutor() {
+    XxlJobSpringExecutor executor = new XxlJobSpringExecutor();
+    executor.setAdminAddresses(adminAddresses);
+    executor.setAppname(appName);
+    executor.setIp(ip);
+    int executorPort = serverPort + 1;
+    executor.setPort(executorPort);
+```
+
+执行器自己开一个端口，约定是应用端口加 1；调度中心到点时就回调这个端口。服务里标了 `@XxlJob("名字")` 的方法会被执行器扫到，名字就是控制台上填的 JobHandler。
+
+一次「清理登录记录」是这样走的：
+
+<Sequence
+  title="凌晨，调度中心叫醒 identity"
+  actors={[
+    { id: "admin", label: "调度中心", sub: "xxl-job-admin" },
+    { id: "executor", label: "执行器", sub: "identity 里" },
+    { id: "job", label: "loginRecordCleanupJob", sub: "@XxlJob 方法" },
+    { id: "app", label: "应用层", sub: "CommandBus" }
+  ]}
+  messages={[
+    { from: "admin", to: "executor", label: "到点：跑 loginRecordCleanupJob", caption: "CRON 到点。调度中心按路由策略从 identity 的执行器里挑一个，回调它的端口。" },
+    { from: "executor", to: "job", label: "调 execute()", caption: "执行器按名字找到标了 `@XxlJob` 的方法，在自己的线程里调它。" },
+    { from: "job", to: "app", label: "PurgeRetiredLoginRecordsCommand", caption: "任务入口只做转发：把保留期放进命令，交给命令总线。真正的删除逻辑在应用层。" },
+    { from: "app", to: "job", label: "删了 N 行", caption: "应用层返回删除的行数。" },
+    { from: "job", to: "executor", label: "handleSuccess", caption: "入口调 `XxlJobHelper.handleSuccess(…)` 写下这次的结果；出错时调 `handleFail(…)`。" },
+    { from: "executor", to: "admin", label: "回报结果", dashed: true, caption: "结果回到调度中心，控制台上能看到这次成功还是失败、写了什么。" }
+  ]}
+/>
+
+<CodeRef at="patra-api/patra-identity/patra-identity-adapter/src/main/java/dev/patra/identity/adapter/session/scheduler/LoginRecordCleanupScheduleJob.java@5073ab1358404ecd989e722373cd9f7edafe238b" lines="35-48" />
+
+## 两种做法，2 个实例时差在哪
+
+<Compare
+  title="同一个「凌晨清理」任务，服务跑了 2 个实例"
+  variants={[
+    { label: "@Scheduled", steps: ["实例 A 的定时器到点，调清理方法", "实例 B 的定时器也到点，也调清理方法", "两边各删一遍"], results: [{ label: "执行次数", value: "2 次", tone: "bad" }, { label: "改时间", value: "改代码或配置，再重启", tone: "wait" }, { label: "看执行记录", value: "翻两份日志", tone: "wait" }], verdict: { tone: "bad", head: "重复执行。", text: "删除碰巧是幂等的还好；要是「发一封日报」，用户就收到两封。" } },
+    { label: "XXL-Job", steps: ["调度中心到点", "按路由策略只挑一个执行器回调", "被挑中的实例执行，结果回报调度中心"], results: [{ label: "执行次数", value: "1 次", tone: "ok" }, { label: "改时间", value: "控制台上改 CRON", tone: "ok" }, { label: "看执行记录", value: "控制台一处看", tone: "ok" }], verdict: { tone: "ok", head: "集群里只跑一次。", text: "代价是多维护一个调度服务，服务里多一个执行器端口。" } }
+  ]}
+/>
+
+## 防撞车：三层
+
+「同一件事同时跑两份」有三种来源，Patra 各有一层挡。
+
+**第一层，多个实例**：调度中心的**路由策略**决定挑哪个执行器。事件补投任务配的是「第一个」，只回调一个实例。
+
+**第二层，同一个任务上一次还没跑完**：调度中心的**阻塞处理策略**决定怎么办。事件补投每分钟一次，配的是「丢弃后续调度」：上一轮还在跑，这一轮直接不跑。
+
+<CodeRef at="patra-tool/patra-tool-events/src/main/java/dev/patra/tool/events/resubmit/EventPublicationResubmitJob.java@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="8-11" />
+
+**第三层，两条不同的任务做同一件事**：调度中心管不了，因为它们在它眼里是两个任务。这一层要在代码里挡。
+
+全文抓取 `pmcFullTextFetchJob` 就是这样：同一个 handler 建了两条任务，一条是每天 PubMed 增量同步跑完后触发的子任务，一条是每小时一次的兜底。首次抓取可能跑好几个小时，兜底那条一定会撞上。
+
+<Stepper
+  title="子任务还在跑，兜底任务到点了"
+  nodes={[
+    { id: "child", label: "子任务", sub: "增量同步后触发" },
+    { id: "fallback", label: "兜底任务", sub: "每小时一次" },
+    { id: "lock", label: "任务锁", sub: "catalog.fulltext-fetch" },
+    { id: "runner", label: "抓取", sub: "PmcFullTextFetchRunner" }
+  ]}
+  links={[
+    { from: "child", to: "lock" },
+    { from: "fallback", to: "lock" },
+    { from: "lock", to: "runner" }
+  ]}
+  steps={[
+    { caption: "增量同步跑完，触发全文抓取的子任务。Handler 先去拿锁 `catalog.fulltext-fetch`，拿到了，开始抓。", focus: ["child", "lock", "runner"], links: ["child>lock", "lock>runner"], tokens: [{ id: "c", label: "子任务", at: "runner" }], notes: [{ at: "lock", text: "被子任务持有", tone: "wait" }] },
+    { caption: "抓了一个多小时还没完。每小时的兜底任务到点，调度中心照常触发：在它看来这是另一条任务，阻塞策略管不到。", focus: ["fallback"], tokens: [{ id: "c", label: "子任务", at: "runner" }, { id: "f", label: "兜底", at: "fallback" }], notes: [{ at: "lock", text: "被子任务持有", tone: "wait" }] },
+    { caption: "兜底任务去拿同一把锁，拿不到。Handler 记一行日志「另一个全文抓取实例正在运行，本次跳过」，返回空统计。", focus: ["fallback", "lock"], links: ["fallback>lock"], tokens: [{ id: "c", label: "子任务", at: "runner" }, { id: "f", label: "兜底", at: "lock", state: "dropped" }], notes: [{ at: "lock", text: "被子任务持有", tone: "wait" }] },
+    { caption: "子任务抓完，释放锁。下一个小时的兜底任务就能拿到锁，处理新到期的候选。", focus: ["lock"], notes: [{ at: "lock", text: "空闲", tone: "ok" }] }
+  ]}
+  guesses={[
+    { before: 3, question: "兜底任务拿不到锁，在调度中心的控制台上这一次会显示成什么？", options: ["失败，因为没执行", "成功，统计为 0", "一直显示运行中，等锁释放"], answer: "B", explain: "拿不到锁说明有人正在做这件事，这一次没什么可做，不算失败。Handler 返回空统计，入口照常 handleSuccess；不等锁，所以不会堆积。" }
+  ]}
+/>
+
+<CodeRef at="patra-api/patra-catalog/patra-catalog-app/src/main/java/dev/patra/catalog/app/fulltext/usecase/fetch/PmcFullTextFetchHandler.java@5073ab1358404ecd989e722373cd9f7edafe238b" lines="26-35" />
+
+锁的实现是 PostgreSQL 的会话级 advisory lock：在一条连接上 `pg_try_advisory_lock`，拿到就干活，干完 `pg_advisory_unlock`。进程崩了，连接断开，锁随会话自动释放，不会留下一把永远打不开的锁。
+
+<CodeRef at="patra-api/patra-catalog/patra-catalog-infra/src/main/java/dev/patra/catalog/infra/kernel/lock/PgAdvisoryRunLockAdapter.java@5073ab1358404ecd989e722373cd9f7edafe238b" lines="39-54" />
+
+## 任务入口要薄，才好测
+
+所有 `@XxlJob` 方法都长一个样：读参数、交给命令总线、回报结果。逻辑都在应用层，入口的测试只要验三件事：参数解析对不对、成功和失败时分别回报了什么。
+
+`XxlJobHelper` 是静态方法，测试用 Mockito 的 `mockStatic` 把它换掉：
+
+<CodeRef at="patra-api/patra-catalog/patra-catalog-adapter/src/integrationTest/java/dev/patra/catalog/adapter/fulltext/scheduler/PmcFullTextFetchScheduleJobIT.java@5073ab1358404ecd989e722373cd9f7edafe238b" lines="34-48" />
+
+```java
+  @Test
+  @DisplayName("没给参数时处理全部到期候选，成功时 handleSuccess")
+  void should_run_all_candidates_without_params() {
+    try (MockedStatic<XxlJobHelper> xxl = mockStatic(XxlJobHelper.class)) {
+      xxl.when(XxlJobHelper::getJobParam).thenReturn(" ");
+      ArgumentCaptor<PmcFullTextFetchCommand> captor =
+          ArgumentCaptor.forClass(PmcFullTextFetchCommand.class);
+      when(commandBus.handle(captor.capture())).thenReturn(FullTextFetchRunStats.of(3, 2, 1, 0));
+
+      job.execute();
+
+      assertThat(captor.getValue().publicationIds()).isEmpty();
+      xxl.verify(() -> XxlJobHelper.handleSuccess(contains("处理 3 篇")));
+    }
+  }
+```
+
+<Transfer
+  prompt="两个新需求：一是每个服务实例每 10 分钟清理一次自己本机临时目录里超过一天的下载文件；二是每天早上 8 点给订阅了的用户发一封昨日摘要邮件。各用哪种做法？各要防哪种撞车？"
+  points={[
+    { label: "清理本机临时目录", text: "用进程内的 `@Scheduled`：临时文件在每台机器自己的磁盘上，每个实例本来就该各清各的，和心跳是同一个道理。" },
+    { label: "发摘要邮件", text: "用 XXL-Job：全集群只该发一次。路由策略挑一个执行器，时间在控制台上配，执行记录在调度中心查。" },
+    { label: "邮件的撞车", text: "阻塞策略挡住上一轮没发完时的下一轮；有人手动补跑或另建了一条任务时，靠应用层的任务锁或「这一天给这个用户发过没有」的记录去重。" },
+    { label: "入口要薄", text: "两种都只在入口里转发给应用层，逻辑在应用层单测；入口只测参数和回报。" }
+  ]}
+/>

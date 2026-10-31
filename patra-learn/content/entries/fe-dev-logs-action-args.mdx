@@ -1,0 +1,64 @@
+---
+title: 开发终端打印出了明文密码
+summary: Next.js 16 开发模式下，每次调用 Server Action 都会在终端打一行日志，带上全部参数。登录和注册的参数里就有明文密码。在 next.config.ts 里关掉 logging.serverFunctions。
+type: pitfall
+difficulty: practice
+tags: [frontend, security]
+prerequisites: [fe-server-actions]
+sources:
+  - version: v0.8
+    issue: PAP-68
+personalEnv: false
+---
+
+<Diagnose
+  question="门户的登录表单提交给一个 Server Action，参数是邮箱和密码。你在本机用 next dev 跑门户、登录一次。开发终端里会看到什么？"
+  options={["一行请求日志，不含任何参数", "一行 Server Action 调用日志，参数原样打印，密码也是明文", "什么都没有"]}
+  answer="B"
+  ifRight="对。开发模式下 Next 默认把 Server Action 的调用连同参数打出来。下面讲在哪关、为什么要关。"
+  ifWrong="答案是 B。Next 16 的开发模式默认记录每次 Server Action 调用和它的参数，登录的参数里就有明文密码。这题考的是 Server Action：它的参数是从浏览器序列化过来的普通数据，框架看得到全部内容。"
+/>
+
+## 坑
+
+v0.8 账号登录那一版写登录页时实测（Next 16）：开发模式下，每调用一次 Server Action，终端就打一行，参数原样带上：
+
+```text
+└─ ƒ login({"email":…,"password":…}) in …ms lib/auth/actions.ts
+```
+
+密码是明文。这行只在 `NODE_ENV === 'development'` 时打印，生产构建不会有，所以上线前的检查发现不了它。可开发日志常常被贴进 Issue、聊天记录，或者被别的工具读走。
+
+## 怎么避开
+
+在 `next.config.ts` 里把 `logging.serverFunctions` 设为 `false`（默认是 `true`）。关掉以后，请求本身的日志照常打印，只是不再带 Server Action 的参数。
+
+<CodeRef at="patra-portal/next.config.ts@4a13287485468f2c489027f1aac0bb6174643e8d" lines="3-10" />
+
+```ts
+const nextConfig: NextConfig = {
+  reactStrictMode: true,
+  // 产出自包含 Node server 到 .next/standalone（容器化运行，镜像精简）
+  output: "standalone",
+  // 开发时 Next 默认在终端打印每次 Server Action 调用的参数，登录、注册的参数里有明文密码；也默认打印每个进来的
+  // 请求（带查询串），一键退订地址的查询串里有退订令牌
+  logging: { serverFunctions: false, incomingRequests: { ignore: [/\/unsubscribe\/one-click/] } },
+};
+```
+
+后半句是同一类问题在 v0.16 通知中心那一版又遇到一次：开发模式默认打印每个进来的请求和它的查询串，而邮件里的一键退订地址把退订令牌放在查询串上。这次的修法是让请求日志跳过那一个路径。
+
+<Callout kind="warn">
+
+没关掉之前，别把开发服务器的日志贴到任何地方，也别让工具去读它。
+
+</Callout>
+
+<Transfer
+  prompt="后端的 Spring 服务在开发环境打开了 HTTP 客户端的请求体日志，方便调试。它会不会犯同样的错？你会怎么检查一个项目里「日志会不会带出敏感数据」？"
+  points={[
+    { label: "同一类问题", text: "请求体日志会把登录、改密码、令牌之类的字段原样记下；开发环境的默认值往往比生产宽松，最容易漏。" },
+    { label: "列出敏感入口", text: "把带密码、令牌、一次性链接的接口和参数列出来，逐个在开发模式下真跑一次，看日志里出现了什么。" },
+    { label: "默认关、按需开", text: "请求体、参数类日志默认关闭；要开就只对特定路径开，并跳过敏感路径。" }
+  ]}
+/>

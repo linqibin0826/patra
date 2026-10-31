@@ -1,0 +1,132 @@
+---
+title: 坏了三个月：镜像芯片格式装错
+summary: 部署流水线在云端打出的镜像是 x86 格式，Apple 芯片的部署机拉不下来。流水线从改造那天起一次都没真正部署成功过，近三个月没人发现，直到要拉起整套集群才暴露。
+type: troubleshooting
+difficulty: practice
+tags: [ci-cd, docker, deployment]
+prerequisites: [ops-cpu-architectures, ops-cd-deploy-loop]
+personalEnv: false
+---
+
+<Diagnose
+  question="镜像的名字和版本号都对，镜像仓库里也确实有它。部署机拉取时却报错：no matching manifest for linux/arm64/v8。最可能的原因是什么？"
+  options={["网络不通，仓库连不上", "镜像是按另一种芯片打的，没有适合这台机器芯片的那一份", "账号没有拉取权限"]}
+  answer="B"
+  ifRight="对。报错的字面意思是「没有匹配 arm64 的清单」。网络不通或没权限是另外的报错。"
+  ifWrong="答案是 B。「no matching manifest」是说仓库里有这个镜像，但清单里找不到适合 linux/arm64 的那一份。网络问题通常报超时或 EOF，权限问题报 unauthorized。这题考的是读懂报错文字。"
+  suggest="ops-cpu-architectures"
+/>
+
+<Callout kind="lead" label="结论先说">
+
+2026 年 6 月 9 日，CD 把构建挪到了云端 x86 的 `ubuntu-latest`，但构建命令里没有指定目标芯片，产出的镜像是 x86 格式。Apple 芯片的部署机拉取时报错 no matching manifest。这条流水线自那天起**一次都没有成功部署过**，直到 8 月 27 日要把整套集群拉起来，才第一次真的去拉镜像，问题才暴露。
+
+- **怎么修的**：先在构建命令里补上 QEMU 和 `--platform linux/arm64`；随后又把构建整个搬回部署机原生进行
+- **值得记住**：错误不是被发现的，是被撞上的。再加一道部署前的格式断言，把它变成能被发现的
+
+</Callout>
+
+## 现象
+
+2026 年 8 月 27 日，要把整套服务拉起来，部署机拉镜像时报：
+
+```
+no matching manifest for linux/arm64/v8
+```
+
+镜像在 GHCR 上，名字、版本号都对。最容易把人带偏的方向是网络：看到拉取失败，第一反应往往是代理、DNS、超时。可这句报错说的不是连不上，而是**连上了，找不到合适的那一份**。
+
+## 一个版本号背后，可以有好几份
+
+先搞清楚报错里的「manifest」指什么。
+
+<Structure
+  title="一个镜像版本号背后的清单"
+  nodes={[
+    { id: "mini", label: "部署机", sub: "arm64", col: 1, desc: "芯片是 Apple 芯片，所以需要 arm64 格式的镜像。" },
+    { id: "tag", label: "patra-catalog:<SHA>", sub: "仓库里的一个版本号", code: true, col: 2, desc: "一个版本号背后挂着一份清单，列出这个版本针对各种芯片各有哪一份内容。拉取时按本机芯片去清单里挑。" },
+    { id: "amd64", label: "amd64 那一份", sub: "x86 格式", col: 3, desc: "云端 x86 机器默认打出的就是这一份。" },
+    { id: "arm64", label: "arm64 那一份", sub: "清单里没有", col: 3, row: 2, desc: "部署机要的是这一份，可构建时没指定目标芯片，它从来没被打出来。" }
+  ]}
+  edges={[
+    { from: "mini", to: "tag", label: "拉取" },
+    { from: "tag", to: "amd64" },
+    { from: "tag", to: "arm64", dashed: true }
+  ]}
+  traces={[
+    {
+      button: "部署机拉取",
+      packet: "拉取",
+      hops: [
+        { at: "mini", caption: "部署机说：我要 patra-catalog 这个版本。" },
+        { at: "tag", caption: "仓库找到版本，在清单里找适合 arm64 的那一份。" },
+        { at: "arm64", caption: "清单里没有。拉取失败：no matching manifest。", drop: true }
+      ]
+    }
+  ]}
+/>
+
+## 根因
+
+根因只有一行没写的东西。构建机是 x86 的云端机器，构建命令里没有告诉它「请为 arm64 打包」，它就按自己的芯片默认打出 x86 格式。修复提交的说明，意思是这样：构建任务移到了 x86 的云端机器，没有指定 `--platform`，产出的是 x86 镜像，arm64 的部署机拉取时报 no matching manifest。
+
+门户和学习站的情况类似：它们的镜像同样是 x86 构建出来的，工作流文件的注释里记着，那种镜像在 Apple 芯片上要靠转译层才能运行。
+
+## 为什么近三个月没人发现
+
+这一条是整个事故里最值得停下来想的。
+
+三个月里，流水线没有一次成功把后端服务部署上去过。可没有人看到过这个问题，直到 8 月 27 日要拉起整套集群，才第一次真的去拉镜像。
+
+<Callout kind="insight" label="怎么认出这类问题">
+
+错误一直存在，但没有任何东西在替你**看**它。构建成功了，镜像推上去了，一切看起来正常；只有走到「在目标机器上真的拉一次、跑一次」，才会撞上。
+
+</Callout>
+
+## 修法：两层
+
+**第一层，让这次不再错。** 8 月 27 日的修复在构建里加了 QEMU 并指定 `--platform linux/arm64`。随后，构建整个搬回部署机本机原生进行（那一篇讲了为什么），格式从物理上不可能再错。
+
+**第二层，让将来的错能被发现。** 部署脚本拿到镜像之后，先核对它的芯片架构，不是 arm64 就拒绝部署：
+
+<CodeRef at="patra-infra/cd/deploy.sh@2197850b5a624ed4dbaa97df71e144c343e28baa" lines="56-59" />
+
+```bash
+assert_arm64() { # $1=img:tag
+  local arch; arch="$($DOCKER image inspect --format '{{.Architecture}}' "$1")"
+  [ "$arch" = "arm64" ] || { echo "✗ $1 架构为 ${arch}（期望 arm64）"; return 1; }
+}
+```
+
+它在主流程里紧跟在「镜像就位」后面，不过就不会往下 `compose up`：
+
+<CodeRef at="patra-infra/cd/deploy.sh@2197850b5a624ed4dbaa97df71e144c343e28baa" lines="116-118" />
+
+为什么本机原生构建之后还要这道断言？因为镜像不一定是刚刚本机打的。回滚时，如果本地没有旧镜像，会从 GHCR 把历史归档拉回来，而那里面躺着修复之前打的 x86 镜像。没有断言，回滚就可能把这次事故的主角重新请回来。
+
+这条规则还有一个单元测试守着：用假的 Docker 把架构伪装成 amd64，断言部署脚本不执行 `up`。
+
+<CodeRef at="patra-infra/cd/deploy.test.sh@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="104-111" />
+
+<Quiz
+  title="考考自己"
+  questions={[
+    {
+      question: "构建已经搬回部署机原生进行，格式不会再错了。部署脚本里的架构断言是不是多余的？",
+      options: ["多余：构建的地方变了，问题就不存在了", "不多余：回滚会从镜像仓库拉回历史镜像，里面可能有旧的错误格式", "不多余：因为原生构建有时也会产出错误格式"],
+      answer: "B",
+      explain: "断言守的是「进入部署环节的镜像」，不管它从哪里来。回滚时从仓库拉回来的历史镜像，就是不受新构建约束的那一类。"
+    }
+  ]}
+/>
+
+<Transfer
+  prompt="你要把一个新服务部署到一台 arm64 的树莓派上，构建仍然在云端 x86 的 CI 里做。哪些地方要设防，才不会重演这次事故？"
+  points={[
+    { label: "构建时指定", text: "构建命令里明确写目标芯片，而不是依赖构建机的默认值；需要模拟时要配套安装模拟器。" },
+    { label: "部署前断言", text: "拿到镜像先用 `docker image inspect --format '{{.Architecture}}'` 核对，不对就拒绝，不要等到容器起不来才发现。" },
+    { label: "有人看", text: "至少有一次真实的部署在目标机器上跑过；流水线「绿」只代表构建成功，不代表能运行。" },
+    { label: "测试守住", text: "用假的 Docker 命令伪造一个错误架构，写一个测试断言脚本拒绝执行，防止以后有人把断言改没了。" }
+  ]}
+/>

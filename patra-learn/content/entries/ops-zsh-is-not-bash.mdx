@@ -1,0 +1,80 @@
+---
+title: zsh 不是 bash：三处按 bash 习惯写就错的地方
+summary: macOS 默认的 shell 是 zsh。按 bash 的习惯写一次性命令，有三处会悄悄出错：没加引号的变量不会按空格切开；小写的 path 就是 PATH；变量后面紧跟冒号会被当成修饰符。
+type: pitfall
+difficulty: practice
+tags: [deployment]
+prerequisites: [ops-bash32-fullwidth-punctuation]
+sources:
+  - version: v0.13
+    issue: PAP-115
+  - version: v0.16
+    issue: PAP-128
+personalEnv: false
+---
+
+<Diagnose
+  question={"在 zsh 里执行：`for path in /papers/1 /papers/2; do curl -s \"http://localhost:6300$path\"; done`。会发生什么？"}
+  options={["依次请求两个地址", "两次都报 curl: command not found", "只请求第一个地址"]}
+  answer="B"
+  ifRight="对。zsh 里小写的 `path` 是和 `PATH` 绑在一起的数组，循环一给它赋值，PATH 就只剩 `/papers/1`，curl 自然找不到了。"
+  ifWrong="答案是 B。在 zsh 里给 `path` 赋值等于改写 `PATH`，循环体里所有命令都找不到。这题考的是 shell 变量的边界与特殊变量，先读讲变量名边界的那篇。"
+  suggest="ops-bash32-fullwidth-punctuation"
+/>
+
+<Callout kind="lead" label="坑在哪">
+
+macOS 从 Catalina 起默认 shell 是 zsh，可网上的脚本示例、多数人的肌肉记忆都是 bash。语法九成一样，剩下一成不报错、只给错结果。Patra 开发中踩到的是下面三处。
+
+</Callout>
+
+## 一、没加引号的变量不会被切开
+
+bash 会把没加引号的 `$spec` 按空格切成几个词，zsh 默认不切：
+
+```bash
+spec="patra-catalog.jar dev.patra.CatalogApplication"
+set -- $spec
+echo "$1"   # bash: patra-catalog.jar      zsh: 整串
+echo "$2"   # bash: dev.patra.CatalogApplication  zsh: 空
+```
+
+想循环处理「(jar, 类名)」这种成对的值时，别靠空格切分，写成一个接两个参数的函数，逐对调用。
+
+## 二、小写 path 就是 PATH
+
+zsh 把小写的 `path` 绑定成 `PATH` 的数组形式：改一个，另一个跟着变。v0.13 写一次性压测时用了 `for path in /papers/1 …`，循环体里的 curl、python3 全部 `command not found`。循环变量换个名字（`pg`、`url`）就好。
+
+同类的还有小写的 `cdpath`、`fpath`、`manpath`，都分别绑着对应的大写变量。
+
+## 三、变量后紧跟冒号，会被当成修饰符
+
+<Quiz
+  questions={[
+    {
+      question: "zsh 里 `$1` 是 `:patra-api:patra-interaction:patra-interaction-infra`。执行 `./gradlew \"$1:test\"`，Gradle 收到的任务名是什么？",
+      options: ["`…:patra-interaction-infra:test`", "`…:patra-interaction-infraest`", "报错：变量不存在"],
+      answer: "B",
+      explain: "zsh 把 `:t` 当成「取路径最后一段」的修饰符吃掉了，剩下的 `est` 原样拼在后面。任务找不到，Gradle 报错。"
+    }
+  ]}
+/>
+
+zsh 支持在变量后面接 `:h`（去掉最后一段）、`:t`（只留最后一段）、`:r`（去掉扩展名）这类修饰符。`$1:test` 里的 `:t` 正好是一个，于是被吃掉了。v0.16 做 PAP-128 时，按模块循环跑测试就这样跑了个空。
+
+修法和全角标点那篇一样：变量后面紧跟任何可能被误读的字符，一律写大括号 `${1}:test`。
+
+## 怎么避开
+
+- 写给 bash 的脚本，第一行写 `#!/usr/bin/env bash` 并用 `bash 脚本名` 执行，别在 zsh 里粘贴运行。
+- 在 zsh 里直接敲的一次性命令：变量都加大括号，要切分的值用数组，循环变量别叫 `path`。
+- 顺带一个 macOS 的差异：系统不带 GNU 的 `timeout` 命令，`timeout 120 java -jar …` 会以 127 退出、命令根本没跑。要么装 coreutils 用 `gtimeout`，要么让进程自己退出。
+
+<Transfer
+  prompt={"同事在 Linux 服务器上（bash）写了一行：`for f in $FILES; do cp $f backup/; done`，`FILES=\"a.txt b.txt\"`，运行正常。你在 macOS 的终端（zsh）里照抄，会怎样？怎么改才在两种 shell 里都对？"}
+  points={[
+    { label: "zsh 下的结果", text: "`$FILES` 不会被切开，循环只跑一次，`cp` 收到的是「a.txt b.txt」这一个文件名，报找不到文件。" },
+    { label: "两边都对的写法", text: "用数组：`files=(a.txt b.txt); for f in \"${files[@]}\"; do cp \"$f\" backup/; done`。" },
+    { label: "更稳的做法", text: "把它写进脚本、用 bash 执行，不依赖交互式 shell 是哪一种。" }
+  ]}
+/>

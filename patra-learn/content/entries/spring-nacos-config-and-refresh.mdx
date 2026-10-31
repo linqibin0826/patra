@@ -1,0 +1,176 @@
+---
+title: Nacos：配置中心与动态刷新
+summary: Patra 的配置放在 git，CD 推到 Nacos，服务启动时从 Nacos 读；在线刷新靠 Spring Cloud 把配置对象原地重新绑定，所以要刷新的配置写成可变类，用的时候每次现读。
+type: concept
+difficulty: advanced
+tags: [spring, backend, deployment]
+prerequisites: [spring-configuration-properties]
+sources:
+  - version: v0.9
+    issue: PAP-78
+    pr: 231
+  - version: v0.9
+    issue: PAP-75
+    pr: 231
+personalEnv: false
+---
+
+<Diagnose
+  question="登录失败上限写在一个 record 配置类里，服务启动时注入进登录服务、存成字段。有人在配置中心把上限从 5 改成 2，服务没有重启。下一次登录，用的上限是几？"
+  options={["5", "2", "服务直接报错"]}
+  answer="A"
+  ifRight="对：配置绑定到对象是启动时做的一次性动作，之后改配置源，已经造好的 record 不会变。这篇讲配置中心怎么让它变，以及代码要配合写成什么样。"
+  ifWrong="答案是 5。`@ConfigurationProperties` 默认只在启动时绑定一次；record 造好以后字段就定了，配置源再改也碰不到它。这题考的是配置绑定发生在什么时候，前置篇讲过。"
+/>
+
+<Callout kind="lead">
+
+Nacos 是一个配置中心：服务启动时从它读配置，运行中它把改动推给服务。Patra 里配置的唯一来源是 git，CD 把文件推到 Nacos；服务收到推送后，由 Spring Cloud 把配置对象**原地重新绑定**。所以要在线调的参数写成可变类，使用方每次用时现读。
+
+</Callout>
+
+## 配置从哪来：三层，后面的盖前面的
+
+一个 Patra 服务启动时读三份配置：
+
+| 层 | 放什么 |
+|---|---|
+| jar 里的 `application.yml` | 代码默认值和启动必需的引导配置 |
+| Nacos 的 `patra-common.yaml` | 几个服务共用的配置 |
+| Nacos 的 `<服务名>.yaml` | 这个服务的环境差异和可调参数 |
+
+两份 Nacos 文件由启动器 `PatraApplication` 统一导入，服务自己的 `application.yml` 里不写：
+
+<CodeRef at="patra-tool/patra-tool-launch/src/main/java/dev/patra/tool/launch/PatraApplication.java@b6e01875bb5692356021c8a19562f557f319fc54" lines="51-65" />
+
+```java
+    // 后导入的覆盖先导入的：本服务的配置覆盖公共配置
+    properties.put(
+        "spring.config.import", "nacos:" + COMMON_DATA_ID + ",nacos:" + applicationName + ".yaml");
+    properties.put("spring.cloud.nacos.config.namespace", NAMESPACE);
+    // Nacos 的值覆盖 jar 里的默认值（SCA 默认是本地优先）
+    properties.put("spring.cloud.nacos.config.preference", "remote");
+```
+
+`preference=remote` 这一行很关键：Spring Cloud Alibaba 默认让本地（jar 里）的值优先，那样 jar 里写过的键在 Nacos 里改了也不生效。Patra 改成远端优先。启动参数、环境变量仍然高于 Nacos。
+
+密码这类密钥不进 Nacos：配置里只写 `${REDIS_PASSWORD}` 这样的引用，值留在每台机器本地（环境变量或本机的密钥文件），不进仓库也不进 Nacos。
+
+## git 是唯一来源，控制台只读
+
+要推到 Nacos 的文件放在仓库的 `patra-infra/nacos/dev/` 下。合进 main 后，CD 跑 `patra-infra/scripts/nacos-push.sh` 把它们同步过去：内容不同或不存在的发布，相同的跳过，Nacos 里有、目录里没有的删除。
+
+<CodeRef at="patra-infra/scripts/nacos-push.sh@25d6e781ce2078a892d1b7f89231de4a0b157f68" lines="111-137" />
+
+```bash
+    if nacos_ok; then
+      # 逐字节比较：不经 shell 变量，命令替换会吞掉末尾换行
+      if jq -e --rawfile want "$file" '.data.content == $want' <<<"$NACOS_BODY" >/dev/null; then
+        report 未变化 "$name"
+        continue
+      fi
+```
+
+为什么不直接在 Nacos 控制台上改？控制台上改没有评审、没有 diff，仓库里的文件和线上的就对不上了。回滚也简单：`git revert` 那次改动，CD 再推一次。
+
+脚本推送前还有一道本地预检：每个文件里必须有一行「签到行」，比如 `patra.config-source.service: patra-identity.yaml`。服务启动时检查自己读到了这句，读不到就启动失败，防止服务在没拿到 Nacos 配置的情况下用 jar 里的默认值悄悄跑起来。
+
+## 推送之后，服务里发生了什么
+
+<Stepper
+  title="Nacos 推来一次改动之后"
+  nodes={[
+    { id: "nacos", label: "Nacos", sub: "patra-identity.yaml" },
+    { id: "env", label: "Environment", sub: "服务里的配置源" },
+    { id: "rebinder", label: "Rebinder", sub: "重新绑定" },
+    { id: "props", label: "LoginThrottleProperties", sub: "配置对象" },
+    { id: "login", label: "登录逻辑", sub: "每次现读" }
+  ]}
+  links={[
+    { from: "nacos", to: "env" },
+    { from: "env", to: "rebinder" },
+    { from: "rebinder", to: "props" },
+    { from: "props", to: "login" }
+  ]}
+  steps={[
+    { caption: "仓库里把 `max-failures` 从 5 改成 2，CD 推到 Nacos。Nacos 通知在监听这个文件的 identity。", focus: ["nacos"], tokens: [{ id: "v", label: "2", at: "nacos" }], notes: [{ at: "props", text: "maxFailures = 5" }] },
+    { caption: "Nacos 客户端拉到新内容，更新服务里的配置源，并发布一个 `EnvironmentChangeEvent`，里面列着变了哪些键。", focus: ["env"], links: ["nacos>env"], tokens: [{ id: "v", label: "2", at: "env" }], notes: [{ at: "props", text: "maxFailures = 5" }] },
+    { caption: "Spring Cloud 的 `ConfigurationPropertiesRebinder` 收到事件，把容器里的 `@ConfigurationProperties` 对象重新绑定一遍。", focus: ["rebinder", "props"], links: ["env>rebinder", "rebinder>props"], tokens: [{ id: "v", label: "2", at: "props" }], notes: [{ at: "props", text: "maxFailures = 2", tone: "ok" }] },
+    { caption: "下一次有人登录，登录逻辑从配置对象现读一次，拿到 2。服务全程没有重启。", focus: ["props", "login"], links: ["props>login"], tokens: [{ id: "v", label: "2", at: "login" }], notes: [{ at: "props", text: "maxFailures = 2", tone: "ok" }, { at: "login", text: "上限 2", tone: "ok" }] }
+  ]}
+  guesses={[
+    { before: 3, question: "要是这个配置类是开头诊断题里的 record，第 3 步会怎样？", options: ["照样改成 2", "跳过它，record 里还是 5", "刷新报错，服务停掉"], answer: "B", explain: "重新绑定是往已有对象的字段里写新值，record 的字段改不了。Spring Cloud 刷新时直接跳过 record，所以 record 只适合不需要在线调的配置。" }
+  ]}
+/>
+
+## 所以：要刷新的写成可变类，用时现读
+
+这是 v0.9 定下的写法（决策 D）。登录失败上限的配置类：
+
+<CodeRef at="patra-api/patra-identity/patra-identity-boot/src/main/java/dev/patra/identity/config/LoginThrottleProperties.java@b6e01875bb5692356021c8a19562f557f319fc54" lines="18-41" />
+
+```java
+@Data
+@Validated
+@ConfigurationProperties(prefix = "patra.identity.login-throttle")
+public class LoginThrottleProperties {
+
+  /// 计数窗口内允许的失败次数，到达即上锁。
+  @Min(1)
+  private volatile int maxFailures = 5;
+```
+
+三处讲究：普通类加 `@Data`（有 setter，重新绑定才写得进去）；默认值写在字段上，jar 的 `application.yml` 里不写这些键；字段是 `volatile`，一个线程重新绑定写进去的值，别的线程马上看得到。
+
+光把配置类写成可变的还不够，使用方也不能把值抄走存起来。identity 交给登录逻辑的是一个 `Supplier`，每调一次就按配置的当前值造一份参数：
+
+<CodeRef at="patra-api/patra-identity/patra-identity-boot/src/main/java/dev/patra/identity/config/IdentityConfiguration.java@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="58-70" />
+
+<Compare
+  title="同一次推送，两种写法"
+  variants={[
+    { label: "record，启动时注入成字段", steps: ["启动：绑定出 record，maxFailures 是 5", "登录服务把它存进字段", "Nacos 推来 2，Rebinder 跳过 record", "下一次登录读字段"], results: [{ label: "下一次登录的上限", value: "5", tone: "bad" }], verdict: { tone: "bad", head: "改了没用。", text: "要重启服务才会用上 2。" } },
+    { label: "可变类 + 用时现读", steps: ["启动：绑定出可变对象，maxFailures 是 5", "登录逻辑拿到一个 Supplier，不存值", "Nacos 推来 2，Rebinder 把字段改成 2", "下一次登录调 Supplier，现读配置对象"], results: [{ label: "下一次登录的上限", value: "2", tone: "ok" }], verdict: { tone: "ok", head: "不重启就生效。", text: "这就是 Patra 里可调参数的写法。" } },
+    { label: "可变类，但构造器里抄走", steps: ["启动：绑定出可变对象，maxFailures 是 5", "登录服务在构造器里把 5 抄进自己的 int 字段", "Nacos 推来 2，配置对象变成 2", "下一次登录读自己的 int 字段"], results: [{ label: "配置对象里", value: "2", tone: "ok" }, { label: "下一次登录的上限", value: "5", tone: "bad" }], verdict: { tone: "bad", head: "对象变了，用的人没变。", text: "抄走的是一个值，不是引用。" } }
+  ]}
+/>
+
+## 坏值怎么办
+
+`@Validated` 让不合法的值在刷新时报错。集成测试直接验了这一条：把上限推成 0，刷新抛出带 `maxFailures` 的校验错误，健康检查转为 DOWN。
+
+<CodeRef at="patra-api/patra-identity/patra-identity-boot/src/integrationTest/java/dev/patra/identity/config/IdentityConfigRefreshIT.java@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="78-93" />
+
+<Callout kind="cost">
+
+重新绑定是「先把字段重置成默认值，再写入新值，最后校验」。所以校验失败时，坏值已经写进去了，不会保留旧值；重新绑定的那一瞬间，并发的读者也可能读到默认值。v0.9 接受了这两点：可调参数彼此独立、改动都在 git 里评审，不值得为它自研一套「校验通过才替换」的组件。
+
+</Callout>
+
+测试里没有真的起一个 Nacos，而是模拟了 Nacos 推送后会发生的两件事：把新值放到最高优先级的配置源，再发布 `EnvironmentChangeEvent`。
+
+<CodeRef at="patra-api/patra-identity/patra-identity-boot/src/integrationTest/java/dev/patra/identity/config/IdentityConfigRefreshIT.java@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="117-129" />
+
+```java
+  private static void change(AssertableApplicationContext context, Map<String, Object> changes) {
+    context
+        .getEnvironment()
+        .getPropertySources()
+        .addFirst(new MapPropertySource("nacos-change-" + System.nanoTime(), changes));
+    // ConfigurationPropertiesRebinder 只认事件源是它所在的上下文，测试包装过的上下文不行
+    context.publishEvent(
+        new EnvironmentChangeEvent(context.getSourceApplicationContext(), changes.keySet()));
+  }
+```
+
+刷新这条路上还有几个具体的坑，各有一篇：推回出错前的原文不会触发刷新；枚举值写法不对会让每次刷新都失败；以及为什么最后没有自研刷新组件。
+
+<Transfer
+  prompt="interaction 要加一个「每人每天最多发几条评论」的参数，希望不重启就能调。你会怎么写这个配置类、怎么让使用方读到新值？谁来改这个值、改错了会怎样？"
+  points={[
+    { label: "可变类", text: "写成带 `@ConfigurationProperties` 和 `@Validated` 的普通类，字段加默认值和 `@Min(1)` 这类约束，字段 `volatile`；jar 的 `application.yml` 不写这个键。" },
+    { label: "用时现读", text: "使用方注入配置对象或一个 `Supplier`，每次发评论时读，不在构造器里把数字抄进字段。" },
+    { label: "改在 git", text: "要调就在 `patra-infra/nacos/dev/patra-interaction.yaml` 里加键，评审后合入，CD 推到 Nacos；不在控制台上改。" },
+    { label: "改错了", text: "比如写成 0：刷新报错、健康检查 DOWN，而且坏值已经写进对象。恢复靠 revert 后重新推送。" }
+  ]}
+/>

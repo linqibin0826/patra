@@ -1,0 +1,127 @@
+---
+title: Cookie 与会话
+summary: HTTP 本身不记人。Cookie 加服务端会话怎样让它记住你，HttpOnly、Secure、SameSite 各挡什么。
+type: concept
+difficulty: basic
+tags: [network, security, backend]
+prerequisites: [http-request-and-response]
+personalEnv: false
+---
+
+<Diagnose
+  question="你在一个网站登录成功后，点开下一个页面，那是一个全新的 HTTP 请求。HTTP 请求之间互不相识，服务器凭什么还认得你？"
+  options={["凭你的 IP 地址，每个人的都不同", "凭浏览器在每次请求里带上的一小段凭证", "服务器和你的浏览器一直保持着同一条连接"]}
+  answer="B"
+  ifRight="对，浏览器每次请求都带上登录时拿到的凭证。这段凭证通常存在 Cookie 里，往下读。"
+  ifWrong="答案是 B：HTTP 每个请求都是独立的，服务器只能靠请求里带的凭证认人。IP 会变（换网络、多人共用出口），连接也会断，都不可靠。"
+  suggest="http-request-and-response"
+/>
+
+## HTTP 没有记性
+
+上一篇你看到，一问一答之后服务器就把你忘了。可是登录之后，你期望「我是谁」被一直记住。这中间缺的这一块，靠两个东西补上：
+
+- **会话**（session）：服务器那边存的一条记录，写着「某个人，几点登录，设备是什么」。
+- **Cookie**：浏览器那边存的一小段文字，写着这条会话的**号码**。浏览器之后每次请求都自动带上它。
+
+<Callout kind="analogy">
+
+游乐场的手环。入口处登记（登录）后，工作人员给你戴一个手环（Cookie），手环上只有一个编号。你去任何项目，对方扫编号，查登记簿（会话）就知道你买过票。手环丢了可以挂失，登记簿是他们自己的，随时能作废。
+
+</Callout>
+
+## 一次登录的来回
+
+点「下一条」，注意第三条和第五条里 Cookie 的方向。
+
+<Sequence
+  title="登录之后，服务器怎么认出你"
+  actors={[
+    { id: "browser", label: "浏览器" },
+    { id: "portal", label: "门户" },
+    { id: "identity", label: "identity", sub: "身份服务" }
+  ]}
+  messages={[
+    { from: "browser", to: "portal", label: "提交邮箱和密码", caption: "你在登录页提交表单。这是第一次，请求里还没有任何凭证。" },
+    { from: "portal", to: "identity", label: "校验，并创建会话", caption: "门户把登录交给 identity。校验通过后，identity 在 Redis 里建一条会话，得到一个令牌。" },
+    { from: "portal", to: "browser", label: "Set-Cookie：令牌", caption: "门户把令牌写进响应头 Set-Cookie。浏览器收到后把它存起来，以后同一个网站的请求都会自动带上。" },
+    { from: "browser", to: "portal", label: "请求带着 Cookie", caption: "你点开下一页。请求头里有 Cookie：令牌，这一步是浏览器自动做的。" },
+    { from: "portal", to: "identity", label: "令牌换会话", caption: "门户读出令牌，向后端出示。后端查到会话，就知道是谁。" },
+    { from: "portal", to: "browser", label: "返回你的页面", caption: "身份确认，页面里带上你的昵称和头像返回。" }
+  ]}
+  summary={{ caption: "Cookie 里只有一个编号，真正的信息在服务器的会话里。服务器想让你下线，作废那条会话就行。" }}
+/>
+
+## 会话存在哪、存多久
+
+在 Patra 里，会话由 identity 独占，存在 Redis 里。创建时有三件事：
+
+- 写一条以令牌哈希为键的记录（用户、设备、创建时间、不活跃超时、绝对过期时间）。
+- 记录的存活时间取「不活跃超时」和「距离绝对过期」两者中较短的那个。
+- 每个用户的会话数有上限，超过时按创建时间挤掉最老的。
+
+<CodeRef at="patra-api/patra-identity/patra-identity-infra/src/main/resources/redis/session-create.lua@8a1deacc881d2260bb5802caf0ad974aff0d6072" lines="54-67" />
+
+这就是服务端会话的好处：想踢掉哪台设备、封禁一个账号，直接删记录，下一次请求就会失败。
+
+## Cookie 的三个安全属性
+
+门户写会话 Cookie 时固定设了这些属性：
+
+<CodeRef at="patra-portal/src/lib/auth/session-cookie.ts@fe4c6bb68c591a9c9b5fe80f76bbfbbbc6aeae75" lines="21-33" />
+
+| 属性 | 作用 |
+|---|---|
+| `HttpOnly` | 页面里的脚本读不到这个 Cookie。就算页面被注入恶意脚本，也偷不走令牌。 |
+| `Secure` | 只在 https 连接上发送，不在明文 http 上泄露。 |
+| `SameSite=Lax` | 从别的网站发起的跨站请求，一般不带这个 Cookie，挡住一类伪造请求。 |
+
+自己动手关掉它们，看会发生什么。先猜一猜。
+
+<Params
+  title="Cookie 属性开关"
+  guess={{ question: "如果会话 Cookie 没有设 HttpOnly，页面里被注入的一段恶意脚本能读到它吗？", options: ["读得到，然后就能把令牌发给攻击者", "读不到，浏览器自己保护", "只有换个浏览器才读得到"], answer: "A", explain: "HttpOnly 就是专门禁止脚本读取的开关。不设，脚本里的 document.cookie 就能读出令牌。" }}
+  controls={[
+    { type: "switch", id: "httponly", label: "HttpOnly", default: true },
+    { type: "switch", id: "secure", label: "Secure", default: true },
+    { type: "switch", id: "lax", label: "SameSite=Lax", default: true }
+  ]}
+  cases={[
+    { when: { httponly: false }, results: [{ label: "页面里的脚本读 Cookie", value: "读得到", tone: "bad" }, { label: "后果", value: "令牌被偷，别人可以冒充你", tone: "bad" }], verdict: { tone: "bad", head: "令牌暴露给了脚本。", text: "只要页面有一处被注入脚本，会话就丢了。" } },
+    { when: { secure: false }, results: [{ label: "明文 http 连接上", value: "也会发送 Cookie", tone: "bad" }, { label: "后果", value: "同一网络里的人可能看到令牌", tone: "bad" }], verdict: { tone: "bad", head: "令牌可能在明文里走一遍。", text: "本地开发没有 https 时才会关它，门户用一个环境变量控制，线上应当打开。" } },
+    { when: { lax: false }, results: [{ label: "别的网站发来的请求", value: "也带上 Cookie", tone: "bad" }, { label: "后果", value: "别人的页面能以你的身份发请求", tone: "bad" }], verdict: { tone: "bad", head: "跨站请求伪造的口子开了。", text: "SameSite=Lax 让别的网站发起的写操作拿不到你的登录状态。" } },
+    { results: [{ label: "脚本读 Cookie", value: "读不到", tone: "ok" }, { label: "明文连接", value: "不发送", tone: "ok" }, { label: "跨站请求", value: "不带 Cookie", tone: "ok" }], verdict: { tone: "ok", head: "三道防线都在。", text: "这是 Patra 门户会话 Cookie 的默认状态。" } }
+  ]}
+/>
+
+<Callout kind="insight">
+
+`Secure` 开着时，Cookie 名字前还有 `__Host-` 前缀：浏览器只接受本站经 https 写入、不带 Domain 的那一份。同一个域名下别的子网站没法种入或覆盖它。
+
+</Callout>
+
+<Quiz
+  questions={[
+    {
+      question: "用户点了「退出登录」。只让浏览器删掉 Cookie，而不作废服务器上的会话，有什么隐患？",
+      options: ["没有隐患，Cookie 都没了", "如果有人之前拿到过这个令牌，会话在服务器上仍然有效", "浏览器会报错"],
+      answer: "B",
+      explain: "令牌如果已经泄露，删本地 Cookie 没用，要作废服务器上的会话。服务端会话的价值就在这里。"
+    },
+    {
+      question: "Cookie 里存的是什么，最合适？",
+      options: ["用户的全部资料", "一个难以猜测的随机编号，真正的信息放服务器", "用户的密码，省得再登录"],
+      answer: "B",
+      explain: "Cookie 在用户手里，什么都可能被看到、被改。只放编号，信息放自己控制的地方。"
+    }
+  ]}
+/>
+
+<Transfer
+  prompt="一位用户在公共电脑上登录后忘了退出，会话的有效期是 30 天。你有哪些办法让这条会话提前失效？"
+  points={[
+    { label: "用户自己", text: "在别的设备上打开登录设备列表，把那台踢掉：服务端作废对应会话。" },
+    { label: "不活跃过期", text: "会话有不活跃超时，长时间没人用会自动失效，不必等满 30 天。" },
+    { label: "管理方", text: "账号被封禁或注销时，服务端直接撤销该用户的会话。这是服务端会话比只把信息塞进令牌里更灵活的地方。" }
+  ]}
+/>

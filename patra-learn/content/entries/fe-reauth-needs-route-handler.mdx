@@ -1,0 +1,82 @@
+---
+title: 再认证必须走 Route Handler
+summary: 敏感操作前要用户再输一次密码。这一步如果做成 Server Action，写 Cookie 会让 Next 重新渲染当前页，这次重渲染可能比紧接着重试的注销请求晚到，页面就被守卫送去了登录页。改成 Route Handler 写 Cookie 就不会触发重渲染。
+type: pitfall
+difficulty: practice
+tags: [frontend, security]
+prerequisites: [fe-server-actions, fe-route-handler-bff]
+topics: [login-session]
+sources:
+  - version: v0.12
+    issue: PAP-102
+    pr: 276
+personalEnv: false
+---
+
+<Diagnose
+  question="Next.js 里，一个 Server Action 在执行时写了一个 Cookie。除了把 Cookie 发给浏览器，Next 还会做什么？"
+  options={["什么也不做", "重新渲染当前页，把新的页面内容一起送回浏览器", "整页刷新浏览器"]}
+  answer="B"
+  ifRight="对。Server Action 里改了 Cookie，Next 会认为页面依赖的状态变了，顺带重新渲染当前页。这一篇讲这个顺带的动作怎么坑了注销流程。"
+  ifWrong="答案是 B。Server Action 写了 Cookie，Next 会重新渲染当前路由，把新的服务端组件结果随响应送回。这题考的是 Server Action 的行为：它不只是一次远程调用。"
+  suggest="fe-server-actions"
+/>
+
+## 坑
+
+v0.12 用户中心规定：改邮箱、注销、踢设备这类敏感操作，要求 10 分钟内认证过；超时了，服务端回 403 `REAUTH_REQUIRED`，门户弹窗让用户输密码，再认证成功后自动重试原操作。
+
+再认证起初写成了 Server Action。真浏览器里试注销时出了问题：结果屏一闪就没了，页面被送去了 `/login?next=/settings/account`。
+
+<Sequence
+  title="注销时，那次重渲染晚到了"
+  actors={[
+    { id: "page", label: "设置页", sub: "浏览器" },
+    { id: "next", label: "门户服务端" },
+    { id: "identity", label: "identity" }
+  ]}
+  messages={[
+    { from: "page", to: "next", label: "注销", caption: "用户点注销。上次认证已超过 10 分钟。" },
+    { from: "next", to: "page", label: "403 需要再认证", caption: "服务端要求再认证，页面弹出密码框。" },
+    { from: "page", to: "next", label: "再认证（Server Action）", caption: "用户输入密码，再认证作为 Server Action 发出。" },
+    { from: "next", to: "identity", label: "验证密码，换令牌", caption: "identity 验证通过，门户把新令牌写进会话 Cookie。写 Cookie 让 Next 安排重新渲染设置页。" },
+    { from: "page", to: "next", label: "重试注销", caption: "再认证返回成功，页面立刻重试注销。注销成功，会话被撤销。" },
+    { from: "next", to: "page", label: "设置页的重渲染结果", bad: true, caption: "那次重渲染这时才到。它在会话已撤销后执行，设置页的守卫发现没登录，把页面换成了登录页，注销的结果屏没了。" }
+  ]}
+/>
+
+踢设备、改邮箱不受影响，因为那之后会话仍然有效，重渲染也没问题；只有注销会让会话消失。
+
+## 怎么避开
+
+再认证改成 Route Handler `POST /api/auth/reauth`：浏览器直接请求它，它调 identity，成功时在这里换会话 Cookie。Route Handler 写 Cookie 不会触发当前页的重新渲染。
+
+<CodeRef at="patra-portal/src/app/api/auth/reauth/route.ts@fe4c6bb68c591a9c9b5fe80f76bbfbbbc6aeae75" lines="24-36" />
+
+```ts
+/// 再认证（spec §6.1）：浏览器 → 这里 → identity `POST /auth/reauth`，成功时在这里换会话 Cookie。用 Route Handler
+/// 而不是 Server Action，换 Cookie 不会触发当前页的重新渲染（见 `reauthenticate` 的说明）。同源校验挡跨站请求。
+export async function POST(request: Request): Promise<NextResponse> {
+  if (!isSameOrigin(request)) {
+    return new NextResponse(null, { status: 403 });
+  }
+  // ……读密码、调 identity、按结果回状态码
+}
+```
+
+<Callout kind="cost">
+
+Route Handler 没有 Server Action 自带的 `Origin` 校验，要自己补同源检查（上面的 `isSameOrigin`），还要自己定义响应的形状。这也和门户「写操作走 Server Action」的约定分了叉，所以理由写进了代码注释。
+
+</Callout>
+
+<CodeRef at="patra-portal/src/lib/identity/reauth.ts@fe4c6bb68c591a9c9b5fe80f76bbfbbbc6aeae75" lines="30-37" />
+
+<Transfer
+  prompt="门户里还有「退出登录」：清掉会话 Cookie，然后跳回首页。用 Server Action 做会不会遇到同样的问题？判断一个写 Cookie 的操作该用 Server Action 还是 Route Handler，你会看什么？"
+  points={[
+    { label: "看重渲染有没有害", text: "写 Cookie 触发的重渲染会用新的登录状态再跑一遍当前页；如果当前页在新状态下会被守卫换走，而你还要在原页上展示结果，就有问题。" },
+    { label: "看后面还有没有动作", text: "写 Cookie 之后立刻还有别的请求（比如重试原操作），重渲染和它的先后就不可控。" },
+    { label: "退出的情形", text: "退出后本来就要离开当前页，重渲染被守卫送走恰好符合预期；再认证之后要留在原页继续操作，才必须避开重渲染。" }
+  ]}
+/>

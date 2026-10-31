@@ -1,0 +1,96 @@
+---
+title: 配置推回原文，服务却不刷新
+summary: 往配置中心推了一个非法值，服务刷新失败、健康检查变 DOWN；再把出错前的原文推回去，服务还是用着坏值。原因是客户端只在内容的 md5 和「上次处理成功的那版」不同时才通知。
+type: troubleshooting
+difficulty: practice
+tags: [spring, deployment]
+prerequisites: [spring-nacos-config-and-refresh]
+topics: [config-refresh]
+sources:
+  - version: v0.9
+    pr: 231
+personalEnv: false
+---
+
+<Diagnose
+  question="配置中心里一份配置从版本 A 改成了坏的版本 B，服务刷新 B 失败。你把内容一字不差地改回 A 再发布。服务会刷新回 A 吗？"
+  options={["会，配置变了就会通知", "不一定：客户端要是记着「上次成功的是 A」，会认为没有变化", "不会，刷新失败后客户端就不再监听"]}
+  answer="B"
+  ifRight="对。客户端比较的不是「上一次收到的」，而是「监听器上一次成功处理的」。B 没处理成功，它记着的还是 A。"
+  ifWrong="答案是 B。Nacos 客户端靠内容的 md5 判断有没有变化，比较的基准是监听器上次成功处理的那一版。这题考的是配置中心怎么把变更通知给服务，先读配置刷新那篇。"
+  suggest="spring-nacos-config-and-refresh"
+/>
+
+## 现象
+
+v0.9 配置中心那一版收尾时，专门演练了「推错配置」：把 identity 的登录失败上限 `patra.identity.login-throttle.max-failures` 推成 0。
+
+这个配置类可以在线刷新，字段上有 `@Min(1)`。刷新时 Spring Cloud 重新绑定、校验失败，健康检查转为 DOWN，登录接口返回 422。到这一步都符合预期。
+
+<CodeRef at="patra-api/patra-identity/patra-identity-boot/src/main/java/dev/patra/identity/config/LoginThrottleProperties.java@b6e01875bb5692356021c8a19562f557f319fc54" lines="11-25" />
+
+接着用推送脚本把出错前的原文推回去。Nacos 客户端日志里有 `data-received`，说明新内容收到了；可后面再也没有 `notify-listener`。服务一直是 DOWN，登录一直 422。
+
+## 怎么查
+
+<DebugTrail
+  steps={[
+    { hypothesis: "推回去的内容没到客户端？", result: "客户端日志有 data-received，内容收到了。", verdict: "ruled-out" },
+    { hypothesis: "收到了，但没往下通知？", result: "日志里没有 notify-listener：客户端收到新内容后判断「监听器已经有这一版了」，没有调用监听器，Spring Cloud 也就没有重新绑定。", verdict: "closer" },
+    { hypothesis: "它拿什么判断「已经有这一版」？", result: "nacos-client 给每个监听器记着它上次成功处理的内容 md5，新内容的 md5 不同才通知。坏值那一版的通知全部失败，监听器记的仍是出错前那版的 md5；推回的原文和它一模一样，md5 相同，于是不通知。", verdict: "found" }
+  ]}
+/>
+
+## 根因
+
+<Stepper
+  title="监听器记着的 md5，和服务实际用的值"
+  nodes={[
+    { id: "server", label: "Nacos 服务端", sub: "当前配置" },
+    { id: "client", label: "Nacos 客户端", sub: "监听器记的 md5" },
+    { id: "app", label: "identity", sub: "实际在用的值" }
+  ]}
+  links={[
+    { from: "server", to: "client" },
+    { from: "client", to: "app" }
+  ]}
+  steps={[
+    { caption: "一开始：服务端是原文 A，监听器记着 md5(A)，服务用的上限是 5。", notes: [{ at: "server", text: "A" }, { at: "client", text: "md5(A)", tone: "ok" }, { at: "app", text: "上限 5", tone: "ok" }] },
+    { caption: "推了坏版本 B。md5(B) 和 md5(A) 不同，客户端通知监听器。", focus: ["server", "client"], links: ["server>client"], tokens: [{ id: "cfg", label: "B", at: "client" }], notes: [{ at: "server", text: "B" }, { at: "client", text: "md5(A)", tone: "wait" }, { at: "app", text: "上限 5" }] },
+    { caption: "Spring Cloud 重新绑定：新值 0 先写进对象，再校验，校验失败。监听器没处理成功，记着的 md5 不更新。", focus: ["app"], links: ["client>app"], tokens: [{ id: "cfg", label: "B", at: "app" }], notes: [{ at: "server", text: "B" }, { at: "client", text: "仍是 md5(A)", tone: "wait" }, { at: "app", text: "上限 0 · DOWN", tone: "bad" }] },
+    { caption: "推回原文 A。客户端收到了，比较 md5(A) 和监听器记着的 md5(A)：相同，判定「没有变化」，不通知。", focus: ["server", "client"], links: ["server>client"], tokens: [{ id: "cfg2", label: "A", at: "client", state: "dropped" }], notes: [{ at: "server", text: "A" }, { at: "client", text: "md5(A)，相同", tone: "bad" }, { at: "app", text: "上限 0 · DOWN", tone: "bad" }] },
+    { caption: "先推一版内容不同的 A'（只多一行注释），md5 不同，通知、绑定成功；再推回 A，又一次成功刷新。或者直接重启服务。", focus: ["app"], links: ["server>client", "client>app"], tokens: [{ id: "cfg3", label: "A'", at: "app" }], notes: [{ at: "server", text: "A'" }, { at: "client", text: "md5(A')", tone: "ok" }, { at: "app", text: "上限 5", tone: "ok" }] }
+  ]}
+  guesses={[
+    { before: 4, question: "这时候把原文 A 原样推回去，服务会恢复吗？", options: ["会", "不会，客户端认为监听器已经有 A 了", "会，但要等几分钟"], answer: "B", explain: "坏版本 B 从没被处理成功，监听器记着的还是 md5(A)。推回 A，md5 相同，客户端不通知。" }
+  ]}
+/>
+
+<Callout kind="insight">
+
+为什么坏值会留在对象里：Spring Cloud 的重新绑定是先把新值写进配置对象、再校验。校验失败只会让刷新报错、健康检查转 DOWN，不会把旧值放回去。这是 Patra 有意接受的代价（见「取消自研的 RefreshableProperties」那篇）。
+
+</Callout>
+
+## 修法
+
+恢复有两种办法：
+
+1. 先推一版**内容不同**的配置（比如多一行注释），让 md5 变化、触发刷新并绑定成功，再推回原文。
+2. 重启服务。
+
+日常不会碰到第二步：配置文件放在 git 里，合进 main 后由 CD 推送，CD 改了某个服务的配置就会重新部署这个服务。用 git revert 撤回坏配置，CD 推送并重部署，服务自然恢复。只用推送脚本手动推回原文、不重部署时，才会掉进这个坑。
+
+这条经验写进了基础设施的说明文档：
+
+<CodeRef at="patra-infra/CLAUDE.md@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="65" />
+
+<Transfer
+  prompt="你用的是另一种配置中心，它的客户端按「版本号比上次收到的大」来判断要不要通知。同样推坏值、再推回原文，会不会掉进这个坑？换成「每次收到都通知」的客户端呢？"
+  points={[
+    { label: "按版本号递增", text: "推回原文时服务端版本号仍会加一，客户端会通知，不会掉进这个坑。关键是比较的是版本号还是内容。" },
+    { label: "每次都通知", text: "不会卡住，但每次推送都触发一次重新绑定；内容没变的推送也会让配置对象被重置一遍。" },
+    { label: "通用的查法", text: "看客户端日志里「收到」和「通知监听器」是否成对出现；只有收到没有通知，就去查它的比较基准。" },
+    { label: "兜底", text: "无论哪种客户端，坏配置的恢复都不该只靠「推回原文」，要准备好重启或重新部署这一步。" }
+  ]}
+/>

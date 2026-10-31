@@ -1,0 +1,126 @@
+---
+title: 为什么代码要分层
+summary: 所有代码写在一个方法里能跑，但改一处会牵动全身。分层是把「谁来敲门、先做什么、规则是什么、怎么存」分开放，让每次改动只落在一个地方。
+type: concept
+difficulty: intro
+tags: [ddd, backend]
+prerequisites: []
+personalEnv: false
+---
+
+<Diagnose
+  question="一个数字 200（每人最多 200 个收藏夹）在代码里被复制粘贴写在了 5 个不同的方法里。产品说改成 300。最可能出什么事？"
+  options={["编译器会报错，提醒你改全", "改漏了其中一两处，各处行为对不上", "不会有问题，程序会自己对齐"]}
+  answer="B"
+  ifRight="对，编译器不知道这 5 个 200 是同一件事，漏改了也照样编译通过。这篇要讲的分层，就是从根上避免这种事。"
+  ifWrong="答案是 B：编译器只认语法，不认「这 5 个 200 是同一个业务数字」。漏改一处，各个入口的行为就对不上了。这篇讲怎么用分层避免它。"
+/>
+
+## 先看不分层的写法会怎样
+
+假设要做「新建收藏夹」。最直接的写法是把所有事塞进一个方法里：
+
+```java
+// 假想的写法，用来对比，不是 Patra 的代码
+@PostMapping("/me/collections")
+public Map<String, Object> create(@RequestBody Map<String, String> body, HttpSession session) {
+  long userId = (long) session.getAttribute("userId");
+  String name = body.get("name").trim();
+  int count = jdbc.queryForObject("SELECT count(*) FROM collection WHERE user_id = ?", Integer.class, userId);
+  if (count >= 200) throw new RuntimeException("最多 200 个");
+  // 再查重名、再 INSERT、再把数据库行拼成 JSON 返回……
+}
+```
+
+它能跑。问题在于，一个方法同时懂四件事：怎么从 HTTP 里取数据、先做什么后做什么、「200」这条规则、SQL 怎么写。
+
+<Callout kind="analogy">
+
+像一家小餐馆里，同一个人又收银、又点菜、又炒菜、又洗碗。人少的时候没问题。想换一种收银方式，他得连炒菜的流程一起重新想一遍，因为所有事缠在他一个人的脑子里。
+
+</Callout>
+
+## 分层：每层只回答一个问题
+
+分层就是把这四件事分开放。Patra 里「新建收藏夹」是这样分的：
+
+| 层 | 只回答的问题 | 新建收藏夹里对应的东西 |
+|---|---|---|
+| adapter（适配器） | 谁在敲门？数据怎么进来、怎么出去？ | `MyCollectionController` 收 JSON，交给命令总线 |
+| app（应用） | 先做什么，再做什么？ | `CreateCollectionHandler` 排顺序：锁用户、数个数、查重名、创建 |
+| domain（领域） | 业务规则是什么？ | `CollectionLimits` 放数字 200，`CollectionName` 管名称怎么算合法 |
+| infra（基础设施） | 具体怎么存？ | `CollectionRepositoryAdapter` 里才有 SQL |
+
+先别急着记这四个名字。后面的篇目会一层一层展开。这篇只要看清一点：每一层只管一类变化。
+
+<CodeRef at="patra-api/patra-interaction/patra-interaction-adapter/src/main/java/dev/patra/interaction/adapter/collection/rest/MyCollectionController.java@3cf6fa5757b3be54c3b030e4cace871f53e2599c" lines="48-53" />
+
+<CodeRef at="patra-api/patra-interaction/patra-interaction-app/src/main/java/dev/patra/interaction/app/collection/usecase/collection/CreateCollectionHandler.java@3cf6fa5757b3be54c3b030e4cace871f53e2599c" lines="34-53" />
+
+<CodeRef at="patra-api/patra-interaction/patra-interaction-domain/src/main/java/dev/patra/interaction/domain/collection/policy/CollectionLimits.java@3cf6fa5757b3be54c3b030e4cace871f53e2599c" lines="1-11" />
+
+## 改一处会牵动多少地方
+
+下面把两种写法并排放，看看「改 200 为 300」和「换一种存法」各要动哪里。
+
+<Compare
+  title="同一个功能，两种放法"
+  variants={[
+    {
+      label: "全塞一个方法（假想）",
+      steps: ["从 HTTP 请求里取 JSON、读登录态", "拼 SQL 数现有收藏夹个数，和 200 比较", "拼 SQL 查重名", "拼 SQL 插入", "把数据库行拼成 JSON 返回"],
+      results: [
+        { label: "把 200 改成 300", value: "翻整个方法，还要在别的方法里找同一个数字", tone: "bad" },
+        { label: "换一种存法", value: "整个方法重写", tone: "bad" },
+        { label: "测「超过上限会拒绝」", value: "要起数据库和 HTTP 才能测", tone: "bad" }
+      ],
+      verdict: { tone: "bad", head: "能跑，但每一处都动不得。", text: "四件事缠在一起，改任何一件都要重新读懂另外三件。" }
+    },
+    {
+      label: "分四层（Patra 的做法）",
+      steps: ["adapter：收 JSON，交给命令总线", "app：锁用户、数个数、查重名、创建，只排顺序", "domain：数字 200 和名称规则放在这里", "infra：实现数个数、查重名、插入的 SQL"],
+      results: [
+        { label: "把 200 改成 300", value: "改 CollectionLimits 里的一个常量", tone: "ok" },
+        { label: "换一种存法", value: "只重写 infra 里的适配器", tone: "ok" },
+        { label: "测「超过上限会拒绝」", value: "把仓库换成假的，不用起数据库", tone: "ok" }
+      ],
+      verdict: { tone: "ok", head: "每次改动落在一处。", text: "规则、流程、存储、入口各管各的，变化被圈在一层里。" }
+    }
+  ]}
+/>
+
+<Quiz
+  title="考考自己"
+  questions={[
+    {
+      question: "产品说：文献库每人最多 20000 条，改成 30000 条。按 Patra 的分层，你该去改哪一层？",
+      options: ["adapter：Controller 里", "domain：放业务数字的 CollectionLimits", "infra：SQL 里"],
+      answer: "B",
+      explain: "数量上限是业务规则，放在 domain 的 CollectionLimits 里。其他层只引用它，不自己写数字。"
+    },
+    {
+      question: "团队决定把收藏夹从 PostgreSQL 换到另一种数据库。理想情况下要重写哪些地方？",
+      options: ["只重写 infra 里实现仓库的那部分", "四层都要重写", "只改 Controller"],
+      answer: "A",
+      explain: "存储细节只出现在 infra。domain 里只有仓库接口，app 只调接口，所以它们都不用动。"
+    }
+  ]}
+/>
+
+## 分层是有代价的
+
+<Callout kind="cost">
+
+文件变多了。新建一个收藏夹，要打开 Controller、Handler、Repository 接口、适配器至少四个文件才能看全。Patra 愿意付这个代价，是因为项目会长期改下去，而且改的是互相独立的东西：规则、流程、存储。几十行的小脚本不需要分层。
+
+</Callout>
+
+<Transfer
+  prompt="新需求：每个用户每天最多新建 20 个收藏夹。请说说这三样东西各该放在哪一层：「20」这个数字，「数今天已建了几个」的 SQL，「超了就拒绝」这个先后顺序。"
+  points={[
+    { label: "数字 20", text: "是业务规则，放 domain，和 CollectionLimits 放在一起。" },
+    { label: "数今天几个的 SQL", text: "是存储细节，放 infra：在仓库接口里加一个方法，由适配器写 SQL。" },
+    { label: "超了就拒绝", text: "是流程顺序，放 app 的 Handler：数个数，和 domain 里的数字比，超了就抛领域里定义的异常。" }
+  ]}
+  placeholder="比如：20 放在……"
+/>

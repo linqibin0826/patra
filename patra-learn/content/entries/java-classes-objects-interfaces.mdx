@@ -1,0 +1,196 @@
+---
+title: 类、对象与接口
+summary: 类是图纸，对象是照图纸造出来的实物；接口只约定「能做什么」，由实现类给出「怎么做」。用 Patra 的登录限次看一个接口怎么配上两种实现。
+type: concept
+difficulty: intro
+tags: [java]
+prerequisites: [java-how-a-program-runs]
+personalEnv: false
+---
+
+<Diagnose
+  question="Patra 的登录代码 LoginUserHandler 里有一行 private final LoginThrottlePort loginThrottle;，它的类型写的是 LoginThrottlePort（一个接口），不是 LoginThrottleAdapter（用 Redis 记失败次数的那个类）。哪天改成用数据库记失败次数，LoginUserHandler 要改吗？"
+  options={["要改，用到 Redis 的地方都得跟着改", "不用改，换一个同样实现了 LoginThrottlePort 的类就行", "不用改，Java 会自动找到新的存储方式"]}
+  answer="B"
+  ifRight="对。LoginUserHandler 只认「接口约定了哪些方法」，不管背后是谁在做。下面从类和对象讲起，讲到接口为什么能做到这一点。"
+  ifWrong="答案是 B：LoginUserHandler 只依赖接口，换实现时它不用动。要看懂这一点，先得分清类、对象和接口，这篇从头讲。"
+  suggest="java-how-a-program-runs"
+/>
+
+<Callout kind="lead">
+
+**类**是图纸，写清一个东西有哪些数据、能做哪些事；**对象**是照图纸用 `new` 造出来的实物；**接口**只列出「能做哪些事」，不写怎么做，由**实现类**来补上。
+
+</Callout>
+
+## 类：一张图纸
+
+Java 代码几乎全写在类里。一个类通常有三样东西：
+
+- **字段**：这个东西记着哪些数据；
+- **构造器**：造它的时候要交给它什么；
+- **方法**：它能做哪些事。
+
+看 Patra 里一个真实的类。它负责「同一个邮箱密码输错太多次就锁一会儿」，失败次数记在 Redis（一个很快的内存数据库）里。它的第一行是 `public final class LoginThrottleAdapter implements LoginThrottlePort {`，`class` 后面就是类名。往下是字段和构造器：
+
+<CodeRef at="patra-api/patra-identity/patra-identity-infra/src/main/java/dev/patra/identity/infra/account/throttle/LoginThrottleAdapter.java@5073ab1358404ecd989e722373cd9f7edafe238b" lines="43-53" />
+
+```java
+  private final StringRedisTemplate redis;
+  private final Supplier<LoginThrottlePolicy> policy;
+
+  /// 创建适配器。
+  ///
+  /// @param redis Redis 模板
+  /// @param policy 失败限制参数的来源：每次开始或结算时取一次，配置刷新后下一次调用即用上新值
+  public LoginThrottleAdapter(StringRedisTemplate redis, Supplier<LoginThrottlePolicy> policy) {
+    this.redis = Objects.requireNonNull(redis, "redis 不能为 null");
+    this.policy = Objects.requireNonNull(policy, "policy 不能为 null");
+  }
+```
+
+（`///` 开头的是给人看的说明，叫文档注释，JVM 运行时不管它。）
+
+- `redis`、`policy` 是**字段**：它要用的 Redis 连接，和「最多错几次、锁多久」这些规则。
+- 和类同名、没有返回类型的 `LoginThrottleAdapter(...)` 是**构造器**：造对象时把这两样交进来，存进字段。
+- 后面还有 `begin`、`recordFailure` 等**方法**，就是它能做的事。
+
+## 对象：照图纸造出来的实物
+
+图纸本身不能用，得照着造出来。造的写法是 `new 类名(构造器要的东西)`。Patra 的测试里就有一行，造了一个登录处理器：
+
+<CodeRef at="patra-api/patra-identity/patra-identity-app/src/test/java/dev/patra/identity/app/account/usecase/login/LoginUserHandlerTest.java@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="152-166" />
+
+`new LoginUserHandler(users, credentials, ..., loginThrottle, ...)` 执行完，内存里就多了一个 `LoginUserHandler` 对象，它的字段里存着这次交进去的那些东西。同一张图纸可以造很多个对象，每个对象各有各的字段值，互不干扰。
+
+<Callout kind="analogy">
+
+类像户型图，对象像照户型图盖出来的房子。一张户型图可以盖一百套房，每套房里放的家具（字段的值）各不相同；但每套房都有户型图上画的那几个房间（方法）。
+
+</Callout>
+
+## 接口：只说能做什么
+
+`LoginThrottleAdapter` 那一行里还有半句 `implements LoginThrottlePort`。`LoginThrottlePort` 是一个**接口**：
+
+<CodeRef at="patra-api/patra-identity/patra-identity-domain/src/main/java/dev/patra/identity/domain/account/port/throttle/LoginThrottlePort.java@5073ab1358404ecd989e722373cd9f7edafe238b" lines="14-45" />
+
+```java
+public interface LoginThrottlePort {
+
+  /// 开始一次尝试，在校验密码之前调用。
+  ///
+  /// @param accountType 账号类型
+  /// @param email 邮箱
+  /// @return 被放行的尝试
+  /// @throws LoginTemporarilyLockedException 处于锁定期，或「失败次数 + 在途次数」已到上限
+  LoginAttempt begin(AccountType accountType, EmailAddress email);
+
+  /// 按成功结算：删掉在途登记，清零失败计数，不动锁。
+  ///
+  /// @param attempt 尝试
+  void recordSuccess(LoginAttempt attempt);
+
+  /// 按失败结算：删掉在途登记，处于锁定期就不计数，否则失败计数加一，达到上限就上锁。
+  ///
+  /// @param attempt 尝试
+  /// @return 处于锁定期时（包括这次刚上锁）返回剩余时间，否则为空
+  Optional<Duration> recordFailure(LoginAttempt attempt);
+
+  /// 按取消结算：只删掉在途登记，不计失败。用于中途出错（哈希排队超时、数据库异常等）。
+  ///
+  /// @param attempt 尝试
+  void cancel(LoginAttempt attempt);
+
+  /// 清零：删掉失败计数和锁，在途登记不动（自然过期）。重设密码成功后用。
+  ///
+  /// @param accountType 账号类型
+  /// @param email 邮箱
+  void clear(AccountType accountType, EmailAddress email);
+}
+```
+
+跳过注释只看代码：每个方法都只有一行「签名」：叫什么、要什么、还什么，后面直接是分号，没有 `{ }` 包着的具体做法。接口就是一份约定：「谁说自己是 `LoginThrottlePort`，就必须会这五件事。」
+
+## 实现类：把约定兑现
+
+一个类写上 `implements LoginThrottlePort`，就是在说「我兑现这份约定」。编译器会检查：五个方法少写一个，编译就不过。`LoginThrottleAdapter` 里每个方法上的 `@Override` 是一个标签，意思是「这个方法是在兑现约定里的某一条」（开头带 `@` 的标签先不细究，「注解：贴在代码上的标签」那篇专门讲）：
+
+<CodeRef at="patra-api/patra-identity/patra-identity-infra/src/main/java/dev/patra/identity/infra/account/throttle/LoginThrottleAdapter.java@5073ab1358404ecd989e722373cd9f7edafe238b" lines="86-92" />
+
+```java
+  /// 按成功结算。
+  ///
+  /// @param attempt 尝试
+  @Override
+  public void recordSuccess(LoginAttempt attempt) {
+    settle(attempt, "SUCCESS");
+  }
+```
+
+这回方法后面有 `{ }` 了，里面就是具体做法。
+
+## 为什么要多一层接口
+
+用到限次功能的是 `LoginUserHandler`。它的字段类型写的是接口，不是 Redis 那个类：
+
+<CodeRef at="patra-api/patra-identity/patra-identity-app/src/main/java/dev/patra/identity/app/account/usecase/login/LoginUserHandler.java@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="70" />
+
+```java
+  private final LoginThrottlePort loginThrottle;
+```
+
+于是任何实现了这个接口的对象都能交给它。Patra 里正好有两个：
+
+<Structure
+  title="一份约定，两种实现"
+  intro="点任意一块，看它在这段关系里的角色"
+  nodes={[
+    { id: "handler", label: "LoginUserHandler", sub: "处理登录", code: true, col: 1, desc: "只认识接口：调用 begin、recordFailure 等方法，不知道也不关心背后是 Redis 还是别的。" },
+    { id: "port", label: "LoginThrottlePort", sub: "接口 · 约定", code: true, col: 2, desc: "只列出五个方法的签名，没有任何具体做法。" },
+    { id: "adapter", label: "LoginThrottleAdapter", sub: "实现 · 线上用", code: true, col: 3, desc: "真正连 Redis，用脚本记失败次数、上锁。服务跑起来时用的是它。" },
+    { id: "mock", label: "mock(LoginThrottlePort.class)", sub: "实现 · 测试用", code: true, col: 3, row: 2, desc: "测试工具 Mockito 现场造出的假对象，不连 Redis，测试让它返回什么它就返回什么。" }
+  ]}
+  edges={[
+    { from: "handler", to: "port", label: "只依赖它" },
+    { from: "adapter", to: "port", label: "implements", desc: "线上的实现：兑现五个方法，背后是 Redis。" },
+    { from: "mock", to: "port", label: "也满足约定", desc: "测试里的实现：不需要启动 Redis，测试跑得快、结果可控。" }
+  ]}
+/>
+
+测试里那一行就是第二种实现：
+
+<CodeRef at="patra-api/patra-identity/patra-identity-app/src/test/java/dev/patra/identity/app/account/usecase/login/LoginUserHandlerTest.java@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="145" />
+
+```java
+  private final LoginThrottlePort loginThrottle = mock(LoginThrottlePort.class);
+```
+
+测登录逻辑时不用真的起一个 Redis，造一个假的限次对象交给 `LoginUserHandler` 就行。`LoginUserHandler` 分不出真假，因为它本来就只认接口。
+
+<Quiz
+  questions={[
+    {
+      question: "在 LoginThrottlePort 里加一个新方法，但不改 LoginThrottleAdapter。会怎样？",
+      options: ["没影响，新方法用不到就不管", "编译报错：LoginThrottleAdapter 说自己实现了这个接口，却少了一个方法", "运行到那个方法时才报错"],
+      answer: "B",
+      explain: "implements 是一个承诺，编译器会逐条核对。少兑现一条，编译就不过。"
+    },
+    {
+      question: "代码里写 new LoginThrottlePort()，能编译吗？",
+      options: ["能，造出一个限次对象", "不能，接口只有约定没有做法，不能直接 new"],
+      answer: "B",
+      explain: "接口没有方法的具体做法，造出来也没法用。要 new 的是实现了它的类。"
+    }
+  ]}
+/>
+
+<Transfer
+  prompt="Patra 要在用户注册后给他发一封邮件。本地开发和跑测试时，不希望真的把邮件发出去。照这篇的思路，你会怎么设计「发邮件」这件事的代码？"
+  points={[
+    { label: "先定接口", text: "定一个接口，只约定「发一封邮件」这个方法：给谁、标题、正文，不写怎么发。" },
+    { label: "线上一个实现", text: "一个实现类真的连邮件服务把信发出去，服务跑起来时用它。" },
+    { label: "测试一个实现", text: "测试里交一个假的实现，只记下「被要求发过哪封信」，不真发，用来断言。" },
+    { label: "用的地方只认接口", text: "注册的代码字段类型写接口，换实现时它一行都不用改。" }
+  ]}
+/>

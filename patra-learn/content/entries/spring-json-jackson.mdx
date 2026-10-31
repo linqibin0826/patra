@@ -1,0 +1,180 @@
+---
+title: 对象和 JSON 怎么互转：Jackson
+summary: Jackson 负责把 Java 对象写成 JSON、把 JSON 读回 Java 对象。Patra 在 HTTP 响应里把 Long 写成字符串，因为浏览器里的 JavaScript 装不下这么大的整数。
+type: concept
+difficulty: basic
+tags: [spring, backend, frontend]
+prerequisites: [spring-mvc-controller, http-json-and-content-type]
+sources:
+  - version: v0.10
+    pr: 234
+personalEnv: false
+---
+
+<Diagnose
+  question="后端返回的 JSON 是 `{ 「id」: 1234567890123456789 }`，id 写成了数字。浏览器里的 JavaScript 用 `JSON.parse` 读它，拿到的 id 是多少？"
+  options={["1234567890123456789，一位不差", "1234567890123456800，后几位变了", "解析报错：数字太大"]}
+  answer="B"
+  ifRight="对。JavaScript 的数字装不下这么多位，悄悄变成了最接近的那个数，也不报错。这篇讲 Jackson 怎么把对象写成 JSON，以及 Patra 怎么躲开这个坑。"
+  ifWrong="答案是 B：JavaScript 的数字只能精确表示到 2 的 53 次方左右，再大就四舍五入到最接近的数，不报错。JSON 本身不限制数字大小，读的那一方装不下才出问题，这一点在 JSON 那篇讲过。"
+  suggest="http-json-and-content-type"
+/>
+
+<Callout kind="lead">
+
+Jackson 是 Java 里最常用的 JSON 库。对象写成 JSON 叫**序列化**，JSON 读回对象叫**反序列化**。Spring MVC 收发 JSON 时，背后干活的就是它。
+
+</Callout>
+
+## 两个方向
+
+上一篇的 Controller 里，两个方向都出现过：
+
+- **进来**：登录接口的 `@RequestBody LoginRequest request`。请求体是一段 JSON 文本，Jackson 按 `LoginRequest` 这个 record 的字段名，把同名的键读进去，造出一个 Java 对象。这是反序列化。
+- **出去**：方法返回 `SessionsRevokedResponse`，Jackson 把它的字段一个个写成 JSON 的键值。这是序列化。
+
+规则大体是直觉的：
+
+| Java 里 | 写成 JSON |
+|---|---|
+| record 或带 getter 的对象 | 对象 `{ … }`，字段名就是键名 |
+| `List`、数组 | 数组 `[ … ]` |
+| `String` | 字符串 |
+| `int`、`long`、`boolean` | 数字、布尔 |
+| 枚举，如 `DeviceClass.DESKTOP` | 字符串 `DESKTOP` |
+| `null` | `null` |
+
+Patra 的容器里只有一个由 Spring Boot 装配的 `JsonMapper`（Jackson 的入口对象），谁要用 JSON 就注入它，不自己 new（v0.10 决策 F）。这样 Boot 的默认设置在全项目只有一份。
+
+## 问题出在大整数
+
+Patra 的主键是「雪花 ID」：一种按时间加机器号拼出来的 64 位整数，Java 里用 `Long` 装，正好。可浏览器里的 JavaScript 只有一种数字类型，能精确表示的整数最大是 2 的 53 次方减 1，也就是 `9007199254740991`，16 位。雪花 ID 远超这个范围。
+
+拖动滑块看看，ID 有几位时会出事：
+
+<Params
+  title="ID 写成 JSON 数字，浏览器读到的还准不准"
+  controls={[
+    { type: "slider", id: "digits", label: "ID 的位数", min: 5, max: 19, step: 1, default: 19, unit: "位" },
+    { type: "switch", id: "string", label: "后端把 ID 写成字符串", default: false }
+  ]}
+  cases={[
+    { when: { string: true }, results: [{ label: "JSON 里", value: "「id」: 「…」（字符串）" }, { label: "浏览器读到", value: "一位不差", tone: "ok" }], verdict: { tone: "ok", head: "准。", text: "字符串就是一串字符，多少位都原样保留。前端拿它当标识用，不做加减。" } },
+    { when: { digits: [5, 15] }, results: [{ label: "JSON 里", value: "数字" }, { label: "浏览器读到", value: "一位不差", tone: "ok" }], verdict: { tone: "ok", head: "准。", text: "{digits}的整数在安全范围内，写成数字没问题。" } },
+    { when: { digits: [16, 16] }, results: [{ label: "JSON 里", value: "数字" }, { label: "浏览器读到", value: "看运气", tone: "wait" }], verdict: { tone: "bad", head: "开始不可靠。", text: "16 位里，不超过 9007199254740991 的准，超过的就不准。" } },
+    { results: [{ label: "JSON 里", value: "数字" }, { label: "浏览器读到", value: "后几位变了", tone: "bad" }], verdict: { tone: "bad", head: "悄悄错了。", text: "{digits}的整数超出安全范围，浏览器四舍五入成最接近的数，不报错。拿它去踢设备，踢的是另一个 ID。" } }
+  ]}
+/>
+
+最危险的是「不报错」：页面照常显示，直到有人拿这个错的 ID 发请求，才收到「找不到」，或者更糟，正好撞上别人的数据。
+
+## Patra 的做法：只在 HTTP 响应里把 Long 写成字符串
+
+<CodeRef at="patra-tool/patra-tool-web/src/main/java/dev/patra/tool/web/json/LongToStringHttpMessageConvertersCustomizer.java@b6e01875bb5692356021c8a19562f557f319fc54" lines="12-33" />
+
+```java
+/// 让 MVC 响应里的包装类型 `Long` 以字符串输出。
+///
+/// 雪花 ID 超过 JavaScript 的安全整数范围（2^53），浏览器端必须拿到字符串。这是 HTTP 响应的
+/// 策略，所以只挂在 MVC 的 JSON 转换器上：转换器用的是从容器 `JsonMapper` 派生出来的实例，
+/// 保留 Boot 的全部默认配置与 ProblemDetail 定制，只多一个 `Long` 序列化器。容器里的
+/// `JsonMapper` 本身不受影响，持久化、消息、服务间请求体里的 `Long` 仍是数字。
+///
+/// 原始类型 `long` 不受影响。
+public final class LongToStringHttpMessageConvertersCustomizer
+    implements ServerHttpMessageConvertersCustomizer, Ordered {
+
+  private final JacksonJsonHttpMessageConverter jsonConverter;
+
+  /// 从容器的 `JsonMapper` 派生出带 Long → String 序列化器的响应转换器。
+  ///
+  /// @param jsonMapper 容器里的 `JsonMapper`
+  public LongToStringHttpMessageConvertersCustomizer(JsonMapper jsonMapper) {
+    SimpleModule module = new SimpleModule("LongToString");
+    module.addSerializer(Long.class, ToStringSerializer.instance);
+    this.jsonConverter =
+        new JacksonJsonHttpMessageConverter(jsonMapper.rebuild().addModule(module).build());
+  }
+```
+
+它做了三件事：
+
+1. 从容器里的 `JsonMapper` **复制**一份（`rebuild()`），在复制品上加一条规则：遇到 `Long` 就用 `ToStringSerializer`，写成字符串。
+2. 用这个复制品做一个 JSON 转换器，替换 Spring MVC 写响应时用的那个。
+3. 容器里原来的 `JsonMapper` 一点没动。
+
+为什么不干脆在容器的 `JsonMapper` 上加这条规则？因为 `JsonMapper` 不只用来写 HTTP 响应。下面三种做法并排比：
+
+<Compare
+  title="Long 转字符串，规则加在哪"
+  variants={[
+    { label: "哪都不加", steps: ["Controller 返回带 `Long id` 的对象", "MVC 用容器的 `JsonMapper` 写响应", "浏览器 `JSON.parse`"], results: [{ label: "浏览器里的 id", value: "后几位变了", tone: "bad" }, { label: "数据库 JSON 列、消息里的 Long", value: "数字", tone: "ok" }], verdict: { tone: "bad", head: "前端拿到错的 ID。", text: "Java 之间没问题，偏偏给浏览器的错了。" } },
+    { label: "加在容器的 JsonMapper 上", steps: ["给容器的 `JsonMapper` 加 Long → 字符串", "HTTP 响应、数据库 JSON 列、RabbitMQ 消息、服务间请求体都用它", "浏览器 `JSON.parse`"], results: [{ label: "浏览器里的 id", value: "准", tone: "ok" }, { label: "数据库 JSON 列、消息里的 Long", value: "也变成了字符串", tone: "bad" }], verdict: { tone: "bad", head: "管多了。", text: "只有浏览器装不下大整数，Java 服务之间、写进数据库的 JSON 里本来好好的数字，全被改成了字符串，读的一方都得跟着改。" } },
+    { label: "只加在 MVC 响应转换器上", steps: ["复制容器的 `JsonMapper`，复制品上加 Long → 字符串", "只有 MVC 写响应用复制品", "浏览器 `JSON.parse`"], results: [{ label: "浏览器里的 id", value: "准", tone: "ok" }, { label: "数据库 JSON 列、消息里的 Long", value: "数字", tone: "ok" }], verdict: { tone: "ok", head: "Patra 的做法。", text: "问题只出在给浏览器的响应上，规则就只加在那里。" } }
+  ]}
+/>
+
+这个定制器由 `patra-tool-web` 的自动配置 `WebJsonAutoConfiguration` 注册，每个引了这个工具模块的服务自动生效（自动配置那篇讲过怎么回事）。
+
+## 前端那头：只收字符串
+
+门户读登录设备列表时，id 只接受字符串，收到数字直接当成格式错误：
+
+<CodeRef at="patra-portal/src/lib/identity/session-list.ts@fe4c6bb68c591a9c9b5fe80f76bbfbbbc6aeae75" lines="3-6" />
+
+```ts
+/// 登录设备列表里的一项（`GET /me/sessions`，PAP-99）。`id` 是雪花 ID，后端按字符串序列化（数字会超出 JS 的
+/// 安全整数范围、解析时就丢精度，所以不接受数字）。
+export const sessionSchema = z.object({
+  id: z.string().regex(/^\d{1,19}$/),
+```
+
+为什么不「数字也收」？数字到这一步已经被 `JSON.parse` 改错了，收下来就是在用一个错的 ID。前后端两头都守住，问题在第一次联调时就会暴露。
+
+## 只管包装类型 Long
+
+规则只对 `Long`（大写，包装类型）生效，`long`（小写，原始类型）照样写成数字。对照 identity 的两个响应：
+
+<CodeRef at="patra-api/patra-identity/patra-identity-adapter/src/main/java/dev/patra/identity/adapter/session/rest/response/SessionResponse.java@5073ab1358404ecd989e722373cd9f7edafe238b" lines="19-29" />
+
+```java
+@Builder
+public record SessionResponse(
+    Long id,
+    boolean current,
+    String deviceName,
+    DeviceClass deviceClass,
+    String ipAddress,
+    String ipRegion,
+    boolean privateNetwork,
+    Instant signedInAt,
+    Instant lastActiveAt) {
+```
+
+`id` 是 `Long`，写出来是字符串；`current` 是 `boolean`，写出来是 `true` / `false`；`deviceClass` 是枚举，写出来是 `DESKTOP` 这样的名字。
+
+<Quiz
+  questions={[
+    {
+      question: "有人写了一个新的响应 record，字段是 `long authorId`（小写 long），值是一个雪花 ID。门户拿到的是什么？",
+      options: ["字符串，Patra 统一转了", "数字，而且后几位已经错了", "启动时报错，不让写原始类型"],
+      answer: "B",
+      explain: "定制器只给包装类型 `Long` 注册了序列化器。ID 字段要写成 `Long`，否则就掉回坑里。"
+    },
+    {
+      question: "假设 identity 发给 RabbitMQ 的一条事件里有个 `Long userId`。消息里的 userId 是什么？",
+      options: ["字符串", "数字", "要看消费方是谁"],
+      answer: "B",
+      explain: "发消息用的是容器里的 `JsonMapper`，它没有 Long → 字符串的规则。只有 MVC 的 HTTP 响应才转。"
+    }
+  ]}
+/>
+
+<Transfer
+  prompt="假如 Patra 要给第三方提供一个开放接口，调用方是用 Python 写的脚本（Python 的整数没有位数上限），同样返回雪花 ID。你还会把 ID 写成字符串吗？如果这个接口也走 identity 的 Spring MVC，现在的代码会怎么写它？"
+  points={[
+    { label: "现在的行为", text: "只要走 MVC 响应、字段是 `Long`，都会被写成字符串，不分调用方是谁。" },
+    { label: "仍然合理", text: "接口的调用方以后可能有浏览器、有 JavaScript 写的工具；ID 本来就只当标识用、不做运算，字符串对谁都安全。" },
+    { label: "判断依据", text: "精度问题只在读的那一方装不下时出现。规则加在哪一层，取决于哪一类读者有这个问题：HTTP 的读者范围最广，所以加在 HTTP 响应上。" }
+  ]}
+/>

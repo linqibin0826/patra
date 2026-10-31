@@ -1,0 +1,155 @@
+---
+title: 用 compose 拉起一整套服务
+summary: 一份 yml 文件写明每个服务用哪个镜像、开哪个端口、读哪些环境变量、怎样算健康，一条命令就能把一整套服务拉起来。
+type: concept
+difficulty: basic
+tags: [docker, deployment]
+prerequisites: [ops-docker-images-and-containers]
+personalEnv: false
+---
+
+<Diagnose
+  question="Patra 有好几个后端服务，外加数据库、缓存、消息队列。如果每个都用一条很长的 docker run 命令手动启动，最大的麻烦是什么？"
+  options={["命令太长，每次都得记住镜像、端口、环境变量、依赖顺序，换一台机器就要重敲一遍", "Docker 不允许同时运行多个容器", "容器之间天生就能互相找到，不需要配置，所以没有麻烦"]}
+  answer="A"
+  ifRight="对。启动参数多、容易漏，而且没法复用。compose 把这些写进一个文件，以后一条命令照着文件来。"
+  ifWrong="答案是 A。Docker 当然能同时运行很多容器，麻烦在于每个容器的启动参数一大堆，靠人记很容易漏、也没法重复。"
+  suggest="ops-docker-images-and-containers"
+/>
+
+## 把启动参数写进文件
+
+`docker run` 要把镜像名、端口映射、环境变量、重启策略……全写在命令行上。参数一多，既难读，也难复现。
+
+**Docker Compose** 的做法是：把这些写成一份 yml 文件，每个服务一个小节，然后用 `docker compose up -d` 照着文件启动。
+
+<Callout kind="analogy">
+
+compose 文件像是整套服务的 application.yml：你声明想要的状态，由工具负责把现实调整到那个状态。
+
+</Callout>
+
+看一个真实的小节。这是学习站自己的：
+
+```yaml
+  learn:
+    image: ghcr.io/linqibin0826/patra-learn:${LEARN_IMAGE_TAG:-latest}
+    container_name: patra-learn
+    restart: unless-stopped
+    ports: [ "4001:4001" ]
+    env_file:
+      - .env.learn
+    healthcheck:
+      test: [ "CMD", "wget", "-q", "-O", "-", "http://127.0.0.1:4001/api/health" ]
+      <<: *app-healthcheck
+```
+
+<CodeRef at="patra-infra/docker/docker-compose.apps.yaml@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="202-214" />
+
+逐行读：
+
+| 字段 | 含义 |
+|---|---|
+| `image` | 用哪个镜像。tag 是个变量，默认 `latest`；部署时由流水线传入本次的提交号 |
+| `container_name` | 容器叫什么名字，方便 `docker logs` 和脚本引用 |
+| `restart: unless-stopped` | 容器挂了或机器重启后自动拉起，除非你手动停掉 |
+| `ports` | `宿主机端口:容器端口`，让外面能访问到容器里的服务 |
+| `env_file` | 从文件读取环境变量，密钥就靠它注入（见“密钥不进仓库”） |
+| `healthcheck` | 怎么判断这个容器“真的活着”：定时执行一条命令 |
+
+## 健康标准也是声明出来的
+
+容器进程在跑，不等于服务可用。所以每个服务都声明了自己的**健康检查**：定时请求一次健康接口，连续失败多次就把容器标成不健康。
+
+几个应用共用同一套参数，用 YAML 的锚点复写：
+
+<CodeRef at="patra-infra/docker/docker-compose.apps.yaml@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="26-30" />
+
+- `interval: 10s`：每 10 秒检查一次
+- `timeout: 5s`：单次检查最多等 5 秒
+- `retries: 15`：连续失败 15 次才判定不健康
+- `start_period: 60s`：启动后的头 60 秒宽限期，这期间失败不算数（Java 服务启动慢）
+
+## 内存也要声明
+
+在后端服务的小节里还能看到：
+
+```yaml
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+```
+
+这是 2026 年 10 月加的。镜像用 `-XX:MaxRAMPercentage=75` 启动，如果不设上限，每个 JVM 的堆最大能涨到整个虚拟机内存的 75%。一次 catalog 回填，堆膨胀把虚拟机撑满，被系统直接杀掉进程。设了上限之后，堆是上限的 75%，一个服务再贪心也撑不满全局。
+
+## 栈：按职责分几份文件
+
+Patra 不是把所有服务塞进一份文件，而是**按职责拆成几份**：基础设施（数据库、缓存、消息队列）、应用、定时任务、监控……它们各自是独立的 compose 项目，共享同一个外部网络 `patra-net`，所以彼此用容器名就能互相访问。
+
+<Structure
+  title="几份 compose 文件，一个共享网络"
+  nodes={[
+    { id: "core", label: "core 栈", sub: "基础设施", col: 1, desc: "数据库、缓存、消息队列、配置中心等，其他所有服务都依赖它们。" },
+    { id: "apps", label: "apps 栈", sub: "后端服务 + 门户 + 学习站", col: 2, desc: "我们自己写的应用。CD 流水线只动这一份文件里的服务。" },
+    { id: "net", label: "patra-net", sub: "共享网络", code: true, col: 3, desc: "外部网络，由脚本首次创建。各个栈都接入它，容器之间用容器名互相访问。" },
+    { id: "other", label: "其他栈", sub: "任务、监控、搜索、存储", col: 4, desc: "定时任务调度、可观测性、搜索、对象存储，各是独立的 compose 项目。" }
+  ]}
+  edges={[
+    { from: "core", to: "net", label: "接入" },
+    { from: "apps", to: "net", label: "接入" },
+    { from: "other", to: "net", label: "接入" }
+  ]}
+/>
+
+## `up -d` 对一个服务做了什么
+
+部署的时候，流水线对要更新的服务执行 `docker compose up -d 服务名`。它到底做了什么？
+
+<Stepper
+  title="docker compose up -d catalog，一步一步"
+  nodes={[
+    { id: "file", label: "compose 文件", sub: "声明期望状态" },
+    { id: "images", label: "本机镜像库", sub: "找镜像" },
+    { id: "old", label: "旧容器", sub: "正在运行" },
+    { id: "new", label: "新容器", sub: "期望的样子" }
+  ]}
+  steps={[
+    { caption: "读 compose 文件，找到 catalog 的声明。镜像 tag 来自环境变量，这次是新的提交号。", focus: ["file"], tokens: [{ id: "spec", label: "catalog:新提交号", at: "file" }] },
+    { caption: "去本机镜像库找这个镜像。找到了就用，找不到才会去仓库拉。", focus: ["images"], tokens: [{ id: "spec", label: "catalog:新提交号", at: "images" }], notes: [{ at: "images", text: "本机已有，直接用", tone: "ok" }] },
+    { caption: "对比现状：正在运行的 catalog 用的是旧镜像，和声明不一致，需要换掉。", focus: ["old"], tokens: [{ id: "spec", label: "catalog:新提交号", at: "old" }, { id: "running", label: "catalog:旧提交号", at: "old" }], notes: [{ at: "old", text: "和声明不一致", tone: "wait" }] },
+    { caption: "停掉旧容器，按声明创建并启动新容器。其他服务不受影响，因为命令只点了 catalog。", focus: ["new"], tokens: [{ id: "running", label: "catalog:新提交号", at: "new" }], notes: [{ at: "new", text: "健康检查开始计时", tone: "wait" }] }
+  ]}
+  guesses={[
+    { before: 3, question: "catalog 的声明和现在运行的容器一致（镜像、配置都没变）。再执行 up -d catalog，会发生什么？", options: ["先停掉再重新创建，保证最新", "什么也不做，因为已经符合声明", "报错，因为容器已经存在"], answer: "B", explain: "compose 是声明式的：只有声明和现实不一致才动手。一致就什么都不做，所以重复执行是安全的。" }
+  ]}
+/>
+
+这种“声明期望状态，由工具负责对齐”的做法，让重复执行也是安全的。
+
+<Quiz
+  questions={[
+    {
+      question: "容器在运行，但里面的服务其实已经卡死了。哪个配置能发现这种情况？",
+      options: ["restart: unless-stopped", "healthcheck", "container_name"],
+      answer: "B",
+      explain: "restart 只管进程退出时拉起；进程还在却不干活，要靠健康检查定时探测。"
+    },
+    {
+      question: "部署时只更新 catalog，其他服务会被重启吗？",
+      options: ["会，所有服务一起重启", "不会，命令只指定了 catalog"],
+      answer: "B",
+      explain: "up -d 加服务名，只对齐这一个服务。"
+    }
+  ]}
+/>
+
+<Transfer
+  prompt="你要新增一个后端服务 foo，端口 6700。在 compose 的 apps 文件里至少要写哪些项？还要考虑什么？"
+  points={[
+    { label: "最少要写", text: "image（tag 用变量）、container_name、restart、ports、env_file 和 healthcheck。" },
+    { label: "密钥", text: "它需要的密码放在仓库外的密钥文件里，用 env_file 引用，缺一个必需文件时让命令直接报错。" },
+    { label: "内存上限", text: "给它设内存上限，免得 JVM 把整台机器的内存吃光。" },
+    { label: "部署清单", text: "在流水线的服务清单里登记它的名字、端口和健康接口，部署脚本才知道怎么部署、怎么验货。" }
+  ]}
+/>

@@ -1,0 +1,140 @@
+---
+title: 至少一次投递与消费端去重
+summary: 不丢消息的代价是消息可能重复。消费端按事件 ID 记下处理过的事件，并和业务数据在同一个事务里写入，重复到达时直接跳过，让「处理两次」和「处理一次」结果一样。
+type: concept
+difficulty: advanced
+tags: [backend, messaging, database]
+prerequisites: [msg-publisher-confirms, msg-ack-and-redelivery]
+topics: [event-delivery]
+sources:
+  - version: v0.16
+    issue: PAP-137
+    pr: 343
+  - version: v0.16
+    issue: PAP-143
+personalEnv: false
+---
+
+<Diagnose
+  question="发件箱补投，把一条已经送达的“评论发表了”事件又发了一遍。通知服务收到两次同一个事件，要避免给被回复的人写两条提醒。靠什么？"
+  options={["靠网络保证同一条消息不会重复", "消费端记下处理过的事件 ID，再次收到就跳过", "把 RabbitMQ 配成“恰好一次”模式"]}
+  answer="B"
+  ifRight="对。重复无法从传输层消灭，要在接收的一端挡住。这篇讲怎么挡得严实。"
+  ifWrong="答案是 B。前两篇讲了：消费者崩溃会重投，发送确认丢了会补投，两处都会制造重复；消息系统保证的是“不丢”，不保证“不重”。重复要由消费方自己识别。"
+  suggest="msg-publisher-confirms"
+/>
+
+## 三种投递语义
+
+消息从生产者到消费者，对“能收到几次”有三种说法：
+
+| 语义 | 意思 | 代价 |
+|---|---|---|
+| 最多一次 | 可能丢，不会重复 | 丢了就丢了 |
+| 至少一次 | 不会丢，可能重复 | 要处理重复 |
+| 恰好一次 | 不丢不重 | 在跨系统的场景里，很难由传输层单独做到 |
+
+前几篇已经把这条链上的每一环都选成了“宁可重复，不能丢”：
+
+- 消费者处理完才 ack，崩溃会重投；
+- 发送要等确认，等不到就补投；
+- 补投可能把已经送达的再发一遍。
+
+所以 Patra 的事件链是**至少一次**。要得到“恰好一次”的效果，靠的是在消费端让处理变成**幂等**：同一条消息处理两次，结果和处理一次一样。
+
+<Callout kind="lead">
+
+恰好一次的效果 = 至少一次的投递 + 幂等的处理。重复到达是常态，不是异常。
+
+</Callout>
+
+## 怎么让处理幂等：记下处理过的事件
+
+每个事件在创建时就生成一个唯一的事件 ID，并随着消息一路带到消费方。消费方建一张表，记录“我处理过哪些事件”：
+
+<CodeRef at="patra-tool/patra-tool-events/src/integrationTest/resources/db/migration/V2__create_processed_event.sql@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="3-9" />
+
+主键是（消费方, 事件 ID）。处理一条消息时，先尝试往这张表插一行：
+
+- 插成功：没处理过，继续做业务。
+- 主键冲突：处理过了，直接结束。
+
+<CodeRef at="patra-tool/patra-tool-events/src/main/java/dev/patra/tool/events/consumer/JdbcProcessedEventAdapter.java@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="12-45" />
+
+两个细节：
+
+- 用 `INSERT ... ON CONFLICT DO NOTHING`，而不是捕获主键冲突的异常。PostgreSQL 里语句一旦失败，整个事务就作废了，后面的业务写入就做不下去。
+- `@Transactional(propagation = MANDATORY)`：调用时必须已经在事务里。这一点是下面的关键。
+
+## 去重记录必须和业务数据同一个事务
+
+看通知服务怎么用它。以“评论已编辑”为例：
+
+<CodeRef at="patra-api/patra-notification/patra-notification-app/src/main/java/dev/patra/notification/app/inbox/usecase/ingest/RecordCommentEditedHandler.java@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="38-62" />
+
+事务里第一件事是 `markProcessed`，返回 `false` 就直接结束；然后才写业务数据。去重记录和业务数据，在**同一个**事务里提交或回滚。
+
+<Stepper
+  title="同一个事件到了两次，通知服务怎么办"
+  nodes={[
+    { id: "outbox", label: "发件箱", sub: "interaction 的补投" },
+    { id: "queue", label: "notification.inbox", sub: "队列" },
+    { id: "handler", label: "处理器", sub: "一个事务里" },
+    { id: "db", label: "PostgreSQL", sub: "processed_event + 提醒" }
+  ]}
+  links={[
+    { from: "outbox", to: "queue" },
+    { from: "queue", to: "handler" },
+    { from: "handler", to: "db" }
+  ]}
+  steps={[
+    { caption: "第一次：事件 #7f3a 到达处理器。处理器开事务，往 processed_event 插一行，成功，说明没处理过。", focus: ["queue", "handler", "db"], links: ["queue>handler", "handler>db"], tokens: [{ id: "a", label: "#7f3a", at: "handler" }], notes: [{ at: "db", text: "processed_event +1", tone: "wait" }] },
+    { caption: "接着在同一个事务里写提醒，提交。去重记录和提醒一起落库。然后回 ack。", focus: ["handler", "db"], links: ["handler>db"], tokens: [{ id: "a", label: "#7f3a", at: "db" }], notes: [{ at: "db", text: "processed_event 1 行 · 提醒 1 条", tone: "ok" }] },
+    { caption: "ack 在路上丢了。发件箱没收到确认，登记行还在，补投任务又把事件 #7f3a 发了一遍。", focus: ["outbox", "queue"], links: ["outbox>queue"], tokens: [{ id: "b", label: "#7f3a（重复）", at: "queue" }], notes: [{ at: "outbox", text: "补投", tone: "wait" }] },
+    { caption: "第二次：处理器开事务，往 processed_event 插同一个（队列, 事件 ID）。主键冲突，ON CONFLICT 什么也不做，返回“没插入”。", focus: ["queue", "handler", "db"], links: ["queue>handler", "handler>db"], tokens: [{ id: "b", label: "#7f3a（重复）", at: "handler" }], notes: [{ at: "db", text: "插入 0 行", tone: "wait" }] },
+    { caption: "处理器看到“处理过了”，直接结束，不写提醒。被回复的人只收到 1 条提醒。", focus: ["handler", "db"], tokens: [{ id: "b", label: "#7f3a（重复）", at: "handler", state: "dropped" }], notes: [{ at: "db", text: "提醒仍是 1 条", tone: "ok" }] }
+  ]}
+  guesses={[
+    { before: 4, question: "同一个事件再次到达，往 processed_event 插同一个（队列, 事件 ID）会怎样？", options: ["插入成功，多一行", "冲突，什么也不做，处理器据此知道处理过了", "抛出异常，整个事务作废"], answer: "B", explain: "ON CONFLICT DO NOTHING：冲突时不报错，只是报告“影响了 0 行”。这就是“处理过”的信号。" },
+    { before: 5, question: "第二次到达的重复事件，通知服务最后会写几条提醒？", options: ["2 条", "1 条", "要看消息队列有没有去重"], answer: "B", explain: "去重在消费方自己手里：第二次的插入被主键挡住了，业务写入根本没有执行。" }
+  ]}
+/>
+
+<Quiz
+  title="为什么必须在同一个事务里"
+  questions={[
+    {
+      question: "假如去重记录和业务数据放在两个事务：先提交去重记录，再写提醒。两步之间进程崩溃。消息重投时会怎样？",
+      options: ["去重表里已经有这个 ID，被当成重复跳过，提醒永远没写", "正常处理，写出提醒", "两条提醒"],
+      answer: "A",
+      explain: "去重说“处理过了”，业务其实没做，这件事就丢了。同一个事务里，业务失败会让去重记录一起回滚，重投才能重新处理。"
+    },
+    {
+      question: "清理 processed_event 的任务要删多久以前的行？",
+      options: ["全部删掉，反正处理完了", "超过保留期（默认 30 天）的行", "永不删除"],
+      answer: "B",
+      explain: "这张表只增不减会一直涨；但保留期必须比同一个事件可能再次到达的最长间隔更长，否则迟到的重复会被当成新事件。"
+    }
+  ]}
+/>
+
+## 表不能无限长，也不是最后一道防线
+
+去重表只增不减。Patra 有一个每天一次的清理任务，分批删掉处理时间早于保留期（默认 30 天）的行：
+
+<CodeRef at="patra-tool/patra-tool-events/src/main/java/dev/patra/tool/events/consumer/ProcessedEventPurger.java@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="34-49" />
+
+<Callout kind="warn">
+
+`processed_event` 只是第一道去重：超过保留期才再到的重复，会被当成新事件处理。还有一类情况它管不到：业务里调用了**外部系统**（比如发邮件），数据库事务回滚得了表里的行，收不回已经发出去的邮件。副作用不幂等的消费方，要自己再加一道业务层的去重。
+
+</Callout>
+
+<Transfer
+  prompt="假设一个发邮件的消费者这样写：先 markProcessed，再调邮件服务发信，最后在同一个事务里写发送记录。邮件已经发出去了，但写发送记录、提交事务之前进程崩了。消息重投时，去重表挡得住吗？会发生什么？你会怎么补救？"
+  points={[
+    { label: "挡不住", text: "进程崩了，事务没提交，processed_event 里的行也回滚了，重投时当作新事件，会再发一封邮件。" },
+    { label: "原因", text: "邮件是数据库事务之外的副作用，回滚不了。去重表只能管数据库里的写入。" },
+    { label: "补救", text: "让外部系统也幂等：发信时带一个幂等键（比如本次投递的 ID），邮件服务在一段时间内对同一个键只发一次。两层去重各管一段。" }
+  ]}
+/>

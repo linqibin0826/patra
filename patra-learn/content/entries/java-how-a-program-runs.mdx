@@ -1,0 +1,159 @@
+---
+title: Java 程序怎么跑起来
+summary: 写好的 .java 文件先被编译成字节码，打成 jar，再交给 JVM 从 main 方法开始执行。所以同一个 jar 能在装了 Java 的任何机器上跑。
+type: concept
+difficulty: intro
+tags: [java]
+prerequisites: []
+personalEnv: false
+---
+
+<Diagnose
+  question="Patra 的 identity 服务打成了一个 jar 文件。这个 jar 在 Mac 上能跑，现在要放进一个 Linux 容器里跑。需要先在 Linux 上重新编译一遍吗？"
+  options={["需要，换了操作系统就得重新编译", "不需要，只要容器里装了 Java 运行环境", "不需要，容器里什么都不用装"]}
+  answer="B"
+  ifRight="对。jar 里装的不是某种电脑的机器码，而是字节码，交给哪里的 Java 运行环境都能跑。下面一步步看它是怎么来的、又是怎么跑起来的。"
+  ifWrong="答案是 B：jar 里是字节码，不绑定操作系统，但必须有 Java 运行环境（JVM）来执行它。这篇从头讲这件事。"
+/>
+
+<Callout kind="lead">
+
+Java 程序跑起来要经过三步：**编译**（`.java` 源码变成 `.class` 字节码）、**打包**（一堆 `.class` 装进一个 jar）、**运行**（JVM 读 jar，从 `main` 方法开始一行行执行）。
+
+</Callout>
+
+## 电脑看不懂你写的代码
+
+我们写的 Java 代码是给人看的文字，比如 `PatraIdentityApplication.java`。电脑的处理器只认一种很底层的指令，叫**机器码**；而且不同的处理器（Mac 的芯片、服务器的芯片）认的机器码还不一样。
+
+所以中间需要翻译。很多语言是直接翻译成某一种处理器的机器码，翻好的东西只能在那一种机器上跑。Java 选了另一条路。
+
+<Callout kind="analogy">
+
+把源码想成一份中文菜谱。Java 不把它直接翻成某个厨师的方言，而是先翻成一种「通用速记」。每个厨房里都请一位看得懂速记的厨师，照着做菜。速记就是**字节码**，厨师就是 **JVM**。菜谱翻一次，哪个厨房都能用。
+
+</Callout>
+
+## 第一步：编译成字节码
+
+**编译器**（Java 自带的 `javac`）读 `.java` 文件，检查有没有写错（少个分号、类型对不上），没错就为每个类生成一个 `.class` 文件。`.class` 里装的就是字节码。
+
+写错了的代码在这一步就会被拦下，根本到不了运行那一步。这叫**编译期错误**。
+
+## 第二步：打包成 jar
+
+一个服务有成百上千个 `.class`，还要带上它用到的别人写的代码（框架、工具库）。把这些装进一个压缩包，就是 **jar**（Java ARchive）。Patra 每个服务最后都打成一个 jar，交给部署流程。
+
+打包这件事由构建工具 Gradle 来做，后面「构建：Gradle 把代码变成能跑的包」那篇专门讲。
+
+## 第三步：JVM 从 main 开始执行
+
+**JVM**（Java 虚拟机）是一个程序，它读字节码，翻成当前机器的机器码去执行。JVM 打开 jar 后不会随便从哪一行开始，它找一个固定写法的方法：
+
+```java
+public static void main(String[] args)
+```
+
+这就是**入口**，名字必须叫 `main`。下面是 Patra 的 identity 服务的入口：
+
+<CodeRef at="patra-api/patra-identity/patra-identity-boot/src/main/java/dev/patra/identity/PatraIdentityApplication.java@b6e01875bb5692356021c8a19562f557f319fc54" lines="9-18" />
+
+```java
+@SpringBootApplication
+public class PatraIdentityApplication {
+
+  /// 经启动器启动应用，服务名 `patra-identity`。
+  ///
+  /// @param args 命令行参数
+  public static void main(String[] args) {
+    PatraApplication.run("patra-identity", PatraIdentityApplication.class, args);
+  }
+}
+```
+
+`main` 里只有一行：把活交给 Patra 的启动器 `PatraApplication`，由它把整个服务拉起来。开头的 `@SpringBootApplication` 是一个「标签」，先不管，「注解：贴在代码上的标签」那篇再讲。
+
+Patra 的六个后端服务各有一个这样的启动类，长得几乎一样，只是服务名不同。
+
+## 把三步串起来看
+
+点「下一步」走一遍。中间有一道题，先猜再看。
+
+<Stepper
+  title="从 PatraIdentityApplication.java 到一个跑着的服务"
+  nodes={[
+    { id: "source", label: "源码", sub: ".java" },
+    { id: "javac", label: "javac", sub: "编译器" },
+    { id: "jar", label: "jar", sub: "字节码 + 依赖" },
+    { id: "jvm", label: "JVM", sub: "Java 运行环境" },
+    { id: "main", label: "main", sub: "入口" }
+  ]}
+  links={[
+    { from: "source", to: "javac" },
+    { from: "javac", to: "jar" },
+    { from: "jar", to: "jvm" },
+    { from: "jvm", to: "main" }
+  ]}
+  steps={[
+    { caption: "你写好了 PatraIdentityApplication.java，这是给人看的文字。", focus: ["source"], tokens: [{ id: "code", label: "代码", at: "source" }] },
+    { caption: "javac 读源码、检查语法和类型。没有错，就生成 .class 字节码。", focus: ["javac"], links: ["source>javac"], tokens: [{ id: "code", label: "字节码", at: "javac" }], notes: [{ at: "javac", text: "编译通过", tone: "ok" }] },
+    { caption: "所有 .class 和用到的库一起装进一个 jar。到这里，开发机的工作就结束了。", focus: ["jar"], links: ["javac>jar"], tokens: [{ id: "code", label: "app.jar", at: "jar" }] },
+    { caption: "jar 被复制进 Linux 容器。容器里装着 Java 运行环境，jar 里的字节码一个字节都没改。", focus: ["jar", "jvm"], links: ["jar>jvm"], tokens: [{ id: "code", label: "app.jar", at: "jvm" }], notes: [{ at: "jvm", text: "Linux 容器", tone: "wait" }] },
+    { caption: "JVM 读字节码，翻成这台机器的机器码，找到 main 方法开始执行。服务启动了。", focus: ["main"], links: ["jvm>main"], tokens: [{ id: "code", label: "运行中", at: "main" }], notes: [{ at: "main", text: "服务已启动", tone: "ok" }] }
+  ]}
+  guesses={[
+    { before: 4, question: "jar 要被拿到一台 Linux 容器里去跑。这一步需要对 jar 做什么？", options: ["在 Linux 上重新编译一次源码", "什么都不用做，原样复制过去", "把字节码先转成 Linux 的机器码再复制"], answer: "B", explain: "字节码不绑定操作系统。翻成机器码是 JVM 在运行时做的事，不需要提前做。" }
+  ]}
+/>
+
+## 在 Patra 里：容器里只装了运行环境
+
+Patra 的后端服务在 Docker 容器里跑。容器的「底座」写在 Dockerfile 里：
+
+<CodeRef at="patra-infra/docker/service.Dockerfile@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="21" />
+
+```dockerfile
+FROM eclipse-temurin:25-jre
+```
+
+`jre` 是 Java Runtime Environment，Java 运行环境：里面有 JVM，但没有编译器。容器根本没法编译代码，它只拿到 jar、只负责跑。启动命令在同一个文件的最后一行：
+
+<CodeRef at="patra-infra/docker/service.Dockerfile@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="57" />
+
+```dockerfile
+ENTRYPOINT ["java", "-XX:MaxRAMPercentage=75.0", "-DJM.LOG.PATH=/app/logs/nacos", "-DJM.SNAPSHOT.PATH=/app", "-jar", "app.jar"]
+```
+
+去掉中间几个设置项，就是 `java -jar app.jar`：启动 JVM，让它打开 `app.jar`，找到 `main`，开始执行。
+
+<Callout kind="warn">
+
+字节码不挑操作系统，但挑 Java 版本。Patra 用 Java 25 编译，`25-jre` 里的 JVM 才认得它；拿版本更老的 JVM 去跑，启动时就会报错，说这个 class 文件的版本太新。
+
+</Callout>
+
+<Quiz
+  questions={[
+    {
+      question: "代码里把一个变量的类型写错了。这个错误最早在哪一步被发现？",
+      options: ["javac 编译时", "打包成 jar 时", "JVM 运行到那一行时"],
+      answer: "A",
+      explain: "编译器会检查类型。类型对不上，就不会生成 .class，后面的步骤都走不到。"
+    },
+    {
+      question: "Patra 的服务容器里能编译 Java 源码吗？",
+      options: ["能，Java 都自带编译器", "不能，容器只装了 JRE，有 JVM 没有编译器", "能，Docker 会自动编译"],
+      answer: "B",
+      explain: "底座是 eclipse-temurin:25-jre。JRE 只负责运行，编译在打 jar 之前就做完了。"
+    }
+  ]}
+/>
+
+<Transfer
+  prompt="一位朋友用 Windows 电脑，想在自己机器上跑一下 Patra 的 identity 服务的 jar。他需要准备什么？如果他电脑上已经装了 Java 17，会怎样？"
+  points={[
+    { label: "不用重新编译", text: "jar 里是字节码，不绑定 Windows 还是 Linux，原样拿过去就行。" },
+    { label: "要有 Java 运行环境", text: "他的机器上得有 JVM（装一个 JRE 或 JDK），用 java -jar 启动。" },
+    { label: "版本要够", text: "Patra 用 Java 25 编译，Java 17 的 JVM 认不得这么新的字节码，启动就报错，要装 25 或更新的。" }
+  ]}
+/>

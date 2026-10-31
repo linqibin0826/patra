@@ -1,0 +1,118 @@
+---
+title: 双写问题：存库和发消息怎么一起成功
+summary: 数据库和消息队列是两个独立的系统，没法放进同一个事务。先存后发，崩在中间会丢消息；先发后存，回滚后会留下一条说谎的消息。要换一个思路，而不是调整顺序。
+type: concept
+difficulty: advanced
+tags: [backend, messaging, database]
+prerequisites: [msg-ack-and-redelivery, db-transactions]
+personalEnv: false
+---
+
+<Diagnose
+  question="interaction 先把评论写进数据库并提交，再往 RabbitMQ 发「评论已发表」。进程在这两步之间崩溃重启了。通知服务最后会怎样？"
+  options={["收到消息，因为 RabbitMQ 会记住发送过的消息", "永远收不到，评论在库里，消息从没发出去，没有任何地方记得这件事", "收到消息，因为重启后程序会自动重新执行"]}
+  answer="B"
+  ifRight="对。数据库里有评论，却没有谁欠着一条消息。这个坑有名字，叫双写问题。这篇把它拆开讲。"
+  ifWrong="答案是 B。提交成功之后，程序还没来得及发消息就崩了；重启后程序不会回头去执行那一行，评论也没有标记说「还没通知过别人」。事务回滚的话，会发生什么？下面都会走一遍。"
+  suggest="msg-ack-and-redelivery"
+/>
+
+## 两个系统，两份「真相」
+
+保存评论是写 PostgreSQL，通知别人是写 RabbitMQ。这是两个互相独立的系统，各自有自己的存储和提交。
+
+数据库的事务能保证它自己的多次写入同成同败，但管不到 RabbitMQ；RabbitMQ 也管不到数据库。没有一个“总开关”能让两边**一起提交、一起回滚**。
+
+所以一个用例里只要同时写这两个地方，就叫**双写**。无论怎样排顺序，总有一个时间点，一边做完了，另一边还没做。
+
+## 排顺序救不了你
+
+<Compare
+  title="给被回复的人发提醒：两种顺序，崩在中间会怎样"
+  failureLabel="进程在第 2 步和第 3 步之间崩溃"
+  variants={[
+    {
+      label: "先提交，再发消息",
+      steps: ["写入评论", "提交事务", "往 RabbitMQ 发「评论已发表」"],
+      results: [{ label: "数据库 · 评论", value: "在", tone: "ok" }, { label: "RabbitMQ · 消息", value: "已发出", tone: "ok" }],
+      verdict: { tone: "ok", head: "两样都成功。", text: "只看顺利的时候，两种顺序没有区别。" },
+      failure: { after: 2, results: [{ label: "数据库 · 评论", value: "在", tone: "ok" }, { label: "RabbitMQ · 消息", value: "没有", tone: "bad" }], verdict: { tone: "bad", head: "消息丢了。", text: "评论好好地在，被回复的人却永远收不到提醒，也没有任何痕迹显示哪里出了问题。" } }
+    },
+    {
+      label: "先发消息，再提交",
+      steps: ["写入评论", "往 RabbitMQ 发「评论已发表」", "提交事务"],
+      results: [{ label: "数据库 · 评论", value: "在", tone: "ok" }, { label: "RabbitMQ · 消息", value: "已发出", tone: "ok" }],
+      verdict: { tone: "ok", head: "两样都成功。", text: "只看顺利的时候，两种顺序没有区别。" },
+      failure: { after: 2, results: [{ label: "数据库 · 评论", value: "回滚了，不存在", tone: "bad" }, { label: "RabbitMQ · 消息", value: "已发出，收不回", tone: "bad" }], verdict: { tone: "bad", head: "消息说了谎。", text: "对方收到「有人回复了你」，点进去却发现那条评论从来没存在过。" } }
+    }
+  ]}
+/>
+
+两种顺序各丢一样东西：
+
+- **先存后发**，可能丢消息：事情做了，没人知道。
+- **先发后存**，可能多出消息：事情没做成，消息却已经说出去了，而且收不回来。
+
+## 为什么不用分布式事务
+
+有人会想：让数据库和 RabbitMQ 参与同一个“全局事务”，一起提交，不就解决了吗？
+
+理论上有这类协议（两阶段提交）。实际上业界很少在微服务里用它：
+
+- 要求两边都支持，并且都愿意配合；
+- 提交期间要把相关资源锁住，等最慢的一方；
+- 任何一方卡住，另一方也跟着等，抵消了你拆服务想要的松耦合。
+
+Patra 的 v0.16 发布说明里列了三种可选做法，分析各自的问题：
+
+<CodeRef at="docs/patra/release-specs/v0.16-notification.md@cc2956951013b15d07d7c58136fc9593455b884e" lines="155-162" />
+
+<DecisionOptions
+  options={[
+    { name: "提交后直接发", summary: "事务提交以后，代码里直接发消息。", pros: "最简单。", cons: "崩在两步之间就丢消息，正是上面的问题。" },
+    { name: "Outbox（发件箱）", summary: "把要发的消息和业务数据写进同一个库、同一个事务，提交后由后台把它发出去；发不出去的留在表里重发。", pros: "同成同败，崩了不丢。", cons: "多一张表，多一个后台发送的环节，消息可能重复。", chosen: true },
+    { name: "事务消息", summary: "RocketMQ 自带的能力，先发半条消息，本地事务成功后再确认。", pros: "由消息中间件保证。", cons: "只有 RocketMQ 有，而 Patra 这一版已经不用 RocketMQ。" }
+  ]}
+/>
+
+发件箱的思路，是不再试图让两个系统一起提交，而是把问题改成：**让“要发的消息”和业务数据住在同一个数据库里**。数据库的事务本来就能让它俩同成同败。下一篇展开。
+
+<Callout kind="warn">
+
+调整顺序、加 try/catch、加重试，都救不了这个问题：崩溃发生在整个进程消失的时刻，代码里任何补救逻辑都跟着一起没了。你需要的是在崩溃之前，就把“还欠一条消息”记在一个重启也在的地方。
+
+</Callout>
+
+## 在 Patra 里
+
+发表评论的代码，就在一个事务里写入评论、发布事件。注意事件的发布是在事务里面：
+
+<CodeRef at="patra-api/patra-interaction/patra-interaction-app/src/main/java/dev/patra/interaction/app/discussion/usecase/comment/PublishCommentHandler.java@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="88-110" />
+
+这里的 `events.publishEvent(...)` 看起来和上一篇的进程内事件一样，但它背后接的是发件箱：事件会被登记进数据库，提交后再发到 RabbitMQ。怎么做到的，见下一篇。
+
+<Quiz
+  questions={[
+    {
+      question: "先发 RabbitMQ 消息、再提交数据库事务。事务提交时数据库宕机，事务回滚。会留下什么？",
+      options: ["什么也没留下", "一条已经发出、对应的数据却不存在的消息", "一条数据存在、却没有消息的记录"],
+      answer: "B",
+      explain: "消息发出就收不回。数据没提交，对方却被告知“有这件事”。"
+    },
+    {
+      question: "给发消息加上“失败重试三次”，能解决双写问题吗？",
+      options: ["能，重试到成功为止", "不能：崩溃时进程没了，重试逻辑也没了"],
+      answer: "B",
+      explain: "重试只能应付“发送这次失败了”，应付不了“进程在提交和发送之间消失”。"
+    }
+  ]}
+/>
+
+<Transfer
+  prompt="电商里，用户支付成功后要 (1) 把订单状态改成已支付（写 MySQL），(2) 给仓库系统发「备货」消息（走 Kafka）。你的同事先改状态再发消息。请说出：什么情况下订单已支付，却永远不会备货？你会怎么向他解释“为什么顺序换过来也不行”？"
+  points={[
+    { label: "丢备货", text: "状态已提交，进程在发 Kafka 之前崩溃或网络断了，仓库永远收不到备货消息。" },
+    { label: "换顺序更糟", text: "先发消息再改状态：状态写入失败回滚时，仓库已经备货，订单却没有支付。" },
+    { label: "核心原因", text: "MySQL 和 Kafka 是两个系统，没有一个事务能同时覆盖它们。该做的是把“要发备货消息”这件事和订单状态一起写进 MySQL。" }
+  ]}
+/>

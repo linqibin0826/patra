@@ -1,0 +1,231 @@
+---
+title: 锁：乐观锁、行锁与咨询锁
+summary: 并发写同一份数据时，用版本号发现冲突（乐观锁），用 SELECT FOR UPDATE 先占住行（行锁），或用咨询锁保证一件事同一时刻只有一个在做；以及多把锁怎么避免死锁。
+type: concept
+difficulty: advanced
+tags: [database, backend, spring]
+prerequisites: [db-isolation-levels]
+---
+
+<Diagnose
+  question="两个管理员同时打开同一个用户的资料页，都改了昵称，几乎同时点保存。不做任何并发控制，最终数据库里的昵称是？"
+  options={["谁的修改先到谁生效，后到的被拒绝", "后保存的覆盖先保存的，先保存的那个人的修改悄悄丢了", "两个昵称合并在一起"]}
+  answer="B"
+  ifRight="对。数据库默认谁后写谁赢，没有人会收到提醒。要避免这种静默覆盖，就得让并发写互相知道对方的存在，这就是锁要做的。"
+  ifWrong="答案是 B。不加控制时，两次保存各自是一条独立的 UPDATE，后执行的覆盖先执行的，数据库不会拒绝也不会提醒。先保存的那个人以为改成功了，其实被覆盖了。"
+  suggest="db-isolation-levels"
+/>
+
+## 为什么要锁
+
+上一篇讲到，读已提交下两个事务"先读后写"会丢更新。办法之一是让其中一个**等一等**，或者让后到的**发现冲突、重来**。这就是锁。
+
+Patra 里用到三种，思路各不相同：
+
+| 锁 | 一句话 | 谁来保证 | Patra 里的例子 |
+|---|---|---|---|
+| 乐观锁 | 先不拦，写的时候检查「在我之后有没有人改过」，改过就报错 | 应用 + 版本号列 | 实体基类里的 `version` 列 |
+| 行锁（悲观锁） | 先把这行占住，别人想改只能等 | 数据库 `SELECT ... FOR UPDATE` | 用户行：封禁与登录签发串行 |
+| 咨询锁 | 随便起个名字当锁，约定谁拿到谁做 | 数据库 `pg_advisory_lock` | 导入任务同一时刻只跑一个 |
+
+## 乐观锁：写的时候对一下版本号
+
+给表加一列 `version`。每次修改，`UPDATE` 的条件里要带上自己读到的版本，同时把版本加 1：
+
+```sql
+UPDATE idn_user_profile SET display_name = ?, version = version + 1
+ WHERE id = ? AND version = 3;
+```
+
+如果影响了 1 行，说明在你读完到现在没人改过；如果影响 **0 行**，说明有人抢先改了（版本已经不是 3），你的修改不能生效，要报错让用户刷新重来。它叫"乐观"，是因为假设大概率不会冲突，不预先拦着任何人，只在最后核对一次。
+
+<Stepper
+  title="两个人同时改昵称，乐观锁怎么发现冲突"
+  nodes={[
+    { id: "a", label: "管理员 A" },
+    { id: "row", label: "资料行", sub: "version = 3" },
+    { id: "b", label: "管理员 B" }
+  ]}
+  links={[
+    { from: "a", to: "row" },
+    { from: "b", to: "row" }
+  ]}
+  steps={[
+    { caption: "A 和 B 都打开了资料页，都读到 version = 3。", focus: ["a", "b", "row"], tokens: [{ id: "a", label: "A 读到 v3", at: "a" }, { id: "b", label: "B 读到 v3", at: "b" }], notes: [{ at: "row", text: "version = 3" }] },
+    { caption: "A 先保存：UPDATE ... WHERE version = 3，条件成立，改成功，version 变成 4。", focus: ["a", "row"], links: ["a>row"], tokens: [{ id: "a", label: "A 保存成功", at: "row" }, { id: "b", label: "B 读到 v3", at: "b" }], notes: [{ at: "row", text: "version = 4", tone: "ok" }] },
+    { caption: "B 随后保存：UPDATE ... WHERE version = 3。可现在版本是 4，条件不成立，影响 0 行。", focus: ["b", "row"], links: ["b>row"], tokens: [{ id: "b", label: "B 的保存影响 0 行", at: "row", state: "dropped" }], notes: [{ at: "row", text: "version = 4", tone: "wait" }] },
+    { caption: "框架看到 0 行，抛出乐观锁异常。B 的页面提示「数据已被修改，请刷新后重试」，A 的修改没有被悄悄覆盖。", focus: ["b"], tokens: [{ id: "b", label: "B 收到冲突提示", at: "b" }], notes: [{ at: "b", text: "刷新后重来", tone: "bad" }] }
+  ]}
+  guesses={[
+    { before: 4, question: "B 的 UPDATE 影响了 0 行，没有报 SQL 错误。框架怎么知道发生了冲突？", options: ["数据库返回一个冲突错误码", "框架发现「影响行数是 0，但本来应该是 1」，就判定为冲突", "框架每次保存前先把整张表锁起来"], answer: "B", explain: "乐观锁靠影响行数来判断。应该改 1 行结果改了 0 行，说明版本对不上，框架据此抛出乐观锁异常。" }
+  ]}
+/>
+
+Patra 的所有 JPA 实体基类里都有这一列：
+
+<CodeRef at="patra-tool/patra-tool-jpa/src/main/java/dev/patra/tool/jpa/entity/BaseJpaEntity.java@b6e01875bb5692356021c8a19562f557f319fc54" lines="134-140" />
+
+```java
+  /// 用于乐观锁的版本号。
+  ///
+  /// 此字段由 JPA 自动管理，防止并发更新冲突。
+  /// 初始值为 0，每次更新时自动递增。
+  @Version
+  @Column(name = "version")
+  private Long version;
+```
+
+冲突时框架抛出 `OptimisticLockingFailureException`，仓库适配器把它翻译成领域里的异常，让上层决定怎么办：
+
+<CodeRef at="patra-api/patra-identity/patra-identity-infra/src/main/java/dev/patra/identity/infra/account/persistence/UserRepositoryAdapter.java@5073ab1358404ecd989e722373cd9f7edafe238b" lines="108-121" />
+
+```java
+    try {
+      return mapper.toAggregate(dao.saveAndFlush(entity));
+    } catch (DataIntegrityViolationException ex) {
+      // ... 邮箱、用户名唯一约束冲突，翻译成「已被占用」
+    } catch (OptimisticLockingFailureException ex) {
+      throw new UserModifiedConcurrentlyException();
+    }
+```
+
+乐观锁适合**冲突少**的场景（改个人资料、改一篇文献）。冲突频繁时，总是写完才发现要重来，不如换悲观锁。
+
+## 行锁：先占住，别人等
+
+悲观锁的想法正相反：既然怕冲突，就在读的时候把这行**锁住**，直到事务结束。别的事务想改同一行，要排队等。
+
+SQL 写法是 `SELECT ... FOR UPDATE`。在 Patra 里，查用户并加行锁是一个专门的方法：
+
+<CodeRef at="patra-api/patra-identity/patra-identity-infra/src/main/java/dev/patra/identity/infra/account/persistence/dao/UserDao.java@5073ab1358404ecd989e722373cd9f7edafe238b" lines="17-23" />
+
+```java
+  /// 按 ID 加行锁查（`SELECT … FOR UPDATE`），只能在事务里调。
+  @Lock(LockModeType.PESSIMISTIC_WRITE)
+  @Query("select u from UserEntity u where u.id = :id")
+  Optional<UserEntity> findByIdForUpdate(@Param("id") Long id);
+```
+
+为什么要用？Patra 的规范里写了一个具体理由：**会话的签发和用户封禁，靠同一把用户行锁串行化**。如果不串行，可能出现"管理员刚封禁了账号，同一时刻一个新登录又成功签发了会话"，封禁就被绕过去了。两边都先锁住这个用户的行，一个做完另一个才能开始，顺序就确定了。
+
+<CodeRef at=".claude/rules/tech/transaction.md@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="26" />
+
+行锁要点：
+
+- 锁**只在事务里有效**，事务结束（提交或回滚）自动释放，所以 `findByIdForUpdate` 注释写着"只能在事务里调"。
+- 锁的是行，不同用户的行互不影响。
+- 持锁时间越短越好，别在持锁期间做慢操作。
+
+## 咨询锁：给"一件事"上锁
+
+有时要保证的不是"别人别改这一行"，而是"这件事同一时刻只有一个人在做"。比如 catalog 的 PubMed 导入任务，一个做完了才能开下一个；多个服务实例同时跑，不能有两个同时导入。
+
+这件事没有对应的"行"可锁。PostgreSQL 提供了**咨询锁**：你随便起一个名字（实际是一个 64 位整数），谁拿到这个"锁号"谁就独占，别人取不到。数据库不关心这个锁代表什么，约定由你的代码遵守，所以叫"咨询"。
+
+<CodeRef at="patra-api/patra-catalog/patra-catalog-infra/src/main/java/dev/patra/catalog/infra/kernel/lock/PgAdvisoryRunLockAdapter.java@5073ab1358404ecd989e722373cd9f7edafe238b" lines="39-54" />
+
+```java
+  public <T> Optional<T> runExclusively(String lockName, Supplier<T> work) {
+    long key = lockKey(lockName);
+    return jdbcTemplate.execute(
+        (ConnectionCallback<Optional<T>>)
+            connection -> {
+              if (!queryBoolean(connection, "SELECT pg_try_advisory_lock(?)", key)) {
+                log.info("任务锁 {} 已被其他实例持有，本次跳过", lockName);
+                return Optional.empty();
+              }
+              try {
+                return Optional.ofNullable(work.get());
+              } finally {
+                queryBoolean(connection, "SELECT pg_advisory_unlock(?)", key);
+              }
+            });
+  }
+```
+
+读法：`pg_try_advisory_lock` 是"试着拿，拿不到立刻返回 false，不等"。拿不到就说明别的实例在跑，这次直接跳过；拿到了就干活，干完（`finally`）释放。两个细节：
+
+- 这是**会话级**咨询锁，绑在数据库连接上，所以整个运行期间都占着同一条连接（连接池那一篇提过）。进程崩了连接断开，锁自动释放，不会"死锁"在那里。
+- "有帮助"功能里用的是另一种：**事务级**咨询锁 `pg_advisory_xact_lock`，对每个被点的目标上锁，随事务结束自动释放。拿不到时它会等，不是跳过：
+
+<CodeRef at="patra-api/patra-interaction/patra-interaction-infra/src/main/java/dev/patra/interaction/infra/reaction/persistence/HelpfulRepositoryAdapter.java@b554d996121f219ca9dc8a6ea08baf4f93648f5a" lines="35-40" />
+
+```java
+  public void lockTarget(HelpfulTarget target) {
+    jdbc.sql("SELECT pg_advisory_xact_lock(hashtextextended(:lockKey, 0))")
+        .param("lockKey", LOCK_PREFIX + target.type().name() + ":" + target.id())
+        .query((rs, rowNum) -> 1)
+        .single();
+  }
+```
+
+目标是"评论或帖子加它的 ID"，把它拼成一个字符串再哈希成锁号。这样"删评论的同时有人点有帮助"会排好队，不会留下指向已删评论的孤儿明细。
+
+## 多把锁：死锁
+
+锁用多了会遇到**死锁**：事务 A 占着锁 1 等锁 2，事务 B 占着锁 2 等锁 1，两边都等不到，数据库检测到后只能杀掉其中一个。
+
+<Stepper
+  title="死锁是怎么形成的：顺序相反"
+  nodes={[
+    { id: "a", label: "事务 A" },
+    { id: "rows", label: "两行统计", sub: "行 1、行 2" },
+    { id: "b", label: "事务 B" }
+  ]}
+  links={[
+    { from: "a", to: "rows" },
+    { from: "b", to: "rows" }
+  ]}
+  steps={[
+    { caption: "A 要给行 1 和行 2 都加 1，B 要给行 2 和行 1 都加 1。A 先动手：锁住行 1。", focus: ["a", "rows"], links: ["a>rows"], tokens: [{ id: "a", label: "A 持有行 1", at: "rows" }], notes: [{ at: "a", text: "持有：行 1" }] },
+    { caption: "B 也开始了，先锁住行 2。两边各占一把，目前没问题。", focus: ["b", "rows"], links: ["b>rows"], tokens: [{ id: "a", label: "A 持有行 1", at: "rows" }, { id: "b", label: "B 持有行 2", at: "rows" }], notes: [{ at: "a", text: "持有：行 1" }, { at: "b", text: "持有：行 2" }] },
+    { caption: "A 接着要锁行 2，被 B 占着，A 开始等。B 接着要锁行 1，被 A 占着，B 也开始等。", focus: ["a", "b"], tokens: [{ id: "a", label: "A 等行 2", at: "a", state: "faded" }, { id: "b", label: "B 等行 1", at: "b", state: "faded" }], notes: [{ at: "a", text: "等 B 放行 2", tone: "wait" }, { at: "b", text: "等 A 放行 1", tone: "wait" }] },
+    { caption: "谁也等不到。数据库检测到死锁，强行回滚其中一个，另一个才能继续。被回滚的那个收到错误。", focus: ["b"], tokens: [{ id: "b", label: "B 被回滚", at: "b", state: "dropped" }], notes: [{ at: "b", text: "报「检测到死锁」", tone: "bad" }, { at: "a", text: "A 继续", tone: "ok" }] }
+  ]}
+  guesses={[
+    { before: 4, question: "怎样做可以从根上避免这种死锁？", options: ["给事务设更长的超时时间", "让所有事务都按同样的顺序加锁，比如都先锁行 1 再锁行 2", "用更大的连接池"], answer: "B", explain: "死锁来自加锁顺序相反形成的环。大家都按同一个顺序加锁，就不会形成环，后到的只会排队等，不会互相等。" }
+  ]}
+/>
+
+办法是**约定加锁顺序**。Patra 的文献库在批量给多篇文献的收藏人数加减 1 时，就是这么做的：
+
+<CodeRef at="patra-api/patra-interaction/patra-interaction-infra/src/main/java/dev/patra/interaction/infra/collection/persistence/LibraryRepositoryAdapter.java@b554d996121f219ca9dc8a6ea08baf4f93648f5a" lines="270-307" />
+
+```java
+  /// 给这些对象的收藏人数各 +1，没有统计行就建出来。按 `subject_id` 升序处理，多行时拿行锁的顺序固定，两个批量
+  /// 操作不会互等。
+  ...
+            SELECT id, 1 FROM unnest(CAST(:ids AS bigint[])) AS t(id) ORDER BY id
+  ...
+  /// 先按 `subject_id` 升序锁住统计行（多行 `UPDATE` 不保证加锁顺序），再减；
+```
+
+两个批量操作，不管传进来的顺序如何，一律按 `subject_id` 从小到大处理，加锁顺序就固定了。规范里对不同种类的锁也有统一顺序：**配额锁，业务对象锁，行锁**。
+
+<Quiz
+  title="考考自己"
+  questions={[
+    {
+      question: "编辑文章的冲突很少见，但一旦冲突要提示用户而不是悄悄覆盖。最合适用哪种锁？",
+      options: ["乐观锁（版本号）", "每次编辑前对整张表加锁", "咨询锁"],
+      answer: "A",
+      explain: "冲突少时乐观锁最划算：平时零开销，万一冲突就在保存时发现并提示。"
+    },
+    {
+      question: "一个定时任务可能被多个服务实例同时触发，但同一时刻只许一个实例真正执行，其他的直接跳过。该用什么？",
+      options: ["乐观锁", "SELECT ... FOR UPDATE 锁住某一行", "pg_try_advisory_lock 这样的咨询锁"],
+      answer: "C",
+      explain: "这件事没有对应的数据行，需要的是「给一件事上锁」；try 版本拿不到立刻返回，正好用来跳过。"
+    }
+  ]}
+/>
+
+<Transfer
+  prompt="两个用户同时给同一篇文献各点一次「收藏」，收藏人数统计行要加 2。统计行里只有一列 collector_count。请分别说明：用乐观锁、用 SELECT FOR UPDATE、用 UPDATE ... SET c = c + 1，各自会怎样处理这次并发？哪个最简单？"
+  points={[
+    { label: "乐观锁", text: "两个事务都读到旧版本，先提交的成功，后提交的发现版本不对、影响 0 行，要重试。能保证不丢，但要写重试逻辑。" },
+    { label: "FOR UPDATE", text: "第一个事务先读并锁住行，第二个等；第一个提交后第二个才读到最新值再加 1。正确，但要先读再写，两步都在事务里。" },
+    { label: "c = c + 1", text: "一条语句，数据库自己等行锁并基于最新值计算，不需要读、不需要重试，是这种纯加减计数最简单的做法。" },
+    { label: "什么时候选前两种", text: "要在读出的值上做复杂判断再决定怎么写时，才需要先读后写，这时用 FOR UPDATE 或乐观锁。" }
+  ]}
+/>
