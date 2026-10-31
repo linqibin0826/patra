@@ -7,3 +7,5 @@ CREATE TABLE processed_event
     processed_at TIMESTAMP WITH TIME ZONE NOT NULL,
     PRIMARY KEY (consumer, event_id)
 );
+-- 保留期清理按处理时间删（ProcessedEventPurger，默认 30 天）
+CREATE INDEX processed_event_processed_at_idx ON processed_event (processed_at);

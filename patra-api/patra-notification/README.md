@@ -65,7 +65,7 @@ inbox 不依赖 preference：偏好只管邮件，站内提醒照常。
 | 错误码前缀 | `NOTIFICATION`（如 `NOTIFICATION-0404`） |
 | 配置 | jar 里的 `application.yml` 放随代码变的默认值；库地址与 RabbitMQ 密码引用在 Nacos `patra-notification.yaml`，库账号、RabbitMQ 坐标与 xxl-job 管理端地址在 `patra-common.yaml` |
 | 密钥 | `~/.patra/secrets/nacos.env`、`rabbitmq.env`（都必需） |
-| 定时任务 | 执行器 `patra-notification`：注销清理 `deletedUserCleanupJob`（PAP-142，每天 06:30，含偏好、信箱、在站记录）；信箱保留期 `inboxRetentionJob`（PAP-143，每天 06:45，北京时间 5 个自然月）；离站邮件、每日汇总随各 Issue 加 |
+| 定时任务 | 执行器 `patra-notification`：注销清理 `deletedUserCleanupJob`（PAP-142，每天 06:30，含偏好、信箱、在站记录）；信箱保留期 `inboxRetentionJob`（PAP-143，每天 06:45，北京时间 5 个自然月）；已处理事件清理 `processedEventPurgeJob`（事件模块提供，每天 07:00，删 30 天前的去重记录）；离站邮件、每日汇总随各 Issue 加 |
 | 调用的服务 | identity 内部接口 `POST /_internal/users/recipients`（收件信息）与 `POST /_internal/users/summaries`（注销清理取账号状态、列表取名片），`lb://patra-identity`；interaction 内部接口 `POST /_internal/subjects/views`（对象视图）与 `POST /_internal/posts/outlines`（经验结果），`lb://patra-interaction`；都是连接 1 秒、读 2 秒 |
 | 消费的事件 | interaction 的 `interaction.events`（队列 `notification.inbox`） |
 | 上线 | `docs/patra/runbooks/v0.16-notification-go-live-runbook.md` |

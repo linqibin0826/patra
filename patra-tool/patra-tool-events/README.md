@@ -17,6 +17,7 @@
 |---|---|---|---|
 | `publisher.confirm-timeout` | Duration | `5s` | 等 broker 确认的上限 |
 | `resubmit.min-age` | Duration | `1m` | 只补投发布时间早于它的登记行 |
+| `consumer.processed-retention` | Duration | `30d` | `processed_event` 的保留期，清理任务删掉处理时间早于它的行；不写单位按天，必须为正；要长过同一事件可能再次到达的最长间隔（spec 4.14） |
 | `consumer.trusted-packages` | List<String> | 空 | 按消息头 `__TypeId__` 反序列化时信任的包，按包名精确匹配（不含子包）。一个监听类用多个 `@RabbitHandler` 时要写发布方集成事件所在的包；监听方法参数是具体类型时不用配 |
 
 ## 出哪些默认值
@@ -81,7 +82,7 @@
 ## 消费方怎么接
 
 1. boot 模块引入本模块；adapter 写 `@RabbitListener` 要 `spring-boot-starter-amqp`。
-2. Flyway 建 `processed_event`：照抄 `src/integrationTest/resources/db/migration/V2__create_processed_event.sql`。`event_publication` 也照建（同发布方第 2 步）：Modulith 关机时会查未完成的登记行，没有表会报 SQL 错。
+2. Flyway 建 `processed_event`（含 `processed_at` 索引）：照抄 `src/integrationTest/resources/db/migration/V2__create_processed_event.sql`。`event_publication` 也照建（同发布方第 2 步）：Modulith 关机时会查未完成的登记行，没有表会报 SQL 错。
 3. boot 层声明队列（连同死信交换机 `<队列>.dlx`、死信队列 `<队列>.dlq`，以及发布方的交换机）：
 
    ```java
@@ -106,7 +107,10 @@
 
    `markProcessed` 必须在已有事务里调用（`MANDATORY`）；业务失败回滚时记录一起回滚，重试不会被当成重复。
 
-5. 死信队列里的消息不会自己回来，在 RabbitMQ 管理界面查看或重放。
+5. xxl-job-admin 登记 `processedEventPurgeJob`：CRON `0 0 7 * * ?`（每天一次），路由「第一个」，阻塞处理「单机串行」，超时 300 秒，不重试。删掉 30 天前的去重记录；发布方不用登记（它们没有这张表）。
+6. 死信队列里的消息不会自己回来，在 RabbitMQ 管理界面查看或重放。死信里可能有已处理事件的重复副本：重放超过保留期（30 天）的死信前，先按事件 ID 查业务表，去重行已经被清理掉了。
+
+`processed_event` 只是第一道去重：超过保留期才再到的重复会被当成新事件。副作用不幂等的消费方要自己带一道业务层去重（现有各消费方怎么做的见 spec 4.14）。
 
 ## 测试
 

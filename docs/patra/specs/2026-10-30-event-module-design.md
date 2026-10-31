@@ -68,7 +68,7 @@ v0.16 要让 interaction、identity 把「发生了什么」告诉新的通知�
 - 不接入任何具体服务：interaction（PAP-141）、identity（PAP-104）、notification（PAP-139 / 143 / 105）各自引依赖、建表、写映射与监听器。
 - 不做 compose 与 mini 上的 RabbitMQ（PAP-138）。
 - 不做乱序处理（墓碑、版本号，决策 D 后半）：它们是各事件的业务规则，归 PAP-143。
-- 不做死信告警、死信重放工具、`processed_event` 的过期清理（见第 9 节）。
+- 不做死信告警、死信重放工具（见第 9 节）。
 - 不做 Boot 4.1 升级本身（PAP-152 单独做、单独合入）。
 
 **反目标**（功能都在也算失败）
@@ -276,6 +276,7 @@ CREATE TABLE processed_event
     processed_at TIMESTAMP WITH TIME ZONE NOT NULL,
     PRIMARY KEY (consumer, event_id)
 );
+CREATE INDEX processed_event_processed_at_idx ON processed_event (processed_at);
 ```
 
 模块的集成测试用的就是这两段（`src/integrationTest/resources/db/migration/`），README 指向它们。
@@ -337,6 +338,33 @@ identity 本地的 `spring.task.execution.pool.core-size: 2` 和它的配置测�
 - Boot 默认的执行器队列不设上限，长时间卡住时排队的外送任务堆在内存里（每个只带一个事件对象，按现在的量可忽略）。哪天要给执行器配队列容量，理由写内存，并且拒绝策略**不能用 `CallerRunsPolicy`**：提交后监听在业务事务的 `afterCompletion` 里执行，那时请求线程还拿着业务连接，队列满了让请求线程自己跑外送，等于原问题复活；默认的 `AbortPolicy` 只打 ERROR、事件留给补投。
 - 去掉 identity 的并发上限后，8 个异步线程同时超时时会集中做几次毫秒级的短事务（标失败、标进行中），算不上饿死。
 
+### 4.14 `processed_event` 的保留期清理（10/31 补）
+
+**问题**：去重表每处理一个事件就多一行，只增不减。删早了会出错：同一个事件如果在行被删之后又来一次，`markProcessed` 会把它当成第一次。
+
+**`processed_event` 是第一道去重，不是唯一一道**。现有消费方各自还有业务层的第二道，行删了再来的重复事件今天没有可见后果：
+- 安全邮件：`SendSecurityMailHandler` 先按事件 ID 查 `mail.mail_delivery`（这张表不清理），查到就跳过，不会再发一封；
+- 回复与 @ 提醒：插入带 `ON CONFLICT (recipient_id, comment_id) DO NOTHING`，不会多一条；
+- 评论删除、经验删除：有墓碑，重复处理也是幂等的；
+- 有帮助（PAP-144）：同一个人、同一时刻的重复点击被吸收，不重置已读。
+
+所以保留期真正保护的是「没有第二道去重的副作用」。**以后新增的消费方**：副作用不幂等的，要么自己带一道业务层去重，要么接受「超过保留期才再到的重复会再处理一次」。
+
+**同一个事件什么时候会再来**：
+- **broker 重投**：消费方处理完、还没 ack 就断开（崩溃、重启），这条消息在连接恢复后立刻重投。间隔等于消费方停机多久，一般是分钟级，最坏是一次几天的故障。
+- **发布方补投**：消息其实送到了、也处理了，但发布方没拿到 broker 的确认（超时、断线），登记行留着，补投任务每分钟再发一次，直到某次拿到确认。间隔等于 broker「收得下却回不了确认」持续多久，通常随 broker 恢复几分钟内结束。补投没有上限：极端情况下登记行卡很久（broker 半坏几天，或者长假后才有人处理），几天后才补投成功。还有一种 broker 本身健康的情形：同一个路由键绑了多个队列、其中一个拒收（比如超长度拒收），broker 回 nack，其他队列却已收下，于是每分钟送来一份副本、一直持续；现在每个路由键只绑一个消费队列，不会发生，以后多绑时要留意（这时补投 WARN 里「多半是路由键没有队列绑定」的提示会误导）。
+- **死信重放**：死信里可能是已处理事件的重复副本。比如第一份处理成功、ack 前断开，重投的那份碰上数据库抖动、重试三次都失败进了死信；死信队列不设过期，超过保留期再重放，去重行已经没了，会被当成新事件。上线手册与 README 的重放步骤都写了：重放超过保留期的死信前，先按事件 ID 查业务表。
+
+**选 30 天**：比前两种的现实间隔（分钟到小时，最坏几天）长一个数量级，也覆盖「出事后过一个长假才处理」。
+- **代价**：多留 30 天的行。notification 每天处理的事件按百到千条计，30 天几万行、每行几十字节，几 MB；按 `processed_at` 加索引，清理只扫要删的行。与信箱的 5 个月对齐也只是几十 MB，选 30 天是因为现有消费方都有第二道去重，不必为它们多留。
+- **残余风险**：超过 30 天才再到的重复会被再处理一次，现有消费方靠第二道去重挡住。补投那条路要登记行卡 30 天以上，这期间补投每分钟都会打 WARN，到不了 30 天；死信那条路靠重放前先查业务表。
+- **为什么不按事件时间丢弃太旧的事件**：集成事件只约定了 `eventId`，没有统一的时间字段；而且按时间丢会把真正没处理过的晚到事件也丢掉。
+- **配置**：`patra.events.consumer.processed-retention`，不写单位按天；必须为正，写 0 或负数启动失败（否则每天把去重表删光）。
+
+**怎么触发**：和补投一样用 XXL-Job。模块注册 `processedEventPurgeJob`（`ProcessedEventPurger`），消费事件的服务在调度中心登记，每天一次（CRON `0 0 7 * * ?`）。调度中心看得到、可以手动执行；不用 `@Scheduled`（服务没开 `@EnableScheduling`），也不在 `markProcessed` 里顺手删（每次写入多一条删除，业务事务变长）。删除分批：每批一条语句、最多 1000 行、各自提交，删到某批为 0 才停（有并发清理时也不会提前收工），不开长事务、不一次锁住大量行。「各自提交」的前提是任务线程不带事务、连接池开着自动提交（Hikari 默认如此）；哪个服务关掉自动提交，连接归还时删除会被回滚，任务照样回写删了多少，行却还在。
+
+**谁要登记**：现在只有 notification 消费事件；identity、interaction 也会注册这个任务入口（模块按有没有 `JdbcClient` 装配），但它们没有 `processed_event` 表，调度中心里不要给它们登记（误登记只会让任务报失败）。
+
 ## 5. 包结构
 
 ```text
@@ -352,7 +380,7 @@ patra-tool-events
       EventsDefaultsPostProcessor             4.9 默认值
       EventsRabbitAutoConfiguration           转换器、mandatory 定制、ConfirmingRabbitMessagingTemplate
       EventsResubmitAutoConfiguration         EventPublicationResubmitter；有 xxl-job 时注册任务
-      EventsConsumerAutoConfiguration         JdbcProcessedEventAdapter
+      EventsConsumerAutoConfiguration         JdbcProcessedEventAdapter、ProcessedEventPurger；有 xxl-job 时注册清理任务
     publisher
       ConfirmingRabbitMessagingTemplate
     resubmit
@@ -361,6 +389,8 @@ patra-tool-events
     consumer
       EventQueue
       JdbcProcessedEventAdapter
+      ProcessedEventPurger
+      ProcessedEventPurgeJob
 
 patra-tool-test
   dev.patra.tool.test.container.initializer.RabbitMQContainerInitializer
@@ -390,6 +420,7 @@ patra-tool-test
 - 默认值：`management.health.rabbit.enabled=false`。
 - 等确认时不占数据库连接：`ExternalizationConnectionIT`（4.13）。
 - 线程上挂着事务资源时拒绝等确认：`ConfirmingRabbitMessagingTemplateTest` 绑一个资源后发送，断言报错（4.13）。
+- 已处理事件清理：`ProcessedEventPurgerIT` 在真 PostgreSQL 上插 2500 条 40 天前的行和 3 条 29 天前的行，清理删掉 2500 条（跨三批）、留下 3 条；`ProcessedEventPurgerTest` 断言截止时间与「删到 0 才停」；装配契约测试覆盖注册条件、不写单位按天、0 天启动失败、配置值传到清理器；任务单测覆盖回写（4.14）。
 - 只登记外送器（4.12 落地时加）：IT 里放一个普通的 `@TransactionalEventListener(AFTER_COMMIT)`，发布后登记表里只有外送器的行。
 - 外送监听器的 ID：IT 断言登记行的 `listener_id`，防止以后误加第二个外送器。2.0.8 是 `DelegatingEventExternalizer.externalize(java.lang.Object)`，2.1 改为 `EventExternalizerModuleListener.externalize(java.lang.Object)`。
 
@@ -414,6 +445,5 @@ patra-tool-test
 
 ## 9. 留给后续 Issue
 
-- `processed_event` 的过期清理：每个事件一行、只有三列，按 Patra 的量级多年也就几十 MB；需要时由消费方服务加清理任务。
 - 死信告警与重放工具（release spec 决策 E 的代价）。
 - 无。落到 2.1 的改动属于本 Issue，见 4.12。
