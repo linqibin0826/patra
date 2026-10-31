@@ -48,6 +48,18 @@ inbox 不依赖 preference：偏好只管邮件，站内提醒照常。
 - 读时组合：列表的对象信息（链接 key、标题、期刊、是否还在、经验结果）调 interaction 现查，挂了降级为不带对象信息；名片调 identity，挂了 503。
 - 给别的子域的：读端口 `InboxReadPort`（列表、三个未读数），领域事件 `UnreadCountsChangedEvent`（实时推送提交后订阅）、`NotificationsCreatedEvent`（提醒邮件同事务订阅）。
 
+### realtime：实时推送
+
+设计：`docs/patra/specs/2026-10-31-notification-realtime-push-design.md`（第 5 节是给门户的契约）。
+
+- 接口 `GET /me/notifications/stream`（经网关 `/patra-notification/me/notifications/stream`，网关就要求登录、走推送专用连接池）：SSE，只推三个未读数。连上立刻推一次当前值（带 `retry: 3000`），之后每次未读数变化推一条 `unread-count`，数据与未读数接口同形；每 25 秒一行注释 `:ping`；没有 `Last-Event-ID`。
+- 连接表 `UnreadCountStreamRegistry`（app）管「用户 → 连接」，不认识 SSE；`SseEmitter` 在 adapter 里实现 `UnreadCountStream`。推送读数放在每个用户的锁里，并发推送时最后一条总是最新值；写不进去的连接剔除。
+- 提交后推：`UnreadCountPushListener` 订阅 inbox 的 `UnreadCountsChangedEvent`（`AFTER_COMMIT` + `@Async`，换到 Boot 的 `applicationTaskExecutor`），回滚不推；不进事件登记表。
+- 寿命与超时：`SseEmitter` 的超时就是 30 分钟寿命（也是显式设的异步超时，不设是 Tomcat 默认的 30 秒），到点正常结束，浏览器 3 秒后重连、网关借机重新查会话。
+- 在站：连接建立时与每轮心跳给在线的人记一次（`PresenceGateway`，决策 H）。
+- 停机：`ContextClosedEvent` 时结束所有连接，优雅停机不用等它们。
+- 配置：`patra.notification.realtime.heartbeat-interval`（25s）、`max-connection-age`（30m），在 jar 的 `application.yml`；只有一个实例（连接在内存里）。
+
 「已处理事件」表（决策 D）不属于任何子域：表结构按事件模块（PAP-137），库里只建一张，inbox 与 mail 的消费者共用，谁先落地谁建。
 
 ## 3. 存储

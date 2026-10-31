@@ -1,6 +1,6 @@
 # 通知服务实时推送工程设计（PAP-145）
 
-> 状态：设计定稿（2026-10-31），待实施
+> 状态：已实施（2026-10-31，计划 `docs/patra/plans/2026-10-31-notification-realtime-push.md`）；实施中的偏离与实测见第 14 节
 > 日期：2026-10-31
 > Issue：PAP-145（GitHub #332），Linear Project P-PAP-13 v0.16 Notification，Milestone BE Ready
 > 依据：release spec `docs/patra/release-specs/v0.16-notification.md` 2.1「推送什么」「后台与断线」、第 3 节 B / C、决策 H、决策 I、Done D3 / D8；PAP-143 信箱契约（`docs/patra/specs/2026-10-31-notification-inbox-design.md` 第 10 节）
@@ -158,7 +158,7 @@ realtime 子域只依赖 inbox 的公开包（`model.read.UnreadCounts`、`port.
 |---|---|---|
 | domain | — | 没有业务规则需要放这里：推送是信箱状态的一种投递方式，规则（谁的数、怎么算）都在 inbox。domain 里只有骨架的 `package-info` |
 | app | `service.UnreadCountStream`（接口） | 一条已打开的推送连接：推数字、推心跳、结束。不认识 SSE，由 adapter 实现 |
-| app | `service.UnreadCountStreamRegistry` | 「用户 → 连接」表：登记（并推当前值、记在站）、注销、按用户推、心跳一轮、全部结束 |
+| app | `service.UnreadCountStreamRegistry` | 「用户 → 连接」表：给当前用户登记（并推当前值、记在站）、注销、按用户推、心跳一轮、全部结束 |
 | app | `listener.UnreadCountPushListener` | 订阅 `UnreadCountsChangedEvent`：提交后、换线程，交给表按用户推 |
 | adapter | `rest.UnreadCountStreamController` | `GET /me/notifications/stream`：要登录，建 `SseEmitter`，登记 |
 | adapter | `rest.SseUnreadCountStream` | 用 `SseEmitter` 实现 `UnreadCountStream`，并把 emitter 的完成 / 超时 / 出错接回表里注销 |
@@ -170,8 +170,8 @@ realtime 子域只依赖 inbox 的公开包（`model.read.UnreadCounts`、`port.
 
 ### 6.2 建立连接
 
-1. 控制器 `CurrentUserPort.require()` 取当前用户；没有身份断言时抛出，安全 starter 回 401 `NOTIFICATION-0401`（正常经网关时网关已先拦住，这里是第二道）。
-2. 建 `SseEmitter(max-connection-age)`，包成 `SseUnreadCountStream`，交给表登记。
+1. 控制器调连接表的 `openForCurrentUser`，由它在 app 层经 `CurrentUserPort.require()` 取当前用户（项目里只有 app 层读当前用户）；没有身份断言时抛出，安全 starter 回 401 `NOTIFICATION-0401`（正常经网关时网关已先拦住，这里是第二道）。控制器直接用连接表、不走命令总线：它管的是长连接的状态，不是一个用例，每 25 秒的心跳过拦截器链只会刷日志。
+2. 建 `SseEmitter(max-connection-age)`，包成 `SseUnreadCountStream`，交给表登记；表返回用户 ID，控制器再挂上完成 / 超时 / 出错回调。
 3. 登记时在该用户的锁里：放进表 → 读当前三个数 → 推给这条连接（带 `retry: 3000`）。先放进表再读，读之后发生的变化一定会再推一次，不会漏。
 4. 锁外记一次在站。
 5. 返回 `ResponseEntity<SseEmitter>`，响应头带 `Cache-Control: no-cache, no-transform`：`no-transform` 让 Next.js 的压缩中间件和 Cloudflare 不对事件流做 gzip（压缩会攒满一块才发，事件就卡住了）。
@@ -188,7 +188,7 @@ realtime 子域只依赖 inbox 的公开包（`model.read.UnreadCounts`、`port.
 
 **顺序**：同一个用户的两次变化可能在两个线程里同时推。读数放在锁**里面**：后拿到锁的那个，读到的一定是两次提交之后的状态，最后一条推出去的总是最新值。不在锁外读，否则先读的旧值可能后发，铃铛停在错的数上。
 
-**取数的事务**：按 inbox 读端口实现的约定；它若要求已有事务，就在推送线程里开只读事务（实现时看 PAP-143 的 `InboxReadAdapter`）。
+**取数的事务**：PAP-143 的 `InboxReadAdapter.unreadCounts` 是一条普通的 `JdbcClient` 查询、不要求事务，推送线程直接调，不开事务。
 
 **失败**：推某条连接出错（浏览器已走、写不进去）→ 从表里剔除这条、结束它，别的连接照推；读数出错 → 记 WARN，这一轮不推，等下一次变化或下一次重连。监听器不往外抛异常。
 
@@ -378,3 +378,24 @@ HTTP/1.1 下浏览器对同一站点最多 6 条连接，所以门户在标签�
 6. 响应头带 `Cache-Control: no-cache, no-transform`（6.2）。
 7. release spec 决策 I 里连接池默认值的说法有误（2.4），交编排会话更正。
 8. 推送路由逐字节读、按事件刷（7.5）；网关停机时主动结束推送流（7.6）。
+
+## 14. 实施记录（2026-10-31）
+
+### 14.1 与本设计的偏离
+
+| 项 | 设计 | 实际 | 理由 |
+|---|---|---|---|
+| 取当前用户 | 控制器 `CurrentUserPort.require()` | 连接表 `openForCurrentUser(stream)` 在 app 层取，返回用户 ID 给控制器挂回调 | 项目里只有 app 层读 `CurrentUserPort`，adapter 一处都没有 |
+| 取数的事务 | 视读端口而定 | 不开事务 | `InboxReadAdapter.unreadCounts` 不要求事务 |
+| 网关拷贝 | 自带的「读一块刷一次」 | `PushProxyExchange` 逐字节读、按事件刷（7.5） | 实测事件攒到流结束才出来 |
+| 网关停机 | 未写 | 停机开始时结束推送流（7.6） | 设计评审补充 |
+| 推送 `RestClient` | 从容器里的 Builder 建 | 先 `clone()` 再改 | 那个 Builder 是单例，直接改会把普通路由换到推送池（池满用例抓到） |
+| 集成测试寿命 | 压到 3 秒 | 5 秒 | 要长过「3 秒内推到」的窗口 |
+
+### 14.2 实测与守护
+
+- **网关攒事件**：`GatewayPushRouteIT.should_deliver_each_event_as_soon_as_it_arrives` 先红（第一条事件约 5 秒、流结束才到），换成 `PushProxyExchange` 后绿。
+- **池满**：`GatewayPushRouteIT.should_reject_extra_stream_at_once_when_push_pool_is_full_while_other_requests_pass`：第三条推送立即 503 `GW-0503`（借连接失败按现有分类规则就是 503，不用改分类器），普通请求 200。
+- **变异确认测试会变红**：去掉推送处理器的刷新事件转交 → `should_forward_stream_with_assertion_and_without_session_token` 红（会话令牌直达下游）；把读数挪到锁外 → `should_end_with_latest_counts_when_two_pushes_race` 红；把监听器改成同步 `@EventListener` → `should_push_only_after_commit_and_not_record_publication` 红。
+- **在站的时序**：一轮心跳先发完全部连接再记在站，刚收到心跳时读到的可能还是上一轮的时刻，集成测试用 Awaitility 等它前进。
+- **到寿命的日志**：`onTimeout` 里 `complete()` 后响应正常结束，日志里没有 `AsyncRequestTimeoutException`；浏览器走后的写失败只在 DEBUG 记一行。
