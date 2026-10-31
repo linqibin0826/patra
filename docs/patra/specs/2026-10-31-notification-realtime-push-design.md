@@ -173,7 +173,7 @@ realtime 子域只依赖 inbox 的公开包（`model.read.UnreadCounts`、`port.
 1. 控制器调连接表的 `openForCurrentUser`，由它在 app 层经 `CurrentUserPort.require()` 取当前用户（项目里只有 app 层读当前用户）；没有身份断言时抛出，安全 starter 回 401 `NOTIFICATION-0401`（正常经网关时网关已先拦住，这里是第二道）。控制器直接用连接表、不走命令总线：它管的是长连接的状态，不是一个用例，每 25 秒的心跳过拦截器链只会刷日志。
 2. 建 `SseEmitter(max-connection-age)`，包成 `SseUnreadCountStream`，交给表登记；表返回用户 ID，控制器再挂上完成 / 超时 / 出错回调。
 3. 登记时在该用户的锁里：放进表 → 读当前三个数 → 推给这条连接（带 `retry: 3000`）。先放进表再读，读之后发生的变化一定会再推一次，不会漏。
-4. 锁外记一次在站。
+4. 锁外记一次在站。在站只是附带信号：写不进去只记 WARN，连接照常返回（往外抛的话控制器拿不到 emitter，表里却留着这条连接，成了永不剔除、每轮都记在站的幽灵连接，见 14.3）。
 5. 返回 `ResponseEntity<SseEmitter>`，响应头带 `Cache-Control: no-cache, no-transform`：`no-transform` 让 Next.js 的压缩中间件和 Cloudflare 不对事件流做 gzip（压缩会攒满一块才发，事件就卡住了）。
 
 读当前值失败（数据库挂了）时从表里撤下这条连接，异常照常抛出，回 500 / 503 的 ProblemDetail，不返回事件流。
@@ -190,7 +190,7 @@ realtime 子域只依赖 inbox 的公开包（`model.read.UnreadCounts`、`port.
 
 **取数的事务**：PAP-143 的 `InboxReadAdapter.unreadCounts` 是一条普通的 `JdbcClient` 查询、不要求事务，推送线程直接调，不开事务。
 
-**失败**：推某条连接出错（浏览器已走、写不进去）→ 从表里剔除这条、结束它，别的连接照推；读数出错 → 记 WARN，这一轮不推，等下一次变化或下一次重连。监听器不往外抛异常。
+**失败**：推某条连接出错（浏览器已走、写不进去）→ 从表里剔除这条、结束它，别的连接照推；读数出错 → 记 WARN，这一轮不推，等下一次变化或下一次重连；记在站出错 → 记 WARN，不影响推送和同一轮后面的人。监听器不往外抛异常。
 
 ### 6.4 连接寿命 30 分钟
 
@@ -202,8 +202,8 @@ realtime 子域只依赖 inbox 的公开包（`model.read.UnreadCounts`、`port.
 
 `UnreadCountStreamHeartbeatScheduleJob` 用 Spring 的 `@Scheduled(fixedRateString = "${patra.notification.realtime.heartbeat-interval}")`（boot 层加 `@EnableScheduling`），每 25 秒调一次表的「心跳一轮」：
 
-- 对每个有连接的用户，在他的锁里给每条连接写 `:ping`；写失败的剔除。
-- 一轮里每个仍有连接的用户记一次在站（`markSeen`），同一用户多条连接只记一次。
+- 对每个有连接的用户，给每条连接写 `:ping`；写失败的剔除。**不拿用户锁**：推送在锁里读库，数据库一慢，心跳排在锁后面，一轮就会拖过网关 60 秒的读超时、所有推送流一起断开；同一条连接上的写由 `SseEmitter` 自己的 `writeLock` 串行化。所以心跳偶尔会先于第一条 `unread-count` 写进还没初始化的 emitter，浏览器忽略注释，「第一条事件带 `retry`」不受影响。
+- 一轮里每个仍有连接的用户记一次在站（`markSeen`），同一用户多条连接只记一次；一人写不进去只记 WARN，不影响后面的人。
 
 为什么用进程内定时器、不用 XXL-Job：连接只存在于这个进程的内存里，心跳必须由持有连接的进程自己发；XXL-Job 是集群调度，粒度和语义都不合适。
 
