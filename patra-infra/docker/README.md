@@ -336,13 +336,15 @@ notification 的执行器 `patra-notification`（端口 6601，不映射到宿�
 
 ## 门户的公网入口（Cloudflare Tunnel）
 
-给少数人体验和测试用：https://patra.linqibin.dev 经 Cloudflare Tunnel 转到 mini 上门户的 `localhost:4000`。**只有门户对外**，PG、Redis、Nacos、MinIO 等基础设施端口仍然只在 tailnet 和局域网里。门口没有加 Cloudflare Access，访问控制只靠 Patra 自己的登录（2026-10-28 决定）。2026-10-28 实测：首页首次打开 5～6 秒，连接复用后每个请求约 1 秒（免费版落在洛杉矶节点）。
+给少数人体验和测试用：https://patra.linqibin.dev 经 Cloudflare Tunnel 转到 mini 上门户的 `localhost:4000`。学习站经同一条隧道以 https://learn.linqibin.dev 对外（v0.17 起），转到 mini 上的 `localhost:4001`。**只有门户和学习站对外**，PG、Redis、Nacos、MinIO 等基础设施端口仍然只在 tailnet 和局域网里。门口没有加 Cloudflare Access，访问控制只靠 Patra 自己的登录（2026-10-28 决定）。2026-10-28 实测：首页首次打开 5～6 秒，连接复用后每个请求约 1 秒（免费版落在洛杉矶节点）。
 
-- **隧道**：Cloudflare 账号里的 `patra-portal`（远程管理，ingress 在 Cloudflare 后台：`patra.linqibin.dev` → `http://localhost:4000`，其余返回 404）；DNS 是 `patra` 指向 `<隧道 ID>.cfargotunnel.com` 的代理 CNAME。`linqibin.dev` 开着 Always Use HTTPS，http 访问会 301 到 https。同一账号里的 `office-mac-ssh` 隧道与 Patra 无关。
+- **隧道**：Cloudflare 账号里的 `patra-portal`（远程管理，ingress 在 Cloudflare 后台：`patra.linqibin.dev` → `http://localhost:4000`、`learn.linqibin.dev` → `http://localhost:4001`，其余返回 404）；DNS 是 `patra`、`learn` 两条指向 `<隧道 ID>.cfargotunnel.com` 的代理 CNAME。`linqibin.dev` 开着 Always Use HTTPS，http 访问会 301 到 https。同一账号里的 `office-mac-ssh` 隧道与 Patra 无关。
 - **mini 上的进程**：brew 装的 `cloudflared`，由 LaunchAgent `~/Library/LaunchAgents/dev.patra.cloudflared-portal.plist` 常驻（`RunAtLoad` + `KeepAlive`，执行 `cloudflared tunnel --no-autoupdate run --token-file ~/.patra/secrets/cloudflared-patra-portal.token`），日志在 `~/Library/Logs/cloudflared-patra-portal.log`。cloudflared 走家宽直连 Cloudflare（QUIC），不经 Clash。LaunchAgent 要有用户登录会话才会运行。
 - **令牌**：`~/.patra/secrets/cloudflared-patra-portal.token`（权限 600），只在 mini 上。泄露后到 Cloudflare 后台轮换该隧道的令牌，再覆盖这个文件并 `launchctl kickstart -k gui/$(id -u)/dev.patra.cloudflared-portal`。
 - **查状态**：`launchctl print gui/$(id -u)/dev.patra.cloudflared-portal | grep state`；正常时日志里有 4 条 `Registered tunnel connection`。
 - **暂停对外**：`launchctl bootout gui/$(id -u)/dev.patra.cloudflared-portal`；恢复用 `launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/dev.patra.cloudflared-portal.plist`。
+
+- **学习站只绑本机回环**：compose 里 learn 的端口是 `127.0.0.1:4001:4001`，tailnet 和局域网都不能直接访问 4001，要看学习站走 https://learn.linqibin.dev；mini 本机仍可 `curl http://127.0.0.1:4001/api/health`（`deploy.sh` 的探活就走这里）。学习站是纯静态站、不登录，读者进度只存在浏览器里。
 
 已知限制：
 

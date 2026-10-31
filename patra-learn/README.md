@@ -6,7 +6,7 @@ Patra 学习站：借 Patra 这个真实项目学后端，从「HTTP 请求是�
 
 - **技术栈**：Next.js 16 App Router · React 19 · MDX · zod · TypeScript strict · Tailwind v4 · Biome · Vitest · Playwright
 - **Node**：24（`.nvmrc` 锁定）+ pnpm 10
-- **访问**：部署在 Mac mini，目前仅 tailscale 内网，端口 4001
+- **访问**：https://learn.linqibin.dev（公网，不用登录）；部署在 Mac mini，容器端口 4001 只绑 mini 本机回环，经 Cloudflare Tunnel 对外
 
 ## 快速开始
 
@@ -73,7 +73,8 @@ learn 在 `.github/workflows/ci.yml` 有专属 job（`learn_changed` 门控，�
 
 - **镜像**：`patra-learn/Dockerfile` 三阶段构建（deps → `next build` → standalone runner），产物是 Next.js standalone Node server，监听 4001。
 - **CD**：merge 到 main 且命中 `patra-learn/**` 等 paths → `.github/workflows/learn-cd.yml` 在 Mac mini runner 原生 arm64 `docker build` → `patra-infra/cd/deploy.sh` 部署（健康检查 `/api/health` + 部署后验证 + 不健康自动回滚）→ GHCR 归档推送（best-effort）。回滚：`workflow_dispatch` 填旧 sha 的 `image_tag`。
-- **容器**：Mac mini `patra-apps` 栈，compose 服务名 `learn` / 容器 `patra-learn`，env 只读 `.env.learn`（纯静态站，不读 `.env.common`）。
+- **容器**：Mac mini `patra-apps` 栈，compose 服务名 `learn` / 容器 `patra-learn`，env 只读 `.env.learn`（纯静态站，不读 `.env.common`）。端口只绑 `127.0.0.1:4001`，tailnet 上不能直接访问。
+- **公网入口**：门户那条 Cloudflare Tunnel 加了 `learn.linqibin.dev` → `http://localhost:4001`（见 `patra-infra/docker/README.md`「门户的公网入口」）。对线上的 Playwright 回归走这个域名。
 - **Bootstrap 提示**：首次合入 main 后需等 learn-cd 首跑完成产出镜像；在那之前 Mac mini 整栈 `compose-all.sh up` 会因拉不到 learn 镜像报错，属预期——等首跑绿了再 up 即可。
 
 ## 设计文档
