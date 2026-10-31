@@ -156,7 +156,7 @@
 | 参数 | 必填 | 说明 |
 |---|---|---|
 | `title` | 是 | 图的标题 |
-| `intro` | 否 | 没选中任何东西时的说明，默认「点任意一块看它管什么」 |
+| `intro` | 否 | 没选中任何东西时的说明，默认「点图上的方块或连线，看它管什么。」 |
 | `nodes` | 是 | 2～12 个，每个 `{ id, label, sub?, code?, col, row?, desc }`：`sub` 是第二行小字，`code` 用等宽字体，`col` / `row` 是网格位置（从 1 数），`desc` 是点中后的说明 |
 | `edges` | 否 | 连线，每条 `{ from, to, label?, desc?, dashed? }`，箭头从 `from` 指向 `to`；写了 `desc` 的连线可以点 |
 | `traces` | 否 | 最多 3 个「发一条」按钮，每个 `{ button, packet, hops }`：`packet` 是消息块上的字，`hops` 是 2～8 跳 `{ at, caption, drop? }`，最后一跳 `drop` 表示消息在这里被丢掉 |
@@ -297,7 +297,7 @@
 
 - `focus`：这一步点亮的节点 id；写了的点亮，其余变淡；不写都正常显示。
 - `links`：这一步点亮的连线，写成 `"起点>终点"`，必须先在顶层 `links` 里声明。
-- `tokens`：这一步各消息块在哪，`{ id, label, at, state? }`。同一个 `id` 在相邻两步里 `at` 不同，就会从前一个节点移动到后一个；`state` 写 `"faded"` 变淡，写 `"dropped"` 划掉（被丢弃）。某一步没写某个 token，它就淡出。
+- `tokens`：这一步各消息块在哪，`{ id, label, at, state? }`。同一个 `id` 在相邻两步里 `at` 不同，就会从前一个节点移动到后一个；`state` 写 `"faded"` 变淡，写 `"dropped"` 划掉（被丢弃）。某一步没写某个 token，它就消失。
 - `notes`：节点下方的小框 `{ at, text, tone? }`，`tone` 写 `"wait"`（琥珀）、`"ok"`（绿）、`"bad"`（红）。
 
 ```mdx

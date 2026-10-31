@@ -29,6 +29,20 @@ describe("按内容定列宽", () => {
     expect(boxes.c?.x).toBe(480);
   });
 
+  it("各列加起来比画布宽时按比例缩窄，列间至少留 24 px，方块不重叠", () => {
+    const { boxes } = gridLayout(
+      ["a", "b", "c", "d"].map((id, i) => ({ id, col: i + 1, width: 172 })),
+      { width: 632, nodeHeight: 60, rowGap: 60 },
+    );
+    const xs = ["a", "b", "c", "d"].map((id) => boxes[id] as { x: number; w: number });
+    for (let i = 1; i < xs.length; i++) {
+      const prev = xs[i - 1] as { x: number; w: number };
+      expect((xs[i] as { x: number }).x - (prev.x + prev.w)).toBeGreaterThanOrEqual(24);
+    }
+    const last = xs[3] as { x: number; w: number };
+    expect(last.x + last.w).toBeLessThanOrEqual(632);
+  });
+
   it("同一列里宽度不同的节点按这一列最宽的居中", () => {
     const { boxes } = gridLayout(
       [

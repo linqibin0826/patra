@@ -18,6 +18,9 @@ export interface GridOptions {
   gap?: number;
 }
 
+/// 按内容定列宽时，相邻两列之间最少留多宽
+const MIN_COLUMN_GAP = 24;
+
 /// 按列均分宽度、按行叠放，节点在格子里水平居中。
 /// 节点带了 width 时改为按内容定列宽：每列取这一列最宽的节点，两端对齐，空当平均分给列间（标签放得下）
 export function gridLayout(
@@ -30,9 +33,14 @@ export function gridLayout(
   const boxes: Record<string, Box> = {};
   const height = rows * nodeHeight + (rows - 1) * rowGap;
   if (items.every((i) => i.width !== undefined)) {
-    const colWidths = Array.from({ length: cols }, (_, c) =>
+    const natural = Array.from({ length: cols }, (_, c) =>
       Math.max(0, ...items.filter((i) => i.col === c + 1).map((i) => i.width ?? 0)),
     );
+    // 放不下时按比例缩窄，列间至少留 MIN_COLUMN_GAP
+    const room = width - MIN_COLUMN_GAP * (cols - 1);
+    const total = natural.reduce((a, b) => a + b, 0);
+    const scale = total > room ? room / total : 1;
+    const colWidths = natural.map((w) => w * scale);
     const spare = width - colWidths.reduce((a, b) => a + b, 0);
     const between = cols > 1 ? spare / (cols - 1) : 0;
     const lead = cols > 1 ? 0 : spare / 2;
@@ -40,7 +48,7 @@ export function gridLayout(
       (_, c) => lead + colWidths.slice(0, c).reduce((a, b) => a + b, 0) + c * between,
     );
     for (const item of items) {
-      const w = item.width ?? 0;
+      const w = (item.width ?? 0) * scale;
       const cw = colWidths[item.col - 1] ?? w;
       boxes[item.id] = {
         x: (colX[item.col - 1] ?? 0) + (cw - w) / 2,
