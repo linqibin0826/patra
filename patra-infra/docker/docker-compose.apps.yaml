@@ -203,7 +203,9 @@ services:
     image: ghcr.io/linqibin0826/patra-learn:${LEARN_IMAGE_TAG:-latest}
     container_name: patra-learn
     restart: unless-stopped
-    ports: [ "4001:4001" ]
+    # 只绑 mini 本机回环：公网经 Cloudflare Tunnel（learn.linqibin.dev → localhost:4001）进来，
+    # tailnet 与局域网不再能直接访问 4001；deploy.sh 探活走 127.0.0.1，不受影响
+    ports: [ "127.0.0.1:4001:4001" ]
     # learn 是纯静态学习站（无后端依赖），不读 .env.common
     env_file:
       - .env.learn

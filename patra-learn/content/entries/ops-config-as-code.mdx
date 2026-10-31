@@ -1,0 +1,127 @@
+---
+title: 配置也走流水线：从 git 推到 Nacos
+summary: 非敏感的配置以 git 里的文件为唯一来源，合并进 main 后由 CD 自动推送到 Nacos，控制台只用来应急查看。好处是改动有评审、有历史；代价是写错的配置，回滚镜像救不回来。
+type: concept
+difficulty: advanced
+tags: [ci-cd, deployment, spring]
+prerequisites: [ops-cd-deploy-loop, spring-nacos-config-and-refresh]
+topics: [config-refresh]
+sources:
+  - version: v0.9
+    issue: PAP-75
+    pr: 231
+personalEnv: false
+---
+
+<Diagnose
+  question="有人在 Nacos 控制台里直接改了某个配置。几天后，CD 因为另一次代码合并，重新推送了一遍配置。控制台里手改的那处会怎样？"
+  options={["保留：推送只会覆盖仓库里改过的部分", "被仓库里的版本覆盖", "两边合并，保留较新的"]}
+  answer="B"
+  ifRight="对。推送是把整个目录同步过去，仓库里的内容就是标准答案，控制台里的手工修改会被覆盖。这正是这套设计想要的。"
+  ifWrong="答案是 B。推送是整份同步：内容不同的发布，Nacos 里有而仓库里没有的删除。仓库是唯一来源，所以控制台里的手工修改会被覆盖。这题考的是「以谁为准」。"
+  suggest="spring-nacos-config-and-refresh"
+/>
+
+<Callout kind="lead">
+
+非敏感的配置，以仓库里 `patra-infra/nacos/dev/` 下的 YAML 文件为**唯一来源**。合并进 main 后，CD 在部署之前先把它们同步到 Nacos。Nacos 控制台只在应急时用，改在那里的内容，下一次推送就会被覆盖。
+
+</Callout>
+
+## 为什么以 git 为准
+
+配置中心有现成的控制台，随手就能改，为什么还要多绕一步？
+
+<Compare
+  title="谁说了算"
+  variants={[
+    {
+      label: "以控制台为准",
+      steps: ["在 Nacos 控制台里改", "立即生效", "仓库里的文件不动"],
+      results: [{ label: "有评审吗", value: "没有", tone: "bad" }, { label: "有 diff 吗", value: "没有", tone: "bad" }, { label: "仓库与线上", value: "迟早对不上", tone: "bad" }],
+      verdict: { tone: "bad", head: "快，但没有记录。", text: "改动没有评审，也看不到谁改了什么。时间一长，仓库里的文件和线上的实际值会不一致，没人说得清哪个对。" }
+    },
+    {
+      label: "以 git 为准",
+      steps: ["改仓库里的 YAML，开 PR", "评审、合并进 main", "CD 自动推送到 Nacos"],
+      results: [{ label: "有评审吗", value: "有", tone: "ok" }, { label: "有 diff 吗", value: "有", tone: "ok" }, { label: "回滚", value: "git revert", tone: "ok" }],
+      verdict: { tone: "ok", head: "慢一点，但每一次改动都有历史。", text: "配置和代码走同一条路径，回滚就是再提交一次反向修改。" }
+    }
+  ]}
+/>
+
+## 推送脚本做了什么
+
+同步由一个幂等脚本 `nacos-push.sh` 完成。目录名就是 Nacos 的命名空间，目录里的每个 `*.yaml` 是一份配置，文件名就是配置的名字。
+
+<CodeRef at="patra-infra/scripts/nacos-push.sh@25d6e781ce2078a892d1b7f89231de4a0b157f68" lines="1-14" />
+
+对比 Nacos 里已有的内容，脚本按四种情况处理：
+
+| 情况 | 动作 |
+|---|---|
+| Nacos 里没有 | 新增 |
+| 内容不同 | 更新 |
+| 内容逐字节相同 | 跳过，打印「未变化」 |
+| Nacos 里有、目录里没有 | 删除 |
+
+所以多跑几次没有副作用，这就是「幂等」。脚本还有一个 `--check` 模式：只对比不写入，退出码 0 表示一致，2 表示有差异，1 表示出错。
+
+推送前先做一次本地预检，不联网：必须有 `patra-common.yaml`，每个文件的第一行必须是对应的「签到行」。签到行是一行形如 `patra.config-source.service: patra-catalog.yaml` 的配置，服务启动时靠它确认确实读到了 Nacos 里的配置，而不是悄悄回退到了 jar 包里的默认值。
+
+<CodeRef at="patra-infra/scripts/nacos-push.sh@25d6e781ce2078a892d1b7f89231de4a0b157f68" lines="79-96" />
+
+## 在流水线里的位置
+
+CD 的任务顺序是：判断改了什么，然后推送配置，然后构建部署。推送在部署**之前**，因为新代码可能依赖新配置。推送失败，本次就不部署。
+
+<CodeRef at=".github/workflows/cd.yml@b6e01875bb5692356021c8a19562f557f319fc54" lines="90-109" />
+
+这里有两个设计值得停下来想：
+
+1. **推送任务在每次 push main 时都跑**，不看这次到底改没改配置。原因是排队中的运行会被更新的一次替换，被替换那次的配置修改，不在新运行的 diff 里，只看 diff 会漏推。脚本会跳过没变化的文件，多跑一次只花几秒。
+2. **推送前再查一次配置文件**。CD 不等 CI，直接推 main 时 CI 的检查可能还没跑完，所以推送前在部署机上再跑一次 `NacosConfigFilesTest`。它检查：签到行、重复的键、以及不许写密钥。
+
+关于密钥：仓库是公开的，名字以 `password`、`secret`、`token`、`api-key` 之类结尾的键，值只能写 `${变量}` 引用（或者带公开的 dev 默认值的引用）。真正的密钥放在部署机上仓库之外的目录，由容器启动时注入。
+
+改了配置之后，对应的服务也要重新部署，因为库地址、对象存储这类配置是启动时读取的：`patra-<服务名>.yaml` 改了就重部署那个服务；公共配置 `patra-common.yaml` 改了，六个后端服务全部重部署。
+
+## 代价：写错的配置，回滚镜像救不回来
+
+这个设计有一个已知的代价，值得用一个场景走一遍。
+
+<Stepper
+  title="一份坏配置是怎么拖住恢复的"
+  nodes={[
+    { id: "git", label: "git 仓库", sub: "配置文件" },
+    { id: "nacos", label: "Nacos", sub: "dev 命名空间" },
+    { id: "svc", label: "某个后端服务", sub: "监听配置变化" }
+  ]}
+  links={[
+    { from: "git", to: "nacos", label: "CD 推送" },
+    { from: "nacos", to: "svc", label: "通知变化" }
+  ]}
+  steps={[
+    { caption: "一切正常：仓库里是第 1 版配置，Nacos 里也是，服务在用它。", focus: ["svc"], tokens: [{ id: "cfg", label: "第 1 版", at: "svc" }], notes: [{ at: "svc", text: "健康", tone: "ok" }] },
+    { caption: "有人改了一个值，改得不合法（比如把一个次数上限写成 0），合并后 CD 把第 2 版推进了 Nacos。", focus: ["git", "nacos"], links: ["git>nacos"], tokens: [{ id: "cfg", label: "第 2 版", at: "nacos" }], notes: [{ at: "nacos", text: "第 2 版", tone: "bad" }] },
+    { caption: "Nacos 通知服务刷新。服务拒绝这个值，刷新失败，健康检查转为 DOWN。服务还在用旧值，但状态已经红了。", focus: ["svc"], links: ["nacos>svc"], tokens: [{ id: "cfg", label: "第 2 版", at: "svc", state: "dropped" }], notes: [{ at: "svc", text: "DOWN", tone: "bad" }] },
+    { caption: "部署脚本发现不健康，把服务回滚到上一个镜像。可是旧镜像读的是同一份 Nacos 配置，也就是同一个坏值。回滚没有帮上忙。", focus: ["svc"], tokens: [{ id: "cfg", label: "第 2 版", at: "svc", state: "dropped" }], notes: [{ at: "svc", text: "旧镜像，仍然 DOWN", tone: "bad" }] },
+    { caption: "正确的恢复：在仓库里 `git revert` 那次配置修改，合并后 CD 推送正确内容，并重新部署对应的服务。", focus: ["git", "nacos", "svc"], links: ["git>nacos", "nacos>svc"], tokens: [{ id: "cfg", label: "第 3 版", at: "svc" }], notes: [{ at: "svc", text: "恢复健康", tone: "ok" }] }
+  ]}
+  guesses={[
+    { before: 4, question: "配置刷新失败，服务不健康，部署脚本自动把镜像回滚到上一个版本。服务会恢复吗？", options: ["会：旧镜像本来是好的", "不会：旧镜像读的是同一份坏配置", "取决于旧镜像里有没有默认值"], answer: "B", explain: "配置在 Nacos 里，不在镜像里。镜像回滚到旧版本，读的仍是 Nacos 上那个坏值。" },
+    { before: 5, question: "有人想走捷径：用推送脚本手动把配置推回出错之前的原文。服务会恢复吗？", options: ["会：内容回到了之前", "不一定：内容与出错前完全相同，Nacos 客户端认为没有变化，不会再通知服务", "一定不会"], answer: "B", explain: "失败的那一版没有被服务处理成功，监听器记着的还是出错之前的版本摘要。推回完全相同的内容，摘要一样，客户端就不再通知。要么重启服务，要么先推一版内容不同的配置，要么走 revert 加 CD。" }
+  ]}
+/>
+
+当时没有为这件事做推送前的完整校验，也没有做部署失败后的 Nacos 自动恢复。理由是单人开发，revert 一次几分钟就能恢复，写一套自动恢复机制得不偿失。
+
+<Transfer
+  prompt="你想把 identity 服务某个非敏感的超时参数从 30 秒改成 60 秒。这件事该怎么做？改完以后要不要动服务？为什么不直接去控制台改？"
+  points={[
+    { label: "怎么做", text: "改 `patra-infra/nacos/dev/patra-identity.yaml`，开 PR，评审合并进 main，CD 自动推送。" },
+    { label: "要不要动服务", text: "不用手动重启：文件对应的服务会被 CD 重新部署，启动时读取新配置；需要运行中刷新的配置则由服务自己的刷新机制处理。" },
+    { label: "为什么不用控制台", text: "控制台里改没有评审、没有 diff，仓库与线上会对不上；下一次推送还会把它覆盖掉。" },
+    { label: "写错了怎么办", text: "镜像回滚救不回来，`git revert` 这次修改，让 CD 再推一遍并重部署。" }
+  ]}
+/>

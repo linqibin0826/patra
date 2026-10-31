@@ -1,0 +1,121 @@
+---
+title: 实体与值对象
+summary: 有身份的是实体，换了内容还是它；只看值的是值对象，值一样就是同一个。值对象在造出来的那一刻就自己守规则，拿到它的人不必再检查。
+type: concept
+difficulty: basic
+tags: [ddd, backend, java]
+prerequisites: [ddd-rules-vs-plumbing, java-records-and-immutability]
+personalEnv: false
+---
+
+<Diagnose
+  question="用户甲和用户乙各建了一个收藏夹，名字都叫「读书笔记」。这两个名字相等吗？这两个收藏夹是同一个收藏夹吗？"
+  options={["名字相等，收藏夹也是同一个", "名字相等，但收藏夹不是同一个", "名字不相等，收藏夹也不是同一个"]}
+  answer="B"
+  ifRight="对。「读书笔记」四个字一样，名字就相等；但两个收藏夹是两个东西，各有各的身份。这篇把这两种东西分别叫值对象和实体。"
+  ifWrong="答案是 B：名字只看内容，内容一样就相等；收藏夹是一个具体的东西，两个人各有一个，不能算同一个。这里要用到「record 按值判断相等」，不熟的话先读那篇。"
+  suggest="java-records-and-immutability"
+/>
+
+## 两种东西：认身份，还是认内容
+
+- **实体**：有身份的东西。内容可以变，只要身份（通常是一个 ID）没变，它就还是它。一条评论被编辑、被删除，它还是那条评论。
+- **值对象**：没有身份，只看内容。两个值对象的内容一样，就是同一个，随时可以互换。
+
+<Callout kind="analogy">
+
+人民币 100 元的纸币：你不在乎手里是哪一张，只要面值一样，换一张给你也行，这是值对象。你的身份证则是实体：改了地址，它还是你的身份证，号码不变；换一张别人的就不行。
+
+</Callout>
+
+## 值对象：Patra 里的 CollectionName
+
+收藏夹的名称在 Patra 里不是一个裸的 `String`，而是一个 record：
+
+<CodeRef at="patra-api/patra-interaction/patra-interaction-domain/src/main/java/dev/patra/interaction/domain/collection/model/vo/CollectionName.java@3cf6fa5757b3be54c3b030e4cace871f53e2599c" lines="1-30" />
+
+注意两点：
+
+1. record 的 `equals` 按值比较，所以两个 `CollectionName("读书笔记")` 相等。
+2. 构造入口 `parse` 把规则都守了：去首尾空白、不能为空、不超过 100 个字素。不合法的名称根本造不出来。
+
+下面一步步看一次 `parse`。
+
+<Stepper
+  title="一个名称是怎么被造出来的"
+  nodes={[
+    { id: "raw", label: "用户输入", sub: "原始字符串" },
+    { id: "parse", label: "CollectionName.parse", sub: "唯一入口" },
+    { id: "rules", label: "TextRules", sub: "文本规则" },
+    { id: "name", label: "CollectionName", sub: "值对象" }
+  ]}
+  links={[
+    { from: "raw", to: "parse" },
+    { from: "parse", to: "rules" },
+    { from: "parse", to: "name" }
+  ]}
+  steps={[
+    { caption: "用户在页面输入「  读书笔记  」，两头有空格。", focus: ["raw"], tokens: [{ id: "t", label: "  读书笔记  ", at: "raw" }] },
+    { caption: "交给 parse。它先请 TextRules 规范化：统一 Unicode 写法，去掉首尾空白。", focus: ["parse", "rules"], links: ["raw>parse", "parse>rules"], tokens: [{ id: "t", label: "读书笔记", at: "rules" }] },
+    { caption: "再检查：不含控制字符，不超过 100 个字素。通过。", focus: ["rules"], tokens: [{ id: "t", label: "读书笔记", at: "rules" }], notes: [{ at: "rules", text: "通过", tone: "ok" }] },
+    { caption: "通过之后才 new CollectionName。从这里往后，拿到它的代码都不必再检查。", focus: ["parse", "name"], links: ["parse>name"], tokens: [{ id: "t", label: "读书笔记", at: "name" }] },
+    { caption: "换一个输入：只有几个空格。规范化之后，什么都没剩。", focus: ["parse", "rules"], links: ["parse>rules"], tokens: [{ id: "u", label: "空串", at: "parse" }] },
+    { caption: "parse 抛出异常，CollectionName 根本没有被造出来。", focus: ["parse"], tokens: [{ id: "u", label: "空串", at: "parse", state: "dropped" }], notes: [{ at: "parse", text: "抛异常", tone: "bad" }] }
+  ]}
+  guesses={[
+    { before: 6, question: "输入全是空格，规范化后是空串。parse 会怎么处理？", options: ["造出一个名字为空的 CollectionName", "抛异常，不造对象", "返回 null"], answer: "B", explain: "parse 的约定是：要么造出合法的值，要么抛异常。手里有一个 CollectionName，它就一定是合法的。" }
+  ]}
+/>
+
+<Callout kind="lead">
+
+值对象把规则「焊」在类型上：只要手里是 `CollectionName`，名称就一定合法。检查只在造它的一处做一次，不用在每个用到的地方再检查。
+
+</Callout>
+
+## ID 也是值对象
+
+那收藏夹本身是实体，它的 ID 呢？ID 是值对象，用来表示身份：
+
+<CodeRef at="patra-api/patra-interaction/patra-interaction-domain/src/main/java/dev/patra/interaction/domain/collection/model/vo/CollectionId.java@3cf6fa5757b3be54c3b030e4cace871f53e2599c" lines="1-15" />
+
+给 ID 单独一个类型，不是为了好看。看 catalog 里的 `AuthorId`：
+
+<CodeRef at="patra-api/patra-catalog/patra-catalog-domain/src/main/java/dev/patra/catalog/domain/author/model/vo/AuthorId.java@5073ab1358404ecd989e722373cd9f7edafe238b" lines="15-25" />
+
+它在构造时就拒绝空值和非正数。更重要的是类型不同：函数要 `AuthorId`，你就没法误传一个 `OrganizationId` 或随手写的数字。裸 `long` 做不到这一点。
+
+## 实体：Patra 里的评论
+
+评论是实体。同一条评论，编辑了正文、被删成占位，评论 ID 不变，还是那条评论：
+
+<CodeRef at="patra-api/patra-interaction/patra-interaction-domain/src/main/java/dev/patra/interaction/domain/discussion/model/aggregate/CommentAggregate.java@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="29-45" />
+
+可以看到它有 `commentId`，状态会从正常变成已删除。「评论」靠 ID 区分，而不是靠内容区分：两条正文一模一样的评论，是两条评论。
+
+<Quiz
+  title="分一分"
+  questions={[
+    {
+      question: "哪个更适合做成实体？",
+      options: ["一条评论", "评论的正文长度上限（500 字）"],
+      answer: "A",
+      explain: "评论有生命周期：发表、编辑、删除，随时间变化但始终是它。上限是一个固定的值，不需要身份。"
+    },
+    {
+      question: "两个 CollectionName，内容都是「读书笔记」，用 equals 比较会得到什么？",
+      options: ["true", "false"],
+      answer: "A",
+      explain: "record 的 equals 按所有字段的值比较，内容一样就相等。这正是值对象要的行为。"
+    }
+  ]}
+/>
+
+<Transfer
+  prompt="要给收藏夹加「简介」，最多 500 个字，可以不填，换行允许。简介该做成实体还是值对象？它的 parse 方法该返回什么，才能表达「可以不填」？"
+  points={[
+    { label: "值对象", text: "简介没有自己的身份，只看内容，做成 record，规则（500 字素、允许换行）放进 parse。" },
+    { label: "可空怎么表达", text: "parse 返回 Optional：空白就是没有简介，返回空；有内容才造出对象。Patra 的 CollectionDescription 就是这么写的。" },
+    { label: "为什么不用 null", text: "类型上写明可能没有，调用方不会忘记处理。" }
+  ]}
+/>

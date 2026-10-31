@@ -1,0 +1,103 @@
+---
+title: localhost 解析成 ::1，健康的服务被判不健康
+summary: 容器里的健康检查写了 localhost，被解析成 IPv6 的 ::1，而服务只监听 IPv4，检查工具又不会回退重试，于是一个完全健康的服务被判成不健康。检查地址直接写 127.0.0.1。
+type: pitfall
+difficulty: practice
+tags: [ci-cd, docker, network]
+prerequisites: [ops-health-checks]
+personalEnv: false
+---
+
+<Diagnose
+  question="容器里的 Next.js 服务只监听 IPv4。容器的健康检查用 busybox 的 wget 访问 `http://localhost:4000`，而 `localhost` 在这个容器里先被解析成 IPv6 的 `::1`。检查会得到什么结果？"
+  options={["自动改用 IPv4，检查通过", "连接被拒绝，检查失败", "检查通过，但很慢"]}
+  answer="B"
+  ifRight="对。服务不在 `::1` 上监听，工具又不会自己换一个地址再试，所以连接直接被拒绝。"
+  ifWrong="答案是 B。`localhost` 可以对应多个地址，工具拿到的第一个是 `::1`，服务不在那里监听。busybox 的 wget 不会失败后回退去试 IPv4，所以直接报连接被拒绝。这题考的是名字解析与监听地址要对得上。"
+  suggest="ops-health-checks"
+/>
+
+<Callout kind="lead" label="坑在哪">
+
+健康检查里写 `localhost`，在某些镜像和工具的组合下会被解析到 IPv6 的 `::1`；服务只监听 IPv4，检查就失败。服务其实好好的，却被判成不健康。修法：检查地址直接写 `127.0.0.1`。
+
+</Callout>
+
+## 它是怎么发生的
+
+门户上线时，容器的健康检查写的是 `localhost`。门户的镜像基于很小的 Linux 发行版，没有 `curl`，用自带的 busybox `wget` 做检查。
+
+<Sequence
+  title="一次被误判的健康检查"
+  actors={[
+    { id: "check", label: "健康检查", sub: "busybox wget" },
+    { id: "dns", label: "名字解析", sub: "localhost" },
+    { id: "app", label: "门户服务", sub: "只监听 IPv4" }
+  ]}
+  messages={[
+    { from: "check", to: "dns", label: "localhost 是哪个地址？", caption: "检查工具先要把名字翻译成地址。" },
+    { from: "dns", to: "check", label: "::1（IPv6）排第一", caption: "localhost 同时对应 IPv6 的 `::1` 和 IPv4 的 `127.0.0.1`，容器里 IPv6 的排在前面。" },
+    { from: "check", to: "app", label: "连接 ::1:4000", caption: "wget 拿第一个地址去连。", bad: true },
+    { from: "app", to: "check", label: "拒绝：这个地址上没人监听", caption: "服务只监听了 IPv4 的地址，`::1` 上没有任何东西在等。", bad: true, dashed: true }
+  ]}
+  summary={{ caption: "wget 不会回退去试 127.0.0.1，这次检查就此失败。服务一直是健康的。" }}
+/>
+
+检查把这次失败计入次数，连续失败达到上限，容器就被判成不健康。
+
+## 为什么难发现
+
+<Callout kind="insight" label="怎么认出它">
+
+应用的日志里一切正常，从宿主机上访问也通。只有容器自查不过。报错是 Connection refused，看上去像服务没起来，其实服务就在那里。
+
+</Callout>
+
+后端容器里的检查用的是 `curl` 访问 `localhost`，它们没出过问题：`curl` 连 `::1` 失败后，会自己回退去试 `127.0.0.1`。同样写 `localhost`，换一个工具就换一种结果，这是它容易被忽略的原因。
+
+<Compare
+  title="同样的 localhost，不同的工具"
+  variants={[
+    {
+      label: "curl + localhost",
+      steps: ["解析出 ::1 和 127.0.0.1", "先连 ::1，被拒绝", "回退到 127.0.0.1，成功"],
+      results: [{ label: "检查结果", value: "通过", tone: "ok" }],
+      verdict: { tone: "ok", head: "碰巧能用。", text: "curl 会逐个地址尝试，所以后端容器的检查没出过问题。" }
+    },
+    {
+      label: "busybox wget + localhost",
+      steps: ["解析出 ::1 和 127.0.0.1", "先连 ::1，被拒绝", "不再尝试，报连接被拒绝"],
+      results: [{ label: "检查结果", value: "失败", tone: "bad" }],
+      verdict: { tone: "bad", head: "健康的服务被判不健康。", text: "wget 不回退，服务明明在 IPv4 上好好地监听着。" }
+    },
+    {
+      label: "任意工具 + 127.0.0.1",
+      steps: ["直接得到 IPv4 地址", "连接成功"],
+      results: [{ label: "检查结果", value: "通过", tone: "ok" }],
+      verdict: { tone: "ok", head: "不依赖工具的脾气。", text: "地址里没有名字解析，也就没有回退行为可以依赖。" }
+    }
+  ]}
+/>
+
+## 怎么避开
+
+门户和学习站的容器自查，以及部署脚本在宿主机一侧的全部轮询，都写死 `127.0.0.1`。旁边的注释把原因留在了案发现场：
+
+<CodeRef at="patra-infra/docker/docker-compose.apps.yaml@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="195-200" />
+
+部署脚本一侧也是同样的写法，并且在文件头注释里记着原因：
+
+<CodeRef at="patra-infra/cd/deploy.sh@2197850b5a624ed4dbaa97df71e144c343e28baa" lines="13-14" />
+
+后端容器里的 `curl` 保持原样。但部署脚本这一侧不赌任何工具的回退行为，一律写 `127.0.0.1`。
+
+一句话的规则：**健康检查的地址，不给名字解析留任何发挥空间。**
+
+<Transfer
+  prompt="你给一个新的 Node 服务写容器健康检查，镜像里只有 busybox 的 wget。你会怎么写检查命令？将来如果这个服务改成只监听 IPv6，要改什么？"
+  points={[
+    { label: "怎么写", text: "`wget -q -O - http://127.0.0.1:<端口>/<健康路径>`，地址直接写 IPv4 的回环地址。" },
+    { label: "地址要和监听对得上", text: "服务只监听 IPv6 时，就要改成 `[::1]`；检查地址永远要和服务实际监听的地址一致。" },
+    { label: "上线前先验证", text: "把同样的命令在容器里手动跑一遍，确认通过，再把它写进 compose。" }
+  ]}
+/>

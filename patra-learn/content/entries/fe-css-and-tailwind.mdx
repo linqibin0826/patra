@@ -1,0 +1,174 @@
+---
+title: 样式：CSS 布局与 Tailwind
+summary: 页面上每个元素都是一个盒子；Flex 把盒子排成一行，Grid 把盒子放进格子；Tailwind 把一条条样式写成类名；颜色等设计 token 只定义一次、处处引用。拿门户顶栏和检索按钮看。
+type: concept
+difficulty: basic
+tags: [frontend]
+prerequisites: [fe-what-makes-a-web-page]
+personalEnv: false
+---
+
+<Diagnose
+  question="门户顶栏的「快速检索」按钮是圆角、浅纸色底；点它会弹出检索框。这两件事分别是谁管的？"
+  options={["都是 CSS 管的", "外观是 CSS，点了弹框是 JavaScript", "都是 HTML 管的"]}
+  answer="B"
+  ifRight="对。这篇只讲外观这一层：盒子多大、怎么排、颜色从哪来。"
+  ifWrong="答案是 B：HTML 说「这里有个按钮」，CSS 管它长什么样，JavaScript 管点了以后做什么。这题考的是网页的三层分工，这篇要在它的基础上讲 CSS 这一层。"
+  suggest="fe-what-makes-a-web-page"
+/>
+
+## 每个元素都是一个盒子
+
+CSS 眼里，页面上每个元素——按钮、段落、图片——都是一个长方形的盒子。盒子从里到外有四层：
+
+| 层 | 是什么 | Tailwind 写法举例 |
+|---|---|---|
+| 内容 | 文字、图片本身占的地方 | `w-50`：宽 200px |
+| 内边距 padding | 内容和边框之间的空隙 | `p-5`：四周各 20px |
+| 边框 border | 盒子的那一圈线 | `border`：1px |
+| 外边距 margin | 这个盒子和旁边盒子的间距 | `mt-4`：上方 16px |
+
+<Callout kind="analogy">
+
+像墙上挂的一幅装裱好的画：画本身是内容，画和画框之间的白衬纸是内边距，画框是边框，这幅画和旁边那幅之间留的墙面是外边距。
+
+</Callout>
+
+这里有一个大多数人第一次都会算错的地方：给盒子写了 `width: 200px`，它到底占多宽？答案取决于一条规则 `box-sizing`。切换看两种算法：
+
+<Compare
+  title="同一个盒子：宽 200px、内边距 20px、边框 1px"
+  variants={[
+    { label: "content-box（浏览器原本的默认）", steps: ["200px 只算内容的宽", "左右内边距各 20px 加在外面", "左右边框各 1px 再加在外面"], results: [{ label: "内容宽", value: "200px" }, { label: "盒子实际占宽", value: "242px", tone: "bad" }], verdict: { tone: "bad", head: "比写的宽。", text: "写 200px，量出来 242px。两个 50% 宽的盒子加上内边距就挤不进一行了。" } },
+    { label: "border-box（Tailwind 的默认）", steps: ["200px 是整个盒子到边框外沿的宽", "左右内边距各 20px 从里面扣", "左右边框各 1px 也从里面扣"], results: [{ label: "内容宽", value: "158px" }, { label: "盒子实际占宽", value: "200px", tone: "ok" }], verdict: { tone: "ok", head: "写多少就占多少。", text: "加内边距、加边框，盒子都不会变宽，排版好算得多。" } }
+  ]}
+/>
+
+门户用的 Tailwind 在最开头放了一份「基础重置」样式，第一条就是把所有元素改成 `box-sizing: border-box`。所以在门户里写的宽度，就是盒子最终占的宽度。
+
+## Flex 排成一行，Grid 放进格子
+
+单个盒子之外，还要决定盒子之间怎么摆。最常用的是两种：
+
+- **Flex**（弹性布局）：把子盒子沿一条线排开，常用来排一行按钮、图标加文字。
+- **Grid**（网格布局）：先画好几列（或几行）格子，再把子盒子放进去，常用来分页面的几大块。
+
+门户顶栏两种都用了。整条顶栏是一个三列的格子：
+
+<CodeRef at="patra-portal/src/components/portal/TopNav.tsx@d0ca49caf72d9d9aacd7459c1054cf9131b3759e" lines="105" />
+
+```tsx
+        <div className="mx-auto grid h-14 max-w-page grid-cols-[1fr_auto_1fr] items-center gap-6 px-gutter max-[880px]:grid-cols-[1fr_auto]">
+```
+
+`grid-cols-[1fr_auto_1fr]` 定了三列：左边是 Logo，中间是「首页 / 文献 / 期刊」导航，右边是按钮区。`auto` 是「内容多宽就多宽」，`1fr` 是「分剩下的地方」。
+
+右边的按钮区里，几个按钮排成一行，用的是 Flex：
+
+<CodeRef at="patra-portal/src/components/portal/TopNav.tsx@d0ca49caf72d9d9aacd7459c1054cf9131b3759e" lines="142" />
+
+```tsx
+          <div className="flex items-center gap-1.5 justify-self-end">
+```
+
+`flex` 让子盒子横着排，`items-center` 让它们上下居中对齐，`gap-1.5` 在它们之间留 6px。
+
+<Quiz
+  questions={[
+    {
+      question: "顶栏左边的 Logo 比右边的按钮区窄。中间的导航会落在整条顶栏的正中间吗？",
+      options: ["会，因为左右两列都是 1fr，分到的宽度一样", "不会，会偏向窄的那一边", "要看导航里有几个链接"],
+      answer: "A",
+      explain: "左右两列都写 1fr，把中间那列用剩的地方平分。两边内容宽窄不同，格子宽度还是一样的，中间那列就正好在中间。"
+    },
+    {
+      question: "窗口窄于 880px 时，`max-[880px]:grid-cols-[1fr_auto]` 生效。顶栏会变成几列？",
+      options: ["还是三列", "两列：Logo 和按钮区，导航不见了", "一列"],
+      answer: "B",
+      explain: "窄屏时格子换成两列。中间的导航自己也写了 `max-[880px]:hidden`（第 119 行），窄屏时藏起来，改由菜单按钮打开。"
+    }
+  ]}
+/>
+
+## Tailwind：把样式写成类名
+
+传统写法是在单独的 CSS 文件里写规则，再给元素起个类名去对应。Tailwind 反过来：预先准备好成百上千个只做一件事的类名，你直接写在元素上。每个类名对应一两行 CSS：
+
+| 类名 | 对应的 CSS |
+|---|---|
+| `flex` | `display: flex` |
+| `items-center` | `align-items: center` |
+| `h-9` | `height` 为 9 × 0.25rem，即 36px |
+| `gap-6` | `gap` 为 6 × 0.25rem，即 24px |
+| `rounded-full` | `border-radius` 设成无限大，两头变成半圆 |
+| `grid-cols-[1fr_auto_1fr]` | `grid-template-columns: 1fr auto 1fr`（方括号里写任意值，下划线代替空格） |
+
+类名前面还能加条件：`hover:text-ink-900` 是「鼠标移上去时字变成 ink-900 色」，`max-[880px]:hidden` 是「窗口窄于 880px 时藏起来」。
+
+好处是样式就写在元素旁边，不用在两个文件之间来回找；代价是类名一长串，第一次读要逐个认。
+
+## 设计 token：颜色只定义一次
+
+`text-ink-900`、`bg-action-primary` 里的颜色不是随手写的色值，而是**设计 token**：给颜色、字号、间距起名字，全站只在一个地方定义它们的值。门户的 token 在 `src/styles/tokens.css`。
+
+以检索框里那个深陶土色的「搜索」按钮为例，它的颜色经过了好几层名字。点「改一下 clay-700」看改动怎么一层层传下去：
+
+<Structure
+  title="「搜索」按钮的颜色从哪来"
+  intro="箭头从被引用的指向引用它的。点一块看它在哪个文件。"
+  nodes={[
+    { id: "clay", label: "--clay-700", sub: "#97441e", code: true, col: 1, desc: "tokens.css 第 37 行：陶土色系里的一档，只是一个色值，不说它用在哪。" },
+    { id: "action", label: "--action-primary", sub: "主操作色", code: true, col: 2, desc: "tokens.css 第 99 行：语义 token，说的是用途：主操作按钮用这个色，值指向 --clay-700。" },
+    { id: "theme", label: "--color-action-primary", sub: "@theme", code: true, col: 3, desc: "globals.css 第 66 行：写在 Tailwind 的 @theme 里，Tailwind 据此生成 bg-action-primary、text-action-primary 这些类名。" },
+    { id: "button", label: "bg-action-primary", sub: "「搜索」按钮", code: true, col: 4, desc: "Composer.tsx 第 111 行：按钮上写的类名。组件只认用途，不认具体色值。" }
+  ]}
+  edges={[
+    { from: "clay", to: "action" },
+    { from: "action", to: "theme" },
+    { from: "theme", to: "button" }
+  ]}
+  traces={[
+    {
+      button: "改一下 clay-700",
+      packet: "新色值",
+      hops: [
+        { at: "clay", caption: "设计把 --clay-700 调深一点，只改 tokens.css 这一行。" },
+        { at: "action", caption: "--action-primary 指向它，跟着变。" },
+        { at: "theme", caption: "@theme 里的 --color-action-primary 指向 --action-primary，跟着变。" },
+        { at: "button", caption: "「搜索」按钮和所有写了 bg-action-primary 的地方一起换色，组件代码一行没动。" }
+      ]
+    }
+  ]}
+/>
+
+对应的几行真实代码：
+
+<CodeRef at="patra-portal/src/styles/tokens.css@902182a65145dd7d152774d6ecaacc48ef9886bb" lines="99" />
+
+```css
+  --action-primary: var(--clay-700);
+```
+
+<CodeRef at="patra-portal/src/app/globals.css@4a13287485468f2c489027f1aac0bb6174643e8d" lines="66" />
+
+```css
+  --color-action-primary: var(--action-primary);
+```
+
+为什么要分「色值」和「用途」两层：主按钮哪天要换成另一个色系，只改 `--action-primary` 指向谁；而 `--clay-700` 可能还被别的地方当成别的用途用着，不该跟着动。
+
+<Callout kind="warn">
+
+在组件里直接写死色值（例如 `bg-[#97441e]`）也能出效果，但它绕过了 token：下次统一调色时这一处不会跟着变，页面上就会多出一块颜色对不上的按钮。门户的约定是只用 token 生成的类名。
+
+</Callout>
+
+<Transfer
+  prompt="设计提出两个改动：一是「所有主操作按钮的颜色深一档」；二是「页面左右的留白在大屏上再宽一点」（顶栏上写的是 `px-gutter`）。参照上文，你会分别去改哪里？改完以后哪些组件会跟着变，哪些需要逐个改？"
+  points={[
+    { label: "主按钮颜色", text: "改语义 token `--action-primary`，让它指向更深的一档（例如 `--clay-800`），而不是改 `--clay-700` 的色值，因为后者可能还有别的用途。" },
+    { label: "跟着变的", text: "所有写 `bg-action-primary` 的按钮自动换色，组件代码不动。" },
+    { label: "留白", text: "`px-gutter` 也是 token 生成的类名：去 tokens.css 找 `--gutter` 改它的值，所有用 `px-gutter` 的地方一起变宽。" },
+    { label: "需要逐个改的", text: "写死了色值或像素的地方不会跟着变，只能一个个找出来改成 token。" }
+  ]}
+/>

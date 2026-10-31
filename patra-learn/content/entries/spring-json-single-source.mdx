@@ -1,0 +1,104 @@
+---
+title: JSON 只从容器拿一个 JsonMapper
+summary: 以前代码里有静态 Holder、自建 mapper、全局定制器好几处 JSON 入口，拿到哪一个取决于类初始化顺序，埋了两个「数字被写成字符串」的潜伏 bug。改成全仓只注入 Spring Boot 装配的那一个 JsonMapper，Long 转字符串只在 MVC 响应出口做。
+type: decision
+difficulty: practice
+tags: [spring, java]
+prerequisites: [spring-json-jackson]
+sources:
+  - version: v0.10
+    pr: 234
+personalEnv: false
+---
+
+<Diagnose
+  question="为了让浏览器拿到不丢精度的 ID，有人给 Spring 容器里那个全局 JsonMapper 加了「Long 一律写成字符串」的模块。之后，往数据库 JSON 列里写 Long 的代码也注入了同一个 mapper。数据库里会存成什么？"
+  options={["数字，数据库和 HTTP 是两回事", "字符串，因为它们用的是同一个 mapper", "看列的类型"]}
+  answer="B"
+  ifRight="对。改的是容器里那个 bean 本身，所有注入它的地方都受影响。这篇讲 Patra 怎么把这类「全局改动」收回到真正需要它的出口。"
+  ifWrong="答案是 B。mapper 不知道自己这一次是在写 HTTP 响应还是写数据库，它只按自己的配置序列化。这题考的是 Jackson 的 mapper 和模块是怎么起作用的，先读 Jackson 那篇。"
+  suggest="spring-json-jackson"
+/>
+
+## 背景：同一个「全局 mapper」有好几张脸
+
+Patra 的 ID 是雪花 ID，超过 JavaScript 的安全整数范围（2 的 53 次方），浏览器拿到数字会丢精度，所以接口响应里的 `Long` 要写成字符串。
+
+v0.10 工具层重组之前，这件事是这样做的：工具库里注册了一个全局定制器，直接给容器里的 `JsonMapper` 加上 Long 转字符串。与此同时，JSON 还有好几个别的入口：
+
+- 一个静态的 `JsonMapperHolder`：容器就绪前，第一次取时自己懒建一个干净的 mapper；容器就绪后，由另一个 bean 把容器里那个回填进去。
+- 一些类在初始化时就从 Holder 取一次存成静态常量，之后不变。
+- 有的地方自己 `JsonMapper.builder().build()`，有的甚至 `new` 了一个 Jackson 2 的 `ObjectMapper`。
+
+于是「拿到哪个 mapper」取决于类在什么时候初始化：早于回填，拿到的是干净的；晚于回填，拿到的是带 Long 转字符串的。谁先谁后由 bean 注册顺序决定，没有任何测试保证。
+
+## 两个潜伏 bug
+
+两个都是「需要数字的地方被写成了字符串」，都是每次调用时从 Holder 取 mapper，运行期必然拿到带 Long 转字符串的那个：
+
+| 位置 | 做了什么 | 结果 |
+|---|---|---|
+| 批处理的 Job 参数工具 | 先把参数对象转成 Map，再按值的运行时类型分派 | `Long` 字段转出来已经是字符串，落进 `addString` 分支；下游 `getLong()` 取值时抛异常 |
+| 采集计划的窗口配置 | 用 `valueToTree` 把 `IdRange(from, to)` 写进 JSON 列 | `from`、`to` 落库成字符串；读回时过不了「必须是数值」的校验 |
+
+第一个其实早有人察觉：对应的单元测试里有一段在测试开始前把 Holder 重置成干净 mapper 的代码，注释写的正是「集成测试先跑会注册带 Long 转字符串的 mapper」。测试靠这段绕过去了，生产代码没修。
+
+（这两处代码属于后来删除的采集服务，仓库里已经不在了，这里只记现象。）
+
+## 选项
+
+<DecisionOptions
+  options={[
+    { name: "保留静态 Holder，修好初始化顺序", summary: "保证回填一定先于所有使用方。", pros: "改动最小。", cons: "顺序靠约定和 bean 注册次序，没法测试保证；Long 转字符串仍然影响所有使用方。" },
+    { name: "全仓只认容器里的一个 JsonMapper", summary: "删掉 Holder 和所有自建 mapper，一律注入 Boot 装配的那个；Long 转字符串只挂在 MVC 响应的转换器上。", pros: "来源只有一个，配置只认 spring.jackson.*；持久化、消息、服务间请求体里的 Long 都是数字。", cons: "要改所有调用点；不在容器里的类得把 mapper 当构造参数传进去。", chosen: true }
+  ]}
+/>
+
+## 选择
+
+只注入容器里那一个 `JsonMapper`。具体有四条：
+
+**1. Long 转字符串只在 HTTP 出口。** 从容器的 mapper `rebuild()` 派生出一个副本，只多一个 `Long` 序列化器，用它替换 MVC 的 JSON 转换器。容器里的 mapper 本身不受影响。
+
+<CodeRef at="patra-tool/patra-tool-web/src/main/java/dev/patra/tool/web/json/LongToStringHttpMessageConvertersCustomizer.java@b6e01875bb5692356021c8a19562f557f319fc54" lines="12-41" />
+
+**2. 注入类型写 `JsonMapper`，不写 `ObjectMapper`。** `XmlMapper` 也是 `ObjectMapper` 的子类，有 XML 的服务里按 `ObjectMapper` 注入会撞上两个候选。
+
+**3. JPA 的 JSON 列走 `JsonColumnCodec`。** 映射器改成抽象类注入它，空值语义统一在一处。
+
+**4. 用构建检查守住。** 工具模块里，`autoconfigure` 包以外出现 `JsonMapper.builder()`、`new ObjectMapper(` 一类写法，`./gradlew check` 直接失败。
+
+<CodeRef at="build-logic/src/main/kotlin/AutoConfigurationRules.kt@b6e01875bb5692356021c8a19562f557f319fc54" lines="20" />
+
+刻意的例外只有两个：输出要进哈希或快照的组件，自带一个固定配置的 mapper，不能随 `spring.jackson.*` 漂移。
+
+<Quiz
+  questions={[
+    {
+      question: "改完以后，门户收到的接口响应里，用户 ID 是什么？存进 JSON 列、发进消息里的用户 ID 又是什么？",
+      options: ["都是字符串", "响应里是字符串，其他地方是数字", "都是数字，门户自己处理精度"],
+      answer: "B",
+      explain: "Long 转字符串只挂在 MVC 响应的转换器上。门户用 z.string() 校验 userId，这一条不能收窄。持久化、消息、服务间请求体里仍是数字；读取端 Jackson 默认允许字符串转 Long，新旧格式并存也不出错。"
+    }
+  ]}
+/>
+
+## 代价
+
+<Callout kind="cost">
+
+- **一次改了 137 个文件**：所有调用点都要改成注入；用到 JSON 列的 8 个 JPA 映射器里有 7 个原来是接口，要改成抽象类才能注入 `JsonColumnCodec`。
+- **测试要多导入东西**：`@WebMvcTest` 切片要显式导入 Long 转字符串的自动配置，否则响应里 Long 是数字；`@DataJpaTest` 切片要导入 `JsonColumnCodec` 和 Boot 的 Jackson 自动配置。
+- **可观察的行为变化**：Hibernate 的 JSON 列改用容器的 mapper 后，未知字段从「抛异常」变成「忽略」（Boot 默认关了 `FAIL_ON_UNKNOWN_PROPERTIES`）。
+
+</Callout>
+
+<Transfer
+  prompt="另一个团队想让所有接口响应里的时间都输出成「2026-10-31 08:00:00」这种格式，打算给容器里的 JsonMapper 改日期格式。按这篇的思路，你会提醒他们什么？"
+  points={[
+    { label: "先问影响面", text: "容器里的 mapper 不只写 HTTP 响应，还写数据库 JSON 列、消息、服务间请求；改了它，这些地方的时间格式全跟着变。" },
+    { label: "只改出口", text: "像 Long 转字符串一样，从容器的 mapper rebuild() 一个副本，只挂在 MVC 响应转换器上。" },
+    { label: "已有数据怎么办", text: "改的如果是持久化格式，库里和队列里的旧数据还是旧格式，读取端要能两种都认。" },
+    { label: "加测试", text: "分别断言响应、JSON 列、消息体里的时间格式，防止以后有人又改回全局。" }
+  ]}
+/>

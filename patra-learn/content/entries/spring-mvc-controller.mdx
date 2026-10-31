@@ -1,0 +1,193 @@
+---
+title: 写一个接口：从 Controller 到 JSON
+summary: Controller 是 HTTP 请求进入 Java 代码的门口：它按方法和路径把请求分给某个 Java 方法，把路径、请求体里的东西转成参数，再把方法的返回值写成 JSON 回给调用方。
+type: concept
+difficulty: basic
+tags: [spring, backend]
+prerequisites: [spring-dependency-injection, http-rest-api-design]
+personalEnv: false
+---
+
+<Diagnose
+  question="门户发来一个请求：`DELETE /me/sessions/7001`，意思是「踢掉 ID 为 7001 的那台设备」。在 Spring 里，这个请求要变成对某个 Java 方法的调用。你觉得需要告诉 Spring 哪两件事？"
+  options={["只要告诉它类名，它会自己猜", "「DELETE 加这个路径」对应哪个方法，以及路径里的 7001 交给方法的哪个参数", "要先把请求存进数据库，再由方法去读"]}
+  answer="B"
+  ifRight="对。这两件事分别叫路由映射和参数绑定，再加上「返回值怎么变成 JSON」，就是一个接口的全部骨架。"
+  ifWrong="答案是 B：一是「哪种请求方法加哪个路径」交给哪个方法，二是请求里的值交给哪个参数。请求方法（GET、DELETE）和路径怎么设计，是 REST 接口设计那篇的内容，先读它会顺很多。"
+  suggest="http-rest-api-design"
+/>
+
+<Callout kind="lead">
+
+`@RestController` 标出一个处理 HTTP 请求的类。类和方法上的 `@GetMapping`、`@DeleteMapping` 等注解决定哪个请求交给哪个方法；`@PathVariable`、`@RequestBody` 决定请求里的值怎么变成参数；方法返回的对象由 Spring 写成 JSON。
+
+</Callout>
+
+## 一个真实的 Controller
+
+identity 服务里管「我的登录设备」的 Controller，一共三个接口：看列表、踢一台、踢掉除本机外的全部。
+
+<CodeRef at="patra-api/patra-identity/patra-identity-adapter/src/main/java/dev/patra/identity/adapter/session/rest/MeSessionController.java@5073ab1358404ecd989e722373cd9f7edafe238b" lines="18-52" />
+
+```java
+@Tag(name = "Me", description = "当前用户的账号设置")
+@RestController
+@RequestMapping("/me/sessions")
+@RequiredArgsConstructor
+public class MeSessionController {
+
+  private final CommandBus commandBus;
+  private final SessionQueryService sessionQueryService;
+
+  /// 登录设备列表，只含活会话，本机第一。401 当前会话已不在。
+  ///
+  /// @return 列表
+  @GetMapping
+  public SessionListResponse list() {
+    return SessionListResponse.from(sessionQueryService.list());
+  }
+
+  /// 踢掉除本机外的全部设备。403 超过再认证窗口（`traits` 含 `REAUTH_REQUIRED`）。
+  ///
+  /// @return 被踢掉的会话数
+  @DeleteMapping("/others")
+  public SessionsRevokedResponse revokeOthers() {
+    return SessionsRevokedResponse.from(commandBus.handle(RevokeOtherSessionsCommand.of()));
+  }
+
+  /// 踢掉一个设备。已经不在也是 200（数量 0）；409 踢的是本机（`CURRENT_SESSION`，本机走退出登录）；
+  /// 403 超过再认证窗口。
+  ///
+  /// @param id 会话 ID
+  /// @return 被踢掉的会话数
+  @DeleteMapping("/{id}")
+  public SessionsRevokedResponse revoke(@PathVariable long id) {
+    return SessionsRevokedResponse.from(commandBus.handle(RevokeSessionCommand.of(id)));
+  }
+}
+```
+
+它要的 `CommandBus` 和 `SessionQueryService` 照样是构造器注入进来的，和依赖注入那篇里的 `LogoutUserHandler` 一样。
+
+## 路由映射：哪个请求交给哪个方法
+
+类上的 `@RequestMapping("/me/sessions")` 是公共前缀，方法上的注解再补上请求方法和剩下的路径，拼起来就是完整的路由：
+
+| 请求 | 交给 |
+|---|---|
+| `GET /me/sessions` | `list()` |
+| `DELETE /me/sessions/others` | `revokeOthers()` |
+| `DELETE /me/sessions/7001` | `revoke(7001)` |
+
+`/{id}` 里的花括号是占位：这一段写什么都能匹配，匹配到的值留着给参数用。
+
+<Quiz
+  questions={[
+    {
+      question: "`DELETE /me/sessions/others` 既能匹配 `/others`，看起来也能匹配 `/{id}`（把 `others` 当成 id）。Spring 会交给谁？",
+      options: ["`revoke`，然后因为 `others` 不是数字报错", "`revokeOthers`：写死的路径比带占位的更具体，优先", "两个都匹配，启动时就报错"],
+      answer: "B",
+      explain: "几个路由都能匹配时，Spring 选最具体的那个。`/others` 一个字都没留空，比 `/{id}` 具体。"
+    },
+    {
+      question: "门户发来 `GET /me/sessions/7001`。会怎样？",
+      options: ["交给 `revoke(7001)`", "交给 `list()`，忽略后面的 7001", "没有方法匹配「GET 加这个路径」，请求被拒"],
+      answer: "C",
+      explain: "`/{id}` 只登记了 DELETE，`list()` 只登记了不带后缀的 GET。请求方法和路径要一起对上才算匹配。"
+    }
+  ]}
+/>
+
+## 参数绑定：请求里的值怎么变成参数
+
+`revoke(@PathVariable long id)` 的意思是：把路径里 `{id}` 那一段取出来，交给参数 `id`。URL 里的 `7001` 本来是一串字符，Spring 按参数类型把它转成 `long`。转不了（比如 `/me/sessions/abc`），这个方法根本不会被调用，请求在进方法前就被拒绝，回一个 400。
+
+除了路径，请求里还有别的地方能取值。登录接口要从请求体里读邮箱和密码：
+
+<CodeRef at="patra-api/patra-identity/patra-identity-adapter/src/main/java/dev/patra/identity/adapter/account/rest/AuthController.java@5073ab1358404ecd989e722373cd9f7edafe238b" lines="73-77" />
+
+```java
+  @PostMapping("/login")
+  public AuthenticatedUserResponse login(
+      @RequestBody LoginRequest request,
+      HttpServletRequest http,
+      @RequestHeader(value = HttpHeaders.USER_AGENT, required = false) String userAgent) {
+```
+
+| 注解 | 从哪取 | 例子 |
+|---|---|---|
+| `@PathVariable` | 路径里的占位段 | `/me/sessions/{id}` 的 `id` |
+| `@RequestParam` | `?` 后面的查询参数 | `?page=2` 的 `page` |
+| `@RequestBody` | 请求体（通常是 JSON） | 登录时的邮箱、密码、客户端类型 |
+| `@RequestHeader` | 请求头 | `User-Agent` |
+
+`@RequestBody LoginRequest request` 里，`LoginRequest` 是一个 record，字段是 `email`、`password`、`clientType`、`deviceId`。请求体 JSON 里同名的键会被读进对应字段。
+
+## 一次请求走完的路
+
+点「下一条」，看踢一台设备的请求在 identity 里怎么走。
+
+<Sequence
+  title="DELETE /me/sessions/7001 在 identity 里经过谁"
+  actors={[
+    { id: "client", label: "调用方", sub: "门户经网关转来" },
+    { id: "mvc", label: "Spring MVC", sub: "分发与转换" },
+    { id: "controller", label: "MeSessionController" },
+    { id: "bus", label: "CommandBus", sub: "交给 Handler" }
+  ]}
+  messages={[
+    { from: "client", to: "mvc", label: "DELETE /me/sessions/7001", caption: "请求到了 identity。Spring MVC 先查路由表：DELETE 加这个路径，归 `revoke`。" },
+    { from: "mvc", to: "controller", label: "revoke(7001)", caption: "把路径里的 `7001` 转成 `long`，调用 `revoke`。" },
+    { from: "controller", to: "bus", label: "RevokeSessionCommand", caption: "Controller 自己不踢设备，只把请求包成一个命令交给命令总线，由对应的 Handler 去做。" },
+    { from: "bus", to: "controller", label: "SessionsRevoked", dashed: true, caption: "Handler 做完，返回「踢掉了几个」。" },
+    { from: "controller", to: "mvc", label: "SessionsRevokedResponse", dashed: true, caption: "Controller 把结果换成响应对象返回。" },
+    { from: "mvc", to: "client", label: "200 · JSON", caption: "Spring MVC 把响应对象写成 JSON，配上状态码 200 回去。" }
+  ]}
+  summary={{ caption: "Controller 只做两头的翻译：HTTP 进来变成命令，结果出去变成响应对象。真正的事在命令总线后面。" }}
+/>
+
+## 返回值怎么变成 JSON
+
+`@RestController` 等于 `@Controller` 加 `@ResponseBody`：方法返回的对象不是页面名，而是直接写进响应体。写成什么格式？Spring 看调用方要什么、自己有哪些转换器，Patra 的接口一律是 JSON，由 Jackson 来写。
+
+`revoke` 返回的是：
+
+<CodeRef at="patra-api/patra-identity/patra-identity-adapter/src/main/java/dev/patra/identity/adapter/session/rest/response/SessionsRevokedResponse.java@5073ab1358404ecd989e722373cd9f7edafe238b" lines="8" />
+
+```java
+public record SessionsRevokedResponse(int revokedSessions) {
+```
+
+写出来就是：
+
+```json
+{ "revokedSessions": 1 }
+```
+
+record 的每个字段变成 JSON 的一个键。对象怎么变 JSON、JSON 怎么变回对象，以及 Patra 里为什么有些数字被写成了字符串，是 Jackson 那篇的内容。
+
+## Controller 里不写业务
+
+注意 `MeSessionController` 里一行业务判断都没有：踢的是不是本机、有没有超过再认证窗口，都不在这里。Patra 的约定是：
+
+- 写操作（会改数据的）包成命令交给 `CommandBus`；
+- 读操作直接调 `QueryService`；
+- Controller 不直接碰数据库，也不调别的 Controller。
+
+这样同一个「踢设备」的逻辑，以后从定时任务、消息里触发，也不用复制一份。
+
+<Callout kind="warn">
+
+请求和响应用的是专门的 `*Request`、`*Response` 对象，不直接把领域对象（比如用户聚合）返回出去。领域对象一改字段，接口的 JSON 就跟着变，调用方会莫名其妙地坏掉。
+
+</Callout>
+
+<Transfer
+  prompt="门户要一个新接口：查看某一台登录设备的详情，路径是 `/me/sessions/7001`。你会在 `MeSessionController` 里怎么加？它和已有的 `revoke` 用同一个路径，会冲突吗？返回什么？"
+  points={[
+    { label: "用 GET 区分", text: "加一个方法，贴 `@GetMapping`、路径写 `/{id}`。路径和 `revoke` 相同，但请求方法不同，不冲突。" },
+    { label: "参数绑定", text: "参数写 `@PathVariable long id`，`abc` 这类转不成数字的请求在进方法前就被拒。" },
+    { label: "读走查询服务", text: "这是读操作，调 `SessionQueryService` 拿结果，不经过 `CommandBus`。" },
+    { label: "返回响应对象", text: "返回一个专门的 `*Response` record，由 Spring 写成 JSON；不直接返回领域对象。" }
+  ]}
+/>

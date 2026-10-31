@@ -1,0 +1,165 @@
+---
+title: 服务发现：`lb://` 怎么找到服务
+summary: 服务启动时把自己的地址报到注册中心 Nacos；调用方只写服务名 lb://patra-registry，发请求那一刻才向注册中心要实例列表、挑一个真实地址。
+type: concept
+difficulty: advanced
+tags: [spring, backend, network]
+prerequisites: [spring-http-interface-clients]
+personalEnv: false
+---
+
+<Diagnose
+  question="catalog 调 registry 的字典接口，配置里写的基础地址是 `lb://patra-registry`。网络上并没有一台叫 patra-registry 的机器，DNS 也查不到这个名字。请求最后是怎么发到 registry 的？"
+  options={["DNS 服务器里其实配了这个名字", "catalog 发请求前问注册中心要 patra-registry 的实例列表，挑一个真实地址发过去", "请求先发给网关，由网关转发", "Spring 在启动时把它替换成了固定 IP"]}
+  answer="B"
+  ifRight="对：`lb://` 后面是服务名，不是主机名。这篇讲名字是谁登记的、在哪一刻被换成真实地址。"
+  ifWrong="答案是 B。`lb://patra-registry` 里的 patra-registry 是服务名，由 Spring Cloud 在每次发请求时向注册中心查出真实地址再替换进去。这题要先懂 HTTP Interface 背后有一个 `RestClient` 在发请求，前置篇讲过。"
+/>
+
+<Callout kind="lead">
+
+服务发现就是：每个服务启动时把「我叫什么、在哪个地址」报到注册中心；调用方只记服务名，真要发请求时再去注册中心查这个名字下有哪些实例，挑一个发过去。Patra 的注册中心是 Nacos。
+
+</Callout>
+
+## 为什么不把地址写死
+
+把 registry 的地址写进 catalog 的配置，看起来最简单。但地址是会变的：
+
+- 容器重建后可能拿到新地址；
+- 同一个服务可能同时跑两个实例，写死只能打到一个；
+- 一个实例挂了，调用方得知道别再往那儿发。
+
+<Callout kind="analogy">
+
+像医院的叫号台。医生（服务实例）上班时在台上登记「我在 3 号诊室」，下班就划掉。病人（调用方）不用记哪位医生在哪间，只说「看内科」，叫号台给出一间现在有人的诊室。
+
+</Callout>
+
+## 第一步：服务启动时报到
+
+Patra 的服务都由工具模块 `patra-tool-launch` 接入 Nacos。它在 Spring Boot 加载配置之前，先补上一组服务发现的默认值：
+
+<CodeRef at="patra-tool/patra-tool-launch/src/main/java/dev/patra/tool/launch/NacosDefaultsPostProcessor.java@b6e01875bb5692356021c8a19562f557f319fc54" lines="58-74" />
+
+```java
+  private static final Map<String, Object> DEFAULTS =
+      Map.of(
+          "spring.cloud.nacos.server-addr",
+          "${PATRA_NACOS_ADDR:${PATRA_INFRA_HOST:127.0.0.1}:8848}",
+          "spring.cloud.nacos.username",
+          "${NACOS_USERNAME}",
+          "spring.cloud.nacos.password",
+          "${NACOS_PASSWORD}",
+          "spring.cloud.nacos.discovery.service",
+          "${spring.application.name}",
+          "spring.cloud.nacos.discovery.ip",
+          "${PATRA_ADVERTISE_IP:}",
+          // nacos 3.x gRPC 握手未完成时同步注册会失败，fail-fast 会让整个应用启动失败
+          "spring.cloud.nacos.discovery.fail-fast",
+          "false");
+```
+
+和服务发现有关的是两行：
+
+- `discovery.service` 取 `spring.application.name`：服务在注册中心里的名字就是它的应用名，比如 `patra-registry`。调用方写的 `lb://patra-registry` 对的就是这个名字。
+- `discovery.ip` 取环境变量 `PATRA_ADVERTISE_IP`，没设时留空，由客户端自己探测本机地址。
+
+<Callout kind="warn">
+
+自动探测的地址不一定是别人能连到的地址。一台机器开着代理软件时会多出一块虚拟网卡，探测可能挑中它，注册上去的地址别的机器根本路由不到。Patra 吃过这个亏（当时是 XXL-Job 执行器自动探测地址，道理相同），所以凡是要对外登记自己地址的组件，都显式读 `PATRA_ADVERTISE_IP`。
+
+</Callout>
+
+## 第二步：发请求那一刻换成真实地址
+
+catalog 这边，基础地址只写服务名：
+
+<CodeRef at="patra-api/patra-catalog/patra-catalog-boot/src/main/resources/application.yml@3cf6fa5757b3be54c3b030e4cace871f53e2599c" lines="72-78" />
+
+```yaml
+    http-interface:
+      connect-timeout: 2s
+      read-timeout: 5s
+      groups:
+        registry:
+          base-url: lb://patra-registry
+          read-timeout: 10s
+```
+
+客户端用的是工具模块提供的 `httpInterfaceLoadBalancedRestClientBuilder`，它带着 Spring Cloud 的 `@LoadBalanced` 注解：
+
+<CodeRef at="patra-tool/patra-tool-http-client/src/main/java/dev/patra/tool/httpclient/autoconfigure/HttpClientInterfaceAutoConfiguration.java@b6e01875bb5692356021c8a19562f557f319fc54" lines="152-163" />
+
+<CodeRef at="patra-api/patra-catalog/patra-catalog-boot/src/main/java/dev/patra/catalog/config/HttpClientConfiguration.java@5073ab1358404ecd989e722373cd9f7edafe238b" lines="51-57" />
+
+`@LoadBalanced` 让 Spring Cloud 给这个 Builder 建出的客户端挂一个拦截器。每次请求发出前，拦截器看到 `lb://patra-registry`，就去服务发现客户端（这里是 Nacos 的）要 `patra-registry` 的实例列表，挑一个，把服务名换成那个实例的真实地址和端口，再真正发出去。
+
+<Structure
+  title="谁报到、谁来查"
+  intro="点任意一块看它在服务发现里干什么，或点下面的按钮走一遍"
+  nodes={[
+    { id: "registry", label: "patra-registry", sub: "被调方 · 实例", code: true, col: 1, desc: "启动时把服务名和自己的地址报到 Nacos，之后持续告诉 Nacos 自己还活着。" },
+    { id: "nacos", label: "Nacos", sub: "注册中心", col: 2, desc: "按服务名记着每个实例的地址。只回答「这个名字下现在有谁」，业务请求不经过它。" },
+    { id: "catalog", label: "patra-catalog", sub: "调用方", code: true, col: 3, desc: "配置里只有 `lb://patra-registry`。发请求前问 Nacos 要实例列表，自己挑一个。" }
+  ]}
+  edges={[
+    { from: "registry", to: "nacos", label: "报到" },
+    { from: "catalog", to: "nacos", label: "查名单" },
+    { from: "catalog", to: "registry", label: "直接发请求", dashed: true, desc: "选好实例后，请求从 catalog 直连 registry 的真实地址，不绕经 Nacos。" }
+  ]}
+  traces={[
+    {
+      button: "启动 registry",
+      packet: "报到",
+      hops: [
+        { at: "registry", caption: "registry 启动，应用名 patra-registry，地址取 PATRA_ADVERTISE_IP。" },
+        { at: "nacos", caption: "Nacos 在 patra-registry 名下记上这个实例。" }
+      ]
+    },
+    {
+      button: "catalog 查一次字典",
+      packet: "请求",
+      hops: [
+        { at: "catalog", caption: "代理调 RestClient，地址是 lb://patra-registry/…。拦截器先拦下它。" },
+        { at: "nacos", caption: "拦截器向 Nacos 要 patra-registry 的实例列表。" },
+        { at: "catalog", caption: "从列表里挑一个实例，把服务名换成它的真实地址。" },
+        { at: "registry", caption: "请求直接发到选中的 registry 实例。" }
+      ]
+    }
+  ]}
+/>
+
+## 「客户端」负载均衡
+
+传统做法是在服务前面放一台负载均衡器（比如 Nginx），所有请求先到它，再由它分给后面的机器。Spring Cloud LoadBalancer 是另一种：**挑哪个实例由调用方自己决定**，请求不经过任何中间节点。好处是少一跳，坏处是每个调用方都要拿到一份实例列表。
+
+网关转发外部请求也用同一套机制，路由的目标同样写成 `lb://` 加服务名：
+
+<CodeRef at="patra-api/patra-gateway-boot/src/main/resources/application.yml@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="56-61" />
+
+<Quiz
+  questions={[
+    {
+      question: "catalog 发请求时，Nacos 里 patra-registry 名下一个实例都没有。会怎样？",
+      options: ["请求照样发出去，等超时", "拦截器挑不出实例，请求根本没发出去就抛异常", "Nacos 替 catalog 把请求排队，等 registry 上线"],
+      answer: "B",
+      explain: "没有实例就没有地址可换，拦截器直接失败，不会发出任何 HTTP 请求。网关查会话的代码把「注册中心里没有实例」和「连不上」都当成 identity 暂时不可用。"
+    },
+    {
+      question: "registry 改了端口重新部署。catalog 要不要改配置、要不要重启？",
+      options: ["都要", "要改配置，不用重启", "都不用"],
+      answer: "C",
+      explain: "catalog 配置里只有服务名。新实例启动后把新端口报到 Nacos，catalog 下次查名单就拿到了。"
+    }
+  ]}
+/>
+
+<Transfer
+  prompt="假设 identity 同时跑两个实例 A 和 B。B 所在的机器突然断电，没来得及从 Nacos 注销。接下来几秒里，网关查会话的请求会怎样？要让这种情况对用户的影响变小，可以从哪几头下手？"
+  points={[
+    { label: "名单会滞后", text: "Nacos 要等 B 的心跳停了一段时间才把它移出名单，调用方手里的实例列表也可能还没刷新。这段时间里挑中 B 的请求会连不上。" },
+    { label: "失败长什么样", text: "连不上的请求在调用方抛 `ResourceAccessException`，网关把它当成 identity 暂时不可用，回 503；挑中 A 的请求照常成功。" },
+    { label: "从哪下手", text: "连接超时设短，失败快一点；对幂等的查询可以换一个实例重试一次；对外部署时保证不止一个实例。" }
+  ]}
+/>

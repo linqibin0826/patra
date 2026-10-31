@@ -1,0 +1,24 @@
+title: 测试
+summary: 从「为什么要写测试」读到 Testcontainers、端到端测试与偶发失败。
+order: 6
+entries:
+  - test-why-write-tests
+  - test-unit-tests
+  - test-doubles-and-mocks
+  - test-tdd
+  - test-controlling-time
+  - test-kinds-and-pyramid
+  - test-frontend-unit
+  - test-integration-testcontainers
+  - test-spring-slice-tests
+  - test-http-stubs-wiremock
+  - test-e2e-playwright
+  - test-coverage
+  - test-flaky-tests
+  - test-hikari-too-many-clients-in-ci
+  - test-first-case-timeout
+  - test-high-load-timeouts
+  - test-redis-ttl-real-time
+  - test-resttestclient-retries-429
+  - test-e2e-wait-for-hydration
+  - test-route-mocking-font-flash

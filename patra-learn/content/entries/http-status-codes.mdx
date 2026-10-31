@@ -1,0 +1,127 @@
+---
+title: 状态码：从 2xx 到 5xx
+summary: 五组状态码各说明什么；哪些是调用方的错（4xx），哪些是服务端的错（5xx），以及 Patra 怎样把领域里的错自动翻译成状态码。
+type: concept
+difficulty: basic
+tags: [network, backend]
+prerequisites: [http-request-and-response]
+personalEnv: false
+---
+
+<Diagnose
+  question="一个接口收到的邮箱格式不对，没法处理。这是调用方的错，还是服务端的错？状态码该属于哪一组？"
+  options={["调用方的错，4xx 组", "服务端的错，5xx 组", "没出错，仍然是 2xx 组"]}
+  answer="A"
+  ifRight="对，是调用方送来了不合格的东西，属于 4xx。往下读会讲每一组的分工。"
+  ifWrong="答案是 A：请求本身有问题，服务端没做错什么，所以是 4xx（调用方的错）。5xx 留给服务端自己出了问题的情况。"
+  suggest="http-request-and-response"
+/>
+
+## 状态码就是一个数字加一句话
+
+响应的第一行带一个三位数，告诉调用方「结果怎么样」。**看第一位就知道大类**：
+
+| 开头 | 含义 | 常见例子 |
+|---|---|---|
+| 2xx | 成功 | 200 成功；201 新建成功；202 已接受（异步处理中）；204 成功但没有内容 |
+| 3xx | 去别处看 | 301 永久搬家；304 没变，用你缓存的 |
+| 4xx | 调用方的错 | 400 请求坏了；401 没登录；403 登录了但没权限；404 找不到；409 与现状冲突；422 内容不合规则；429 请求太频繁 |
+| 5xx | 服务端的错 | 500 服务端出错；503 暂时不可用；504 等下游等超时了 |
+
+调用方根据状态码决定下一步：4xx 说明「改一改再来」，重发同样的请求没用；5xx 说明「不是你的问题」，可以稍后重试。
+
+<Callout kind="warn">
+
+不要所有情况都返回 200，把错误写在正文里。监控、网关、浏览器都靠状态码判断成败，全是 200 它们就全瞎了。
+
+</Callout>
+
+## 容易混的两对
+
+**401 和 403**：401 是「我不知道你是谁」（没登录或登录过期），403 是「我知道你是谁，但你不能做这件事」。
+
+**409 和 422**：两个都是「你的请求我看懂了，但不能做」，区别在原因：
+
+- 409 冲突：请求本身没问题，但和**现在的状态**冲突。比如收藏夹重名，换个时间也许就没事。
+- 422 规则不通过：请求的**内容**不合规则。比如名称太长，怎么发都不行。
+
+<Quiz
+  questions={[
+    {
+      question: "新建收藏夹时，名字和你已有的另一个收藏夹重名。该返回？",
+      options: ["409，和现有状态冲突", "422，内容不合规则", "500，服务端出错"],
+      answer: "A",
+      explain: "名称本身合法，只是当前已被占用，属于与现状冲突。Patra 在这种情况下返回 409，错误码叫 COLLECTION_NAME_TAKEN。"
+    },
+    {
+      question: "用户已经登录，但访问了不属于自己的资源。该返回？",
+      options: ["401", "403", "404"],
+      answer: "B",
+      explain: "身份是清楚的（不是 401），只是没权限，是 403。有的系统为了不暴露资源存在，对别人的资源也回 404；Patra 的收藏夹就是这样，不存在和不是自己的一律 404。"
+    },
+    {
+      question: "网关把请求转给下游，下游一直不回数据，超过了读超时。网关该返回？",
+      options: ["400", "404", "504"],
+      answer: "C",
+      explain: "错在等下游，不在调用方，是 5xx；504 专指「等下游超时」。后面有一篇专门讲。"
+    }
+  ]}
+/>
+
+## Patra 怎样选状态码：领域代码不写数字
+
+Patra 的后端有一个约定：业务代码里抛的是**有语义的异常**，比如「找不到」「冲突」「超出配额」，而不是直接写 404、409。把语义翻译成状态码，由一个统一的引擎做。
+
+<Stepper
+  title="一个领域异常怎样变成 404"
+  nodes={[
+    { id: "domain", label: "领域代码", sub: "抛异常" },
+    { id: "engine", label: "错误引擎", sub: "统一翻译" },
+    { id: "http", label: "HTTP 响应", sub: "状态码 + 错误码" }
+  ]}
+  links={[
+    { from: "domain", to: "engine" },
+    { from: "engine", to: "http" }
+  ]}
+  steps={[
+    { caption: "查收藏夹的代码发现它不存在，抛出一个领域异常，异常上带着语义标记：NOT_FOUND（找不到）。", focus: ["domain"], tokens: [{ id: "err", label: "NOT_FOUND", at: "domain" }] },
+    { caption: "异常一路向上，没人在中间包装。到了统一的错误引擎。", focus: ["engine"], links: ["domain>engine"], tokens: [{ id: "err", label: "NOT_FOUND", at: "engine" }] },
+    { caption: "引擎查一张对照表：NOT_FOUND 对应后缀 0404。再拼上服务的前缀，得到错误码，比如 CAT-0404。", focus: ["engine"], notes: [{ at: "engine", text: "NOT_FOUND → 0404", tone: "wait" }] },
+    { caption: "响应的状态码是 404，正文里带着错误码 CAT-0404。调用方既能按状态码处理，也能按错误码精确区分。", focus: ["http"], links: ["engine>http"], tokens: [{ id: "err", label: "404 · CAT-0404", at: "http" }], notes: [{ at: "http", text: "状态码 404", tone: "ok" }] }
+  ]}
+  guesses={[
+    { before: 3, question: "领域代码里并没有出现数字 404。那么是谁决定这次响应是 404？", options: ["领域代码自己，写在异常里", "错误引擎，按异常的语义查表", "浏览器根据页面猜"], answer: "B", explain: "领域代码只表达语义，不碰 HTTP。把语义翻成状态码是引擎的工作，这样领域层不依赖 Web。" }
+  ]}
+/>
+
+这张对照表就写在引擎里：
+
+<CodeRef at="patra-tool/patra-tool-web/src/main/java/dev/patra/tool/web/error/engine/DefaultErrorResolutionEngine.java@b6e01875bb5692356021c8a19562f557f319fc54" lines="62-72" />
+
+读出来就是：
+
+| 语义标记 | 状态码 |
+|---|---|
+| NOT_FOUND | 404 |
+| CONFLICT | 409 |
+| RULE_VIOLATION | 422 |
+| QUOTA_EXCEEDED | 429 |
+| UNAUTHORIZED | 401 |
+| FORBIDDEN | 403 |
+| TIMEOUT | 504 |
+| DEP_UNAVAILABLE | 503 |
+
+错误码格式是 `服务前缀-状态码`，如 `CAT-0404`、`IDN-0409`。项目的异常处理规范里写得更完整：
+
+<CodeRef at=".claude/rules/tech/error-handling.md@cfec9c9f30270dcf03f5cd7b6e54a0cd3b59296b" lines="18-19" />
+
+<Transfer
+  prompt="为「申请改邮箱」接口选状态码：(1) 新邮箱格式不对；(2) 新邮箱已被别人使用；(3) 距离上次输入密码太久、需要重新验证；(4) 今天申请次数用完；(5) 根本没登录。各选哪一个？"
+  points={[
+    { label: "格式不对", text: "422：内容不合规则。" },
+    { label: "已被使用", text: "409：和现有状态冲突，换一个邮箱就好。" },
+    { label: "需要重新验证", text: "403：我知道你是谁，但现在不能做，需要再认证。" },
+    { label: "配额用完", text: "429：请求太频繁或额度用完，通常带上等多久再来。" },
+    { label: "没登录", text: "401：不知道你是谁。" }
+  ]}
+/>

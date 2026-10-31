@@ -1,0 +1,77 @@
+---
+title: Batch 上下文只认 java.* 类型
+summary: Spring Batch 的 ExecutionContext 会被序列化存进数据库，默认的序列化器写入要求 Serializable，读回只放行 java.* 和 Spring Batch 自己的类型。往里放领域 record，写不进也读不回；只放字符串、整数、字符串列表这类基础类型。
+type: pitfall
+difficulty: practice
+tags: [spring, java]
+prerequisites: [spring-batch-jobs]
+sources:
+  - version: v0.11
+    issue: PAP-84
+    pr: 246
+personalEnv: false
+---
+
+<Diagnose
+  question="一个 Spring Batch 任务在 Step 结束时，把一个领域 record（文件处理计数：新建几条、更新几条……）放进 Job 的 ExecutionContext，给后面的 Step 用。这样做会怎样？"
+  options={["没问题，ExecutionContext 就是一个 Map，放什么都行", "可能写不进去，或者写进去了读不回来", "只要 record 实现了 Serializable 就一定没问题"]}
+  answer="B"
+  ifRight="对。ExecutionContext 要随 Job 的执行记录一起存进数据库，也要能读回来，它对能放什么类型有限制。"
+  ifWrong="答案是 B。ExecutionContext 每次提交都会序列化进 Batch 的元数据表，断点续跑时再读回来。默认的序列化器读回时只放行 java.* 与 Spring Batch 自己的类型。这题考的是 Batch 怎么保存执行进度，先读 Spring Batch 那篇。"
+  suggest="spring-batch-jobs"
+/>
+
+## 坑
+
+Spring Batch 6 的 `ExecutionContext` 默认用 `DefaultExecutionContextSerializer` 存进数据库：
+
+- **写入**要求值是 `Serializable`；
+- **读回**只放行 `java.*` 与 `org.springframework.batch.**` 包下的类型。
+
+往里放一个领域 record：没实现 `Serializable`，当场写不进；实现了，写得进去，读回来时被拒绝。
+
+<Quiz
+  title="你猜会怎样"
+  questions={[
+    {
+      question: "给计数 record 加上 implements Serializable，放进 Job 上下文。任务第一次跑完没报错。哪一刻会出问题？",
+      options: ["永远不会，已经能序列化了", "需要从数据库读回上下文的时候，比如任务失败后断点续跑", "下一次部署的时候"],
+      answer: "B",
+      explain: "写入只检查 Serializable，读回才检查类型白名单。一路跑通的时候不需要读回，所以看不出问题；等到失败重启、要从数据库恢复上下文，才被拒绝。"
+    }
+  ]}
+/>
+
+## 为什么
+
+`ExecutionContext` 的用途是**保存进度**：每个 chunk 提交时把它序列化进元数据表，任务失败后重新启动，从表里读回来，从断点继续。
+
+读回时要把字节流还原成对象。反序列化任意类型是 Java 里出名的安全隐患（构造恶意的字节流就能执行代码），所以新版的默认序列化器只信任 JDK 自带的类型和 Spring Batch 自己的类型。你的领域 record 不在白名单里。
+
+v0.11 全文阅读那一版做 PubMed 增量同步时碰到了这个限制：每个更新文件处理完要汇报新建、更新、删除、跳过各多少条。写完实现计划后，先把计划里的代码落到副本里实跑了一遍，查出计数 record 放进上下文这条路走不通。
+
+## 怎么避开
+
+只放 `java.*` 类型：字符串、整数、`ArrayList<String>`。每个计数按 key 单独存一个 `Integer`，key 集中定义在一个类里，并写明为什么：
+
+<CodeRef at="patra-api/patra-catalog/patra-catalog-infra/src/main/java/dev/patra/catalog/infra/publication/batch/update/PubmedImportContextKeys.java@5073ab1358404ecd989e722373cd9f7edafe238b" lines="3-25" />
+
+Step 结束时把内存里的计数快照拆开，一项一项写进 Job 上下文：
+
+<CodeRef at="patra-api/patra-catalog/patra-catalog-infra/src/main/java/dev/patra/catalog/infra/publication/batch/update/PubmedImportStepListener.java@5073ab1358404ecd989e722373cd9f7edafe238b" lines="56-72" />
+
+<Callout kind="insight">
+
+这段代码顺带避开了另一个坑：计数是直接写进 **Job** 上下文的，没经过 `ExecutionContextPromotionListener`（它负责把 Step 上下文里的键「提升」到 Job 上下文）。`afterStep` 按注册顺序的**逆序**调用，经提升很容易顺序反掉：提升器先跑时，计数还没写进 Step 上下文，什么也提升不上去。
+
+</Callout>
+
+<Transfer
+  prompt="一个导入任务想在上下文里保存「处理到的最后一条记录的时间戳」，类型是 java.time.Instant；另一个想保存「已经处理过的文件名集合」，类型是 Guava 的 ImmutableSet<String>。分别会怎样？你会怎么存？"
+  points={[
+    { label: "Instant", text: "在 java.* 包下，读回放行；存成 Instant 或者 epoch 毫秒的 Long 都可以。" },
+    { label: "ImmutableSet", text: "Guava 的类型不在白名单里，读回会被拒绝；改存 ArrayList<String>，读回后自己转成集合。" },
+    { label: "大集合别放上下文", text: "上下文每次提交都要整体序列化写库，文件名很多时会拖慢每次提交，这类数据放一张自己的表更合适。" },
+    { label: "测试断点续跑", text: "写一条让任务中途失败再重启的测试，读回上下文这条路径才会被走到。" }
+  ]}
+/>

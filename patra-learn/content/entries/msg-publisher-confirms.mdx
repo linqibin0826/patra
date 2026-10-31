@@ -1,0 +1,113 @@
+---
+title: 发送确认：broker 真的收到了吗
+summary: 发送方法没抛异常，只说明消息交给了网络，不说明 RabbitMQ 收下了。要等 broker 的发布确认（ack）才算数；投不出去的消息 RabbitMQ 先退回、再照样回 ack，两个信号都要看。
+type: concept
+difficulty: advanced
+tags: [backend, messaging]
+prerequisites: [msg-transactional-outbox]
+personalEnv: false
+---
+
+<Diagnose
+  question="发件箱的后台代码调用了发送方法，方法正常返回，没有抛异常。能不能据此把登记行标成已完成？"
+  options={["能，没抛异常就是发成功了", "不能：返回只说明消息交给了网络连接，RabbitMQ 收没收下还要等它的回执", "能，TCP 连接保证了送达"]}
+  answer="B"
+  ifRight="对。这就是为什么要等“发布确认”。这篇讲确认怎么回、什么情况下回得出人意料。"
+  ifWrong="答案是 B。发送方法一般只把消息写进网络缓冲就返回了：对方宕机、磁盘写满、没有队列可投，你都不知道。上一篇的发件箱说“发成功才删登记行”，这个“成功”要有可靠的判断依据。"
+  suggest="msg-transactional-outbox"
+/>
+
+## 发出去，不等于收到了
+
+上一篇的发件箱有一个前提：登记行只在“消息确实发出去了”之后才删除。否则消息丢了，登记行也删了，就回到了丢消息的老问题。
+
+可是“确实发出去了”怎么判断？
+
+Spring Modulith 默认的做法是：外送的方法一返回，就把登记行标成完成。但返回只意味着消息交给了网络连接，**不等于 RabbitMQ 已经收下**。如果 RabbitMQ 恰好此时出了问题，消息没进队列，登记行却已经没了。
+
+所以 Patra 在这里补了一步：**同步等 RabbitMQ 的发布确认**。
+
+<Callout kind="lead">
+
+发布确认（publisher confirm）是 RabbitMQ 收下消息、并保证不丢（持久化的消息已写盘）之后，回给发送方的一条回执。发送方等到它，才算真的发成功。
+
+</Callout>
+
+## 一次带确认的发送
+
+<Sequence
+  title="一次等确认的发送"
+  actors={[
+    { id: "externalizer", label: "外送器", sub: "Modulith" },
+    { id: "template", label: "ConfirmingRabbitMessagingTemplate", sub: "Patra 的发送模板" },
+    { id: "broker", label: "RabbitMQ" }
+  ]}
+  messages={[
+    { from: "externalizer", to: "template", label: "convertAndSend(...)", caption: "Modulith 的外送器要发一条集成事件，调用发送模板。" },
+    { from: "template", to: "broker", label: "发布消息，带关联 ID，mandatory", caption: "模板每次发送都生成一个新的随机关联 ID，用来对上稍后的回执；mandatory 表示投不出去要退回来。" },
+    { from: "broker", to: "template", label: "ack（已收下）", caption: "RabbitMQ 把消息放进队列后，回一个确认，关联 ID 对得上。" },
+    { from: "template", to: "externalizer", label: "方法返回", caption: "模板等到了 ack、没有退回，才让发送方法返回。外送器此时才把登记行标成完成。" }
+  ]}
+  summary={{ caption: "发送方法的返回，从“交给网络”变成了“RabbitMQ 已收下”。" }}
+/>
+
+## 失败有好几种，要全看
+
+等确认时，会碰到几种结果：
+
+- **ack 且没被退回**：成功。
+- **nack**：broker 说“我处理不了这条消息”。失败。
+- **超时**（默认等 5 秒）：没等到任何回执。失败。
+- **被退回**：交换机找不到可以投递的队列，这条消息被送回来。失败。
+
+最后一种有个反直觉的细节：**消息被退回之后，RabbitMQ 仍然会回一个 ack**，因为它确实“处理”了这条消息，只是没有队列可投。所以代码必须**先看有没有被退回，再看 ack**。
+
+Patra 的发送模板正是这样写的：
+
+<CodeRef at="patra-tool/patra-tool-events/src/main/java/dev/patra/tool/events/publisher/ConfirmingRabbitMessagingTemplate.java@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="112-139" />
+
+只看 ack 的代码，会把“没有队列可投”当成成功，登记行被删，消息就这样静悄悄地没了。亲手试一下：
+
+<Params
+  title="动手试试：生产者到底收到了什么"
+  guess={{ question: "有一条消息，没有任何队列绑定它的路由键，发送时带了 mandatory。生产者会依次收到什么？", options: ["只有 ack", "先收到退回，再收到 ack", "只有退回，没有 ack"], answer: "B", explain: "路由不到的消息先被退回，broker 随后照样回 ack。所以要先看退回，再看 ack。" }}
+  controls={[
+    { type: "switch", id: "bound", label: "有队列绑定了这个路由键", default: false },
+    { type: "switch", id: "mandatory", label: "发送时带 `mandatory`", default: true },
+    { type: "switch", id: "check-return", label: "代码先看退回，再看 ack", default: false }
+  ]}
+  cases={[
+    { when: { bound: true }, results: [{ label: "生产者依次收到", value: "ack", tone: "ok" }, { label: "登记行", value: "删除", tone: "ok" }], verdict: { tone: "ok", head: "正常。", text: "有队列接，broker 回 ack，登记行删掉。" } },
+    { when: { mandatory: false }, results: [{ label: "生产者依次收到", value: "ack", tone: "ok" }, { label: "消息去哪了", value: "悄悄丢掉", tone: "bad" }], verdict: { tone: "bad", head: "连退回都没有。", text: "不带 mandatory，路由不到队列的消息直接被丢掉，却照样回 ack。Patra 的模板一律带 mandatory，不能关。" } },
+    { when: { "check-return": false }, results: [{ label: "生产者依次收到", value: [{ text: "退回", tone: "wait" }, { text: "ack", tone: "ok" }] }, { label: "登记行", value: "被删除", tone: "bad" }], verdict: { tone: "bad", head: "这就是坑。", text: "代码只看 ack，以为发成功了，登记行被删掉，事件就这样丢了。" } },
+    { results: [{ label: "生产者依次收到", value: [{ text: "退回", tone: "wait" }, { text: "ack", tone: "ok" }] }, { label: "登记行", value: "留着，等补投", tone: "wait" }], verdict: { tone: "ok", head: "没丢，但发不出去。", text: "先看到退回，登记行留着；因为没有队列，它每次补投都会被再次退回。所以只外送有队列订阅的事件。" } }
+  ]}
+/>
+
+## 等确认的代价
+
+<Callout kind="cost">
+
+每次发送要多等一次回执，大约几毫秒。等待期间线程是被占住的，所以模板在发送前会检查线程上有没有挂着数据库连接之类的事务资源：有就直接报错，免得 broker 一卡住，连接池被占光。
+
+</Callout>
+
+<Quiz
+  questions={[
+    {
+      question: "RabbitMQ 重启，发送方等了 5 秒没收到任何回执。登记行该怎么处理？",
+      options: ["标成完成，反正可能已经收到了", "当作失败，登记行留着，等补投", "直接删除"],
+      answer: "B",
+      explain: "没有收到回执就是不知道。宁可补投一次（可能重复），也不能冒着丢消息的风险标成完成。重复由消费端去重来应对。"
+    }
+  ]}
+/>
+
+<Transfer
+  prompt="你要把“发布确认”用在另一个场景：把用户上传的图片信息发到消息队列。代码里 if (ack) { 标记完成 } else { 保留重发 }。你会提醒同事检查哪两件事，才能保证消息不会悄悄丢掉？"
+  points={[
+    { label: "先看退回", text: "路由不到队列的消息会被退回，但 broker 仍然回 ack。要先判断有没有被退回，再看 ack。" },
+    { label: "mandatory 与超时", text: "发送要开 mandatory 才能收到退回；等确认要设超时，等不到就算失败，不能无限等也不能默认成功。" },
+    { label: "失败要有去处", text: "失败的消息要留在发件箱之类的地方等重发，而不是抛个异常就丢。" }
+  ]}
+/>

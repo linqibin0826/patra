@@ -1,0 +1,154 @@
+---
+title: 并行开考与汇总放行
+summary: 多个检查任务同时跑，总耗时取最慢的一个；再用一个固定名字的汇总任务做分支保护唯一认的检查，被跳过的任务算通过，失败的算失败。
+type: concept
+difficulty: advanced
+tags: [ci-cd]
+prerequisites: [ops-ci-changed-only]
+personalEnv: false
+---
+
+<Diagnose
+  question="一个 PR 只改了文档，CI 里的后端、前端、学习站检查任务因为没有相关改动全被跳过（skipped）。如果分支保护要求这些任务都成功，合并按钮会怎样？"
+  options={["亮着，跳过就是没事", "是灰的，因为这些任务没有成功过", "取决于配置：需要明确声明“跳过也算通过”"]}
+  answer="C"
+  ifRight="对。跳过不会自动等于通过，要看你怎么汇总。Patra 用一个汇总任务明确声明了哪些任务可以被跳过。"
+  ifWrong="答案是 C。这件事没有统一的默认，要靠汇总逻辑去明确规定。Patra 的做法是专门写一个汇总任务，在里面列出“允许被跳过”的任务名。"
+  suggest="ops-ci-changed-only"
+/>
+
+## 先并行：总耗时取最慢的那个
+
+上一篇算出了“要考哪些科”。这一篇看这些科怎么开考。
+
+关键词是**并行**：各个检查任务互不依赖，各领一台云端机器**同时开工**。总耗时不是各科相加，而是等最慢的那一个。
+
+<Structure
+  title="ci.yml 里的任务，谁等谁"
+  intro="点任意一块看它管什么，或者跟一次 PR 走一遍"
+  nodes={[
+    { id: "detect", label: "detect-changes", sub: "算出考哪些科", code: true, col: 1, row: 2, desc: "第一个跑，输出 backend_units 等字段，后面的任务据此决定要不要开工。" },
+    { id: "preflight", label: "preflight", sub: "总是跑的治理检查", code: true, col: 2, row: 1, desc: "测试用的容器镜像版本与 workflow、compose 是否一致，module-graph 有没有陈旧。便宜，所以每个 PR 都跑。" },
+    { id: "backend", label: "backend", sub: "每个单元一台机器", code: true, col: 2, row: 2, desc: "按受影响的单元展开成一组并行任务，每个单元跑自己的测试。" },
+    { id: "portal", label: "portal", sub: "改了门户才跑", code: true, col: 2, row: 3, desc: "门户有改动才开工：lint、类型检查、单测、构建。" },
+    { id: "learn", label: "learn", sub: "改了学习站才跑", code: true, col: 2, row: 4, desc: "学习站有改动才开工，是纯静态站，检查也更轻。" },
+    { id: "coverage", label: "coverage", sub: "只在全量时汇总", code: true, col: 3, row: 2, desc: "全量检查时才把各单元的覆盖率数据汇总上传，局部检查时不假装是全仓覆盖率。" },
+    { id: "gate", label: "required-check", sub: "汇总放行", code: true, col: 4, row: 2, desc: "分支保护唯一认的检查。等前面所有任务，汇总出一个结论。" }
+  ]}
+  edges={[
+    { from: "detect", to: "backend", label: "needs" },
+    { from: "detect", to: "portal" },
+    { from: "detect", to: "learn" },
+    { from: "backend", to: "coverage" },
+    { from: "preflight", to: "gate" },
+    { from: "backend", to: "gate" },
+    { from: "portal", to: "gate" },
+    { from: "learn", to: "gate" },
+    { from: "coverage", to: "gate" }
+  ]}
+  traces={[
+    {
+      button: "改了 catalog-api",
+      packet: "catalog-api",
+      hops: [
+        { at: "detect", caption: "算出 backend_units 是 catalog、identity、interaction，门户和学习站都没有改动。" },
+        { at: "backend", caption: "三个单元各占一台机器，同时跑自己的测试。portal 和 learn 因为没有改动被跳过。" },
+        { at: "gate", caption: "汇总任务：backend 成功，portal、learn、coverage 被跳过但在许可名单里，preflight 成功，结论是通过。" }
+      ]
+    },
+    {
+      button: "只改了 README",
+      packet: "README",
+      hops: [
+        { at: "detect", caption: "判断是纯文档：backend_units 为空，portal 和 learn 都没改。" },
+        { at: "gate", caption: "后端、前端、学习站、覆盖率全被跳过。它们都在许可名单里，preflight 成功，所以仍然是绿的。" }
+      ]
+    }
+  ]}
+/>
+
+backend 这一步值得细看。它用 **matrix（矩阵）** 把一个 job 展开成一组：
+
+<CodeRef at=".github/workflows/ci.yml@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="119-135" />
+
+- `matrix.unit` 的取值来自 detect-changes 输出的单元列表。列表里有几个单元，就生成几个并行任务。
+- `fail-fast: false`：一个单元失败了，其余的继续跑完。这样一次就能看到所有出错的单元，不用修一个、再等一轮。
+- 每个单元要跑什么 Gradle 任务，从 module-graph 里查，而不是写死在 workflow 里。
+
+## 再汇总：为什么需要一个“总闸”
+
+分支保护要指定“哪些检查必须通过”。问题来了：
+
+- backend 的任务名随矩阵变化，比如 `backend (catalog)`，每个 PR 不一样，没法提前逐个指定。
+- 有些任务在某些 PR 里根本不会跑。
+
+所以 Patra 另写了一个任务 `required-check`，专门做汇总，并且它的名字永远不变。分支保护只认它。
+
+<CodeRef at=".github/workflows/ci.yml@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="294-305" />
+
+三个关键点：
+
+1. `needs` 列出所有要汇总的任务。
+2. `if: always()`：**前面的任务失败了，它也要运行**。这是最容易写错的一行，下面单独演示。
+3. `allowed-skips`：这几个任务**没有跑（skipped）**，视为通过。没有在名单里的，比如 detect-changes 和 preflight，必须是成功。
+
+## 试一试：少写一行 `if: always()`
+
+先猜，再动手。
+
+<Params
+  title="动手试试：汇总任务不写 always() 会怎样"
+  guess={{ question: "某个后端单元的测试失败了。汇总任务没写 if: always()。合并按钮会怎样？", options: ["是灰的，失败的任务会让汇总也失败", "汇总任务因为依赖失败而被跳过，被当成通过，按钮亮了", "汇总任务会等失败的任务重试成功"], answer: "B", explain: "GitHub 把“被跳过的必过检查”当作通过。依赖的任务失败，汇总任务默认就被跳过，于是坏代码溜了进去。所以汇总任务必须 always() 地运行，自己来判断结论。" }}
+  controls={[
+    { type: "switch", id: "fail", label: "后端某个单元的测试失败了", default: true },
+    { type: "switch", id: "always", label: "汇总任务写了 if: always()", default: false }
+  ]}
+  cases={[
+    { when: { fail: false }, results: [{ label: "汇总任务", value: "运行，成功", tone: "ok" }, { label: "合并按钮", value: "亮", tone: "ok" }], verdict: { tone: "ok", head: "全绿。", text: "没有失败的任务，汇总任务怎么写都是成功。" } },
+    { when: { always: true }, results: [{ label: "汇总任务", value: "运行，发现有失败，自己失败", tone: "bad" }, { label: "合并按钮", value: "灰", tone: "ok" }], verdict: { tone: "ok", head: "挡住了。", text: "汇总任务总会运行，看到有失败就报失败，坏代码被拦在门外。" } },
+    { results: [{ label: "汇总任务", value: "被跳过", tone: "wait" }, { label: "合并按钮", value: "亮，被当成通过", tone: "bad" }], verdict: { tone: "bad", head: "漏了。", text: "依赖失败时汇总任务被跳过，而被跳过的必过检查等同通过，坏代码溜进了 main。" } }
+  ]}
+/>
+
+## 允许被跳过，而不是允许被忽略
+
+`allowed-skips: backend, portal, learn, coverage` 这一行的含义要想清楚：
+
+- 这些任务**没有运行**，算通过。比如改文档时，它们本来就不该跑。
+- 这些任务**运行了但失败**，仍然算失败。跳过和不及格是两回事。
+
+所以，新增一个“有条件才跑”的任务时，要同时做两件事：把它加进 `needs`，并把它加进 `allowed-skips`。漏了第二件，下一个只改文档的 PR 就会被它挡住：它被跳过，但不在许可名单里，汇总任务判定为失败。
+
+<Quiz
+  questions={[
+    {
+      question: "给 CI 新增了 docs-lint 任务，只在 docs 目录有改动时才跑。要让它能拦住坏 PR、又不影响别的 PR，需要？",
+      options: ["只加进 needs 就够了", "加进 needs，也加进 allowed-skips", "只加进 allowed-skips"],
+      answer: "B",
+      explain: "不加 needs，汇总看不到它的结果；不加 allowed-skips，没改 docs 的 PR 会因为它被跳过而失败。"
+    },
+    {
+      question: "detect-changes 任务失败了。汇总任务会怎样？",
+      options: ["因为它不在 allowed-skips 里，汇总失败", "无所谓，汇总照样通过"],
+      answer: "A",
+      explain: "它没有被跳过，是失败；而且它不在许可名单里，汇总必须失败。"
+    }
+  ]}
+/>
+
+## 几处故意的不对称
+
+- **门户的 e2e 测试**：在 PR 里失败不挡合并，在每晚的全量检查里才阻塞。浏览器测试偶尔会抖，不能因此卡住每个 PR。
+- **学习站的 e2e 测试**：只在本地跑，不进 CI。
+- **Gradle 缓存**：PR 里只读，只有主分支和夜间任务才写入。避免 PR 代码污染共享缓存。
+- **每晚一次全量**：不管有没有 PR，每天固定跑一遍，兜住“局部检查漏掉的东西”，同时把缓存喂热。
+
+<Transfer
+  prompt="你要在 CI 里新增一个 spell-check 任务，它每个 PR 都要跑，不管改了什么。要在 ci.yml 里怎么接，才能让它真的拦得住 PR？分支保护的设置需要改吗？"
+  points={[
+    { label: "加任务", text: "写一个 job，没有条件限制，每次都跑。" },
+    { label: "接进汇总", text: "把它加进 required-check 的 needs，汇总才能看见它。" },
+    { label: "不进许可名单", text: "它总是会跑，不应该被跳过，所以不要加进 allowed-skips；如果它被跳过，说明出了问题，汇总应当失败。" },
+    { label: "分支保护不用动", text: "分支保护只认 required-check 这个固定名字，里面汇总谁，不用改保护设置，这就是汇总任务的好处。" }
+  ]}
+/>

@@ -1,0 +1,87 @@
+---
+title: 开了连接复用，ssh -N -L 转发立刻就退出了
+summary: ssh 配了 ControlMaster 复用连接后，再开端口转发，新进程会把转发交给已有的主连接然后马上退出。转发其实还在，只是挂在主连接上，主连接空闲到期就跟着断。要一条自己能管的转发，就关掉这次的复用。
+type: pitfall
+difficulty: practice
+tags: [deployment, network]
+prerequisites: [web-client-server-and-ports]
+sources:
+  - version: v0.8
+personalEnv: false
+---
+
+<Diagnose
+  question="`~/.ssh/config` 里给部署机配了 `ControlMaster auto` 和 `ControlPersist 600`，几分钟前刚 ssh 上去过。现在执行 `ssh -N -L 127.0.0.1:4000:127.0.0.1:4000 mini`，想让它一直挂着做端口转发。会怎样？"
+  options={["进程挂住，转发一直在，直到按 Ctrl+C", "进程立刻以 0 退出，但转发能用一阵子", "报错：端口 4000 已被占用"]}
+  answer="B"
+  ifRight="对。新进程发现已有主连接，把转发请求交给它就走了。转发挂在主连接上，主连接什么时候断，转发就什么时候没。"
+  ifWrong="答案是 B。开着连接复用时，新的 ssh 进程不建新连接，而是把「请帮我转发这个端口」交给已有的主连接，然后退出。这题考的是端口转发把本机一个端口接到远端机器的某个程序上，先读端口那篇。"
+  suggest="web-client-server-and-ports"
+/>
+
+<Callout kind="lead" label="坑在哪">
+
+开了 `ControlMaster` 复用之后，`ssh -N -L` 不会挂住：它把转发交给已有的主连接，然后马上以 0 退出。转发还在，但归主连接管，主连接空闲 `ControlPersist` 秒后关闭，转发跟着断。你以为进程退出是转发失败了，或者以为转发会一直在，两种想法都不对。
+
+</Callout>
+
+## 连接复用是什么
+
+每次 ssh 都要握手、认证，慢。`ControlMaster auto` 让第一次连接成为「主连接」，在本机留一个控制用的 socket；之后对同一台机器的 ssh 都通过这个 socket 借用主连接，不再重新握手。`ControlPersist 600` 表示最后一个使用者走了以后，主连接再留 600 秒。
+
+在进程列表里，主连接长这样：
+
+```text
+ssh: /Users/<你>/.ssh/cm-<用户>@<部署机地址>:22 [mux]
+```
+
+## 转发交给了谁
+
+<Compare
+  title="同一条转发命令，开不开复用"
+  variants={[
+    {
+      label: "没有主连接，或关了复用",
+      steps: ["ssh 建一条新连接、完成认证", "在这条连接上开端口转发", "`-N` 不执行远程命令，进程挂住"],
+      results: [{ label: "进程", value: "一直在", tone: "ok" }, { label: "转发", value: "进程在就在，kill 就停", tone: "ok" }],
+      verdict: { tone: "ok", head: "自己管自己。", text: "转发的生命周期就是这个进程的生命周期。" }
+    },
+    {
+      label: "已有主连接（复用开着）",
+      steps: ["ssh 找到控制 socket，借用主连接", "请主连接代开端口转发", "任务交出去了，进程以 0 退出"],
+      results: [{ label: "进程", value: "立刻退出", tone: "wait" }, { label: "转发", value: "挂在主连接上，到期一起断", tone: "bad" }],
+      verdict: { tone: "bad", head: "看不见的转发。", text: "没有进程可以 kill，也看不出它什么时候会断。" }
+    }
+  ]}
+/>
+
+v0.8 收尾时，作者要把本机的 4000 端口转发到部署机上的门户容器，让本机的 Playwright 直接测线上容器，就撞上了这个情况：命令一敲就退出，转发却又能用，过一阵又没了。
+
+## 怎么避开
+
+要一条自己能管的转发，这一次不用复用：
+
+```bash
+ssh -N -o ControlMaster=no -o ControlPath=none -o ExitOnForwardFailure=yes \
+  -L 127.0.0.1:4000:127.0.0.1:4000 mini
+```
+
+- `ControlMaster=no` 加 `ControlPath=none`：不借用主连接，也不自己当主连接，老老实实建一条新连接。
+- `ExitOnForwardFailure=yes`：本机端口被占、转发开不起来时直接报错退出，不会挂着一个没有转发的连接。
+- 放到后台跑，用完 kill 掉。
+
+已经挂在主连接上的转发，用控制命令撤掉：
+
+```bash
+ssh -O cancel -L 127.0.0.1:4000:127.0.0.1:4000 mini
+```
+
+<Transfer
+  prompt="一个脚本用 `ssh mini 'docker ps'` 检查部署机，又用 `ssh -f -N -L 5432:127.0.0.1:5432 mini` 开数据库转发，然后跑迁移。偶尔迁移跑到一半连接断了。你觉得最可能是什么原因？怎么改得更稳？"
+  points={[
+    { label: "转发挂在主连接上", text: "第一条 ssh 建了主连接，转发命令借用了它；主连接空闲到期或被别的会话关掉，转发跟着断。" },
+    { label: "转发单独建连接", text: "开转发那条加 `-o ControlMaster=no -o ControlPath=none`，让它有自己的连接和进程。" },
+    { label: "失败要显式", text: "加 `ExitOnForwardFailure=yes`，转发开不起来就立刻失败，脚本能检查到。" },
+    { label: "用完收掉", text: "记下转发进程号，迁移结束后 kill，别留一条没人管的转发。" }
+  ]}
+/>

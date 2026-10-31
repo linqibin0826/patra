@@ -1,0 +1,118 @@
+---
+title: HTTP 缓存：Cache-Control 与 ETag
+summary: 浏览器和代理什么时候可以不重新请求；换了新内容怎样让缓存失效；私有数据为什么不能被缓存。
+type: concept
+difficulty: basic
+tags: [network, backend]
+prerequisites: [http-request-and-response]
+personalEnv: false
+---
+
+<Diagnose
+  question="用户换了一张新头像，但头像接口的地址没变，浏览器因为缓存还在显示旧图。要让所有人立刻看到新头像，最稳妥的做法是？"
+  options={["让用户自己清一下浏览器缓存", "让新头像的网址和旧的不一样", "把缓存时间设成 1 秒"]}
+  answer="B"
+  ifRight="对，网址变了，缓存里的旧图就对不上号了。这正是 Patra 头像接口的做法，往下读。"
+  ifWrong="答案是 B：缓存是按网址存的。换了网址，浏览器就当它是一份新东西。让用户清缓存做不到；把缓存设很短又失去了缓存的意义。"
+  suggest="http-request-and-response"
+/>
+
+## 缓存是为了少跑一趟
+
+同一张图、同一份脚本，每次打开页面都重新下载，既慢又浪费。HTTP 允许响应**带上说明书**：这份东西多久之内可以直接用，不必再问我。浏览器和中途的代理按说明书把它存起来，这就是缓存。
+
+说明书写在响应头里，最重要的是 **Cache-Control**：
+
+| 写法 | 意思 |
+|---|---|
+| `max-age=3600` | 这份东西 3600 秒内可以直接用，不用再请求 |
+| `public` / `private` | 公共缓存（代理、CDN）能不能存。`private` 只允许用户自己的浏览器存 |
+| `no-cache` | 可以存，但每次用之前必须先问服务器「还有效吗」 |
+| `no-store` | 不要存，任何地方都不要 |
+| `immutable` | 这份东西永远不会变，有效期内连刷新都不用再确认 |
+
+## 过期之后：问一句「变了吗」
+
+缓存过期了，是不是要重新下载全部？不必。服务器可以在第一次响应里带上一个 **ETag**，是这份内容的指纹。浏览器过期后带着指纹去问「我这份还是不是最新」，没变的话服务器只回一个 304，不传正文。
+
+点「下一步」看完整的一轮。
+
+<Stepper
+  title="缓存的一轮：第一次、有效期内、过期之后"
+  nodes={[
+    { id: "browser", label: "浏览器" },
+    { id: "cache", label: "浏览器缓存" },
+    { id: "server", label: "服务器" }
+  ]}
+  links={[
+    { from: "browser", to: "cache" },
+    { from: "browser", to: "server" }
+  ]}
+  steps={[
+    { caption: "第一次需要这张图。缓存里没有，只好去请求服务器。", focus: ["browser", "server"], links: ["browser>server"], tokens: [{ id: "img", label: "请求", at: "server" }] },
+    { caption: "服务器返回 200，带着图片，还带着 Cache-Control 和 ETag。浏览器把它存进缓存。", focus: ["server", "cache"], links: ["browser>cache"], tokens: [{ id: "img", label: "图片 + ETag", at: "cache" }], notes: [{ at: "cache", text: "已缓存", tone: "ok" }] },
+    { caption: "有效期内再次需要这张图。浏览器直接用缓存里的，一个请求都不发。", focus: ["browser", "cache"], links: ["browser>cache"], tokens: [{ id: "img", label: "图片", at: "browser" }], notes: [{ at: "server", text: "0 个请求", tone: "ok" }] },
+    { caption: "过期了。浏览器带着 If-None-Match：旧的 ETag 去问服务器，我这份还是最新的吗？", focus: ["browser", "server"], links: ["browser>server"], tokens: [{ id: "ask", label: "ETag 一致吗？", at: "server" }] },
+    { caption: "服务器比对后回 304：没变。不传图片，只传几个字节。浏览器继续用缓存里的，并刷新有效期。", focus: ["server", "cache"], links: ["browser>cache"], tokens: [{ id: "ask", label: "304", at: "browser" }], notes: [{ at: "cache", text: "有效期已刷新", tone: "ok" }] }
+  ]}
+  guesses={[
+    { before: 3, question: "图片在缓存的有效期内，页面再次需要它。浏览器会向服务器发请求吗？", options: ["会，每次都先问一下", "不会，直接用缓存", "只发一个很小的请求"], answer: "B", explain: "有效期内是「新鲜」的，不必打扰服务器。只有过期了或者 no-cache，才需要先问一句。" }
+  ]}
+/>
+
+## 怎样让缓存「立刻失效」
+
+缓存的好处是不问；坏处也是不问。有效期内内容变了，浏览器不知道。常用的办法是**让网址跟着内容变**：网址里带上内容的指纹（版本号或哈希）。内容变了，网址就变了，旧缓存自然对不上。这样可以放心地把有效期设得很长。
+
+Patra 的头像接口就是这样做的：
+
+<CodeRef at="patra-api/patra-identity/patra-identity-adapter/src/main/java/dev/patra/identity/adapter/account/rest/PublicAvatarController.java@5073ab1358404ecd989e722373cd9f7edafe238b" lines="31-62" />
+
+要点：网址里有 `?v=头像哈希`；响应头 `Cache-Control: public, max-age=31536000, immutable`，也就是缓存一年、永不变；还带着 ETag，`checkNotModified` 命中时回 304。换了头像，哈希变了，网址变了，其他人拿到的是新图。
+
+自己试试，先猜。
+
+<Params
+  title="换头像之后，别人看到什么"
+  guess={{ question: "头像网址不带版本号，缓存一年。用户换了新头像后，已经看过旧头像的人会看到什么？", options: ["新头像，浏览器会自动更新", "最长一年内还是旧头像", "头像变成空白"], answer: "B", explain: "缓存认的是网址，网址没变，浏览器就一直用旧的，直到过期。" }}
+  controls={[
+    { type: "switch", id: "versioned", label: "网址里带版本号 ?v=哈希", default: true },
+    { type: "switch", id: "long", label: "缓存一年（immutable）", default: true }
+  ]}
+  cases={[
+    { when: { versioned: false, long: true }, results: [{ label: "看过旧头像的人", value: "最长一年还是旧的", tone: "bad" }, { label: "请求次数", value: "几乎为 0", tone: "ok" }], verdict: { tone: "bad", head: "省了请求，但内容更新不了。", text: "缓存时间长而网址不变，是最典型的缓存事故。" } },
+    { when: { long: false }, results: [{ label: "看过旧头像的人", value: "总能看到新的", tone: "ok" }, { label: "请求次数", value: "每次都要问一次（304 或 200）", tone: "wait" }], verdict: { tone: "ok", head: "正确，但每次多一趟往返。", text: "每次先问「还有效吗」，没变就是 304，传输量不大，但延迟逃不掉。" } },
+    { results: [{ label: "看过旧头像的人", value: "新网址，自然拿到新头像", tone: "ok" }, { label: "请求次数", value: "旧图一年内不会再问", tone: "ok" }], verdict: { tone: "ok", head: "两头都占到。", text: "内容变了就换网址，没变就一直缓存。这是 Patra 头像的做法。" } }
+  ]}
+/>
+
+## 私有数据不能被缓存
+
+缓存对「所有人看到的都一样」的东西最有用。如果响应是**某个人专属**的（我的收藏夹、我的未读数），被公共缓存存下来，别人可能请求到你的数据。所以：
+
+- 个人数据：`private` 或 `no-store`，别让代理缓存。
+- 可能改变的临时结果也要小心。Patra 用户改名后，旧用户名的主页会临时跳转（301）到新名字。这个跳转最多保留 90 天，原主在 30 天后就可能把名字改回来，所以跳转响应带了 `Cache-Control: no-store`，不允许中间任何一层记住它。
+
+<CodeRef at="patra-api/patra-identity/patra-identity-adapter/src/main/java/dev/patra/identity/adapter/account/rest/PublicUserController.java@5073ab1358404ecd989e722373cd9f7edafe238b" lines="33-43" />
+
+浏览器的 301 默认会被无限期缓存，这里恰恰要防它。
+
+<Quiz
+  questions={[
+    {
+      question: "「我的未读提醒数」这个接口，Cache-Control 最适合？",
+      options: ["public, max-age=86400", "private 或 no-store，必要时配合 ETag", "immutable"],
+      answer: "B",
+      explain: "数据是个人专属并且会变，不能给公共缓存，也不能缓存一天。需要省流量时可以配合 ETag，没变就回 304。"
+    }
+  ]}
+/>
+
+<Transfer
+  prompt="Patra 有两种内容：文献详情页的 JSON（含引用次数，会不时变化）和一个文献的 PDF 全文文件（存下之后不会变）。你会分别怎么设缓存？"
+  points={[
+    { label: "详情 JSON", text: "会变，用 ETag 配 no-cache 或较短的 max-age：用之前先问一声，没变回 304。" },
+    { label: "PDF 全文", text: "内容不变，可以设很长的 max-age。如果它可能被更新，让网址里带版本。" },
+    { label: "私有的要谨慎", text: "凡是跟某个登录用户绑定的响应，用 private 或 no-store，别让公共缓存存。" }
+  ]}
+/>

@@ -1,0 +1,203 @@
+---
+title: 调别的服务：HTTP Interface
+summary: 用一个 Java 接口写清对方服务的 HTTP 接口，Spring 按它生成代理，调方法就是发请求；契约放在被调方的 -api 模块，失败统一变成 RemoteCallException。
+type: concept
+difficulty: advanced
+tags: [spring, backend, network]
+prerequisites: [spring-mvc-controller, http-status-codes]
+personalEnv: false
+---
+
+<Diagnose
+  question="网关调 identity 的查会话接口，写法是 `sessions.introspect(req)`，像调一个普通 Java 方法。这次 identity 回了 HTTP 503。网关这行代码会怎样？"
+  options={["返回 null", "返回一个 active 为 false 的结果", "抛出一个异常，异常里带着 503 和对方给的错误信息", "一直等，直到 identity 恢复"]}
+  answer="C"
+  ifRight="对：方法签名只写了成功时返回什么，失败只能用异常表达。这篇讲这个「方法」背后是谁在发请求，失败又是在哪一处被翻译成异常的。"
+  ifWrong="答案是 C。5xx 表示对方处理失败，方法签名里没有地方放「失败」，只能抛异常。这题考的是 HTTP 状态码的含义：2xx 成功，4xx 调用方的问题，5xx 服务方的问题。"
+  suggest="http-status-codes"
+/>
+
+<Callout kind="lead">
+
+HTTP Interface 是用一个 Java 接口描述对方服务的某个 HTTP 接口：路径、方法、请求体、返回类型都写在注解和签名上。Spring 按这个接口生成一个代理对象，调它的方法，代理就替你拼好请求发出去，再把响应 JSON 变回 Java 对象。
+
+</Callout>
+
+## 契约：一个接口，两头都用
+
+网关每收到一个带令牌的请求，都要问 identity「这个令牌对应谁」。这件事的契约是 `SessionEndpoint`，放在 identity 的 `patra-identity-api` 模块里。
+
+<CodeRef at="patra-api/patra-identity/patra-identity-api/src/main/java/dev/patra/identity/api/session/endpoint/SessionEndpoint.java@5073ab1358404ecd989e722373cd9f7edafe238b" lines="21-33" />
+
+```java
+@HttpExchange(
+    url = "/_internal/sessions",
+    accept = "application/json",
+    contentType = "application/json")
+public interface SessionEndpoint {
+
+  /// 按令牌查会话并节流续期。
+  ///
+  /// @param request 令牌原文
+  /// @return 查询结果；令牌格式不对、会话不在或已过绝对期时 `active` 为 `false`
+  @PostExchange("/introspect")
+  SessionIntrospectionResp introspect(@RequestBody SessionIntrospectionReq request);
+}
+```
+
+接口上的 `@HttpExchange` 给出公共前缀，方法上的 `@PostExchange` 说「这是一个 POST，路径再拼上 `/introspect`」。读下来就是：`POST /_internal/sessions/introspect`，请求体是 `SessionIntrospectionReq`，响应体是 `SessionIntrospectionResp`。
+
+同一个接口被两边用：
+
+<Structure
+  title="一份契约，谁实现、谁调用"
+  intro="点任意一块看它和契约的关系"
+  nodes={[
+    { id: "api", label: "SessionEndpoint", sub: "patra-identity-api", code: true, col: 2, desc: "只有接口和 DTO，不含任何逻辑。被调方和调用方都依赖它，所以路径、字段名两边不会各写各的。" },
+    { id: "impl", label: "SessionEndpointImpl", sub: "identity · @RestController", code: true, col: 1, row: 2, desc: "identity 这边实现接口。Spring MVC 认得接口上的 `@HttpExchange`，按它注册路由，不用再写一遍 `@PostMapping`。" },
+    { id: "proxy", label: "sessionEndpoint 代理", sub: "网关 · IdentityClientConfiguration", code: true, col: 3, row: 2, desc: "网关这边没有实现类，由 `createProxy` 按接口生成代理对象，注入给要用的地方。" }
+  ]}
+  edges={[
+    { from: "impl", to: "api", label: "实现" },
+    { from: "proxy", to: "api", label: "按它生成" }
+  ]}
+/>
+
+契约放在被调方的 `-api` 模块，是因为接口长什么样由提供接口的一方说了算。调用方只依赖这个小模块，拿不到 identity 的任何内部代码。
+
+## 代理：调方法就是发请求
+
+网关里生成代理的地方只有两个 Bean：
+
+<CodeRef at="patra-api/patra-gateway-boot/src/main/java/dev/patra/gateway/config/IdentityClientConfiguration.java@5073ab1358404ecd989e722373cd9f7edafe238b" lines="23-39" />
+
+```java
+  @Bean
+  public RestClient identityRestClient(
+      @Qualifier("httpInterfaceLoadBalancedRestClientBuilder")
+          RestClient.Builder loadBalancedBuilder,
+      RestClientFactory factory) {
+    return factory.createRestClient(loadBalancedBuilder, "identity", "lb://patra-identity");
+  }
+
+  /// 查会话接口代理。
+  ///
+  /// @param identityRestClient identity 的 RestClient
+  /// @param factory RestClient 工厂
+  /// @return 代理
+  @Bean
+  public SessionEndpoint sessionEndpoint(RestClient identityRestClient, RestClientFactory factory) {
+    return factory.createProxy(identityRestClient, SessionEndpoint.class);
+  }
+```
+
+第一个 Bean 是一个 `RestClient`：真正发 HTTP 请求的客户端，基础地址是 `lb://patra-identity`（`lb://` 怎么变成真实地址，另有一篇讲服务发现）。第二个 Bean 把它交给 Spring 的 `HttpServiceProxyFactory`，按 `SessionEndpoint` 生成代理。
+
+一次调用经过这几步：
+
+<Stepper
+  title="sessions.introspect(req) 背后发生了什么"
+  nodes={[
+    { id: "caller", label: "调用方代码", sub: "网关" },
+    { id: "proxy", label: "代理", sub: "SessionEndpoint" },
+    { id: "client", label: "RestClient", sub: "lb://patra-identity" },
+    { id: "identity", label: "identity", sub: "SessionEndpointImpl" }
+  ]}
+  links={[
+    { from: "caller", to: "proxy" },
+    { from: "proxy", to: "client" },
+    { from: "client", to: "identity" }
+  ]}
+  steps={[
+    { caption: "调用方只看见一个接口，调 `introspect(req)`，和调本地方法一样。", focus: ["caller"], tokens: [{ id: "req", label: "req", at: "caller" }] },
+    { caption: "代理读这个方法上的注解：POST、`/_internal/sessions/introspect`、请求体是参数 `req`。", focus: ["proxy"], links: ["caller>proxy"], tokens: [{ id: "req", label: "req", at: "proxy" }] },
+    { caption: "`RestClient` 把 `req` 序列化成 JSON，拼上基础地址发出去。", focus: ["client", "identity"], links: ["proxy>client", "client>identity"], tokens: [{ id: "req", label: "JSON", at: "identity" }] },
+    { caption: "identity 回 200 和一段 JSON。`RestClient` 按方法的返回类型把它反序列化成 `SessionIntrospectionResp`，代理把对象还给调用方。", focus: ["caller", "proxy", "client"], links: ["client>identity", "proxy>client", "caller>proxy"], tokens: [{ id: "resp", label: "resp", at: "caller" }], notes: [{ at: "caller", text: "拿到 resp", tone: "ok" }] }
+  ]}
+  guesses={[
+    { before: 4, question: "如果 identity 这次回的不是 200，而是 503，第 4 步会变成什么？", options: ["照样反序列化，字段全是空的", "某个错误处理器读响应体，抛出异常给调用方", "代理自动重试，直到成功"], answer: "B", explain: "状态码是 4xx / 5xx 时，`RestClient` 不走正常的反序列化，而是交给注册好的错误处理器。Patra 的错误处理器把它翻译成 `RemoteCallException`，下一节讲它在哪。" }
+  ]}
+/>
+
+## 失败：统一翻译成 RemoteCallException
+
+Patra 的服务出错时回 RFC 7807 的 ProblemDetail（`application/problem+json`），扩展字段里带错误码 `code` 和语义特征 `traits`（比如 `NOT_FOUND`、`DEP_UNAVAILABLE`）。调用方要把这段 JSON 读回来，变成一个带着这些信息的 Java 异常。
+
+这件事每个服务都要做，所以统一放在工具模块 `patra-tool-http-client` 里，由 `ProblemDetailErrorHandler` 完成。它挂在 `RestClient.Builder` 上的方式是一个 `RestClientCustomizer`：
+
+<CodeRef at="patra-tool/patra-tool-http-client/src/main/java/dev/patra/tool/httpclient/autoconfigure/HttpClientInterfaceAutoConfiguration.java@b6e01875bb5692356021c8a19562f557f319fc54" lines="94-108" />
+
+```java
+    return builder -> {
+      ProblemDetailErrorHandler errorHandler = errorHandlerProvider.getIfAvailable();
+      if (errorHandler != null
+          && properties.httpInterface().errorHandling().problemDetailEnabled()) {
+        builder.defaultStatusHandler(HttpStatusCode::isError, errorHandler);
+        log.debug("已将 ProblemDetailErrorHandler 添加到 RestClient.Builder");
+      }
+    };
+```
+
+`defaultStatusHandler(HttpStatusCode::isError, …)` 的意思是：只要状态码是 4xx 或 5xx，就交给这个处理器。处理器读响应体，能解析成 ProblemDetail 就把 `code`、`traits`、`traceId` 都装进 `RemoteCallException`；解析不了的（比如对方回了一段 HTML）也包成 `RemoteCallException`，只是没有错误码。
+
+<Callout kind="insight" label="顺带想通的">
+
+网关用的是负载均衡版的 Builder（`httpInterfaceLoadBalancedRestClientBuilder`），它在自动配置里**故意不应用** customizer，注释写着「避免与 RestClientFactory 重复应用自定义器」。错误处理器是在 `RestClientFactory.createRestClient` 里挂上的：先 `clone()` 一份 Builder，再把所有 customizer 依次作用上去。所以只要通过工厂建客户端，就不会漏掉错误翻译。
+
+</Callout>
+
+<CodeRef at="patra-tool/patra-tool-http-client/src/main/java/dev/patra/tool/httpclient/factory/RestClientFactory.java@cfec9c9f30270dcf03f5cd7b6e54a0cd3b59296b" lines="109-113" />
+
+## 调用方：按语义特征判断，不按状态码硬编码
+
+翻译好的异常交给调用方处理。网关查会话的那一处是这样分的：
+
+<CodeRef at="patra-api/patra-gateway-boot/src/main/java/dev/patra/gateway/security/SessionTokenAuthenticationConverter.java@5073ab1358404ecd989e722373cd9f7edafe238b" lines="76-89" />
+
+```java
+  private SessionIntrospectionResp introspect(String token) {
+    try {
+      return sessions.introspect(SessionIntrospectionReq.of(token));
+    } catch (RemoteCallException e) {
+      if (e.getErrorTraits().contains(StandardErrorTrait.DEP_UNAVAILABLE)) {
+        throw new AuthenticationServiceException("会话存储暂时不可用", e);
+      }
+      throw new SessionLookupFailedException(e);
+    } catch (ResourceAccessException | IllegalStateException e) {
+      throw new AuthenticationServiceException("identity 暂时不可用", e);
+    } catch (RuntimeException e) {
+      throw new SessionLookupFailedException(e);
+    }
+  }
+```
+
+两点值得注意：
+
+- 判断「是不是暂时不可用」看的是 `getErrorTraits()` 里有没有 `DEP_UNAVAILABLE`，而不是写死 `status == 503`。语义特征由 identity 自己声明，换个状态码也不会判错。
+- `RemoteCallException` 只覆盖「对方回了响应，但是错误响应」。根本连不上、读超时时没有响应可读，`RestClient` 抛的是 `ResourceAccessException`，要单独接住。
+
+<Quiz
+  questions={[
+    {
+      question: "identity 回了 200，body 里 `active` 是 `false`（令牌已过期）。网关这行调用会怎样？",
+      options: ["抛 RemoteCallException", "正常返回一个 active 为 false 的对象", "抛 ResourceAccessException"],
+      answer: "B",
+      explain: "「令牌无效」是查询的正常结果，不是调用失败。identity 用 200 回答它，错误处理器根本不会被调用。"
+    },
+    {
+      question: "identity 的进程挂了，端口上没人监听。网关会走哪个 catch？",
+      options: ["RemoteCallException，traits 里有 DEP_UNAVAILABLE", "ResourceAccessException", "RuntimeException 兜底"],
+      answer: "B",
+      explain: "连接都建不起来，没有状态码，也就到不了错误处理器。`RestClient` 抛 `ResourceAccessException`，网关把它和「会话存储不可用」一样当成 503。"
+    }
+  ]}
+/>
+
+<Transfer
+  prompt="catalog 导入文献时要调 registry 的字典接口（`DictionaryEndpoint`）把语言代码解析成标准值。registry 对不认识的字典类型回 404 的 ProblemDetail。catalog 这边的适配器该怎么写？哪些失败要和 404 区别对待？"
+  points={[
+    { label: "接住 RemoteCallException", text: "在 catalog 的适配器里 catch `RemoteCallException`，用 `getErrorTraits()` 或 `RemoteErrorHelper.isNotFound(ex)` 判断是不是「找不到」，翻译成 catalog 自己的领域异常，不让它漏到应用层。" },
+    { label: "按语义不按数字", text: "判断依据是 registry 声明的语义特征，不是写死 404；registry 以后改状态码，调用方不用跟着改。" },
+    { label: "连不上另算", text: "registry 宕机、超时抛的是 `ResourceAccessException`，没有错误码。它代表「暂时不可用」，通常该让这一批导入失败重试，而不是当成「字典里没有」。" }
+  ]}
+/>

@@ -1,0 +1,135 @@
+---
+title: 领域事件与集成事件
+summary: 服务内部记录事实的事件，和跨服务公布的事件，要分成两个类。前者字段随内部模型自由变，后者是对外契约要保持稳定，中间用一道映射隔开。
+type: concept
+difficulty: advanced
+tags: [ddd, backend, messaging]
+prerequisites: [ddd-bounded-contexts, msg-in-process-events]
+personalEnv: false
+---
+
+<Diagnose
+  question="interaction 要把「评论已发表」告诉 notification。领域层有一个 CommentPublishedEvent（里面用了 SubjectId、SubjectOwner 等领域类型）。能不能直接把它序列化成 JSON 发给 notification？"
+  options={["能，省一个类", "不太好：领域事件的类型是 interaction 的内部模型，直接发出去就把内部结构公开成了契约", "必须能，否则没法传"]}
+  answer="B"
+  ifRight="对。一旦别的服务按这个 JSON 结构解析，interaction 就不能再随意改领域类型了。更稳妥的做法是另外定义一个专门对外的事件。"
+  ifWrong="答案是 B。直接发出去，等于别的服务从此依赖 interaction 的内部类型。interaction 想重构领域模型时，会发现动哪个字段都可能弄坏消费方。更稳妥的做法是另外定义一个专门对外的事件，这就是这篇的内容。进程内事件怎么发、怎么收，前置篇讲过。"
+  suggest="msg-in-process-events"
+/>
+
+## 两个事件，两种身份
+
+同一件事「评论已发表」，Patra 里有两个类：
+
+| | 领域事件 | 集成事件 |
+|---|---|---|
+| 类名 | `CommentPublishedEvent` | `CommentPublished` |
+| 位置 | interaction 的 domain 模块 | interaction 的 api 模块 |
+| 听众 | 本服务里的其他代码 | 别的服务（如 notification） |
+| 字段 | 怎么方便本服务用怎么定，可用领域类型 | 只放别人需要的，用基本类型，要保持稳定 |
+| 能随便改吗 | 能，重构时一起改 | 不能，改了就是改契约 |
+
+<CodeRef at="patra-api/patra-interaction/patra-interaction-domain/src/main/java/dev/patra/interaction/domain/discussion/event/CommentPublishedEvent.java@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="9-52" />
+
+领域事件里的 `SubjectId`、`SubjectOwner`、`SubjectType` 都是 interaction 内部的领域类型。
+
+<CodeRef at="patra-api/patra-interaction/patra-interaction-api/src/main/java/dev/patra/interaction/api/discussion/event/CommentPublished.java@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="1-48" />
+
+集成事件放在 api 模块里，实现 `IntegrationEvent`。它的 `subject` 是同在 api 模块里的 `SubjectContext`，不是领域类型。消费方依赖的是 api 模块，看不到 interaction 的领域层。
+
+<Callout kind="lead">
+
+领域事件是写给自己人看的账本，集成事件是写给外人看的公告。账本可以随手改，公告改了就得考虑所有看过它的人。
+
+</Callout>
+
+## 中间那道映射
+
+从一个变成另一个，靠一个纯粹拷贝字段的映射类：
+
+<CodeRef at="patra-api/patra-interaction/patra-interaction-boot/src/main/java/dev/patra/interaction/config/IntegrationEventMapper.java@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="19-45" />
+
+它有三个要点，注释里写得很清楚：
+
+1. **只拷字段**：值对象拆成基本类型，枚举转成常量名。
+2. **不查库、不调转换器**：映射在每次外送（包括补投）时都会执行，查库会让补投的结果随时间变化，抛异常则会让这条事件永远发不出去。
+3. **事件 ID 原样带过去**：补投时不变，消费方靠它去重。
+
+外送哪些事件、发到哪个交换机、带什么路由键，都在一个配置类里：
+
+<CodeRef at="patra-api/patra-interaction/patra-interaction-boot/src/main/java/dev/patra/interaction/config/InteractionEventsConfiguration.java@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="26-69" />
+
+注意注释里的一句：「领域层不贴 `@Externalized`」。领域层不知道自己的事件会被发到 RabbitMQ，这件事只有 boot 模块的这个配置知道。
+
+## 一件事的完整旅程
+
+<Sequence
+  title="一条评论发表后，事件走了哪几步"
+  actors={[
+    { id: "handler", label: "PublishCommentHandler", sub: "interaction · app" },
+    { id: "bus", label: "事件发布与登记", sub: "同一事务内" },
+    { id: "mapper", label: "IntegrationEventMapper", sub: "interaction · boot" },
+    { id: "mq", label: "RabbitMQ", sub: "interaction.events" },
+    { id: "inbox", label: "InboxEventListener", sub: "notification · adapter" }
+  ]}
+  messages={[
+    { from: "handler", to: "bus", label: "publishEvent(CommentPublishedEvent)", caption: "在写评论的同一个事务里发布领域事件。进程内的订阅方同步收到；同时，事件被记成一行登记，和评论一起提交。" },
+    { from: "bus", to: "mapper", label: "提交后外送：先映射", caption: "事务提交之后才外送。外送前，把领域事件映射成对外的集成事件。映射只拷字段，不查库。" },
+    { from: "mapper", to: "mq", label: "CommentPublished · 路由键 comment.published", caption: "集成事件发到交换机 interaction.events。队列绑定了这个路由键，消息才有地方去。" },
+    { from: "mq", to: "inbox", label: "投递到队列，通知服务消费", caption: "notification 的监听器收到集成事件，转成自己的命令，交给自己的用例处理。它只认识契约，不认识 interaction 的领域类。" }
+  ]}
+  summary={{ caption: "领域事件在内，集成事件在外，映射类是两者之间唯一的接缝。" }}
+/>
+
+把集成事件转回命令的，是 notification 里的入站适配器：
+
+<CodeRef at="patra-api/patra-notification/patra-notification-adapter/src/main/java/dev/patra/notification/adapter/inbox/mq/InboxEventListener.java@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="36-52" />
+
+## 为什么要这么麻烦
+
+<Callout kind="cost">
+
+每个外送的事件要写两个类，外加一段映射。改集成事件的字段时，还要留意队列里没消费完的旧消息。
+
+</Callout>
+
+换来的是两件事：
+
+- **领域模型能自由重构**。把 `SubjectOwner` 拆成两个类，只要改映射，不影响任何消费方。
+- **契约是显式的**。api 模块里有什么，就是对外承诺了什么；没放进去的，别的服务就用不到。
+
+还有一条小心得：不是所有领域事件都外送。
+
+<Callout kind="insight">
+
+「取消有帮助」这个领域事件就没有外送。配置类注释解释了原因：外送时带 `mandatory`，路由不到任何队列的消息会被退回，登记行每分钟补投一次，永远发不出去。通知服务对「取消」没有动作，没有队列订阅它，所以不外送。新增外送事件之前，通知服务要先绑定它的路由键。
+
+</Callout>
+
+<Quiz
+  title="想一想"
+  questions={[
+    {
+      question: "interaction 想把领域类 SubjectOwner 拆成两个类。会影响 notification 吗？",
+      options: ["会，notification 要跟着改", "不会，只需改映射类，集成事件的字段不变", "会，因为要重启"],
+      answer: "B",
+      explain: "集成事件是契约，字段不变，消费方就无感。领域类型的变化被映射隔离在 interaction 内部。"
+    },
+    {
+      question: "映射类 IntegrationEventMapper 为什么不允许查数据库？",
+      options: ["查库太慢", "映射在每次外送包括补投时都会执行，查库会让补投的结果随时间变化，出错还会让事件永远发不出去", "没有这个限制"],
+      answer: "B",
+      explain: "映射必须是纯函数式的拷贝，同样的领域事件任何时候映射出的集成事件都一样。"
+    }
+  ]}
+/>
+
+<Transfer
+  prompt="假设要新增一个对外事件「评论被置顶」给通知服务。请列出要新增或修改的东西：领域层、api 模块、boot 里的映射和配置各要做什么？还有一件必须在 interaction 之外先做的事是什么？"
+  points={[
+    { label: "领域层", text: "在对应子域的 event 包里有一个领域事件 record，在写入点的同一事务里发布。" },
+    { label: "api 模块", text: "新增集成事件 record，实现 IntegrationEvent，定义路由键常量。" },
+    { label: "boot", text: "映射类里加一个只拷字段的映射方法；配置类里把这个事件加入外送集合，并配好路由与映射。" },
+    { label: "先做的事", text: "通知服务要先声明队列并绑定这个路由键。没有队列订阅，消息会被退回，登记行就一直补投。" }
+  ]}
+/>

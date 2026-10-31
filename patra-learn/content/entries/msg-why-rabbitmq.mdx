@@ -1,0 +1,97 @@
+---
+title: 为什么换成 RabbitMQ
+summary: Patra 原来部署着 RocketMQ，却从没真正用过它。v0.16 第一次要跨服务发事件时，因为 Spring Modulith 的事件外送支持 AMQP、不支持 RocketMQ，RocketMQ 的 Spring 集成也跟不上 Boot 4，于是换成了 RabbitMQ。
+type: decision
+difficulty: practice
+tags: [messaging, backend]
+prerequisites: [msg-exchange-queue-binding, msg-publisher-confirms]
+topics: [event-delivery]
+sources:
+  - version: v0.16
+    issue: PAP-137
+    pr: 343
+  - version: v0.16
+    issue: PAP-138
+    pr: 343
+personalEnv: false
+---
+
+<Diagnose
+  question="项目里已经部署了一个消息队列，但全仓库没有一行代码真正收发过消息。现在第一次要用消息了，选型时最该先看什么？"
+  options={["已经部署了，直接用它最省事", "它和你要用的框架、你要的可靠性做法配不配得上", "选社区最热门的那个"]}
+  answer="B"
+  ifRight="对。没人用过的中间件等于没有沉没成本，该按这次的需求重新选。"
+  ifWrong="答案是 B。「已经部署了」只省掉一次安装；真正的成本在集成：框架支不支持、可靠投递要的回执机制有没有现成实现。这题考的是可靠投递需要 broker 提供什么，先读发布确认那篇。"
+  suggest="msg-publisher-confirms"
+/>
+
+## 背景：一个从没用过的 RocketMQ
+
+v0.16 通知中心那一版，提醒要从 interaction 搬到新建的通知服务，interaction 要把「有人发了评论」这类事件可靠地发给它。这是 Patra 第一次真正让两个服务之间用消息通信。
+
+规划时核对了现状：
+
+- RocketMQ 没有选型记录，是跟着最早的采集服务（ingest）一起进来的。
+- 它**实际零使用**：采集服务从没在部署机上跑过，broker 上连它的 topic 都没有；catalog 引了 RocketMQ 依赖，但没有一行代码用它。
+- 部署机上 3 个 RocketMQ 容器空占约 1.58 GB 内存。
+
+这一版要的可靠投递做法已经定了：用 Spring Modulith 的事件发布登记表当发件箱，事务提交后外送到 broker，并等 broker 的确认回执。选 broker 就看谁能接上这条路。
+
+## 选项
+
+<DecisionOptions
+  options={[
+    { name: "继续用 RocketMQ", summary: "已经部署着，接着用。", pros: "不用新装容器；RocketMQ 自带事务消息。", cons: "rocketmq-spring 没有声明支持 Spring Boot 4，只认 Jackson 2；Spring Modulith 的事件外送不支持它，要自己写桥接。" },
+    { name: "换成 RabbitMQ", summary: "删掉 RocketMQ，新部署一个 RabbitMQ。", pros: "Boot 自带 spring-boot-starter-amqp；Modulith 有官方的 spring-modulith-events-amqp；Testcontainers 有现成模块；publisher confirm 正好是这版要的回执。", cons: "多一个新中间件要学；要新写部署、凭据和镜像检查。", chosen: true }
+  ]}
+/>
+
+<Quiz
+  title="你猜会怎样"
+  questions={[
+    {
+      question: "RocketMQ 有「事务消息」，本来就是为「写库和发消息一起成功」设计的。这一版为什么没拿它当理由留下 RocketMQ？",
+      options: ["事务消息有 bug", "可靠投递已经定了用发件箱（Modulith 登记表）来做，事务消息用不上；而发件箱这条路恰恰接不上 RocketMQ", "RabbitMQ 也有事务消息"],
+      answer: "B",
+      explain: "发件箱让「写库」和「记下要发的消息」在同一个数据库事务里完成，不依赖 broker 的事务能力。它需要的是框架的外送支持和 broker 的确认回执，这两样 RabbitMQ 都有现成的。"
+    }
+  ]}
+/>
+
+## 选择
+
+换成 RabbitMQ，10/30 拍板。决定性的理由是**集成成本**：
+
+- 发布端：Spring Modulith 的官方 AMQP 外送模块直接可用，Patra 只在它上面补一步「同步等 publisher confirm」。
+- 消费端：Boot 自带 AMQP starter，`@RabbitListener`、重试、死信都有现成配置。
+- 测试：Testcontainers 有 RabbitMQ 模块，集成测试能起真 broker。
+
+换成 RocketMQ 这几件都要自己写。
+
+<CodeRef at="patra-tool/patra-tool-events/build.gradle.kts@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="1-30" />
+
+部署上，RabbitMQ 进了基础设施的 compose 文件，设了内存上限和持久卷，固定 hostname（节点名跟着 hostname，容器重建后 hostname 一变，数据就像「消失」了）：
+
+<CodeRef at="patra-infra/docker/docker-compose.core.yaml@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="113-121" />
+
+删除采集服务和 RocketMQ 由单独的一个重构 PR 完成，这一版只接入 RabbitMQ。
+
+## 代价
+
+<Callout kind="cost">
+
+- **多学一个中间件**：交换机、队列、绑定、ack、prefetch、死信，这一版都要从头弄懂。
+- **安全邮件的一次性链接会经过它**：所以 RabbitMQ 和其他基础设施一样只在内网可达，不进公网入口。
+- **上线后的资源**：通知服务上线后实测，RabbitMQ 占 188 MiB，内存上限设的是 768 MiB；比 RocketMQ 空占的 1.58 GB 小得多。
+
+</Callout>
+
+<Transfer
+  prompt="一年后 Patra 的事件量涨了几百倍，有人提议换成 Kafka。按这篇的思路，你会先评估哪几件事？"
+  points={[
+    { label: "框架支不支持", text: "发件箱的外送、消费端的去重和重试，换了 broker 是否还有现成的集成。Modulith 支持 Kafka 外送。" },
+    { label: "回执语义", text: "Kafka 的确认（acks）和 RabbitMQ 的 publisher confirm 不一样，「等确认再标完成」那一步要重新实现并测试。" },
+    { label: "路由模型", text: "RabbitMQ 靠交换机加路由键分发，Kafka 靠 topic 和分区；现有的「每个消费方一个队列、只绑需要的路由键」要重新设计。" },
+    { label: "真实瓶颈在哪", text: "先量清楚是 broker 扛不住，还是消费端处理慢；后者换 broker 解决不了。" }
+  ]}
+/>

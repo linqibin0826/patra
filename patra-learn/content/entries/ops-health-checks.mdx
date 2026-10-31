@@ -1,0 +1,172 @@
+---
+title: 健康检查：上线后要验货
+summary: 容器起来了不等于服务能干活。Patra 的部署要过三道检查：容器自查、部署脚本从门外追问、核对跑的是不是这次的版本，三道全过才算上线成功。
+type: concept
+difficulty: advanced
+tags: [ci-cd, deployment, docker]
+prerequisites: [ops-cd-deploy-loop]
+personalEnv: false
+---
+
+<Diagnose
+  question="部署脚本执行完 `docker compose up -d`，命令安静地返回了，没有报错。这能说明什么？"
+  options={["新版本的服务已经能正常接请求", "容器的进程已经启动，但服务是否真的能干活还不知道", "新版本的代码已经替换了旧版本"]}
+  answer="B"
+  ifRight="对。`up -d` 只负责把容器拉起来，之后服务还要连数据库、注册到配置中心，任何一步都可能出错。这篇讲上线后怎么确认它真的好了。"
+  ifWrong="答案是 B。`up -d` 只说明容器的进程启动了。服务有没有连上数据库、有没有初始化完，它不管；跑的是不是新版本，它也不保证。这题考的是 CD 里「部署」这一步到底做了什么。"
+  suggest="ops-cd-deploy-loop"
+/>
+
+<Callout kind="lead">
+
+上线不算数，验货才算数。Patra 的部署脚本在换上新容器之后，要过三道检查才认这次部署成功：
+
+- **容器自查**：容器在里面定期问自己「我还好吗」
+- **门外追问**：部署脚本从宿主机这一侧，亲自去敲服务的门
+- **对版**：确认跑起来的就是这次要上的那个版本
+
+</Callout>
+
+## 容器起来了，服务还没醒
+
+<Callout kind="analogy">
+
+饭店开了门，不等于能点菜。灯亮了、人到了，后厨的灶还没点着，菜单还没印好，客人进来也吃不上饭。
+
+</Callout>
+
+后端服务也一样。Spring Boot 启动时要连 PostgreSQL、连 Redis、注册进 Nacos，把整个应用上下文初始化完。这些任何一步出错，容器照样显示「已启动」，里面的服务却不能用。
+
+所以「部署」这一步之后，必须有一步专门验货。
+
+## 第一道：容器自己的体检表
+
+每个应用容器在 compose 文件里都声明了 `healthcheck`：容器**从内部**定期自查。六个后端服务和门户、学习站共用同一组节奏参数，用 YAML 锚点写在文件开头：
+
+<CodeRef at="patra-infra/docker/docker-compose.apps.yaml@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="26-30" />
+
+```yaml
+x-app-healthcheck: &app-healthcheck
+  interval: 10s
+  timeout: 5s
+  retries: 15
+  start_period: 60s
+```
+
+| 参数 | 意思 |
+|---|---|
+| `interval` | 每 10 秒查一次 |
+| `timeout` | 一次检查最多等 5 秒 |
+| `retries` | 连续失败 15 次，才判成「不健康」 |
+| `start_period` | 启动后 60 秒内的失败不计数 |
+
+最后一个参数很关键：Spring Boot 冷启动要一阵子，给它一段不计失败的宽限期，免得刚起来就被判了死刑。
+
+检查本身是在容器里发一个 HTTP 请求：后端服务用 `curl` 访问自己的 `/actuator/health`，门户和学习站的镜像里没有 `curl`，用自带的 `wget` 访问 `/api/health`。结果写在容器的 health 状态上，用 `docker ps` 能看到。
+
+这道检查是 Docker 层面的「自我感觉」。它有一个盲区：自己说自己好，部署脚本并不会因此就信。
+
+## 第二道：部署脚本站在门外追问
+
+换上新容器之后，部署脚本 `deploy.sh` 要**从宿主机这一侧**去问：服务，你好了吗？
+
+<CodeRef at="patra-infra/cd/deploy.sh@2197850b5a624ed4dbaa97df71e144c343e28baa" lines="67-81" />
+
+```bash
+health_ok() { # $1=svc
+  local port path match out
+  port="$(meta "$1" port)"; path="$(meta "$1" healthPath)"; match="$(meta "$1" healthMatch)"
+  out="$($CURL -fs "http://127.0.0.1:${port}${path}")" || return 1
+  [ -z "$match" ] || echo "$out" | grep -q "$match"
+}
+```
+
+端口、路径、期望的返回内容都不写死在脚本里，而是从 `services.json` 这份花名册按服务名查。这里有三个细节：
+
+1. **`curl -f`**：服务器回 4xx、5xx 时，`curl` 以非零状态退出。服务返回 503，就算没过。
+2. **`healthMatch`**：后端服务的条目里写了 `"status":"UP"`，返回内容里必须真的出现这几个字才算过。门户和学习站没写，HTTP 成功就行。
+3. **地址写 `127.0.0.1`**，不写 `localhost`。为什么，有一篇专门讲这个坑。
+
+先猜一下，再点着走一遍：
+
+<Stepper
+  title="deploy.sh 怎么等一个服务醒来"
+  nodes={[
+    { id: "deploy", label: "deploy.sh", sub: "宿主机上" },
+    { id: "svc", label: "patra-catalog", sub: "刚换上的新容器" }
+  ]}
+  links={[
+    { from: "deploy", to: "svc", label: "敲门" }
+  ]}
+  steps={[
+    { caption: "`up -d` 刚返回，容器已经启动，Spring Boot 还在初始化。deploy.sh 开始轮询。", focus: ["svc"], notes: [{ at: "svc", text: "正在启动", tone: "wait" }] },
+    { caption: "第 1 次敲门：连接被拒绝，服务的端口还没打开。脚本打印「等待 catalog 健康」，睡 5 秒再来。", focus: ["deploy"], links: ["deploy>svc"], tokens: [{ id: "knock", label: "第 1 次", at: "deploy", state: "faded" }], notes: [{ at: "deploy", text: "1/30 失败", tone: "bad" }, { at: "svc", text: "正在启动", tone: "wait" }] },
+    { caption: "第 9 次敲门：HTTP 成功了，返回内容里有 `\"status\":\"UP\"`。这一道过了。", focus: ["deploy", "svc"], links: ["deploy>svc"], tokens: [{ id: "knock", label: "第 9 次", at: "svc" }], notes: [{ at: "deploy", text: "9/30 通过", tone: "ok" }, { at: "svc", text: "UP", tone: "ok" }] },
+    { caption: "要是 30 次都没等到：脚本打印容器最近 80 行日志，把这个服务标成失败，转入回滚。", focus: ["deploy"], tokens: [{ id: "knock", label: "第 30 次", at: "deploy", state: "dropped" }], notes: [{ at: "deploy", text: "30/30 失败", tone: "bad" }, { at: "svc", text: "仍不可用", tone: "bad" }] }
+  ]}
+  guesses={[
+    { before: 4, question: "每 5 秒问一次，最多问 30 次。如果 30 次都没等到健康的回答，脚本会怎么做？", options: ["继续等，直到服务醒来", "放弃等待，按失败处理", "把这个容器删掉重来"], answer: "B", explain: "等待有上限：30 次乘以 5 秒，两分半。到点不健康就按失败处理，先把日志打出来留作排查现场，再去回滚。" }
+  ]}
+/>
+
+## 第三道：确认跑的是这一版
+
+最阴险的失败长这样：`up -d` 悄悄落在了旧镜像上，比如版本变量没传对。旧版本照样健康，前两道检查全绿，可你要上线的新代码根本没上去。表面成功，实际什么都没发生。
+
+所以还有第三道：用 `docker inspect` 掏出容器正在跑的镜像，和期望的「镜像名:版本号」逐字比对。
+
+<CodeRef at="patra-infra/cd/deploy.sh@2197850b5a624ed4dbaa97df71e144c343e28baa" lines="83-86" />
+
+版本号是提交的 SHA，所以这一步等于把「跑的就是这次提交」变成了可以验证的事实。
+
+三道全过，脚本才在服务器上记下这个服务的「上一个好版本」，用于以后回滚。
+
+<Quiz
+  title="考考自己"
+  questions={[
+    {
+      question: "门户的容器自查是好的（`docker ps` 显示 healthy），部署脚本从门外敲门却得到连接被拒。以谁的结论为准？",
+      options: ["以容器自查为准，它离服务最近", "以部署脚本为准：它走的是真实的对外端口，用户也是走这条路来的", "两边取平均"],
+      answer: "B",
+      explain: "容器自查是在容器内部用内部地址问的。部署脚本问的是宿主机上映射出来的端口，更接近真实的访问路径。两者对不上时，要去查为什么对不上。"
+    },
+    {
+      question: "新版本的 `up -d` 悄悄用了旧镜像，旧镜像是健康的。哪一道检查会拦住它？",
+      options: ["容器自查", "部署脚本的 HTTP 轮询", "对版：核对运行中的镜像是不是期望的版本号"],
+      answer: "C",
+      explain: "前两道只问「活着吗」。旧镜像活得很好，它们都会放行。只有对版这一道问的是「是不是这一版」。"
+    }
+  ]}
+/>
+
+## 里面问和外面问，是两件事
+
+回头看，两种检查的区别在于**谁在问、问的是哪个地址**：
+
+<Structure
+  title="同一个服务，被问两次"
+  intro="点任意一块，看它管什么"
+  nodes={[
+    { id: "deploy", label: "deploy.sh", sub: "宿主机", col: 1, desc: "部署时才存在。从宿主机一侧，通过映射出来的端口访问服务，最接近真实用户的路径。" },
+    { id: "port", label: "127.0.0.1:6300", sub: "宿主机映射端口", code: true, col: 2, desc: "容器内的端口映射到宿主机的这个地址。部署脚本用它来问，地址写死，不让名字解析发挥。" },
+    { id: "ctr", label: "patra-catalog", sub: "容器", code: true, col: 3, desc: "里面跑着 Spring Boot。容器自查在它内部，用容器自己的地址问自己。" },
+    { id: "state", label: "health 状态", sub: "docker ps 能看到", col: 3, row: 2, desc: "容器自查的结果。巡检任务会读它，发现 unhealthy 的容器就亮红灯。" }
+  ]}
+  edges={[
+    { from: "deploy", to: "port", label: "每 5 秒" },
+    { from: "port", to: "ctr" },
+    { from: "ctr", to: "state", label: "自查结果写在这里", dashed: true }
+  ]}
+/>
+
+容器自查的结果不会白费：每天早上的巡检会去看有没有 `unhealthy` 的容器。部署脚本的轮询则只在部署那几分钟里起作用。两者互补，谁也替代不了谁。
+
+<Transfer
+  prompt="你要给 Patra 加一个新服务 `foo`，端口 6700，健康接口是 `/actuator/health`。为了让它能像其他服务一样被安全地部署，要在哪些地方写下健康检查的信息？地址该写什么？"
+  points={[
+    { label: "花名册", text: "在 `services.json` 里加一个条目：`port`、`healthPath`，需要的话再加 `healthMatch`。部署脚本的轮询从这里读，不用改脚本。" },
+    { label: "compose", text: "在 `docker-compose.apps.yaml` 给 `foo` 加 `healthcheck`，复用 `x-app-healthcheck` 这组参数。" },
+    { label: "地址", text: "宿主机一侧写 `127.0.0.1`，容器里用什么工具就看镜像里有什么；没有 `curl` 的镜像用 `wget`，地址同样写 `127.0.0.1`。" },
+    { label: "顺序", text: "条目在 `services.json` 里的位置就是部署顺序，要按依赖关系放：被依赖的放前面。" }
+  ]}
+/>

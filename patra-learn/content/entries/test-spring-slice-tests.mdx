@@ -1,0 +1,177 @@
+---
+title: 切片测试：只起需要的那一层
+summary: 测 Controller 不必启动整个应用：@WebMvcTest 只装配 Web 层，下游一律换成假的；切片缺 Bean 时有三种补法。
+type: concept
+difficulty: advanced
+tags: [testing, spring, java]
+prerequisites: [test-integration-testcontainers, spring-mvc-controller]
+---
+
+<Diagnose
+  question="你想验证一个 Controller：收到 DELETE 请求后，返回 200 和正确的 JSON，并且把请求转成了正确的命令。这个测试需要连上数据库、Redis 和消息队列吗？"
+  options={["需要，否则 Controller 没法工作", "不需要，只要把 Web 这一层装起来，下游的东西换成假的", "需要数据库，但 Redis 和消息队列可以不要"]}
+  answer="B"
+  ifRight="对。Controller 要验证的是「HTTP 进来、命令出去、响应的形状」，下游的东西与这件事无关。这就是「切片测试」的出发点。"
+  ifWrong="答案是 B。Controller 只负责 HTTP 与命令之间的转换：怎么处理业务是下游的事，在别的测试里验证。所以这里只需要 Web 这一层，下游全换成假的。这种只装配一小块的测试叫切片测试，下面详细讲。"
+  suggest="spring-mvc-controller"
+/>
+
+## 切片：只装配一层
+
+完整启动一个 Spring 应用，要装配几百个 Bean，连数据库、连中间件。只为了测一个 Controller，太重了。
+
+Spring Boot 提供了**切片测试**：用一个注解，只装配应用的一层。测 Web 层用 `@WebMvcTest`，测数据访问层用 `@DataJpaTest`（上一篇见过）。没有被装配的东西，要么不需要，要么换成假的。
+
+点一点下面每一层，看在 `@WebMvcTest` 里它是什么状态：
+
+<Structure
+  title="@WebMvcTest 装配了什么"
+  intro="点任意一层，看它在切片测试里的状态"
+  nodes={[
+    { id: "web", label: "Web 层", sub: "Controller、JSON 转换、错误处理", col: 1, desc: "真的装配。这正是被测的对象：请求怎么映射、参数怎么绑定、响应 JSON 长什么样、异常怎么变成状态码。" },
+    { id: "app", label: "应用层", sub: "CommandBus、QueryService", col: 2, desc: "不装配。测试里用 @MockitoBean 换成假的：规定它返回什么，并核对 Controller 有没有正确地调用它。" },
+    { id: "infra", label: "基础设施层", sub: "仓储、客户端", col: 3, desc: "完全不涉及。Controller 不直接依赖它，所以连假的都不需要。" },
+    { id: "db", label: "数据库、Redis、MQ", col: 4, desc: "不启动。切片测试里不会有任何容器。" }
+  ]}
+  edges={[
+    { from: "web", to: "app", label: "替身", desc: "Controller 调用应用层。切片里，这里放的是 Mockito 造的假对象。" },
+    { from: "app", to: "infra", dashed: true },
+    { from: "infra", to: "db", dashed: true }
+  ]}
+/>
+
+## 最小的例子
+
+看 Patra 里一个很短的切片测试：登出接口。
+
+<CodeRef at="patra-api/patra-identity/patra-identity-adapter/src/integrationTest/java/dev/patra/identity/adapter/session/rest/LogoutControllerIT.java@5073ab1358404ecd989e722373cd9f7edafe238b" lines="17-37" />
+
+```java
+@WebMvcTest
+@Import(LogoutController.class)
+@AutoConfigureRestTestClient
+class LogoutControllerIT {
+
+  @Autowired private RestTestClient restClient;
+  @MockitoBean private CommandBus commandBus;
+
+  @Test
+  void should_logout_and_return_204() {
+    restClient.post().uri("/auth/logout").exchange().expectStatus().isNoContent();
+
+    verify(commandBus).handle(LogoutUserCommand.of());
+  }
+}
+```
+
+逐行认识：
+
+- `@WebMvcTest`：只装配 Web 层。
+- `@Import(LogoutController.class)`：明确说「我要测这一个 Controller」。
+- `@AutoConfigureRestTestClient` 与 `RestTestClient`：Spring Boot 4 里发 HTTP 请求并断言响应的客户端，写法像 `restClient.post().uri(…).exchange().expectStatus()…`。
+- `@MockitoBean`：把 `CommandBus` 换成假的，并登记进 Spring 容器。Spring Boot 4 里，旧的 `@MockBean` 已经被移除，现在统一用它。
+- 最后的 `verify`：核对 Controller 把「登出」转成了正确的命令。
+
+整个测试检查了两件事：HTTP 这一侧（204、没有响应体），以及命令那一侧（交给了总线什么）。
+
+## 切片需要一个「根」
+
+这里有个坑。`@WebMvcTest` 启动时，要找一个带 `@SpringBootConfiguration` 的类当配置的根。可 adapter 模块是被别的模块拼起来的，自己没有启动类。找不到，测试连起都起不来。
+
+Patra 的做法是在测试目录里放一个专门的配置根：
+
+<CodeRef at="patra-api/patra-identity/patra-identity-adapter/src/integrationTest/java/dev/patra/identity/IdentityITWebMvcConfig.java@b6e01875bb5692356021c8a19562f557f319fc54" lines="1-12" />
+
+它几乎是空的：`@SpringBootConfiguration` 加 `@EnableAutoConfiguration`。命名也有约定：`{Module}ITWebMvcConfig`。
+
+可统一的错误格式、Long 变字符串这些 Web 层的定制，是怎么进到切片里的？答案在公共的 Web 工具模块里，它登记了一份文件：
+
+<CodeRef at="patra-tool/patra-tool-web/src/main/resources/META-INF/spring/org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureWebMvc.imports@b6e01875bb5692356021c8a19562f557f319fc54" lines="1-2" />
+
+文件里列了两个自动配置类：错误处理，和 JSON 定制。`@WebMvcTest` 会自动读这个文件，把它们加进切片。所以各服务的配置根不必再手工导入。
+
+有的服务要多做一点。Catalog 的 adapter 里有 MapStruct 生成的转换器，需要被扫描到：
+
+<CodeRef at="patra-api/patra-catalog/patra-catalog-adapter/src/integrationTest/java/dev/patra/catalog/adapter/config/CatalogAdapterITWebMvcConfig.java@5073ab1358404ecd989e722373cd9f7edafe238b" lines="20-36" />
+
+它用 `@ComponentScan` 扫描 `rest` 和 `internal` 包里的组件，但**排除了 `@RestController`**：Controller 由每个测试自己用 `@WebMvcTest(controllers = …)` 或 `@Import` 挑，免得一个测试被迫连带加载无关的 Controller 和它们的依赖。
+
+## 切片缺 Bean 时怎么办
+
+切片测试最常见的报错是：
+
+```text
+No qualifying bean of type 'XxxService' available
+```
+
+意思是：Controller 需要一个 Bean，而切片没有装配它。有三种补法，先判断它属于哪一类：
+
+| 缺的是什么 | 怎么补 |
+|---|---|
+| 下游的业务依赖（QueryService、CommandBus） | `@MockitoBean`：换成假的，这是最常见的 |
+| 本模块里无副作用的辅助类（转换器、校验器） | `@Import` 它，或者让配置根的 `@ComponentScan` 扫到 |
+| Web 层的通用定制（错误处理、JSON） | 不用补：公共模块的 `AutoConfigureWebMvc.imports` 已经带进来了 |
+
+先猜一猜：下面这个情形，该选哪一种？
+
+<Quiz
+  title="缺 Bean 怎么补"
+  questions={[
+    {
+      question: "一个 Controller 注入了 MapStruct 生成的 ApiConverter，切片测试报「No qualifying bean of type ApiConverter」。该怎么办？",
+      options: ["用 @MockitoBean 把它换成假的，每个测试都规定它的返回值", "在配置根里 @ComponentScan 扫描到它，或者 @Import 它", "把 @WebMvcTest 改成 @SpringBootTest 启动整个应用"],
+      answer: "B",
+      explain: "转换器是无副作用的纯映射，用真的更省事，也能让响应形状的检查更真。Mock 掉它，等于什么都没验证；换成 @SpringBootTest 则放弃了切片的好处。"
+    },
+    {
+      question: "同一个 Controller 还注入了一个 SessionQueryService，会去查数据库。切片测试里它该怎么办？",
+      options: ["@MockitoBean：规定它返回什么，核对 Controller 的使用", "@Import 它，并启动数据库容器", "忽略报错"],
+      answer: "A",
+      explain: "它是下游的业务依赖。Controller 测试只关心「拿到数据后响应什么样」，数据本身由别处验证。"
+    }
+  ]}
+/>
+
+## 切片测试到底在守什么
+
+看一个稍复杂的切片测试：会话列表与「踢设备」的接口。
+
+<CodeRef at="patra-api/patra-identity/patra-identity-adapter/src/integrationTest/java/dev/patra/identity/adapter/session/rest/MeSessionControllerIT.java@5073ab1358404ecd989e722373cd9f7edafe238b" lines="138-170" />
+
+```java
+when(commandBus.handle(any(RevokeSessionCommand.class)))
+    .thenThrow(new CurrentSessionRevocationException());
+
+restClient.delete().uri("/me/sessions/1").exchange()
+    .expectStatus().isEqualTo(409)
+    .expectBody()
+    .jsonPath("$.code").isEqualTo("IDN-0409")
+    .jsonPath("$.traits[?(@ == 'CURRENT_SESSION')]").exists();
+```
+
+它让假的 `CommandBus` 抛出一个领域异常，然后断言 HTTP 响应：状态码 409，错误码 `IDN-0409`，错误特征里含 `CURRENT_SESSION`。这是在验证「领域异常怎么被统一的错误处理变成 HTTP 响应」，这个转换发生在 Web 层，所以正好是切片该守的。
+
+同一个测试类里还有两处值得注意：会话 ID 在 JSON 里是字符串（公共模块把 Long 变字符串），以及 `/me/sessions/abc` 这样的非数字 ID 返回 400，而且命令总线**没有被调用**（`verifyNoInteractions`）。
+
+<Callout kind="lead" label="切片测试的分工">
+
+它检查的是 HTTP 的形状：路径、参数绑定、状态码、JSON 字段、错误格式，以及请求有没有被转成正确的命令。业务规则本身、数据库行为，都不在它的范围内。
+
+</Callout>
+
+<Callout kind="warn">
+
+切片里的假对象会让测试「很容易绿」。不要只写「调用成功返回 200」这类测试：请同时覆盖参数不合法、领域异常、空值这些边界，那些才是 Web 层容易出错的地方。
+
+</Callout>
+
+<Transfer
+  prompt="你给用户服务新增一个 GET /me/sessions/count 接口，返回当前用户有几个登录设备，实现里 Controller 调 SessionQueryService。请说出：1）测试用哪个注解，需要哪些 Bean？2）至少写哪三个测试用例？3）如果这个 Controller 还注入了一个 MapStruct 转换器，你怎么处理？"
+  points={[
+    { label: "注解与 Bean", text: "@WebMvcTest + @Import(该 Controller) + @AutoConfigureRestTestClient；SessionQueryService 用 @MockitoBean 换成假的；服务自己的 ITWebMvcConfig 作配置根。" },
+    { label: "三个用例", text: "正常返回数字和 200；下游返回 0 时仍是合法响应；查询服务抛出领域异常时，状态码与错误码符合统一格式。" },
+    { label: "转换器", text: "它是无副作用的映射，用真的：让配置根扫描到它，或者 @Import，不用 Mock。" },
+    { label: "检查范围", text: "只检查 HTTP 的形状和与下游的交互，不在这里验证「数字算得对不对」。" }
+  ]}
+  placeholder="比如：我会用 @WebMvcTest……"
+/>

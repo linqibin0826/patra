@@ -1,0 +1,177 @@
+---
+title: 表单与校验
+summary: 同一条规则前后端各查一遍，目的不同：前端校验为了体验，填错马上提示；后端校验为了安全，前端可以被绕过。门户用 zod 写规则、react-hook-form 管表单；数字数要先定「一个字」怎么算，前后端口径一致。
+type: concept
+difficulty: basic
+tags: [frontend, security]
+prerequisites: [fe-react-components-and-state]
+personalEnv: false
+---
+
+<Diagnose
+  question="收藏夹名称输入框下面有个计数「12 / 100」，你每敲一个字它就跟着变。这个数字为什么会自己更新？"
+  options={["浏览器自带字数统计，自动显示", "输入的内容存在组件状态里，状态一变，React 重新渲染，计数跟着重算", "页面每秒整页刷新一次"]}
+  answer="B"
+  ifRight="对。表单本质上就是一组状态：输入的值、哪个字段有错、是不是正在提交。这篇讲在这组状态上怎么做校验。"
+  ifWrong="答案是 B：输入值变了就是状态变了，React 拿新状态重新算一遍界面，计数就更新了。这题考的是「界面是状态的函数」，是读懂表单怎么管值和错误的前提。"
+  suggest="fe-react-components-and-state"
+/>
+
+## 同一条规则，为什么要查两遍
+
+注册时密码要 8 到 64 位。门户的注册页会查，后端的 identity 服务（管账号的那个后端服务）也会查。看起来重复，其实两边各防一件事：
+
+<Callout kind="lead">
+
+**前端校验为了体验**：填错了马上在输入框下面提示，不用等一趟网络往返。**后端校验为了安全**：请求不一定来自门户的页面——有人可以关掉脚本、改掉页面代码，或者用命令行工具直接调接口，前端的检查一条都拦不住他。只有后端那一道是真的关卡。
+
+</Callout>
+
+拨一拨开关，看少了哪一边会怎样：
+
+<Params
+  title="前端、后端，各开各关"
+  guess={{ question: "前端已经查过密码长度，后端去掉这条检查。有人绕过页面，直接向接口发了一个 3 位的密码，会怎样？", options: ["前端会拦下", "账号用 3 位密码注册成功", "浏览器会拒绝发送"], answer: "B", explain: "绕过页面，前端的检查根本没机会跑。后端不查，这个密码就进了数据库。" }}
+  controls={[
+    { type: "switch", id: "front", label: "前端校验", default: true },
+    { type: "switch", id: "back", label: "后端校验", default: true },
+    { type: "switch", id: "bypass", label: "有人绕过页面直接调接口", default: false }
+  ]}
+  cases={[
+    { when: { back: false, bypass: true }, results: [{ label: "3 位密码", value: "注册成功", tone: "bad" }], verdict: { tone: "bad", head: "规则形同虚设。", text: "绕过页面的请求不经过前端，后端又不查，不合规的数据直接进库。" } },
+    { when: { back: false, front: true }, results: [{ label: "正常用户填 3 位", value: "页面上提示，提交不出去", tone: "wait" }], verdict: { tone: "bad", head: "只是还没人试。", text: "看起来一切正常，因为每个请求都碰巧来自门户的页面。安全不能靠「碰巧」。" } },
+    { when: { back: false }, results: [{ label: "正常用户填 3 位", value: "注册成功", tone: "bad" }], verdict: { tone: "bad", head: "两边都没守。", text: "连正常用户手滑都拦不住，不合规的数据直接进库。" } },
+    { when: { bypass: true }, results: [{ label: "3 位密码", value: "后端拒绝，回字段错误", tone: "ok" }], verdict: { tone: "ok", head: "后端拦下了。", text: "不管请求从哪来，后端那一道都会查。" } },
+    { when: { front: false }, results: [{ label: "正常用户填 3 位", value: "提交后等一趟网络，才看到错误", tone: "wait" }], verdict: { tone: "ok", head: "安全，但体验差。", text: "数据守住了，可每填错一次都要提交、等后端回话才知道。" } },
+    { results: [{ label: "正常用户填 3 位", value: "离开输入框就提示", tone: "ok" }, { label: "绕过页面的请求", value: "后端照样拦下", tone: "ok" }], verdict: { tone: "ok", head: "门户的做法。", text: "前端负责快，后端负责准，两边规则一致。" } }
+  ]}
+/>
+
+## 在门户里：规则写成 schema
+
+门户用 **zod** 把规则写成一份「描述」（叫 schema，结构说明），再交给 **react-hook-form** 去管表单。登录和注册的规则都在一个文件里：
+
+<CodeRef at="patra-portal/src/lib/auth/form-schemas.ts@fe4c6bb68c591a9c9b5fe80f76bbfbbbc6aeae75" lines="17-28" />
+
+```ts
+/// 新密码：8 ~ 64 位，不去空格（注册、改密码、重设密码共用；常见密码名单只在后端判）
+const newPasswordField = z
+  .string()
+  .min(1, FIELD_MESSAGES.passwordRequired)
+  .refine((value) => codePoints(value) >= 8, FIELD_MESSAGES.passwordTooShort)
+  .refine((value) => codePoints(value) <= 64, FIELD_MESSAGES.passwordTooLong);
+
+/// 登录表单：后端的登录接口只检查密码非空，前端也只查这一条，不去空格
+export const loginSchema = z.object({
+  email: emailField,
+  password: z.string().min(1, FIELD_MESSAGES.passwordRequired),
+});
+```
+
+一条一条读：是文字；至少 1 位（否则提示「请输入密码」）；按码点数不少于 8；不多于 64。每条后面跟着出错时显示的那句话。
+
+登录表单把这份 schema 交给 react-hook-form：
+
+<CodeRef at="patra-portal/src/components/auth/LoginForm.tsx@fe4c6bb68c591a9c9b5fe80f76bbfbbbc6aeae75" lines="47-54" />
+
+```tsx
+  } = useForm({
+    resolver: zodResolver(loginSchema),
+    // RHF 只在提交时校验；离开字段、输入时的校验由下面的 onBlur、onChange 触发。密码只查非空，
+    // 空着离开又不校验，离开密码框时没有可查的，所以密码框不接 onBlur
+    mode: "onSubmit",
+    reValidateMode: "onSubmit",
+    defaultValues: { email: handoff.email ?? "", password: "" },
+  });
+```
+
+react-hook-form 替你收集各输入框的值、在该校验的时候按 schema 查一遍、把错误放进对应字段。什么时候查也是体验的一部分：门户在提交时查，另外在离开邮箱框时查一次，出错以后每输入一个字就重查，改对了错误立刻消失。
+
+后端那一边，是同一条规则的另一份实现：
+
+<CodeRef at="patra-api/patra-identity/patra-identity-domain/src/main/java/dev/patra/identity/domain/account/policy/PasswordPolicy.java@5073ab1358404ecd989e722373cd9f7edafe238b" lines="45-54" />
+
+```java
+    int length = raw.codePointCount(0, raw.length());
+    if (length < MIN_LENGTH) {
+      return Optional.of(UserFieldViolations.passwordTooShort(field));
+    }
+    if (length > MAX_LENGTH) {
+      return Optional.of(UserFieldViolations.passwordTooLong(field));
+    }
+    if (commonPasswords.isCommon(PlainPassword.comparisonKeyOf(raw))) {
+      return Optional.of(UserFieldViolations.passwordTooCommon(field));
+    }
+```
+
+## 不是每条规则都两边都有
+
+对照两边的代码，会发现规则分成三类：
+
+| 规则 | 前端 | 后端 | 为什么 |
+|---|---|---|---|
+| 密码 8 到 64 位 | 查 | 查 | 填错马上提示，后端兜底 |
+| 不能是常见密码 | 不查 | 查 | 要对照一份名单，名单在后端（`form-schemas.ts` 第 17 行注释） |
+| 收藏夹不能重名 | 不查 | 查 | 要查数据库里已有的收藏夹，只有后端知道（`collection-form.ts` 第 6 行注释） |
+| 两次输入的密码一致 | 查 | 不查 | 「确认密码」只为防手滑，不传给后端（`form-schemas.ts` 第 30 行注释） |
+
+规律是：**凡是关系到数据对不对、安不安全的，后端必须查**；前端能不能也查，看它手里有没有足够的信息。只为体验存在的规则（确认密码），只放前端就够了。
+
+## 字数怎么算：先定「一个字」是什么
+
+「最多 100 个字」听起来很清楚，写成代码时却有好几种数法。JavaScript 里最顺手的 `value.length`，数的并不是你眼里的字：
+
+| 输入 | `.length` | 码点数 | 字素数 | UTF-8 字节 |
+|---|---|---|---|---|
+| 好 | 1 | 1 | 1 | 3 |
+| 😀 | 2 | 1 | 1 | 4 |
+| 👨‍👩‍👧（一家三口） | 8 | 5 | 1 | 18 |
+| é（e 加一个组合重音符，两个码点拼成） | 2 | 2 | 1 | 3 |
+
+- `.length` 数的是 JavaScript 内部存储的单元（UTF-16），一个表情常常占两个。
+- **码点**是 Unicode 给每个字符编的号。「一家三口」是三个人的表情，中间用两个看不见的连接符粘起来，一共 5 个码点。
+- **字素**是用户眼里的「一个字」：不管几个码点拼成，看上去是一个就算一个。
+- **字节**是存进数据库、在网络上传输时实际占的大小。
+
+门户按字段选数法，原则只有一条：**和后端用同一种**。密码按码点（前端 `form-schemas.ts` 第 6 行的 `[...value].length`，后端上面的 `codePointCount`）。收藏夹名称、评论这类给人看的文字按字素，用浏览器自带的 `Intl.Segmenter`：
+
+<CodeRef at="patra-portal/src/lib/grapheme.ts@fe4c6bb68c591a9c9b5fe80f76bbfbbbc6aeae75" lines="1-7" />
+
+```ts
+/// 按字素（用户眼里的「一个字」）切分：汉字、组合字符、emoji 组合序列各算一个，和后端计长度的口径一致
+const SEGMENTER = new Intl.Segmenter("zh", { granularity: "grapheme" });
+
+/// 字素列表
+export function graphemes(value: string): string[] {
+  return Array.from(SEGMENTER.segment(value), (part) => part.segment);
+}
+```
+
+后端收藏夹规则 `TextRules.java` 用 Java 的 `BreakIterator` 数同样的字素。口径不一致会怎样，做下面这道题。
+
+<Quiz
+  questions={[
+    {
+      question: "假设前端用 `value.length` 数收藏夹名称，后端按字素数，上限都是 100。用户输入 60 个 😀，会怎样？",
+      options: ["前端说超了（120），后端其实会收（60）", "两边都说没超", "两边都说超了"],
+      answer: "A",
+      explain: "每个 😀 的 `.length` 是 2，前端算出 120，挡住了一个本来合法的名字。反过来口径不一致时，也可能前端放行、后端拒绝，用户看到的计数和报错对不上。所以前后端要用同一种数法。"
+    }
+  ]}
+/>
+
+<Callout kind="insight">
+
+后端对这类文字除了字素上限，还另卡一道字节上限（`TextRules.java` 第 101 行：字节数不超过字素上限的 4 倍）。为什么要卡、门户怎么提示用户，见实战篇「字数要按字素算，还要卡字节」。
+
+</Callout>
+
+<Transfer
+  prompt="要给讨论区的「投稿经验」正文加一条上限：最多 2000 个字。参照上文：前端怎么数、在什么时候提示；后端要不要再查、怎么数？另外，「正文里不能出现已被封禁的链接」这条规则，你会放在哪一边？"
+  points={[
+    { label: "前后端都查长度", text: "前端为了输入时就能看到计数和提示，后端为了不让绕过页面的请求写进超长正文。" },
+    { label: "同一种数法", text: "给人看的正文按字素数，前端用 `Intl.Segmenter`，后端用同口径的字素计数，两边上限都写 2000。" },
+    { label: "提示时机", text: "输入时显示计数、接近上限时变色，提交时再按 schema 整体查一遍。" },
+    { label: "封禁链接放后端", text: "封禁名单在后端，前端没有这份信息，只能由后端查；被拒时把后端回的字段错误显示在正文下面。" }
+  ]}
+/>

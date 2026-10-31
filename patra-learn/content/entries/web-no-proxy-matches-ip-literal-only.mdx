@@ -1,0 +1,73 @@
+---
+title: no_proxy 的网段只管 IP 字面量，不管主机名
+summary: 命令行工具只认 http_proxy、no_proxy 这些环境变量，不看代理软件里的规则。no_proxy 里写的网段只和网址里直接写出来的 IP 比，网址写的是主机名时不会先解析再比，请求照样进代理。
+type: pitfall
+difficulty: practice
+tags: [network]
+prerequisites: [web-reverse-proxy-and-gateway, web-url-anatomy]
+personalEnv: false
+---
+
+<Diagnose
+  question="shell 里设了 `http_proxy` 指向本机代理，`no_proxy` 写了 `100.64.0.0/10`。内网机器的 IP 在这个网段里，主机名叫 `mini`。执行 `curl http://mini:8080/`，请求会直连还是走代理？"
+  options={["直连，因为 mini 解析出来的 IP 在网段里", "走代理，因为网址里写的是主机名", "看代理软件里有没有为这个网段配直连规则"]}
+  answer="B"
+  ifRight="对。curl 拿网址里的「主机」那一段去和 no_proxy 比，主机名不会先被解析成 IP 再比网段。往下读这会怎样误导排查。"
+  ifWrong="答案是 B。no_proxy 的网段只和网址里直接写的 IP 比；网址写的是主机名，比不上，请求就进了代理。代理软件里的规则对 curl 也没有用：curl 只看环境变量。这题要先分清网址里哪一段是主机。"
+  suggest="web-url-anatomy"
+/>
+
+<Callout kind="lead" label="坑在哪">
+
+两件事常被想当然：一是以为在代理软件里配了「这个网段直连」，命令行工具也会照办；二是以为 `no_proxy` 写了网段，用主机名访问那个网段里的机器也会直连。两个都不成立。
+
+</Callout>
+
+## 命令行工具只看环境变量
+
+curl、wget 这类工具不知道系统里跑着什么代理软件。它们决定走不走代理，只看 `http_proxy` / `https_proxy` / `no_proxy`（大小写两种都认）。代理软件里写的「跳过代理」「按网段直连」，管的是交给它的流量；curl 已经按环境变量把请求交给代理了，代理软件再怎么配也追不回来。
+
+作者的 shell 配置里曾经写着一句注释：「不在 shell 层维护 no_proxy，规则交给代理软件」。这句话是错的，后来改掉了。
+
+认出它的办法是 `curl -v`：如果输出里有 `Uses proxy env variable http_proxy`，就是环境变量在起作用，和代理软件的规则无关。
+
+## 网段只和 IP 字面量比
+
+`no_proxy` 里写网段（`100.64.0.0/10`）要 curl 7.86 以上才支持，而且只和网址里**直接写出来的 IP** 比。网址写的是主机名时，curl 不会先查 DNS 再看那个 IP 在不在网段里：
+
+| 网址 | `no_proxy=100.64.0.0/10` 时 |
+|---|---|
+| `http://<mini 的地址>:8080/`（直接写 IP） | 直连 |
+| `http://mini:8080/`（写主机名） | 走代理 |
+| `curl --noproxy '*' http://mini:8080/` | 直连，这一条命令不用任何代理 |
+
+<Quiz
+  questions={[
+    {
+      question: "想用主机名访问内网机器又直连，`no_proxy` 该怎么写？",
+      options: ["网段写得更大一点，比如 `100.0.0.0/8`", "把主机名本身（或它的域名后缀）也写进 `no_proxy`", "在代理软件里加直连规则"],
+      answer: "B",
+      explain: "主机名只和主机名比。把 `mini`、或者 `.lan` 这类后缀写进去才能匹配上；网段写多大都比不到主机名。"
+    }
+  ]}
+/>
+
+## 它怎么误导了排查
+
+作者有一次排查浏览器访问部署机很慢，用 curl 带主机名去测「直连有多快」，结果也慢，于是一度以为是 VPN 的中继或网络本身坏了。其实那条 curl 也进了代理，测的根本不是直连。换成 `--noproxy '*'` 或直接写 IP，直连只要几十毫秒，问题这才回到正确的方向上（那次的根因见个人环境里的「代理软件把内网主机名解析成假地址」一篇）。
+
+## 怎么避开
+
+- 测「直连快不快」时，用 `curl --noproxy '*'`，或网址里直接写 IP，别让测量本身带上代理。
+- 用主机名访问的内网机器，把主机名或域名后缀写进 `no_proxy`。
+- 记住这一套只对命令行工具有效。Java 程序另有一套例外列表，语法还不一样，见「JVM 的代理例外列表不认 CIDR」。
+
+<Transfer
+  prompt="CI 的 runner 设了 `HTTPS_PROXY` 和 `NO_PROXY=10.0.0.0/8`。流水线里一个脚本用 `curl https://artifacts.internal/...` 下载内部制品，`artifacts.internal` 解析到 10 网段的一台机器，下载却被代理拒了。为什么？有几种改法？"
+  points={[
+    { label: "原因", text: "网址写的是主机名，`NO_PROXY` 里的网段只和 IP 字面量比，比不上，请求进了代理，代理到不了内网。" },
+    { label: "改法一", text: "把 `artifacts.internal`（或 `.internal` 后缀）写进 `NO_PROXY`。" },
+    { label: "改法二", text: "这一条命令加 `--noproxy`，或者直接用 IP 访问（证书校验要另外处理）。" },
+    { label: "怎么确认", text: "`curl -v` 看有没有打印「使用了代理环境变量」那一行。" }
+  ]}
+/>

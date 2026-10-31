@@ -1,0 +1,184 @@
+---
+title: 批处理：Spring Batch 导入大文件
+summary: 两千多万条作者记录不可能一个事务写完。Spring Batch 把导入拆成 Job、Step、Reader、Writer，每读满一块就提交一次并记下进度，失败后用同样的参数重跑，从最后一次提交的地方接着来。
+type: concept
+difficulty: advanced
+tags: [spring, backend, database]
+prerequisites: [spring-dependency-injection, db-transactions]
+personalEnv: false
+---
+
+<Diagnose
+  question="导入一个 2100 万条作者的大文件，所有写入放在同一个数据库事务里。写到第 1500 万条时，数据库连接断了。已经写进去的那 1500 万条会怎样？"
+  options={["都留在库里，只丢了后面的", "全部回滚，表里一条都没有", "留下一半，另一半回滚"]}
+  answer="B"
+  ifRight="对：事务要么全部提交，要么全部回滚。一个事务包整份文件，断在任何地方都是从零开始。这篇讲 Spring Batch 怎么把它切成很多个小事务。"
+  ifWrong="答案是 B。事务还没提交时出错，里面的所有写入一起回滚，不管已经写了多少。这题考的是事务的原子性，前置篇讲过。"
+  suggest="db-transactions"
+/>
+
+<Callout kind="lead">
+
+Spring Batch 是专门跑「大量数据从一处搬到另一处」的框架。它把一次导入叫一个 **Job**，Job 由若干 **Step** 组成；最常见的 Step 是「分块」的：**Reader** 一条一条读，读满一块交给 **Writer** 一起写，然后提交一次事务、记下读到了哪。
+
+</Callout>
+
+## 为什么要分块
+
+上面那道题说明了一个大事务的问题：断一次，前功尽弃。另一个极端是每条记录一个事务，2100 万次提交，光提交本身就要花很多时间。
+
+分块（chunk）取中间：每 N 条一个事务。断了只丢当前这一块，提交次数也只有总数除以 N。
+
+<Params
+  title="动手试试：块大小怎么选"
+  guess={{ question: "块从 5000 调到 500，导入 2100 万条，提交次数会怎样？", options: ["不变", "变成原来的 10 倍", "变成原来的十分之一"], answer: "B", explain: "提交次数 = 总条数 ÷ 块大小。块小了 10 倍，提交就多了 10 倍。" }}
+  controls={[
+    { type: "slider", id: "chunk", label: "块大小", min: 500, max: 10000, step: 500, default: 5000, unit: "条" }
+  ]}
+  cases={[
+    { when: { chunk: [500, 1500] }, results: [{ label: "每次提交写入", value: "{chunk}", tone: "ok" }, { label: "断一次最多重做", value: "{chunk}", tone: "ok" }, { label: "提交次数", value: "上万次", tone: "bad" }], verdict: { tone: "bad", head: "提交太频繁。", text: "每块都要开事务、提交、写一次进度，块太小时这些固定开销占了大头。" } },
+    { when: { chunk: [8500, 10000] }, results: [{ label: "每次提交写入", value: "{chunk}", tone: "wait" }, { label: "断一次最多重做", value: "{chunk}", tone: "wait" }, { label: "内存里同时攥着", value: "{chunk} 个聚合", tone: "bad" }], verdict: { tone: "bad", head: "一块太重。", text: "一块的对象都在内存里，写入时还要按 ORCID 查已有作者，块越大单次查询和刷盘越重。" } },
+    { results: [{ label: "每次提交写入", value: "{chunk}", tone: "ok" }, { label: "断一次最多重做", value: "{chunk}", tone: "ok" }, { label: "提交次数", value: "几千到一万次", tone: "ok" }], verdict: { tone: "ok", head: "折中。", text: "作者导入默认用 5000：注释里写的是「平衡内存与事务开销」。" } }
+  ]}
+/>
+
+## 作者导入长什么样
+
+<CodeRef at="patra-api/patra-catalog/patra-catalog-infra/src/main/java/dev/patra/catalog/infra/author/batch/AuthorImportJobConfig.java@5073ab1358404ecd989e722373cd9f7edafe238b" lines="91-136" />
+
+```java
+  @Bean
+  public Job authorImportJob() {
+    return new JobBuilder("authorImportJob", jobRepository)
+        .listener(authorImportJobExecutionListener)
+        .start(authorImportStep())
+        .build();
+  }
+
+  /// 配置 PubMed Computed Authors 导入 Step。
+  ///
+  /// @return Step 实例
+  @Bean
+  public Step authorImportStep() {
+    int chunkSize = getChunkSize();
+    log.info("配置 authorImportStep，chunk size: {}", chunkSize);
+
+    var stepBuilder =
+        new StepBuilder("authorImportStep", jobRepository)
+            .<AuthorAggregate, AuthorAggregate>chunk(chunkSize)
+            .transactionManager(transactionManager)
+            .reader(authorItemReader(null))
+            .writer(authorItemWriter);
+```
+
+后面几行是按需挂上进度指标监听器，这里没贴。
+
+<Structure
+  title="authorImportJob 的组成"
+  intro="点任意一块看它干什么"
+  nodes={[
+    { id: "job", label: "authorImportJob", sub: "Job", code: true, col: 1, desc: "一次完整的导入。这里只有一个 Step，另外挂了一个 Job 执行监听器 `AuthorImportJobExecutionListener`。" },
+    { id: "step", label: "authorImportStep", sub: "分块 Step · 5000 条一块", code: true, col: 2, desc: "按块循环：读满一块、写一块、提交一次。事务由传进来的 `transactionManager` 管。" },
+    { id: "reader", label: "AuthorItemReader", sub: "Reader · @StepScope", code: true, col: 3, row: 1, desc: "打开时把 JSON Lines 文件下载到临时文件，然后每次 `read()` 返回一个作者；返回 null 表示读完。" },
+    { id: "writer", label: "AuthorItemWriter", sub: "Writer", code: true, col: 3, row: 2, desc: "一次拿到一整块，先在块内按 ORCID 合并重复，再查库里已有的作者合并名字变体，最后批量保存。" },
+    { id: "repo", label: "JobRepository", sub: "批处理元数据表", code: true, col: 2, row: 2, desc: "记着每次执行的状态，以及 Step 存进去的进度（ExecutionContext）。断点续跑靠它。" }
+  ]}
+  edges={[
+    { from: "job", to: "step", label: "包含" },
+    { from: "step", to: "reader", label: "读" },
+    { from: "step", to: "writer", label: "写" },
+    { from: "step", to: "repo", label: "记进度", desc: "每提交一块，Step 把 Reader 报上来的进度写进元数据表，和这一块的数据在同一个事务里提交。" }
+  ]}
+/>
+
+这里没有 Processor：从 Reader 出来的已经是领域对象 `AuthorAggregate`，不需要中间再加工，所以 `chunk` 的两个类型参数都是 `AuthorAggregate`。
+
+Reader 标了 `@StepScope`，意思是「每次 Step 执行时才创建」。这样它才能在创建时拿到这次运行的参数：下载地址是从 Job 参数 `downloadUrl` 注入的。
+
+MeSH 主题词导入（`MeshDescriptorJobConfig`）是同一个结构：一个分块 Step，一个下载并解析 XML 的 Reader，一个 Writer，Job 参数多了一个 `meshVersion`。
+
+## 一块里发生了什么
+
+<Stepper
+  title="作者导入的第 3 块"
+  nodes={[
+    { id: "reader", label: "Reader", sub: "currentIndex" },
+    { id: "writer", label: "Writer", sub: "批量保存" },
+    { id: "db", label: "PostgreSQL", sub: "cat_author 等" },
+    { id: "repo", label: "JobRepository", sub: "进度" }
+  ]}
+  links={[
+    { from: "reader", to: "writer" },
+    { from: "writer", to: "db" },
+    { from: "reader", to: "repo" }
+  ]}
+  steps={[
+    { caption: "前两块已经提交，库里有 10000 个作者，元数据表里记着进度 10000。开一个新事务。", focus: ["db", "repo"], notes: [{ at: "db", text: "10000 条", tone: "ok" }, { at: "repo", text: "进度 10000", tone: "ok" }] },
+    { caption: "Reader 一条条 `read()`，读满 5000 条，自己的 `currentIndex` 走到 15000。", focus: ["reader"], tokens: [{ id: "c", label: "5000 条", at: "reader" }], notes: [{ at: "reader", text: "15000" }, { at: "db", text: "10000 条", tone: "ok" }, { at: "repo", text: "进度 10000", tone: "ok" }] },
+    { caption: "整块交给 Writer，Writer 合并重复、批量写进数据库。事务还没提交。", focus: ["writer", "db"], links: ["reader>writer", "writer>db"], tokens: [{ id: "c", label: "5000 条", at: "db" }], notes: [{ at: "db", text: "15000 条 · 未提交", tone: "wait" }, { at: "repo", text: "进度 10000", tone: "ok" }] },
+    { caption: "Step 调 Reader 的 `update()`，Reader 把 15000 放进 ExecutionContext；Step 把它和这一块的数据在同一个事务里提交。", focus: ["reader", "repo", "db"], links: ["reader>repo"], notes: [{ at: "db", text: "15000 条", tone: "ok" }, { at: "repo", text: "进度 15000", tone: "ok" }] }
+  ]}
+  guesses={[
+    { before: 4, question: "如果进程刚好崩在第 3 步之后、提交之前，重跑时会从哪开始？", options: ["从第 15001 条开始", "从第 10001 条开始，第 3 块重做", "从头开始"], answer: "B", explain: "第 3 块的数据和进度 15000 都没提交，一起回滚了。元数据表里还是 10000，重跑就从第 10001 条接着读。" }
+  ]}
+/>
+
+数据和进度在同一个事务里提交，所以两者永远对得上：不会出现「数据写了、进度没记」导致重复，也不会出现「进度记了、数据没写」导致漏掉。
+
+## 断点续跑要两个条件
+
+**第一，重跑时要被认成「同一次导入」。** Spring Batch 用「Job 名 + 标识性参数」认一个 Job 实例。同一个实例上次失败了，再启动就是接着跑；参数不同就是一个全新的实例，从头来。Patra 启动作者导入时特意不加时间戳参数：
+
+<CodeRef at="patra-api/patra-catalog/patra-catalog-infra/src/main/java/dev/patra/catalog/infra/author/batch/AuthorBatchAdapter.java@5073ab1358404ecd989e722373cd9f7edafe238b" lines="50-59" />
+
+```java
+    // 不添加时间戳，相同参数的 Job 只执行一次（支持断点续传）
+    return jobOperatorHelper.launch(authorImportJob, jobParams, false);
+```
+
+**第二，Reader 要会存进度、会跳回去。** 框架只负责把 ExecutionContext 存好、下次交还，「读到哪了」「怎么跳到那」要 Reader 自己写。`AuthorItemReader` 在 `update()` 里存 `currentIndex`，在 `open()` 里读回来，重新下载文件后跳过这么多条：
+
+<CodeRef at="patra-api/patra-catalog/patra-catalog-infra/src/main/java/dev/patra/catalog/infra/author/batch/AuthorItemReader.java@5073ab1358404ecd989e722373cd9f7edafe238b" lines="110-115" />
+
+<CodeRef at="patra-api/patra-catalog/patra-catalog-infra/src/main/java/dev/patra/catalog/infra/author/batch/AuthorItemReader.java@5073ab1358404ecd989e722373cd9f7edafe238b" lines="185-195" />
+
+<Callout kind="cost">
+
+这种续跑不是「从文件的第 N 个字节接着读」：临时文件在 `close()` 时已经删了，重跑要把约 3.6 GB 的文件重新下载一遍，再从头解析、丢掉前面已经处理过的条数。省下的是写库，不是下载和解析。
+
+</Callout>
+
+<Quiz
+  questions={[
+    {
+      question: "作者导入上次已经成功跑完。有人用同样的参数又触发了一次，会怎样？",
+      options: ["从头再导一遍", "Spring Batch 认出这个实例已经完成，拒绝再跑", "从最后一条之后接着读，读不到东西就结束"],
+      answer: "B",
+      explain: "同参数就是同一个 Job 实例，它已经是完成状态。`addTimestamp=false` 换来了续跑，也意味着同一份数据只导一次。"
+    },
+    {
+      question: "如果 `launch` 的第三个参数改成 `true`（每次加一个时间戳参数），上次失败后重新触发会怎样？",
+      options: ["照样从断点接着跑", "成了一个新实例，从第 1 条开始", "启动失败"],
+      answer: "B",
+      explain: "时间戳是标识性参数，每次都不一样，每次都是新实例，新实例的 ExecutionContext 是空的。"
+    }
+  ]}
+/>
+
+## 谁来启动它
+
+catalog 的 `application.yml` 里写了 `spring.batch.job.enabled: false`：服务启动时不自动跑任何 Job。
+
+<CodeRef at="patra-api/patra-catalog/patra-catalog-boot/src/main/resources/application.yml@3cf6fa5757b3be54c3b030e4cace871f53e2599c" lines="22-26" />
+
+导入由调度中心 XXL-Job 触发：任务入口 `AuthorImportScheduleJob` 把下载地址放进命令交给应用层，应用层经端口 `AuthorBatchPort` 调到上面的 `AuthorBatchAdapter` 启动 Job。应用层不知道 Spring Batch 的存在，只知道「启动一次作者导入」。调度中心本身另有一篇讲定时任务。
+
+<Transfer
+  prompt="要新做一个期刊导入：一个 200 万行的 CSV，从对象存储下载。你希望它中途失败后能接着跑。Job 怎么搭？Reader 要做哪几件事？启动时要注意什么？"
+  points={[
+    { label: "结构", text: "一个分块 Step：Reader 读 CSV 一行出一个领域对象，Writer 整块批量写；需要转换就加一个 Processor。块大小按每条的大小和写入成本选，几千条起步。" },
+    { label: "Reader 存进度", text: "实现 `ItemStream`：`update()` 里把已读行数放进 ExecutionContext，`open()` 里读回来并跳过这么多行；文件地址从 Job 参数注入，Reader 用 `@StepScope`。" },
+    { label: "启动参数", text: "同一份文件要用同样的标识性参数启动（比如文件地址），不要每次加时间戳，否则每次都是新实例、从头来。" },
+    { label: "写入要能重做", text: "进度和数据同一事务提交，崩在块中间时这一块会整块重做；Writer 写的时候按唯一键去重或合并，重做也不会写出重复数据。" }
+  ]}
+/>

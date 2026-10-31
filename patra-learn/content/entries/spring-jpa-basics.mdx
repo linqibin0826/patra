@@ -1,0 +1,242 @@
+---
+title: JPA：用对象读写表
+summary: JPA 让你用一个 Java 类对应一张表、用对象的增删改代替手写 SQL。要用好它，得知道对象什么时候是「被管着的」、改了字段什么时候才真正变成 SQL 发给数据库。
+type: concept
+difficulty: advanced
+tags: [spring, database, java]
+prerequisites: [spring-dependency-injection, db-keys-and-relations]
+personalEnv: false
+---
+
+<Diagnose
+  question="catalog 里一个作者可以有好几个 ORCID（研究者的全球唯一编号），作者存在 `cat_author` 表，ORCID 存在 `cat_author_orcid` 表。表示「这个 ORCID 属于哪个作者」的外键列，应该放在哪张表里？"
+  options={["`cat_author` 里放一个 `orcid_id` 列", "`cat_author_orcid` 里放一个 `author_id` 列", "两张表各放一个，互相指着"]}
+  answer="B"
+  ifRight="对。一对多的外键放在「多」的那一边。等下看 JPA 的注解时，你会发现它们正是照这个关系写的。"
+  ifWrong="答案是 B：一个作者对多个 ORCID，外键放在「多」的那张表里，每行 ORCID 记着自己属于哪个作者。主键、外键和一对多关系是表设计那篇的内容，这篇默认你已经会看。"
+  suggest="db-keys-and-relations"
+/>
+
+<Callout kind="lead">
+
+JPA 是 Java 访问关系数据库的一套标准，Patra 用的实现是 Hibernate。你写一个带 `@Entity` 的类对应一张表，Hibernate 负责把「读对象、改对象」翻译成 SQL；Spring Data JPA 再进一步，你只写一个接口，增删改查的实现由它生成。
+
+</Callout>
+
+## 一个类对应一张表
+
+<CodeRef at="patra-api/patra-catalog/patra-catalog-infra/src/main/java/dev/patra/catalog/infra/author/persistence/entity/AuthorEntity.java@5073ab1358404ecd989e722373cd9f7edafe238b" lines="48-72" />
+
+```java
+@Entity
+@Table(
+    name = "cat_author",
+    indexes = {
+      @Index(name = "idx_normalized_key", columnList = "normalized_key"),
+      @Index(name = "idx_status", columnList = "status"),
+      @Index(name = "idx_provenance", columnList = "provenance_code"),
+      @Index(name = "idx_display_name", columnList = "display_name")
+    })
+public class AuthorEntity extends SoftDeletableJpaEntity {
+
+  // ========== 核心属性 ==========
+
+  /// 姓名规范化格式，对应 PubMed Computed Authors 的 name 字段。
+  ///
+  /// 格式如 "SMITH+R"（姓 Smith + 首字母 R），用于分组查询。
+  /// **非唯一标识**：同一格式下可能有多个不同的已消歧作者。
+  @Column(name = "normalized_key", length = 100, nullable = false)
+  private String normalizedKey;
+
+  /// 展示名称（从首个名字变体派生）。
+  ///
+  /// 格式如 "Zhiyong Lu"，用于界面显示和搜索。
+  @Column(name = "display_name", length = 200)
+  private String displayName;
+```
+
+- `@Entity`：告诉 Hibernate 这个类要和表对应，它的对象叫「实体」。
+- `@Table(name = "cat_author")`：对应哪张表。
+- `@Column(name = "normalized_key")`：字段对应哪一列。字段叫 `normalizedKey`，列叫 `normalized_key`，靠这个注解对上。
+- 主键 `id`、乐观锁版本号 `version`、创建时间这些每张表都有的列，写在父类 `BaseJpaEntity` 里；父类 `SoftDeletableJpaEntity` 再加上软删除：删除时不真删这一行，而是填上 `deleted_at`，之后的查询自动跳过它。
+
+表结构本身由 Flyway 的迁移脚本建，不让 Hibernate 自动建表。实体只描述「类和表怎么对应」。
+
+## 一对多：注解照着外键写
+
+诊断题里那个关系，在实体里是两头各写一句。ORCID 实体这边，外键列 `author_id` 对应一个 `AuthorEntity` 字段：
+
+<CodeRef at="patra-api/patra-catalog/patra-catalog-infra/src/main/java/dev/patra/catalog/infra/author/persistence/entity/AuthorOrcidEntity.java@5073ab1358404ecd989e722373cd9f7edafe238b" lines="54-58" />
+
+```java
+  @ManyToOne(fetch = FetchType.EAGER)
+  @JoinColumn(name = "author_id", nullable = false)
+  @ToString.Exclude
+  @EqualsAndHashCode.Exclude
+  private AuthorEntity author;
+```
+
+作者实体那边，用 `mappedBy = "author"` 说「这个集合由对面的 `author` 字段管着，外键不在我这」：
+
+<CodeRef at="patra-api/patra-catalog/patra-catalog-infra/src/main/java/dev/patra/catalog/infra/author/persistence/entity/AuthorEntity.java@5073ab1358404ecd989e722373cd9f7edafe238b" lines="127-133" />
+
+```java
+  @OneToMany(
+      mappedBy = "author",
+      cascade = CascadeType.ALL,
+      orphanRemoval = true,
+      fetch = FetchType.LAZY)
+  @Builder.Default
+  private Set<AuthorOrcidEntity> orcids = new HashSet<>();
+```
+
+另外三个参数：
+
+- `cascade = CascadeType.ALL`：保存、删除作者时，它的 ORCID 跟着一起保存、删除。
+- `orphanRemoval = true`：从集合里拿掉一个 ORCID，提交时这一行就被删掉。
+- `fetch = FetchType.LAZY`：读作者时先不查 ORCID 表，等代码真用到 `orcids` 时再查。这个「用到才查」在循环里会变成一个经典的坑，后面 N+1 那篇专门讲。
+
+## Repository：只写接口，不写实现
+
+<CodeRef at="patra-api/patra-catalog/patra-catalog-infra/src/main/java/dev/patra/catalog/infra/author/persistence/dao/AuthorDao.java@5073ab1358404ecd989e722373cd9f7edafe238b" lines="29-39" />
+
+```java
+public interface AuthorDao extends JpaRepository<AuthorEntity, Long> {
+
+  // ========== 姓名规范化格式查询 ==========
+
+  /// 根据姓名规范化格式查询作者。
+  ///
+  /// 同一格式下可能有多个不同的已消歧作者。
+  ///
+  /// @param normalizedKey 姓名规范化格式（如 "SMITH+R"）
+  /// @return 匹配的作者列表（可能为空）
+  List<AuthorEntity> findByNormalizedKey(String normalizedKey);
+```
+
+`AuthorDao` 只是一个接口，项目里没有它的实现类。Spring Data JPA 启动时替它生成一个：
+
+- 继承 `JpaRepository<AuthorEntity, Long>`，就白得 `save`、`findById`、`findAllById`、`deleteById` 这些通用方法（`Long` 是主键类型）。
+- 按方法名生成查询：`findByNormalizedKey` 拆开是「找，按 normalizedKey 等于参数」，生成 `where normalized_key = ?`。`countByStatus`、`existsByNormalizedKey` 同理。
+- 方法名说不清的，用 `@Query` 手写 JPQL（一种按实体和字段名写的查询语言，不是直接写表名列名）。比如按 ORCID 找作者：`SELECT a FROM AuthorEntity a JOIN a.orcids o WHERE o.orcid = :orcid`。
+
+<Callout kind="warn">
+
+名字容易混。Spring Data 管这种接口叫 Repository，可在 Patra 里，**领域层的 `AuthorRepository` 是一个端口**（领域层定义、不知道 JPA），JPA 的这个接口叫 `AuthorDao`，放在 infra 层。两者之间隔着一个 `AuthorRepositoryAdapter`。
+
+</Callout>
+
+<Structure
+  title="保存一个作者，经过哪几层"
+  nodes={[
+    { id: "port", label: "AuthorRepository", sub: "领域层的端口", code: true, col: 1, desc: "领域层定义的接口，参数是聚合 `AuthorAggregate`。它不知道有 JPA、有表。" },
+    { id: "adapter", label: "AuthorRepositoryAdapter", sub: "infra 层的实现", code: true, col: 2, desc: "实现端口：把聚合转成 `AuthorEntity`，再交给 `AuthorDao`。转换由 `AuthorJpaMapper` 做。" },
+    { id: "dao", label: "AuthorDao", sub: "Spring Data 生成实现", code: true, col: 3, desc: "只写了接口，增删改查的实现由 Spring Data JPA 生成。" },
+    { id: "table", label: "cat_author", sub: "PostgreSQL 表", code: true, col: 4, desc: "Hibernate 按 `AuthorEntity` 上的注解生成 SQL 读写这张表。" }
+  ]}
+  edges={[
+    { from: "port", to: "adapter", label: "实现", dashed: true },
+    { from: "adapter", to: "dao", label: "调用" },
+    { from: "dao", to: "table", label: "SQL" }
+  ]}
+/>
+
+这样分层，领域层的代码里不会出现一个 JPA 注解；哪天换掉持久化方式，改的只是 infra 层。
+
+## 持久化上下文：被管着的对象
+
+这是 JPA 最容易让人糊涂的地方。用 JPA 读出来的实体，不是一份普通的拷贝，而是**被管着的**（managed）：在当前事务结束前，Hibernate 记着它读出来时的样子。你改了它的字段，哪怕没调 `save`，事务提交时 Hibernate 也会发现「变了」，自动发一条 `UPDATE`。这个「记着所有被管着的对象」的地方叫**持久化上下文**。
+
+而 SQL 也不是你一改字段就立刻发出去的。Hibernate 把要做的改动攒着，到某个时刻一次性发给数据库，这一步叫 **flush**。默认在事务提交前、以及执行一条可能受这些改动影响的查询前会 flush；也可以调 `entityManager.flush()` 手动让它马上发。
+
+catalog 批量导入作者时，更新已有作者正是这样做的：
+
+<CodeRef at="patra-api/patra-catalog/patra-catalog-infra/src/main/java/dev/patra/catalog/infra/author/persistence/AuthorRepositoryAdapter.java@5073ab1358404ecd989e722373cd9f7edafe238b" lines="101-131" />
+
+```java
+    // 处理更新：批量加载现有 Entity，然后更新
+    if (!existingAuthors.isEmpty()) {
+      List<Long> ids = existingAuthors.stream().map(a -> a.getId().value()).toList();
+
+      // 批量加载 managed entities
+      List<AuthorEntity> loadedEntities = authorDao.findAllById(ids);
+      Map<Long, AuthorEntity> entityMap =
+          loadedEntities.stream()
+              .collect(java.util.stream.Collectors.toMap(AuthorEntity::getId, e -> e));
+
+      for (AuthorAggregate aggregate : existingAuthors) {
+        AuthorEntity entity = entityMap.get(aggregate.getId().value());
+        if (entity == null) {
+          log.warn("跨批次更新失败：作者不存在，ID={}", aggregate.getId().value());
+          continue;
+        }
+
+        // 更新核心属性
+        updateEntityFromAggregate(entity, aggregate);
+
+        // 更新子实体（orphanRemoval 会自动删除旧的）
+        entity.getNameVariants().clear();
+        entity.getOrcids().clear();
+
+        allEntities.add(entity);
+      }
+
+      // 先 flush 删除操作，避免 INSERT 和 DELETE 顺序问题导致唯一约束冲突
+      // Hibernate 默认顺序：INSERT → UPDATE → DELETE
+      // 需要先执行 DELETE，才能 INSERT 具有相同唯一键的新记录
+      entityManager.flush();
+```
+
+这段跑在 Spring Batch 的分块事务里（调用方是导入任务的 `AuthorItemWriter`）。点「下一步」看持久化上下文里发生了什么：
+
+<Stepper
+  title="更新一个已有作者，SQL 什么时候发出去"
+  nodes={[
+    { id: "code", label: "Adapter 的代码" },
+    { id: "ctx", label: "持久化上下文", sub: "Hibernate 记着的对象" },
+    { id: "db", label: "PostgreSQL" }
+  ]}
+  links={[
+    { from: "code", to: "ctx" },
+    { from: "ctx", to: "db" }
+  ]}
+  steps={[
+    { caption: "`findAllById(ids)` 发一条 `SELECT`，读出的作者实体放进持久化上下文，从此被管着。", focus: ["ctx", "db"], links: ["ctx>db"], tokens: [{ id: "a", label: "作者 · 原样", at: "ctx" }], notes: [{ at: "db", text: "SELECT 1 条" }] },
+    { caption: "`updateEntityFromAggregate` 只是调了几个 setter，改了内存里对象的字段。代码里没有调 `save`。", focus: ["code", "ctx"], links: ["code>ctx"], tokens: [{ id: "a", label: "作者 · 字段改了", at: "ctx" }], notes: [{ at: "ctx", text: "攒着：UPDATE 作者", tone: "wait" }] },
+    { caption: "清空 ORCID 和名字变体集合。因为 `orphanRemoval = true`，Hibernate 记下：这些子表的行要删。", focus: ["ctx"], tokens: [{ id: "a", label: "作者 · 子集合空了", at: "ctx" }], notes: [{ at: "ctx", text: "攒着：UPDATE + DELETE 子表", tone: "wait" }] },
+    { caption: "`entityManager.flush()`：攒着的改动这时才变成 SQL 发给数据库。还没提交，出错仍能整块回滚。", focus: ["ctx", "db"], links: ["ctx>db"], tokens: [{ id: "a", label: "作者", at: "db" }], notes: [{ at: "ctx", text: "已发出", tone: "ok" }, { at: "db", text: "UPDATE、DELETE 已执行", tone: "ok" }] },
+    { caption: "之后加入新的子实体，`saveAll`，分块事务提交前再 flush 一次，最后提交。", focus: ["db"], notes: [{ at: "db", text: "提交", tone: "ok" }] }
+  ]}
+  guesses={[
+    { before: 3, question: "第 2 步只调了 setter，没调 `save`。如果代码到这里就结束、事务正常提交，作者表里的这一行会变吗？", options: ["不会，没调 save 就不写库", "会：对象是被管着的，提交前 Hibernate 发现字段变了，自动发 UPDATE", "会，但要等下一次读它时才写"], answer: "B", explain: "这叫脏检查：被管着的对象，Hibernate 在 flush 时拿它和读出来时的样子比，变了就生成 UPDATE。" }
+  ]}
+/>
+
+为什么这里非要在中途手动 flush，和 Hibernate 发 SQL 的先后顺序有关，是另一篇坑的内容。在这篇里只要记住：**改对象不等于写库，flush 才是 SQL 真正发出去的时刻，提交才是生效的时刻。**
+
+<Quiz
+  questions={[
+    {
+      question: "在一个事务里用 `findById` 读出一个作者，改了 `displayName`，然后抛出异常、事务回滚。数据库里的 `display_name` 会怎样？",
+      options: ["变了：改字段就是写库", "没变：UPDATE 要么还没发，要么发了也随事务回滚", "变了一半"],
+      answer: "B",
+      explain: "改字段只改了内存里的对象。就算已经 flush，SQL 也还在事务里，回滚就一起撤销。"
+    },
+    {
+      question: "在事务外面（比如没有事务的普通方法里）调 `authorDao.findById` 读出一个作者，改了字段，不调 `save`。会写库吗？",
+      options: ["会，和事务里一样", "不会：没有事务就没有提交，也就没有提交前的那次脏检查", "会，在下次启动时"],
+      answer: "B",
+      explain: "脏检查发生在事务提交前的 flush 里。外面没有事务，改了字段也没人把它变成 SQL，而且不报错。"
+    }
+  ]}
+/>
+
+<Transfer
+  prompt="catalog 要加一个功能：管理员把某个作者的状态改成「已停用」。你会怎么在 infra 层实现「按 ID 改状态」？如果有人写成「在没有事务的方法里先 `findById`，改字段，不调 `save`」，会发生什么？"
+  points={[
+    { label: "放在事务里", text: "在应用层开事务（比如 Handler 里用 `TransactionOperations`），事务里读出实体、改字段；提交时脏检查自动生成 UPDATE。" },
+    { label: "或者显式写", text: "也可以在 `AuthorDao` 上写一个 `@Modifying` 加 `@Query` 的更新语句，直接按 ID 改状态，不经过读实体。" },
+    { label: "没有事务时", text: "没有提交，也就没有提交前的脏检查，改字段只改了内存里的对象，什么都不会写进数据库，而且不报错。" },
+    { label: "分层不变", text: "领域层仍然只看到 `AuthorRepository` 端口；JPA 的细节只出现在 `AuthorRepositoryAdapter` 和 `AuthorDao` 里。" }
+  ]}
+/>

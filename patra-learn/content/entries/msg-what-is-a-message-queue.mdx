@@ -1,0 +1,132 @@
+---
+title: 消息队列是什么：把「要做的事」先存在中间
+summary: 生产者把消息交给队列，消费者按自己的节奏取走处理。队列让双方互不认识、互不等待，也能在高峰时帮消费者排队，但它是传话的通道，不是存数据的仓库。
+type: concept
+difficulty: basic
+tags: [backend, messaging]
+prerequisites: [msg-why-async]
+personalEnv: false
+---
+
+<Diagnose
+  question="平时每秒有 10 条新评论，高峰时 1 秒涌来 300 条。处理提醒的服务每秒最多处理 50 条。如果两者之间放一个队列，高峰过去后会怎样？"
+  options={["多出来的消息在队列里排队，高峰过后慢慢处理完", "超出处理能力的 250 条被直接丢掉", "处理提醒的服务被压垮"]}
+  answer="A"
+  ifRight="对。队列把「来得快」和「做得慢」隔开了。这篇讲这个中间人是怎么工作的，以及它不能做什么。"
+  ifWrong="答案是 A：队列会先把消息存着，消费方按自己的速度一条条取。「为什么要异步」那篇讲了要先答复用户、稍后再做，队列就是存放「稍后再做」的地方。"
+  suggest="msg-why-async"
+/>
+
+## 三个角色
+
+消息队列里只有三个角色：
+
+- **生产者**：产生消息的一方，例如 interaction 服务在评论发表后说「评论 123 发表了」。
+- **队列**：存放消息的地方，先进先出。
+- **消费者**：从队列取消息、处理它的一方，例如通知服务根据这条消息写一条提醒。
+
+<Callout kind="analogy">
+
+队列像小区门口的快递柜。快递员（生产者）把包裹放进去就走，不用等你在不在家；你（消费者）有空时去取。两边不需要同时在场，甚至不需要知道对方是谁。
+
+</Callout>
+
+Patra 里用的是 RabbitMQ，它是一个单独运行的服务，和 PostgreSQL、Redis 一样，用 Docker 容器跑在部署机上。
+
+<CodeRef at="patra-infra/docker/docker-compose.core.yaml@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="113-121" />
+
+<Structure
+  title="一条评论发表的消息，经过哪几站"
+  nodes={[
+    { id: "producer", label: "interaction", sub: "生产者", col: 1, desc: "评论写进数据库之后，把「评论发表了」这件事交给 RabbitMQ。它不关心谁会来取。" },
+    { id: "queue", label: "notification.inbox", sub: "队列", code: true, col: 2, desc: "消息在这里排队，先进先出。取走并确认处理完成之前，它一直在。" },
+    { id: "consumer", label: "notification", sub: "消费者", col: 3, desc: "通知服务按自己的节奏取消息，算出该提醒谁，写一条提醒。" }
+  ]}
+  edges={[
+    { from: "producer", to: "queue", label: "放进去", desc: "生产者只管放，放完就可以做别的事。" },
+    { from: "queue", to: "consumer", label: "取走处理", desc: "消费者忙就慢慢取，不忙就很快取走。" }
+  ]}
+  traces={[
+    {
+      button: "发一条评论发表的消息",
+      packet: "comment",
+      hops: [
+        { at: "producer", caption: "interaction 写好评论，准备告诉别人。" },
+        { at: "queue", caption: "消息进了 notification.inbox，interaction 到这里就完成了。" },
+        { at: "consumer", caption: "通知服务取走消息，开始写提醒。" }
+      ]
+    }
+  ]}
+/>
+
+图里的队列名是 Patra 的真实名字。这里先不管消息怎么「找到」这个队列，下一篇再讲。
+
+## 队列给了你什么
+
+两样东西。
+
+**解耦**。interaction 只知道「我要通知有人评论了」，不知道通知服务存在。哪天通知服务要升级，停一会儿也不要紧，消息在队列里等着。反过来，哪天多一个服务也想知道评论发表了，生产者的代码不用改。
+
+**削峰**。高峰时消息涌进来，队列先收下，消费者按能承受的速度取。看下面这个过程：
+
+<Stepper
+  title="高峰来了，队列怎么帮消费者排队"
+  nodes={[
+    { id: "producer", label: "生产者", sub: "interaction" },
+    { id: "queue", label: "队列", sub: "notification.inbox" },
+    { id: "consumer", label: "消费者", sub: "每秒最多处理 50 条" }
+  ]}
+  links={[
+    { from: "producer", to: "queue" },
+    { from: "queue", to: "consumer" }
+  ]}
+  steps={[
+    { caption: "平时：每秒进来 10 条，消费者每秒能处理 50 条，队列基本是空的。", focus: ["queue"], notes: [{ at: "queue", text: "排队 0 条", tone: "ok" }] },
+    { caption: "高峰：这一秒一下子进来 300 条，全部被队列收下。生产者放完就走，没有被拖慢。", focus: ["producer", "queue"], links: ["producer>queue"], notes: [{ at: "queue", text: "排队 300 条", tone: "wait" }] },
+    { caption: "消费者没有变快，仍然每秒取 50 条。一秒后队列还剩 250 条。", focus: ["queue", "consumer"], links: ["queue>consumer"], notes: [{ at: "queue", text: "排队 250 条", tone: "wait" }, { at: "consumer", text: "本秒处理 50 条" }] },
+    { caption: "又过了 5 秒，队列清空。从头到尾没有消息被丢掉，消费者也没有超负荷。", focus: ["queue", "consumer"], links: ["queue>consumer"], notes: [{ at: "queue", text: "排队 0 条", tone: "ok" }, { at: "consumer", text: "恢复平稳", tone: "ok" }] }
+  ]}
+  guesses={[
+    { before: 3, question: "高峰这一秒结束时，消费者处理了 50 条。队列里还剩多少条？", options: ["0 条，队列自动让消费者加速", "250 条", "300 条"], answer: "B", explain: "队列不会让消费者变快，它只是把消息存下来。300 条进来、50 条被取走，剩 250 条。" }
+  ]}
+/>
+
+<Callout kind="cost">
+
+削峰有前提：高峰要「过得去」。如果消息每秒进来 300 条、一直持续，消费者每秒只能做 50 条，队列只会越积越长。队列能挡住一阵子的洪水，挡不住长期的入不敷出。
+
+</Callout>
+
+## 消息队列不是数据库
+
+很多人第一次用，会想：消息都存在队列里，那我要查的时候去队列里翻不就行了？不行。
+
+- 消息被消费者处理完并确认之后，队列就把它**删掉**了。
+- 队列只擅长「从头取一条」，不能「找出所有 A 用户的消息」。
+- 它只是传话的通道。要长期保存、要按条件查询的数据，写进数据库。
+
+<Quiz
+  questions={[
+    {
+      question: "interaction 把一条「评论发表了」的消息交给队列后，通知服务停机维护了 10 分钟。这期间消息会怎样？",
+      options: ["丢掉，因为没有人取", "留在队列里，通知服务恢复后继续取", "退回给 interaction，让它重发"],
+      answer: "B",
+      explain: "队列的作用之一就是让双方不必同时在线。消息存着，等消费者回来。"
+    },
+    {
+      question: "要统计「用户 A 一共收到过多少条提醒」，应该去哪里查？",
+      options: ["在队列里数 A 的消息", "查存提醒的数据库表", "问生产者"],
+      answer: "B",
+      explain: "队列里的消息处理完就删了，而且不支持按条件查。提醒存在通知服务自己的数据库里。"
+    }
+  ]}
+/>
+
+<Transfer
+  prompt="一位同事提议：「订单消息都留在队列里别删，以后要查历史订单，从队列里翻就行，省得再建一张表。」你怎么回应？"
+  points={[
+    { label: "队列会删", text: "消息被消费者确认处理后，队列就会把它删掉，没法当历史记录用。" },
+    { label: "没法查", text: "队列只能按顺序取，不能按订单号、用户等条件查，也没法统计。" },
+    { label: "各司其职", text: "订单这类要长期保存和查询的数据写进数据库；队列里只放「订单已创建」这样的通知，让别的服务知道发生了什么。" }
+  ]}
+/>

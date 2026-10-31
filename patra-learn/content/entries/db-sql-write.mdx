@@ -1,0 +1,145 @@
+---
+title: 增删改：INSERT、UPDATE 与 DELETE
+summary: 往表里写数据的三条语句，忘写 WHERE 的后果，以及「已经有了就更新」的 upsert 怎么写。
+type: concept
+difficulty: basic
+tags: [database, backend]
+prerequisites: [db-sql-select]
+---
+
+<Diagnose
+  question="有人想把用户表里 id 为 7 的那位的昵称改成 abc，写了 UPDATE users SET nickname = 'abc'，忘了写 WHERE。执行后会怎样？"
+  options={["只改了表里最后一行", "表里每一位用户的昵称都变成了 abc", "数据库发现没有 WHERE，报错并拒绝执行"]}
+  answer="B"
+  ifRight="对。数据库不会替你猜「你大概想改谁」。WHERE 是唯一的筛子，没有它就是整张表。"
+  ifWrong="答案是 B。数据库只照字面执行：没有 WHERE 就是「所有行」，不会报错也不会问你。这是写入语句里最经典的事故。"
+  suggest="db-sql-select"
+/>
+
+## 三条写入语句
+
+读数据用 `SELECT`，写数据有三条，对应「增、改、删」：
+
+| 语句 | 做什么 | 例子（示意） |
+|---|---|---|
+| `INSERT` | 新增一行 | `INSERT INTO cat_venue (id, venue_type, title, provenance_code) VALUES (101, 'JOURNAL', '示例医学杂志', 'PUBMED')` |
+| `UPDATE` | 修改已有的行 | `UPDATE cat_venue SET title = '新标题' WHERE id = 101` |
+| `DELETE` | 删除行 | `DELETE FROM cat_venue WHERE id = 101` |
+
+写入时数据库会替你把关：所有 `NOT NULL` 的列必须有值，类型要对，唯一约束不能撞。哪一条不满足，整条语句失败，**一行也不会写进去**。
+
+每条语句执行完，数据库会告诉你**影响了几行**。这个数字很有用：`INSERT` 影响 1 行说明真的插入了，`UPDATE` 影响 0 行说明 `WHERE` 没找到人。后面会看到 Patra 怎么靠它做决定。
+
+## UPDATE 和 DELETE：WHERE 是唯一的筛子
+
+`UPDATE` 和 `DELETE` 的作用范围完全由 `WHERE` 决定。动手拖一拖，看影响多大：
+
+<Params
+  title="动手试试：这条 UPDATE 改了几行"
+  guess={{ question: "UPDATE cat_venue SET title = '新标题'，没有 WHERE。表里有 10 行，会改几行？", options: ["0 行，没有 WHERE 不执行", "1 行", "10 行"], answer: "C", explain: "没有 WHERE 就是不加筛选，每一行都符合条件。表里有几行，就改几行。" }}
+  controls={[
+    { type: "switch", id: "where", label: "语句末尾加上 WHERE id = 101", default: false },
+    { type: "slider", id: "rows", label: "表里原有的行数", min: 1, max: 2000000, step: 1, default: 10 }
+  ]}
+  cases={[
+    { when: { where: true }, results: [{ label: "影响行数", value: "1 行", tone: "ok" }, { label: "其余行", value: "没动", tone: "ok" }], verdict: { tone: "ok", head: "只改了 101 号。", text: "id 是主键，最多命中一行。影响行数是 1，说明找到了人；是 0 就说明没有这个 id。" } },
+    { results: [{ label: "影响行数", value: "{rows} 行", tone: "bad" }, { label: "每一行的 title", value: "都变成了新标题", tone: "bad" }], verdict: { tone: "bad", head: "整张表都改了。", text: "没有 WHERE，{rows} 行全部命中。数据库不会报错，更不会拦你。" } }
+  ]}
+/>
+
+怎么降低这类风险：
+
+1. 先把 `WHERE` 原样放进 `SELECT` 里跑一遍，看看会命中哪几行、几行，再改成 `UPDATE`。
+2. 重要的修改放进事务里做，不对就回滚（下面「事务」那一篇讲）。
+3. 业务上要「删除」时，很多表用软删除：加一列 `deleted_at`，删除就是给它填上时间，查询时用 `deleted_at IS NULL` 过滤。Patra 的 catalog 里不少表（期刊、文献、作者）这样做，误删时还能找回。
+
+## 插入时已经有了：upsert
+
+导入数据时常遇到这件事：这一行可能已经在表里了。比如导入期刊实例，同一期刊同一年同一卷同一期，只能有一行。直接 `INSERT` 会撞上唯一约束，语句失败。
+
+PostgreSQL 让你在 `INSERT` 后面写 `ON CONFLICT`，告诉它撞上了怎么办：
+
+- `ON CONFLICT (...) DO NOTHING`：已经有了就算了，不插入也不报错；
+- `ON CONFLICT (...) DO UPDATE SET ...`：已经有了就改成新值。这就是常说的 **upsert**（update + insert）。
+
+括号里写的是"撞的是哪个唯一约束"。
+
+<Compare
+  title="第二次插入同一个键，三种写法的结果"
+  variants={[
+    {
+      label: "普通 INSERT",
+      steps: ["第一次 INSERT：键 pmid=123，成功，表里有 1 行", "第二次 INSERT 同样的键：撞上唯一约束"],
+      results: [{ label: "第二次的结果", value: "报错，语句失败", tone: "bad" }, { label: "影响行数", value: "无（异常）", tone: "bad" }],
+      verdict: { tone: "bad", head: "抛异常。", text: "批量导入时，一条重复就让整批失败。" }
+    },
+    {
+      label: "DO NOTHING",
+      steps: ["第一次 INSERT：键 pmid=123，成功，表里有 1 行", "第二次 INSERT 同样的键：撞上唯一约束，数据库悄悄跳过"],
+      results: [{ label: "第二次的结果", value: "不报错，没写入", tone: "ok" }, { label: "影响行数", value: "0 行", tone: "wait" }],
+      verdict: { tone: "ok", head: "靠影响行数判断。", text: "影响 1 行说明真的插入，影响 0 行说明早就有了。Patra 用这个做「找或建」。" }
+    },
+    {
+      label: "DO UPDATE",
+      steps: ["第一次 INSERT：键 pmid=123，成功，表里有 1 行", "第二次 INSERT 同样的键：撞上唯一约束，改写已有那一行"],
+      results: [{ label: "第二次的结果", value: "不报错，旧行被新值覆盖", tone: "ok" }, { label: "影响行数", value: "1 行", tone: "ok" }],
+      verdict: { tone: "ok", head: "最新的值胜出。", text: "适合「每次导入都以最新数据为准」。" }
+    }
+  ]}
+/>
+
+这三种在 Patra 里都有。看 catalog 导入期刊实例时的「找或建」：
+
+<CodeRef at="patra-api/patra-catalog/patra-catalog-infra/src/main/java/dev/patra/catalog/infra/publication/persistence/VenueInstanceRepositoryAdapter.java@5073ab1358404ecd989e722373cd9f7edafe238b" lines="112-123" />
+
+```java
+  public boolean insertJournalInstanceIfAbsent(VenueInstanceAggregate instance) {
+    long id = SnowflakeIdGenerator.getId();
+    int inserted =
+        entityManager
+            .createNativeQuery(
+                """
+                INSERT INTO cat_venue_instance
+                    (id, venue_id, volume, issue, publication_year, publication_month, publication_day)
+                VALUES (:id, :venueId, :volume, :issue, :year, :month, :day)
+                ON CONFLICT (venue_id, volume, issue, edition, conference_name, publication_year)
+                DO NOTHING
+                """)
+```
+
+它先试着插，撞上唯一键就当没发生，然后再把那一行查出来用。方法的返回值是"是否真的插入了新行"。代码注释里还写了一个重要理由：**冲突时不抛异常，所在事务继续可用**。如果改成"先 `INSERT`，抓住异常再查"，PostgreSQL 的事务在报错后就作废了，后面什么都做不了。
+
+"覆盖"的写法在另一个文件 `PublicationSyncRepositoryAdapter` 里：按 PMID 写来源行，`ON CONFLICT (pmid) DO UPDATE SET ...`，已有的整行覆盖成最新解析结果。
+
+<Callout kind="insight" label="影响行数不只是个统计">
+
+Patra 的"有帮助"功能要保证每人对每个目标只能点一次，计数还要对得上。做法是：先用 `INSERT ... ON CONFLICT DO NOTHING` 插明细，**只有影响行数是 1**（真的插进去了）才给计数加 1。重复点击影响 0 行，计数就不动。这个判断为什么必须和插入放在同一个事务里，在「事务」那一篇讲。
+
+</Callout>
+
+<Quiz
+  title="考考自己"
+  questions={[
+    {
+      question: "DELETE FROM cat_venue; 执行后，表结构（有哪些列）会怎样？",
+      options: ["连表一起删除", "表还在，只是没有行了", "报错，必须写 WHERE"],
+      answer: "B",
+      explain: "DELETE 只删行，表结构不动。删表是另一条语句 DROP TABLE，那属于改表结构，由迁移脚本来做。"
+    },
+    {
+      question: "想让「每次导入都以最新数据为准，已有则覆盖」，用哪种写法最合适？",
+      options: ["ON CONFLICT DO NOTHING", "ON CONFLICT DO UPDATE", "先 SELECT 看有没有，再决定 INSERT 还是 UPDATE"],
+      answer: "B",
+      explain: "DO UPDATE 把「看有没有」和「写」合成一条语句，数据库自己保证中间不会被别人插队。第三种写法在两次请求之间可能被并发的另一个请求抢先插入。"
+    }
+  ]}
+/>
+
+<Transfer
+  prompt="用户给文献点「收藏」。表 library_item 的主键是 (user_id, subject_id)，同一个人对同一篇文献只能有一行。用户手快连点了两下，两次请求几乎同时到达。你会怎么写这条 INSERT，才能做到：表里只有一行、第二次点击不报错、并且知道这次到底有没有真的新增？"
+  points={[
+    { label: "加冲突子句", text: "INSERT ... ON CONFLICT (user_id, subject_id) DO NOTHING，撞上主键就跳过，不抛异常。" },
+    { label: "看影响行数", text: "影响 1 行说明这次是新增，影响 0 行说明已经收藏过了。" },
+    { label: "为什么不先查再插", text: "先 SELECT 再 INSERT，两个请求可能同时查到「没有」，然后都去插，其中一个撞上主键失败。" }
+  ]}
+/>

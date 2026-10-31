@@ -1,0 +1,56 @@
+---
+title: 浏览器扩展改了 html 标签，开发模式报水合不一致
+summary: Next 开发模式弹出「水合后有属性对不上」，标红的是 html 标签上一个 data- 开头的属性。那是浏览器里的翻译类扩展在 React 接管之前写进去的，不是代码的问题。用 curl 拿服务器原始 HTML 一比就能确认。
+type: pitfall
+difficulty: practice
+tags: [frontend]
+prerequisites: [fe-hydration]
+sources:
+  - version: v0.8
+    issue: PAP-68
+personalEnv: false
+---
+
+<Diagnose
+  question="开发模式报水合不一致，差异是 html 标签上多了一个属性 data-xxx-page-theme，项目代码里搜不到这个名字。它最可能是从哪来的？"
+  options={["Next 自己在服务端加的", "浏览器扩展在 React 接管之前往页面里写的", "React 19 的新默认属性"]}
+  answer="B"
+  ifRight="对。代码里搜不到、只出现在浏览器里的属性，多半是扩展加的。下面讲怎么一步确诊。"
+  ifWrong="答案是 B。水合时 React 比对的是「服务端给的 HTML」和「浏览器里此刻的 DOM」；扩展在中间改了 DOM，就会对不上。这题考的是水合在比对什么。"
+  suggest="fe-hydration"
+/>
+
+## 坑
+
+v0.8 账号登录那一版本地验收时，作者在自己的 Chrome 里打开门户，Next 的开发浮层报：「A tree hydrated but some attributes of the server rendered HTML didn't match the client properties」。标红的一行是 `<html>` 上的 `data-immersive-translate-page-theme="light"`。
+
+这个属性来自一个翻译类的浏览器扩展：它在 React 接管页面之前就往 `<html>` 上写了属性。React 水合时发现浏览器里的 DOM 和服务端给的 HTML 不一样，于是报错。
+
+## 怎么分辨
+
+用 curl 拿服务器返回的原始 HTML，看 `<html>` 标签上到底有哪些属性：
+
+```bash
+curl -s http://localhost:<门户端口>/ | grep -o '<html[^>]*>'
+```
+
+当时的结果是 `<html>` 上只有 `lang`、`data-scroll-behavior`、`class` 三个属性，源码里也没有那个名字。服务器没给，浏览器里却有，就是扩展加的。
+
+<CodeRef at="patra-portal/src/app/layout.tsx@4a13287485468f2c489027f1aac0bb6174643e8d" lines="43-47" />
+
+另一个办法是开一个无痕窗口（默认不加载扩展）再打开页面，不报了就是扩展的事。
+
+## 影响与处理
+
+- 只在开发模式报。生产构建不比对这类属性，用户看不到，功能也不受影响。
+- 可选的修法是给 `<html>` 加 `suppressHydrationWarning`。它只管这一层元素的属性差异，不会把子元素的真问题一起盖住。
+- 作者觉得无所谓，没有加。再遇到时知道原因、直接说明即可。
+
+<Transfer
+  prompt="一个用户报告：在他的浏览器里，页面某个按钮点了没反应，控制台里有水合报错，你自己的浏览器却一切正常。按这篇的思路，你会先问他什么、自己先做什么？"
+  points={[
+    { label: "先问扩展", text: "问他装了哪些扩展（翻译、广告拦截、密码管理），请他在无痕窗口里再试一次。" },
+    { label: "比对原始 HTML", text: "自己用 curl 拿到服务器给的 HTML，和他浏览器里报差异的那段 DOM 对比，看差异是不是服务器根本没给的。" },
+    { label: "区分开发与生产", text: "生产环境不报属性差异，但扩展要是删改了元素结构，React 接管失败，按钮就可能真的点不动；这时再考虑让那块界面更耐受外部修改。" }
+  ]}
+/>

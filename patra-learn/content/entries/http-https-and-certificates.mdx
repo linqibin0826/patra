@@ -1,0 +1,116 @@
+---
+title: HTTPS 与证书
+summary: HTTPS 为什么能防偷看和防冒充：加密、证书、信任链；一张证书覆盖哪些域名，以及 Patra 学习站为什么用 learn.linqibin.dev。
+type: concept
+difficulty: basic
+tags: [network, security]
+prerequisites: [web-what-happens-opening-a-page, http-request-and-response]
+sources:
+  - version: v0.17
+personalEnv: false
+---
+
+<Diagnose
+  question="你在咖啡店连公共 WiFi，用 http:// 开头的网站登录，输入了密码。同一个 WiFi 里的另一个人，有没有可能看到你的密码？"
+  options={["不可能，网站只有你和它自己知道", "有可能，请求在网络上是明文传输的，沿途的设备都能看到", "只有对方是黑客高手才可能"]}
+  answer="B"
+  ifRight="对，明文传输意味着沿途都能读。HTTPS 就是为解决这件事。"
+  ifWrong="答案是 B：http 不加密，请求是明文走过 WiFi、路由器、运营商。读到它不需要高超的技术，只要抓包。HTTPS 在这之上加了一层加密。"
+  suggest="web-what-happens-opening-a-page"
+/>
+
+## HTTPS 要解决两件事
+
+1. **防偷看**：请求和响应加密，中间的人看到的只是乱码。
+2. **防冒充**：你连上的真的是 patra.linqibin.dev，而不是一个仿冒的网站。
+
+只有加密不够。如果你加密地把密码发给了冒充者，等于白加密。所以 HTTPS 还要有办法让服务器**证明自己是谁**，这就是证书。
+
+## 证书是网站的身份证
+
+证书是一份由第三方机构签发的文件，里面写着：这张证书属于哪些域名、网站的公钥是什么、有效期到什么时候。签发它的机构在上面签了名。
+
+浏览器出厂时内置了一份**可信机构的名单**。看到证书，它做三件事：域名对不对？没过期吗？签名是不是出自名单里的机构（直接或经过中间机构）？三件都通过，才继续。
+
+<Structure
+  title="信任链：谁给谁作保"
+  nodes={[
+    { id: "root", label: "根机构", sub: "在浏览器的名单里", col: 1, desc: "浏览器出厂就信任它。它的私钥被严密保管，平时不直接签网站的证书。" },
+    { id: "mid", label: "中间机构", sub: "被根机构授权", col: 2, desc: "根机构给它签名，授权它日常签发证书。万一出问题，只需要作废这一层。" },
+    { id: "site", label: "网站的证书", sub: "learn.linqibin.dev", col: 3, desc: "由中间机构签名，写着域名、公钥和有效期。服务器把它连同中间机构的证书一起出示给浏览器。" }
+  ]}
+  edges={[
+    { from: "root", to: "mid", label: "签发" },
+    { from: "mid", to: "site", label: "签发" }
+  ]}
+/>
+
+## 握手：浏览器怎么和服务器谈好密钥
+
+建立 https 连接时，多出一个「握手」的环节。下面是简化的过程，不展开密码学细节。
+
+<Stepper
+  title="HTTPS 握手（简化）"
+  nodes={[
+    { id: "browser", label: "浏览器" },
+    { id: "server", label: "服务器" },
+    { id: "trust", label: "可信名单", sub: "浏览器内置" }
+  ]}
+  links={[
+    { from: "browser", to: "server" },
+    { from: "browser", to: "trust" }
+  ]}
+  steps={[
+    { caption: "浏览器告诉服务器：我要访问 learn.linqibin.dev，我支持这几种加密方式。", focus: ["browser", "server"], links: ["browser>server"], tokens: [{ id: "hello", label: "你好", at: "server" }] },
+    { caption: "服务器出示它的证书：域名、公钥、有效期、签发机构的签名。", focus: ["server", "browser"], links: ["browser>server"], tokens: [{ id: "cert", label: "证书", at: "browser" }] },
+    { caption: "浏览器核对：域名对吗？没过期吗？签名是不是出自可信名单里的机构？", focus: ["browser", "trust"], links: ["browser>trust"], tokens: [{ id: "cert", label: "证书", at: "trust" }], notes: [{ at: "trust", text: "核对通过", tone: "ok" }] },
+    { caption: "服务器用证书对应的私钥证明「我真的是这张证书的主人」，同时双方各自算出同一把只有两人知道的临时密钥。", focus: ["browser", "server"], links: ["browser>server"], tokens: [{ id: "key", label: "临时密钥", at: "server" }], notes: [{ at: "server", text: "握手完成", tone: "ok" }] },
+    { caption: "之后所有请求和响应都用这把临时密钥加密。中间的人只能看到一堆乱码。", focus: ["browser", "server"], links: ["browser>server"], tokens: [{ id: "data", label: "密文", at: "server" }] }
+  ]}
+  guesses={[
+    { before: 4, question: "证书是公开的，任何人都能拿到一份拷贝。那么拿到拷贝的人为什么没法冒充这个网站？", options: ["证书上有防复制的水印", "证书里只有公钥；证明身份还需要私钥，而私钥只在真服务器手里", "浏览器会记住每个人的地址，一旦发现不一致就拒绝"], answer: "B", explain: "证书可以公开，是因为它只含公钥。冒充者没有对应的私钥，过不了「证明我是主人」这一步。" }
+  ]}
+/>
+
+<Callout kind="warn">
+
+浏览器地址栏的小锁，意思是「连接加密了，并且证书验证通过」。它不代表这个网站本身可靠，钓鱼网站也可以有合法的证书。
+
+</Callout>
+
+## 一张证书覆盖哪些域名
+
+证书只对写在它上面的域名有效。`*.linqibin.dev` 这种带星号的写法叫**通配符证书**，但星号只代表**一层**：
+
+- 能覆盖 `learn.linqibin.dev`、`patra.linqibin.dev`。
+- 不能覆盖 `learn.patra.linqibin.dev`，因为它在 `linqibin.dev` 下面有两层。
+
+<Quiz
+  questions={[
+    {
+      question: "一张通配符证书 *.linqibin.dev。浏览器访问 learn.patra.linqibin.dev 会怎样？",
+      options: ["正常，通配符覆盖所有子域", "报证书域名不匹配，因为星号只代表一层", "只提示一下，页面仍然正常"],
+      answer: "B",
+      explain: "星号只匹配一段，learn.patra 是两段。要覆盖更深的层级，要另外的证书或单独申请。"
+    }
+  ]}
+/>
+
+## 在 Patra 里
+
+Patra 的公网入口经 Cloudflare：浏览器和 Cloudflare 之间是 https，开着「始终使用 HTTPS」，用 http 打开会被 301 跳到 https。Cloudflare 再经隧道把请求送进 mini，隧道出口到门户那一小段是本机上的普通 http。
+
+<CodeRef at="patra-infra/docker/README.md@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="337-341" />
+
+v0.17 做学习站时遇到了这个知识点：Cloudflare 的免费证书只覆盖一级子域。作者本想用 `learn.patra.linqibin.dev`，二级子域就没有证书，所以改成 `learn.linqibin.dev`。这个决策写在版本规格里。
+
+<CodeRef at="docs/patra/release-specs/v0.17-learn.md@pending" lines="121-125" />
+
+<Transfer
+  prompt="Patra 想再给 API 开一个公网域名，你想用 api.patra.linqibin.dev。会遇到什么问题？你会怎么调整？"
+  points={[
+    { label: "问题", text: "这是 linqibin.dev 下的第二级子域，免费证书不覆盖，浏览器会报证书域名不匹配。" },
+    { label: "调整", text: "改成一级子域，比如 patra-api.linqibin.dev，沿用同一张通配符证书；或者购买能覆盖多级域名的证书。" },
+    { label: "学习站就是这样选的", text: "learn.linqibin.dev 而不是 learn.patra.linqibin.dev，同样的原因。" }
+  ]}
+/>

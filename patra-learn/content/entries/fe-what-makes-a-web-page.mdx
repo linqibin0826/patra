@@ -1,0 +1,163 @@
+---
+title: 网页由什么组成：HTML、CSS 与 JavaScript
+summary: 一页网页由三种东西叠成：HTML 说「这里有什么」，CSS 说「它长什么样」，JavaScript 说「碰到它会发生什么」。拿 Patra 门户顶栏的「快速检索」按钮一层层拆开看。
+type: concept
+difficulty: intro
+tags: [frontend]
+prerequisites: []
+personalEnv: false
+---
+
+<Diagnose
+  question="网速很慢，一个网页的样式文件（CSS）没加载出来，别的都到了。页面会是什么样子？"
+  options={["一片空白，什么都看不到", "文字、图片、按钮都在，只是没了颜色和排版，从上到下挤成一长串", "和平时一模一样"]}
+  answer="B"
+  ifRight="对。内容和样子是分开的两样东西，少了样子，内容照样在。这篇就从这里拆开讲。"
+  ifWrong="答案是 B：文字和按钮写在 HTML 里，颜色和排版写在 CSS 里，两样分开送到浏览器。CSS 没到，内容还在，只是用浏览器默认的样子一行行排下来。往下读会讲这三层各管什么。"
+/>
+
+## 一页网页是三层叠起来的
+
+Patra 是一个医学文献网站。读者在浏览器里打开的那部分叫**门户**（代码在仓库的 `patra-portal/` 目录）。打开门户任何一页，看到的东西都由三种文件叠成：
+
+| 层 | 管什么 | 门户顶栏「快速检索」按钮上的例子 |
+|---|---|---|
+| HTML | 这里**有什么**：一个按钮、一段文字、一个输入框 | 这里有一个按钮，上面写着「快速检索」 |
+| CSS | 它**长什么样**：颜色、大小、圆角、摆在哪 | 圆角、细边框、浅纸色底，鼠标移上去字变深 |
+| JavaScript | 碰到它**会发生什么** | 点一下，弹出检索框 |
+
+<Callout kind="analogy">
+
+像一套房子。HTML 是毛坯：哪里是客厅、哪里有一扇门、门上有个开关。CSS 是装修：墙刷什么颜色、门多宽、开关摆在多高。JavaScript 是开关后面的电线：按下去，灯才会亮。没装修的房子照样能住，只是不好看；没接电线的开关，按了没反应。
+
+</Callout>
+
+## HTML：用标签说「这是什么」
+
+HTML 是一份带标记的文本。每样东西用一对**标签**包起来，标签名说明它是什么：`<button>` 是按钮，`<main>` 是页面的主体，`<h1>` 是一级标题。下面是一份极简的网页（示意，不是门户的真实文件）：
+
+```html
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <title>Patra · 医学文献门户</title>
+    <link rel="stylesheet" href="/style.css">
+  </head>
+  <body>
+    <header>
+      <button type="button">快速检索</button>
+    </header>
+    <main>
+      <h1>……</h1>
+    </main>
+    <script src="/app.js"></script>
+  </body>
+</html>
+```
+
+几个要点：
+
+- 标签可以套标签：`<body>` 里有 `<header>`，`<header>` 里有 `<button>`。
+- `<head>` 里放给浏览器看的信息（标题、要加载哪个样式文件），`<body>` 里才是页面上看得见的东西。
+- `<link>` 指向 CSS 文件，`<script>` 指向 JavaScript 文件。HTML 自己不写样式和行为，只说「还要去拿这两个文件」。
+
+门户的代码不是直接写 `.html` 文件，而是写在 `.tsx` 文件里，用一种长得很像 HTML 的写法。服务器先把它变成真正的 HTML，再发给浏览器。所以浏览器收到的仍然是 HTML。门户每一页最外层的骨架写在这里：
+
+<CodeRef at="patra-portal/src/app/layout.tsx@4a13287485468f2c489027f1aac0bb6174643e8d" lines="41-60" />
+
+```tsx
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <html
+      lang="zh-CN"
+      // globals.css 给 html 开了平滑滚动；声明后 Next 在换页回顶时临时关掉它，换页瞬间回顶
+      data-scroll-behavior="smooth"
+      className={cn(inter.variable, newsreader.variable, plexMono.variable)}
+    >
+      <body>
+        {/* 「回到页首」锚点：放在文档最顶、不吸顶的元素上（挂在吸顶导航上时浏览器按其吸住的位置计算，只滚动一小段） */}
+        <div id="top" aria-hidden />
+        <QueryProvider>
+          {children}
+          <NotificationStream />
+          <Toaster position="bottom-right" />
+        </QueryProvider>
+      </body>
+    </html>
+  );
+}
+```
+
+现在不用看懂每一行，只认出熟悉的部分：`<html lang="zh-CN">` 说这一页是简体中文，`<body>` 里放页面内容，`{children}` 的位置会填进具体哪一页（首页、文献页……）。
+
+## 浏览器是分几趟把三样东西拿齐的
+
+HTML、CSS、JavaScript 是分开的文件，浏览器不是一次就拿全。点下面的「下一条」，一条条看打开门户首页时发生了什么。
+
+<Sequence
+  title="打开门户首页时，浏览器拿了几趟"
+  actors={[
+    { id: "browser", label: "浏览器" },
+    { id: "portal", label: "门户服务器", sub: "patra-portal" }
+  ]}
+  messages={[
+    { from: "browser", to: "portal", label: "我要首页", caption: "你在地址栏回车，浏览器向门户服务器要首页。" },
+    { from: "portal", to: "browser", label: "一份 HTML", caption: "服务器回一份 HTML。浏览器读的同时就能开始显示文字，但它读到了「还要一个样式文件、几个脚本文件」。" },
+    { from: "browser", to: "portal", label: "我要 CSS 文件", caption: "浏览器照 HTML 里写的地址，再去要样式文件。" },
+    { from: "portal", to: "browser", label: "CSS 文件", caption: "样式到了，页面有了颜色、圆角和排版。这时按钮已经好看了。" },
+    { from: "browser", to: "portal", label: "我要 JS 文件", caption: "浏览器再去要脚本文件。" },
+    { from: "portal", to: "browser", label: "JS 文件", caption: "脚本到了、跑起来，登记好「点按钮要做什么」。从这一刻起，点「快速检索」才会弹出检索框。" }
+  ]}
+  summary={{ caption: "三样东西分几趟到。哪一趟没到，就缺哪一层：缺 CSS 是丑，缺 JavaScript 是点了没反应。" }}
+/>
+
+## 同一个按钮，一层层叠上去
+
+门户顶栏的「快速检索」按钮，三层都写在同一个标签上：
+
+<CodeRef at="patra-portal/src/components/portal/TopNav.tsx@d0ca49caf72d9d9aacd7459c1054cf9131b3759e" lines="143-151" />
+
+```tsx
+            <button
+              type="button"
+              onClick={openSearch}
+              onPointerEnter={preloadQuickSearch}
+              onFocus={preloadQuickSearch}
+              className="group/qs inline-flex h-9 items-center gap-2 rounded-full border border-border-default bg-paper-50 pr-1.5 pl-3 text-sm text-fg-2 transition hover:border-border-hover hover:text-ink-900 max-[880px]:size-9 max-[880px]:justify-center max-[880px]:p-0"
+            >
+              <Search className="size-3.5 shrink-0" strokeWidth={1.75} aria-hidden />
+              <span className="max-[880px]:sr-only">快速检索</span>
+```
+
+- `<button>` 和里面的「快速检索」四个字是 HTML：这里有个按钮。
+- `className="…"` 那一长串是 CSS 的简写（门户用一种叫 Tailwind 的写法，每个词是一条小样式规则，例如 `rounded-full` 是两头圆）。样式怎么写，在「样式：CSS 布局与 Tailwind」一篇里讲。
+- `onClick={openSearch}` 是 JavaScript：被点的时候，执行一段叫 `openSearch` 的代码。
+
+切换下面三种情况，看每多一层，按钮多了什么：
+
+<Compare
+  title="「快速检索」按钮，每次多叠一层"
+  variants={[
+    { label: "只有 HTML", steps: ["读 HTML：这里有个按钮，写着「快速检索」", "用浏览器默认的样子画出来"], results: [{ label: "长什么样", value: "方角、灰底的默认按钮", tone: "wait" }, { label: "点一下", value: "没反应", tone: "bad" }], verdict: { tone: "bad", head: "能看到，不能用。", text: "内容都在，可它只是一个写着字的按钮。" } },
+    { label: "加上 CSS", steps: ["读 HTML：这里有个按钮，写着「快速检索」", "读 CSS：圆角、细边框、浅纸色底", "按 CSS 画出来"], results: [{ label: "长什么样", value: "圆角、浅纸色，和门户一致", tone: "ok" }, { label: "点一下", value: "还是没反应", tone: "bad" }], verdict: { tone: "bad", head: "好看了，还不能用。", text: "样式只管外观，不管点了以后做什么。" } },
+    { label: "再加上 JavaScript", steps: ["读 HTML：这里有个按钮，写着「快速检索」", "读 CSS：圆角、细边框、浅纸色底", "按 CSS 画出来", "跑 JavaScript：登记「这个按钮被点时，打开检索框」"], results: [{ label: "长什么样", value: "圆角、浅纸色，和门户一致", tone: "ok" }, { label: "点一下", value: "弹出检索框", tone: "ok" }], verdict: { tone: "ok", head: "三层齐了。", text: "有什么、长什么样、碰到会怎样，各由一层负责。" } }
+  ]}
+/>
+
+## 为什么要分成三层
+
+分开写，改一样不牵动另外两样：
+
+- 设计换配色，只动 CSS，按钮还是那个按钮，点了照样弹框。
+- 检索框换一种打开方式，只动 JavaScript，按钮的样子不变。
+- 另一方面，HTML 写清「这是按钮」「这是标题」，读屏软件（帮视障读者朗读网页的工具）和搜索引擎也看得懂这一页。按钮上那个 `<span>` 在窄屏时被 CSS 藏起来，读屏软件照样能念出「快速检索」，就是这个原因。
+
+<Transfer
+  prompt="打开门户的登录页：有「邮箱」「密码」两个输入框、一个深陶土色的「登录」按钮；密码填错点登录，输入框下面出现一行红字「邮箱或密码不正确」。这一页上的东西分别归哪一层？如果这一页的 JavaScript 文件没加载出来，你觉得会怎样？"
+  points={[
+    { label: "HTML", text: "两个输入框、「登录」按钮、按钮上的字，是这一页有什么。" },
+    { label: "CSS", text: "按钮的深陶土色、输入框的边框、红字的颜色，是长什么样。" },
+    { label: "JavaScript", text: "点登录后去问服务器、拿到结果再把那行错误提示显示出来，是碰到它会发生什么。" },
+    { label: "缺了 JavaScript", text: "页面照样显示、也照样好看，但点登录不会出现页面里的即时提示；能不能提交，要看 HTML 里有没有给浏览器留后路。" }
+  ]}
+/>

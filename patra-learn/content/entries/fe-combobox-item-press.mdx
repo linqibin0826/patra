@@ -1,0 +1,65 @@
+---
+title: 组合框点选后没回填
+summary: base-ui 的 Combobox 在用户点选候选项后，会自己把条目名写回输入框。想要「选中后清空输入框、改成显示卡片」，就得在 onInputValueChange 里认出 reason 为 item-press 的这次修改并忽略它。jsdom 里测不出来。
+type: pitfall
+difficulty: practice
+tags: [frontend]
+prerequisites: [fe-react-hooks-and-effects]
+sources:
+  - version: v0.12
+    issue: PAP-101
+personalEnv: false
+---
+
+<Diagnose
+  question="一个受控输入框：值存在 state 里，onChange 回调里 setInput(新值)。选中候选项时，你的代码调 setInput 把它设成空串，想清空输入框；紧接着组件库也调了一次 onChange，传的是条目名。最后输入框里显示什么？"
+  options={["空，你的清空生效", "条目名：组件库那次修改后到，覆盖了清空", "两个都显示"]}
+  answer="B"
+  ifRight="对。受控组件里，谁最后改 state，显示的就是谁。下面讲这次是谁、怎么认出它。"
+  ifWrong="答案是 B。受控输入框显示的是 state 的最终值；组件库在你清空之后又通过回调写回了条目名，state 就变成了条目名。这题考的是受控组件：输入框不自己记值，只显示 state。"
+/>
+
+## 坑
+
+v0.12 用户中心那一版做资料页的「机构」和「关注领域」选择器，用的是 base-ui 的 Combobox。设计要的是：用户从候选里点一项，输入框清空，选中的东西变成下方的一张卡片（胶囊）。
+
+实际效果是：点选之后，输入框里留着刚选的条目名。原因是 base-ui 选中候选后，会以 `reason: "item-press"` 调一次 `onInputValueChange`，把条目名回填进输入框，覆盖了我们的清空。
+
+<Callout kind="warn">
+
+jsdom 里复现不了这个回填，组件单测是绿的。要在真浏览器里点一次才看得到。
+
+</Callout>
+
+## 怎么避开
+
+`onInputValueChange` 的第二个参数带着这次修改的原因。是 `item-press` 就不接受：
+
+<CodeRef at="patra-portal/src/components/settings/profile/MeshInterestPicker.tsx@fe4c6bb68c591a9c9b5fe80f76bbfbbbc6aeae75" lines="166-176" />
+
+```tsx
+<Combobox<MeshSuggestion>
+  items={suggestions}
+  filter={null}
+  value={null}
+  inputValue={input}
+  onInputValueChange={(next, { reason }) => {
+    // 选中候选时 base-ui 会把条目名回填进输入框；这里选中后要清空（或换成卡片），不接受回填
+    if (reason !== "item-press") setInput(next);
+  }}
+  onValueChange={(suggestion) => pick(suggestion)}
+>
+```
+
+机构选择器还多忽略了一种原因 `input-clear`：候选收起后，base-ui 会把输入同步成已选值（没有已选值就是清空）。设计要求按一次 Esc 只收起候选、保留用户打的字，所以这次同步也不接受。
+
+<CodeRef at="patra-portal/src/components/settings/profile/OrganizationPicker.tsx@fe4c6bb68c591a9c9b5fe80f76bbfbbbc6aeae75" lines="150-161" />
+
+<Transfer
+  prompt="换一个组件库，它的下拉选择组件在选中后也会改输入框，但回调里不带「原因」参数。你还有什么办法让「选中后清空」生效？"
+  points={[
+    { label: "看库有没有别的开关", text: "先查文档：很多库有「选中后不回填」或「清空输入」的选项，比自己拦截更稳。" },
+    { label: "区分来源", text: "在选中回调里记一个标记，紧接着到来的那次输入变更按标记忽略；代价是依赖两次回调的先后。" },
+    { label: "真浏览器验证", text: "这类组件库内部行为在 jsdom 里常常复现不了，改完要在真浏览器里点一遍，最好补一条端到端测试。" }
+  ]}
+/>

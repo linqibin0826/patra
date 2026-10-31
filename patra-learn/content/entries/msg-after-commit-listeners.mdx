@@ -1,0 +1,135 @@
+---
+title: "提交后再处理：@TransactionalEventListener"
+summary: 事务回滚了就不该发出去的通知，要等事务提交后再处理。@TransactionalEventListener 让监听器只在提交后执行，回滚时不调用；代价是提交后的失败回不了滚，进程崩在中间这件事也会丢。
+type: concept
+difficulty: advanced
+tags: [backend, messaging, spring]
+prerequisites: [msg-in-process-events, db-transactions]
+sources:
+  - version: v0.16
+    issue: PAP-145
+    pr: 343
+personalEnv: false
+---
+
+<Diagnose
+  question="评论发表的事务里，代码写了评论，然后发布一个事件，订阅者用 @TransactionalEventListener（提交后执行）。随后事务因为别的错误回滚了。订阅者会被调用吗？"
+  options={["会，事件发布时就已经触发了", "不会，回滚的事务不会触发提交后的监听器", "会，但监听器能看到事务已经回滚"]}
+  answer="B"
+  ifRight="对。提交后的监听器只在真的提交了才执行。这篇讲它的用处、代价，以及什么时候不该用它。"
+  ifWrong="答案是 B。@TransactionalEventListener 默认绑定在「提交之后」这个时机，事务回滚时 Spring 根本不调用它。上一篇的同步 @EventListener 则是发布时立即执行，与此不同。"
+  suggest="msg-in-process-events"
+/>
+
+## 同步监听器的另一面
+
+上一篇的同步 `@EventListener` 在发布时立刻执行，和发布方同成同败。但有些事你**不希望**在提交之前做。
+
+Patra 通知服务有一个实时推送：收到新提醒后，通过 SSE（服务器推送）告诉浏览器「你的未读数变了」。浏览器收到通知，会立刻来拉最新数据。如果在事务提交**之前**就推了：
+
+- 浏览器来拉数据，可能读不到那条还没提交的提醒；
+- 事务如果随后回滚，推出去的通知指向的是一件根本没发生的事。
+
+所以推送要等**事务提交之后**。
+
+## @TransactionalEventListener
+
+Spring 用 `@TransactionalEventListener` 表达这个意思，并通过 `phase` 指定时机，最常用的是 `AFTER_COMMIT`：
+
+- 事务提交了，才调用监听器。
+- 事务回滚了，不调用。
+
+Patra 的实时推送监听器：
+
+<CodeRef at="patra-api/patra-notification/patra-notification-app/src/main/java/dev/patra/notification/app/realtime/listener/UnreadCountPushListener.java@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="11-33" />
+
+```java
+@Async
+@TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+public void on(UnreadCountsChangedEvent event) {
+  registry.push(event.recipientIds());
+}
+```
+
+它还加了 `@Async`：换一条线程去推。类注释解释了：提交事务的是 RabbitMQ 消费线程或请求线程，推送的慢和错不应该落到它们头上；提交后的回调里事务资源还挂在原线程上，换线程读库是干净的上下文。
+
+## 提交后，事务已经结束了
+
+这是最容易踩的地方。`AFTER_COMMIT` 的监听器执行时，**原来的事务已经提交了，回不了滚**：
+
+- 监听器抛异常，不会撤销已经提交的数据，只会记一条日志。
+- 监听器里要写库，原事务已经结束，得自己新开事务（Patra 的事务规范写成 `REQUIRES_NEW`）。
+
+所以它只适合「**提交后可丢的副作用**」，比如推一个通知：丢了一次，浏览器 60 秒一次的轮询会补上。
+
+## 同一个监听器，两种用法
+
+<Compare
+  title="推送、事务和崩溃，三种写法各自的下场"
+  failureLabel="进程在第 2 步之后崩溃"
+  variants={[
+    {
+      label: "推送：同步监听器，提交前推",
+      steps: ["写入新提醒", "监听器立刻推送「未读数变了」", "提交事务"],
+      results: [{ label: "提醒", value: "已写入", tone: "ok" }, { label: "浏览器", value: "收到推送", tone: "ok" }],
+      verdict: { tone: "ok", head: "顺利时看不出问题。", text: "推送先于提交，只是浏览器来拉数据时有风险。" },
+      failure: { after: 2, results: [{ label: "提醒", value: "没有提交，随事务消失", tone: "bad" }, { label: "浏览器", value: "已经收到推送", tone: "bad" }], verdict: { tone: "bad", head: "推送指向空气。", text: "浏览器被告知有新提醒，去拉却什么也没有。" } }
+    },
+    {
+      label: "推送：提交后监听器",
+      steps: ["写入新提醒", "提交事务", "监听器推送「未读数变了」"],
+      results: [{ label: "提醒", value: "已写入", tone: "ok" }, { label: "浏览器", value: "收到推送", tone: "ok" }],
+      verdict: { tone: "ok", head: "顺利。", text: "推送时提醒一定已经在库里了。" },
+      failure: { after: 2, results: [{ label: "提醒", value: "已提交", tone: "ok" }, { label: "浏览器", value: "这次没收到推送", tone: "wait" }], verdict: { tone: "ok", head: "丢一次推送，可以接受。", text: "提醒是对的，浏览器下一次轮询就能看到未读数。" } }
+    },
+    {
+      label: "标记开放获取：提交后监听器",
+      steps: ["保存 PMC 全文记录", "提交事务", "监听器把文献标成开放获取"],
+      results: [{ label: "全文记录", value: "已保存", tone: "ok" }, { label: "文献标记", value: "已标成开放获取", tone: "ok" }],
+      verdict: { tone: "ok", head: "顺利时也没问题。", text: "但这两件事本该同成同败。" },
+      failure: { after: 2, results: [{ label: "全文记录", value: "已保存", tone: "ok" }, { label: "文献标记", value: "永远不会标上", tone: "bad" }], verdict: { tone: "bad", head: "状态对不上，没人知道。", text: "全文在库里，文献却没被标成开放获取，也没有任何地方记得还欠一个标记。" } }
+    }
+  ]}
+/>
+
+最后一种就是**不该用**提交后监听器的例子。Patra 里负责这件事的监听器，类注释写得很明白：同步 `@EventListener`，不能用 `@TransactionalEventListener`，因为提交后才执行，标记会丢。
+
+<CodeRef at="patra-api/patra-catalog/patra-catalog-app/src/main/java/dev/patra/catalog/app/publication/listener/PmcOpenAccessListener.java@5073ab1358404ecd989e722373cd9f7edafe238b" lines="10-31" />
+
+<Callout kind="lead">
+
+怎么选：这件事**必须和主事务同成同败**，用同步 `@EventListener`；这件事**要等提交后才有意义，丢一次也能补回来**，用 `@TransactionalEventListener(AFTER_COMMIT)`。
+
+</Callout>
+
+<Quiz
+  questions={[
+    {
+      question: "下单事务提交后，要更新「今日销量」缓存。缓存更新失败了，下次读取时会自动重算。该用哪种监听器？",
+      options: ["同步 @EventListener", "@TransactionalEventListener(AFTER_COMMIT)"],
+      answer: "B",
+      explain: "缓存更新失败可以补，没必要让它拖住下单事务，也不能在提交前就更新。"
+    },
+    {
+      question: "删除评论时，要同时删掉它收到的全部「有帮助」，两者必须一起成功。该用哪种监听器？",
+      options: ["同步 @EventListener", "@TransactionalEventListener(AFTER_COMMIT)"],
+      answer: "A",
+      explain: "要同成同败，必须在同一个事务里做。Patra 的 HelpfulTargetDeletedListener 就是这样。"
+    }
+  ]}
+/>
+
+## 提交后，崩了怎么办
+
+再看上面第二种写法的失败那一栏：提交了，进程却在推送之前崩了。对「推一次通知」来说无所谓。
+
+可如果这个提交后的动作是「给别的服务发一条消息」，而且那条消息**不能丢**呢？
+
+<Transfer
+  prompt="评论发表后，要发一条消息给通知服务，让它给被回复的人写提醒，这条消息不能丢。有人建议：用 @TransactionalEventListener(AFTER_COMMIT)，提交后再往 RabbitMQ 发。进程恰好在提交之后、发送之前崩溃了，会发生什么？"
+  points={[
+    { label: "评论在，消息没发", text: "事务已经提交了，评论存在；但发送的代码还没执行，进程就没了。" },
+    { label: "没有人记得", text: "提交后的监听器是内存里的调用，重启后不会重来；没有任何地方记着「还欠通知服务一条消息」。" },
+    { label: "需要新办法", text: "要让「要发的消息」也随事务一起落库，崩了还能找回来。这就是下一篇的双写问题，以及再下一篇的发件箱。" }
+  ]}
+/>

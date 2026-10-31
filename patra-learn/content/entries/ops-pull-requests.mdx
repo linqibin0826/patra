@@ -1,0 +1,119 @@
+---
+title: PR 与分支保护
+summary: PR 是代码进入主分支前的考场：检查要全绿、评审意见要处理完，最后用 squash 合并成一条干净的提交。
+type: concept
+difficulty: basic
+tags: [git, ci-cd]
+prerequisites: [ops-git-basics]
+personalEnv: false
+---
+
+<Diagnose
+  question="你的 PR 里一共有 7 次小提交（修 typo、调格式、补测试……），用 squash 方式合并进 main。合并后 main 上会多出几条提交？"
+  options={["7 条，每次小提交都保留", "1 条，七次提交被压成一条", "不一定，看你选了什么合并方式"]}
+  answer="B"
+  ifRight="对。squash 合并把整个 PR 压成 main 上的一条提交。Patra 统一用这种方式，这一篇讲为什么。"
+  ifWrong="答案是 B。Patra 统一用 squash 合并：不管 PR 里提交了多少次，进 main 都只是一条。"
+  suggest="ops-git-basics"
+/>
+
+## PR 是一张报名表
+
+Pull Request（PR）是你对仓库说的一句话：“我想把这条分支合并进 main，请检查并评审。”它本身不改变任何代码，但会触发整套自动流程：云端检查开始跑、AI 评审员进场、分支保护开始盯着按钮。
+
+开发还没做完时，PR 可以先标成**草稿（draft）**，明确告诉所有人“还没准备好”。做完了再转成正式的 ready。
+
+```bash
+gh pr create --draft
+```
+
+## 合并按钮的两把锁
+
+main 上设了**分支保护**：不是想合并就能合并。PR 页面那颗合并按钮要亮起来，两个条件都要满足：
+
+1. **必过检查是绿的**。仓库只认一个叫 `required-check` 的检查，它汇总了所有真正会跑的检查结果（怎么汇总的，后面的篇目细讲）。
+2. **评审留下的对话都处理完了**。每条意见要么改掉，要么回复清楚为什么不改，然后标记为已解决。
+
+两把锁合起来是一句话：坏代码进不了 main，靠的是制度，不靠自觉。
+
+看看一个 PR 的状态是怎么流转的。试着点几个事件，包括不该点的那个。
+
+<StateMachine
+  title="一个 PR 的一生"
+  subject="Pull Request"
+  states={[
+    { id: "draft", label: "草稿", sub: "还没做完", col: 1, desc: "代码还在写。检查照常会跑，但 AI 评审会跳过草稿，等你转成 ready。" },
+    { id: "open", label: "检查与评审中", sub: "ready 状态", col: 2, desc: "云端检查在跑，AI 评审员在读代码。合并按钮还是灰的。" },
+    { id: "blocked", label: "被挡住", sub: "按钮是灰的", col: 3, row: 2, desc: "有检查没通过，或者有评审对话还没处理。必须修复后再来。" },
+    { id: "ready", label: "可以合并", sub: "按钮亮了", col: 3, desc: "必过检查是绿的，所有对话都已处理，可以合并。" },
+    { id: "merged", label: "已合并", sub: "进了 main", col: 4, desc: "用 squash 合并，整个 PR 变成 main 上的一条提交。随后部署流程开始。" }
+  ]}
+  start="draft"
+  events={[
+    { id: "ready", label: "转为 ready" },
+    { id: "push", label: "推送新提交" },
+    { id: "fail", label: "检查变红 / 还有对话没处理" },
+    { id: "pass", label: "检查全绿且对话都处理完" },
+    { id: "merge", label: "点 squash 合并" }
+  ]}
+  transitions={[
+    { from: "draft", event: "ready", to: "open", label: "转正" },
+    { from: "open", event: "fail", to: "blocked", label: "不满足" },
+    { from: "open", event: "pass", to: "ready", label: "满足" },
+    { from: "blocked", event: "push", to: "open", label: "修了再来" },
+    { from: "ready", event: "push", to: "open", label: "改了就重考" },
+    { from: "ready", event: "merge", to: "merged", label: "squash" }
+  ]}
+/>
+
+注意两件事：被挡住之后，唯一的出路是**推送修复**；已经可以合并的 PR 只要再推送，也会回到“检查中”，因为检查要针对新代码重新跑。
+
+## AI 评审员
+
+Patra 是单人项目，没有同事帮忙看代码，评审由两位 AI 评审员替补：
+
+- **Claude Action**：PR 打开、转 ready 或有新推送时自动触发，每个 PR 只评一次，会跳过草稿；评 bug，也核对项目规范。
+- **CodeRabbit**：不自动评审，由 Claude 在评论区发 `@coderabbitai review` 才触发，只做首评。它给公开小仓库的免费额度每小时只有一次评审，复评几乎必然被限流。
+
+对每条意见，规则很硬：**要么修掉并附上提交号，要么明确写不修的理由，不允许已读不回**。
+
+<CodeRef at="CLAUDE.md@cfec9c9f30270dcf03f5cd7b6e54a0cd3b59296b" lines="65-78" />
+
+<Callout kind="warn">
+
+评审意见不一定都对。评审员可能误报，这时候也别直接忽略，回复清楚为什么不改，再标记已解决。沉默会让按钮一直是灰的，也让后来的人看不懂当时的判断。
+
+</Callout>
+
+## squash：把草稿装订成一页
+
+最后是合并方式。Patra 只用 **squash merge**：PR 里不管提交了多少次——“修 typo”“再改一版”——合并时统一压成 main 上的**一条**提交。你的草稿过程仍然留在 PR 页面里，但 main 的历史永远是一行一件事。
+
+这对后面的部署很重要。打包出来的镜像用提交号当版本号，main 上一行一件事，意味着“回滚到某个版本”就是精确指定某一次合并，不会出现“这条提交只含半个功能”。
+
+<Quiz
+  questions={[
+    {
+      question: "必过检查是绿的，但有一条评审意见还没有处理，合并按钮会怎样？",
+      options: ["亮着，检查绿就行", "是灰的，对话也必须处理完"],
+      answer: "B",
+      explain: "两把锁缺一不可：检查全绿，对话也要全部处理完。"
+    },
+    {
+      question: "main 上的提交历史，为什么要保持“一行一件事”？",
+      options: ["只是看着整齐", "回滚和追溯时可以精确点名某一次完整的改动"],
+      answer: "B",
+      explain: "提交号是镜像的版本号。历史干净，才能保证回滚到的每个版本都是完整的功能。"
+    }
+  ]}
+/>
+
+<Transfer
+  prompt="评审员指出你代码里一处可能的空指针，但你确认这个值在上游已经保证不会为空。你该怎么处理这条意见？"
+  points={[
+    { label: "不能不理", text: "沉默会让对话一直未解决，合并按钮保持灰色。" },
+    { label: "写清理由", text: "在评论里回复：为什么这里不会为空，指向保证它的那段上游代码。" },
+    { label: "标记已解决", text: "回复后把对话标成已解决。这样日后读 PR 的人能看到判断的依据。" },
+    { label: "拿不准就修", text: "如果理由不够硬，加一句防御代码的代价通常很小，直接修掉并附上提交号。" }
+  ]}
+/>

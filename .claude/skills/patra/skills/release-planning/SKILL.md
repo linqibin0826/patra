@@ -1,6 +1,6 @@
 ---
 name: release-planning
-description: 启动新版本 / 创建 Linear Project 时使用——产出"5 字段 Release Spec"（版本目标、功能列表、范围边界、关键决策、Done 判定）并派生 Linear Issue 池。当用户说"我想做 v0.X"、"启动新版本"、"这一版要做..."、"准备一份 release spec"、"开个 Project"、"规划下一版"，或描述一组打算在本轮交付的功能集时，必须使用此技能。**这是 Project 层产品 PRD，不是 Issue 层工程 spec**（工程 spec 用 brainstorming）。
+description: 启动新版本 / 创建 Linear Project 时使用——产出"5 字段 Release Spec"（版本目标、功能列表、范围边界、关键决策、Done 判定）并派生 Linear Issue 池。当用户说"我想做 v0.X"、"启动新版本"、"这一版要做..."、"准备一份 release spec"、"开个 Project"、"规划下一版"，或描述一组打算在本轮交付的功能集时，必须使用此技能。**这是 Project 层产品 PRD，不是 Issue 层工程 spec**（工程 spec 用 brainstorming）。版本做完要收尾（勾 Done 判定、Project 改 Completed）时也使用，见「版本收尾」一节。
 ---
 
 # Release Planning：版本规划
@@ -270,6 +270,18 @@ patra-api 是单人开发的绿地项目（无历史包袱、无外部用户）�
 > 后续每个 Issue 走 Linear 默认 5 态状态机（Backlog → Todo → In Progress → In Review → Done），按 area 分流：area:be Issue 进 In Progress 时触发 superpowers:brainstorming + superpowers:writing-plans + TDD；area:design Issue 进 In Progress 时用 Claude Design；area:fe Issue 进 In Progress 时消费 Handoff token。同版本同技术栈的 Issue 共用一条 feature branch 和一个 PR，PR 描述逐行 `Closes` 所承载的 Issue。详见 SOP §5.1 / §6。"
 
 **到此结束。不调用任何其他 skill。**
+
+## 版本收尾
+
+版本的 PR 全部合并、部署完成后另起一次（开始时宣布「我正在使用 patra:release-planning 技能做版本收尾」），按顺序：
+
+1. **逐条找证据**：Done 判定一条条找证据，不凭印象打勾。各工程 spec 的实测节、上线 runbook 的验收节是现成证据；「mini 上跑通」一类等 CD 跑完、确认部署的是 main 最新提交后再真测。
+2. **写学习条目并体检**：按 `patra:learn` 把本版学到的东西写成学习条目，跑一次体检，体检报告摘要留给第 3 步写进收尾记录。条目和 release spec 一样直推 main，不开 PR。
+3. **release spec**：状态行改「已完成（日期）」并写明各 PR；第 5 节全部勾上，与原文不一致或验证方式不同的条目下加「实际：…」；补上学习条目与体检结果。
+4. **Linear Project**：描述第 5 节开头加一行「> 已完成（日期）：…。偏离：…」，勾选全部 Done 判定，状态改 Completed。Issue 由 PR 的 `Closes PAP-xx` 自动关，不手动改。
+5. **版本总结**：生成版本总结 Artifact，挂到 Linear Project。只放真实截图走验证场景和验收结果；概念讲解链到第 2 步写的学习条目，不在两处重复写。
+
+提交与推送方式听用户的。
 
 ## 与 SOP 设计文档的关系
 

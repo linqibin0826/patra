@@ -1,0 +1,131 @@
+---
+title: 确认（ack）与重投：消息什么时候才算处理完
+summary: 消费者处理完回一个确认（ack），RabbitMQ 才把消息删掉；没确认就崩了，消息会重新投递。处理失败则按设置重试，用尽后进死信队列。Spring 的 auto 模式其实是处理成功后才 ack。
+type: concept
+difficulty: basic
+tags: [backend, messaging]
+prerequisites: [msg-exchange-queue-binding]
+personalEnv: false
+---
+
+<Diagnose
+  question="通知服务从队列取走一条消息，处理到一半进程崩溃了，还没来得及告诉 RabbitMQ「我处理完了」。这条消息会怎样？"
+  options={["已经被取走，丢了", "RabbitMQ 没等到确认，把它重新投递给消费者", "留在队列里，但再也不会被投递"]}
+  answer="B"
+  ifRight="对。「处理完才算完」靠的是确认。这篇讲确认的规则，以及它带来的一个后果：消息可能被处理不止一次。"
+  ifWrong="答案是 B。RabbitMQ 把消息发给消费者后并不立即删除，要等消费者回一个确认；消费者断开却没确认，它就把消息重新投递。队列里的消息怎么「出队」，上一篇没细讲，这篇补上。"
+  suggest="msg-exchange-queue-binding"
+/>
+
+## 消息什么时候出队
+
+上一篇说「处理完确认之后队列就把消息删掉」。这个「确认」在 RabbitMQ 里叫 **ack**（acknowledgement）。
+
+<Callout kind="lead">
+
+消费者取到消息，只是「借走」。回了 ack，RabbitMQ 才把消息删掉；没回 ack 就断开连接，消息回到队列，重新投递给消费者。
+
+</Callout>
+
+一条消息的一生，可以用几个状态说清：
+
+<StateMachine
+  title="一条消息在队列里的一生"
+  subject="notification.inbox 里的一条消息"
+  states={[
+    { id: "queued", label: "排队", sub: "等人取", col: 1, desc: "消息在队列里，还没有被任何消费者取走。" },
+    { id: "delivered", label: "已投递", sub: "等 ack", col: 2, desc: "消费者取走了消息，正在处理。RabbitMQ 还留着它，因为还没收到 ack。" },
+    { id: "deleted", label: "已删除", sub: "处理完了", col: 3, desc: "收到 ack，RabbitMQ 把消息删掉。这是正常的终点。" },
+    { id: "dead", label: "进死信队列", sub: "处理不了", col: 3, row: 2, desc: "消息被拒绝，并且设置了不放回队列，于是转进死信队列留存。" }
+  ]}
+  start="queued"
+  events={[
+    { id: "take", label: "消费者取走" },
+    { id: "ack", label: "处理成功，回 ack" },
+    { id: "crash", label: "消费者崩了或断开连接" },
+    { id: "reject", label: "重试用尽，拒绝且不放回" }
+  ]}
+  transitions={[
+    { from: "queued", event: "take", to: "delivered", label: "取走" },
+    { from: "delivered", event: "ack", to: "deleted", label: "ack" },
+    { from: "delivered", event: "crash", to: "queued", label: "重新投递" },
+    { from: "delivered", event: "reject", to: "dead", label: "拒绝" }
+  ]}
+/>
+
+注意从「已投递」回到「排队」的那条线：这就是**重投**。它保证了消费者崩溃时消息不会丢。但这也意味着，**同一条消息可能被处理不止一次**：处理完、ack 还没发出去就崩了，重投时它又被处理一遍。
+
+## 自动确认，和自动确认，不是一回事
+
+这里有一个命名陷阱。
+
+- RabbitMQ 自己的「自动确认」（auto-ack）：消息一发给消费者，RabbitMQ 就当作已确认，立刻删掉。快，但消费者崩溃时消息就丢了。
+- Spring AMQP 配置项 `acknowledge-mode: auto`：由 Spring 在**监听方法正常返回之后**才自动发 ack；方法抛异常就不发 ack。按 RabbitMQ 的分类，这属于「手动确认」，只是 Spring 替你写了。
+
+Patra 用的是后者。项目 README 的默认值表这样写：
+
+<CodeRef at="patra-tool/patra-tool-events/README.md@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="37-40" />
+
+两种确认的差别，崩一下就看出来了：
+
+<Compare
+  title="先删再处理，还是处理完再确认"
+  failureLabel="消费者在处理途中崩溃"
+  variants={[
+    {
+      label: "取走即删",
+      steps: ["RabbitMQ 投递消息，并立刻把它删掉", "处理消息", "把结果写进数据库"],
+      results: [{ label: "处理", value: "做完一次", tone: "ok" }, { label: "队列里的消息", value: "已删除", tone: "ok" }],
+      verdict: { tone: "ok", head: "顺利时没问题。", text: "最快，也最省事。" },
+      failure: { after: 1, results: [{ label: "处理", value: "没做", tone: "bad" }, { label: "队列里的消息", value: "已删除，找不回来", tone: "bad" }], verdict: { tone: "bad", head: "消息丢了。", text: "消息在被处理之前就删了，消费者一崩，这件事谁也不记得。" } }
+    },
+    {
+      label: "处理成功才 ack（Patra）",
+      steps: ["RabbitMQ 投递消息，先留着", "处理消息，写进数据库", "回 ack，RabbitMQ 删除消息"],
+      results: [{ label: "处理", value: "做完一次", tone: "ok" }, { label: "队列里的消息", value: "已删除", tone: "ok" }],
+      verdict: { tone: "ok", head: "顺利时没问题。", text: "多等一次 ack，换来崩溃时不丢。" },
+      failure: { after: 2, results: [{ label: "处理", value: "做完了，会被再做一次", tone: "wait" }, { label: "队列里的消息", value: "没收到 ack，重新投递", tone: "wait" }], verdict: { tone: "bad", head: "不丢，但会重复。", text: "业务已经写进数据库，ack 却没发出去。重投之后同一条消息又被处理一遍。" } }
+    }
+  ]}
+/>
+
+第二种的失败结果有两面：**不丢**，所以 Patra 选它；**会重复**，所以消费方必须能分辨重复的消息。这是「至少一次投递」，后面专门有一篇讲怎么应对。
+
+## 处理失败了呢
+
+崩溃不是唯一的失败。处理时抛了异常，该怎么办？Patra 的默认值（`patra-tool-events` 提供）：
+
+- 先在本地退避重试 3 次，间隔 1、2、4 秒。
+- 还失败，就拒绝这条消息，并且**不放回队列**（`default-requeue-rejected: false`）。
+- 被拒绝的消息转进死信队列，不再堵住后面的消息。
+- `prefetch: 10`：一个消费者手里最多同时攥着 10 条还没确认的消息，免得囤积。
+
+消费者监听队列的写法在这里：类上的 `@RabbitListener` 指明队列，方法正常返回就是成功。
+
+<CodeRef at="patra-api/patra-notification/patra-notification-adapter/src/main/java/dev/patra/notification/adapter/inbox/mq/InboxEventListener.java@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="28-48" />
+
+<Quiz
+  questions={[
+    {
+      question: "Spring 的 acknowledge-mode: auto，意思是 RabbitMQ 一投递就把消息删掉。这句话对吗？",
+      options: ["对", "不对：Spring 是在监听方法成功返回后才发 ack"],
+      answer: "B",
+      explain: "名字里的 auto 指「Spring 自动替你发 ack」，不是 RabbitMQ 的 auto-ack。时机是方法正常返回之后。"
+    },
+    {
+      question: "监听方法抛出异常，重试三次也没成功，而且设置了不放回队列。这条消息最后在哪？",
+      options: ["在原队列队首，一直被重投", "被删掉了", "在死信队列"],
+      answer: "C",
+      explain: "拒绝且不放回，RabbitMQ 按队列设置把它转进死信队列。否则它会在队首无限转圈，堵住后面的消息。"
+    }
+  ]}
+/>
+
+<Transfer
+  prompt="一位同事想让消费者更快：把 acknowledge-mode 改成 RabbitMQ 的 auto-ack（消息一投递就算确认）。吞吐量确实会上去。他漏掉了什么风险？在什么业务里你仍然愿意接受？"
+  points={[
+    { label: "风险", text: "消费者在处理中途崩溃时，消息已经被删除，没有机会重投，这件事就丢了，而且没有人知道。" },
+    { label: "代价换来什么", text: "省掉一次确认往返，吞吐更高，但可靠性从「不丢」降成了「可能丢」。" },
+    { label: "什么业务能接受", text: "丢一条也无所谓、下一次会自动补上的，比如每秒刷新的实时统计。提醒、邮件这类丢了就没人补的，不应该用。" }
+  ]}
+/>

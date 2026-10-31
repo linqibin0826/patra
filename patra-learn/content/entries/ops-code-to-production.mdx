@@ -1,0 +1,115 @@
+---
+title: 代码怎么变成线上服务
+summary: 从你敲下一行代码，到用户用上它：合并前检查、打包、部署、验货、巡检，先把整条路走一遍。
+type: concept
+difficulty: intro
+tags: [deployment, ci-cd]
+prerequisites: []
+personalEnv: false
+---
+
+<Diagnose
+  question="有人把一行有 bug 的代码合并进了主分支。下面哪种安排，能让用户最少受到影响？"
+  options={["写代码时大家都小心一点，出了问题再手动改", "合并前有自动检查拦截；合并后自动打包部署，部署完自动验货，不对就退回上一个好版本", "每次上线都由人登录服务器，一台一台手动替换文件"]}
+  answer="B"
+  ifRight="对。关键是每一步都有机器盯着：拦在门口、上线后验货、不行就退回。这一篇把这条路从头到尾走一遍。"
+  ifWrong="答案是 B。靠小心和靠手工，都挡不住偶尔的疏忽。可靠的做法是让机器在每个环节把关：合并前检查，上线后验货，不行就自动退回。"
+/>
+
+## 先把整条路看一遍
+
+写完代码到用户能用上，中间隔着好几站。下面这张图把它们串起来。每点一次「下一步」走一站。
+
+<Stepper
+  title="一次改动的旅程"
+  nodes={[
+    { id: "dev", label: "你的电脑", sub: "写代码、提交" },
+    { id: "ci", label: "云端机器", sub: "合并前检查" },
+    { id: "mini", label: "家里的 Mac mini", sub: "打包、部署" },
+    { id: "live", label: "线上服务", sub: "用户在用" }
+  ]}
+  links={[
+    { from: "dev", to: "ci", label: "开 PR" },
+    { from: "ci", to: "mini", label: "合并后" },
+    { from: "mini", to: "live", label: "换新" }
+  ]}
+  steps={[
+    { caption: "你在自己的分支上改代码，提交。提交那一刻，你电脑上的钩子先查一遍格式、有没有误带密钥。", focus: ["dev"], tokens: [{ id: "change", label: "改动", at: "dev" }], notes: [{ at: "dev", text: "本地钩子先把关", tone: "wait" }] },
+    { caption: "你开一个 PR，也就是申请把改动合并进主分支。GitHub 在云端机器上开始自动检查：改了什么，就测什么。", focus: ["ci"], links: ["dev>ci"], tokens: [{ id: "change", label: "改动", at: "ci" }], notes: [{ at: "ci", text: "检查全绿才能合并", tone: "wait" }] },
+    { caption: "检查通过，改动合并进主分支。家里那台 Mac mini 领到任务，在本机把改动打成可运行的包。", focus: ["mini"], links: ["ci>mini"], tokens: [{ id: "change", label: "改动", at: "mini" }], notes: [{ at: "mini", text: "打包，tag 是提交号", tone: "ok" }] },
+    { caption: "Mac mini 把新包换上去，然后验货：服务有没有真的起来，跑的是不是新版本。", focus: ["mini", "live"], links: ["mini>live"], tokens: [{ id: "change", label: "新版本", at: "live" }], notes: [{ at: "live", text: "验货中", tone: "wait" }] },
+    { caption: "如果验货不通过，脚本自动把这个服务退回到上一个好版本，同时让这次流水线显示失败。", focus: ["live"], tokens: [{ id: "change", label: "新版本", at: "live", state: "dropped" }, { id: "good", label: "上一个好版本", at: "live" }], notes: [{ at: "live", text: "已退回", tone: "bad" }] },
+    { caption: "还有一类问题与代码无关：机器掉线、磁盘写满。所以 Mac mini 上每天早上还有一次自动巡检。", focus: ["mini"], tokens: [{ id: "patrol", label: "每日巡检", at: "mini" }], notes: [{ at: "mini", text: "无声就是安好", tone: "ok" }] }
+  ]}
+  guesses={[
+    { before: 3, question: "检查全绿、合并之后，把改动打成可运行的包，发生在哪里？", options: ["GitHub 的云端机器上", "要部署的那台家里的 Mac mini 上", "你自己的电脑上"], answer: "B", explain: "Patra 让部署机自己打包：打包的机器就是运行的机器，不会出现包和机器对不上的问题。后面的篇目会讲这个取舍。" },
+    { before: 5, question: "新版本启动了，但健康检查一直不通过。会怎样？", options: ["一直挂着，等人来处理", "自动退回上一个好版本，并让流水线失败", "悄悄忽略，反正服务进程还在"], answer: "B", explain: "部署脚本给每个服务都记着上一个验货通过的版本。验货失败就退回它，再把整次部署标成失败，让你知道出事了。" }
+  ]}
+/>
+
+## 五个词，对应五站
+
+- **提交与分支**：你的改动先在自己的分支上，不直接碰主分支。
+- **CI（持续集成）**：合并前的自动检查，由 GitHub 的云端机器执行。
+- **打包**：把代码连同运行环境做成一个镜像，后面的篇目会讲镜像是什么。
+- **CD（持续部署）**：合并后自动把新版本换到线上。
+- **巡检**：定时检查机器本身是否健康。
+
+<Callout kind="analogy">
+
+把它想成工厂流水线。CI 是出厂前的质检，CD 是装车发货，巡检是仓库每天早上的盘点。你只负责把货做出来。
+
+</Callout>
+
+## 三种坏法，三道防线
+
+坏事有三个时态，每个时态对应一道防线。
+
+| 什么时候坏 | 防线 | 在哪一站 |
+|---|---|---|
+| 将要坏：有问题的代码想进主分支 | 本地钩子、PR 检查、评审 | 合并前 |
+| 正在坏：新版本上线后起不来 | 健康检查、自动退回 | 合并后 |
+| 悄悄坏了：机器掉线、磁盘满了，没有人发现 | 每日巡检 | 平时 |
+
+第三种最阴险，因为没有任何一次改动触发它，也就不会有人去看。
+
+## 在 Patra 里，这条路写在哪
+
+整条路都是文件，放在仓库里，谁都能读：
+
+- 合并前的检查：`.github/workflows/ci.yml`
+- 合并后的部署：`.github/workflows/cd.yml`，部署脚本在 `patra-infra/cd/`
+- 每日巡检：`.github/workflows/runner-watchdog.yml`
+
+`cd.yml` 和部署脚本的开头注释，各用几行话把部署全程说了一遍：
+
+<CodeRef at=".github/workflows/cd.yml@b6e01875bb5692356021c8a19562f557f319fc54" lines="1-18" />
+
+<CodeRef at="patra-infra/cd/deploy.sh@2197850b5a624ed4dbaa97df71e144c343e28baa" lines="1-22" />
+
+<Quiz
+  questions={[
+    {
+      question: "一个 PR 里的检查有一项没通过，改动会发生什么？",
+      options: ["照样合并，反正上线后会验货", "不能合并，必须先让检查通过", "只是提醒一下，由作者自己决定"],
+      answer: "B",
+      explain: "合并前的检查是第一道防线。它没过，合并按钮就是灰的。后面的篇目会讲这是怎么做到的。"
+    },
+    {
+      question: "每天早上的巡检，主要防的是哪一类问题？",
+      options: ["新写的代码有 bug", "没有任何人改动，但机器本身悄悄出了问题", "有人往仓库里提交了密钥"],
+      answer: "B",
+      explain: "巡检防的是没有改动也会发生的问题，比如负责干活的机器掉线、磁盘写满。"
+    }
+  ]}
+/>
+
+<Transfer
+  prompt="你只改了一篇说明文档（.md 文件）并合并。上面的几站里，哪些会真的发生？哪些不会？"
+  points={[
+    { label: "本地钩子", text: "仍然会跑，提交信息格式和密钥扫描照样检查。" },
+    { label: "合并前检查", text: "仓库把纯文档改动识别出来，后端和前端的测试被跳过，汇总检查仍然是绿的。" },
+    { label: "部署", text: "部署只关心代码和基础设施路径，.md 文件被排除在外，不会打包也不会部署。" },
+    { label: "巡检", text: "和这次改动无关，照常每天跑。" }
+  ]}
+/>

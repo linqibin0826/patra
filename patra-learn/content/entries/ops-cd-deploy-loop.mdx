@@ -1,0 +1,146 @@
+---
+title: CD 部署闭环
+summary: 合并进 main 之后，CD 算出要部署的服务、先推配置、在本机原生打包，再由部署脚本按依赖顺序换新，并记住每个服务上一个好版本。
+type: concept
+difficulty: advanced
+tags: [ci-cd, deployment]
+prerequisites: [ops-self-hosted-runner, ops-docker-compose]
+personalEnv: false
+---
+
+<Diagnose
+  question="gateway 每个请求都要先找 identity 查会话。这两个服务这次要一起更新。部署时应该先换哪个？"
+  options={["先换 gateway，它是入口", "先换 identity，被依赖的先上线", "顺序无所谓，一起换就行"]}
+  answer="B"
+  ifRight="对。被依赖的先换新，依赖它的后换，这样入口上线时它要找的服务已经是新版本且就绪了。Patra 的部署顺序就是按这个思路排的。"
+  ifWrong="答案是 B。如果先换 gateway，它新版本启动后去找的 identity 还是旧的甚至正在重启，请求就会失败。被依赖的服务先上。"
+  suggest="ops-docker-compose"
+/>
+
+## 一次部署的全程
+
+CD（持续部署）接在 CI 之后。检查通过、代码合并进 main，`cd.yml` 就开始工作，分三个 job。点着往下走，遇到提问先猜。
+
+<Stepper
+  title="一次合并之后，CD 做了什么"
+  nodes={[
+    { id: "detect", label: "detect-changes", sub: "云端机器" },
+    { id: "nacos", label: "nacos-push", sub: "Mac mini" },
+    { id: "build", label: "原生打包", sub: "Mac mini" },
+    { id: "deploy", label: "deploy.sh", sub: "Mac mini" }
+  ]}
+  links={[
+    { from: "detect", to: "nacos" },
+    { from: "nacos", to: "build" },
+    { from: "build", to: "deploy" }
+  ]}
+  steps={[
+    { caption: "第一步在云端机器上算：这次改动影响哪些服务？用的就是 CI 里那同一个 detect-changes 脚本。结果去掉不可部署的 foundation，就是要部署的服务名单。", focus: ["detect"], tokens: [{ id: "list", label: "服务名单", at: "detect" }], notes: [{ at: "detect", text: "例如 identity、gateway", tone: "ok" }] },
+    { caption: "第二步在 Mac mini 上先把配置推到配置中心。推之前先跑一遍配置检查，因为新代码可能依赖新配置。", focus: ["nacos"], links: ["detect>nacos"], tokens: [{ id: "list", label: "服务名单", at: "nacos" }], notes: [{ at: "nacos", text: "先检查，再推送", tone: "wait" }] },
+    { caption: "第三步在本机打包：先用 Gradle 打出各服务的 jar，再用同一份 Dockerfile 原生构建 arm64 镜像，tag 是本次提交号。", focus: ["build"], links: ["nacos>build"], tokens: [{ id: "list", label: "服务名单", at: "build" }, { id: "img", label: "镜像:提交号", at: "build" }], notes: [{ at: "build", text: "只打名单里的服务", tone: "ok" }] },
+    { caption: "第四步交给 deploy.sh：校验入参，确认镜像就位并且是 arm64，再按顺序一个一个换新、验货、记账。", focus: ["deploy"], links: ["build>deploy"], tokens: [{ id: "img", label: "镜像:提交号", at: "deploy" }], notes: [{ at: "deploy", text: "逐个服务闭环", tone: "ok" }] }
+  ]}
+  guesses={[
+    { before: 3, question: "配置推送到一半失败了（比如配置检查没过）。后面的打包和部署还会继续吗？", options: ["会继续，配置和代码是两回事", "不会，推送失败就不部署", "只部署不依赖配置的服务"], answer: "B", explain: "新代码可能依赖新配置。配置没就位就部署，服务很可能启动失败，所以推送失败时整个部署中止。推送被跳过则不影响。" }
+  ]}
+/>
+
+cd.yml 里决定“要不要部署”的那个条件，写得很细：
+
+<CodeRef at=".github/workflows/cd.yml@b6e01875bb5692356021c8a19562f557f319fc54" lines="112-121" />
+
+- 服务名单不为空才部署。
+- 配置推送只有“成功”或“被跳过”才继续。
+- 开头的 `!cancelled()` 是因为：被依赖的 job 被跳过时，GitHub 默认连下游也一起跳过，要显式写出来才不会。
+
+## 服务清单：唯一的花名册
+
+要部署哪些服务、各自的端口、镜像名、健康检查地址，都记在 `services.json` 里。打包和部署脚本都只按名字来这里查，自己不写死清单。
+
+<CodeRef at="patra-infra/cd/services.json@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="1-23" />
+
+所以“新增一个服务”变成纯配置工作：加一个条目，再在 compose 里加一个小节，workflow 的逻辑不用改。
+
+## 顺序：谁先换新
+
+`services.json` 里条目的**排列顺序，就是部署的顺序**：
+
+`registry → notification → identity → gateway → catalog → interaction → portal → learn`
+
+为什么这样排：
+
+- `notification` 在 `identity`、`interaction` 之前：消费消息的一方先上线，声明好队列和绑定，发消息的一方一上线，事件就有地方可去。
+- `identity` 在 `gateway` 之前：网关每个请求都要找 identity 查会话。
+- `interaction` 在 `catalog` 之后：它运行时要调用 catalog。
+
+<Callout kind="analogy">
+
+像开饭先上米饭再上菜：先上桌的是后面的菜要依赖的东西。
+
+</Callout>
+
+## deploy.sh：每个服务走一遍闭环
+
+部署脚本的核心是一个循环，对名单里的每个服务按顺序做同样几件事：
+
+<Stepper
+  title="一个服务在 deploy.sh 里的一轮"
+  nodes={[
+    { id: "check", label: "入参校验", sub: "名字认识吗" },
+    { id: "image", label: "镜像就位", sub: "并且是 arm64" },
+    { id: "up", label: "换新", sub: "compose up" },
+    { id: "verify", label: "验货", sub: "健康检查+对版" },
+    { id: "note", label: "记账", sub: "last-good" }
+  ]}
+  steps={[
+    { caption: "开工之前，先检查名单合不合法：必须是非空的服务名数组，每个名字都要在 services.json 里。有不认识的，直接拒绝，一个字都不部署。", focus: ["check"], tokens: [{ id: "svc", label: "identity", at: "check" }] },
+    { caption: "确认镜像在本机：正常部署时刚打出来，天然就在；只有回滚且本地缓存被清理时才会去仓库拉。拿到后再断言架构必须是 arm64。", focus: ["image"], tokens: [{ id: "svc", label: "identity", at: "image" }], notes: [{ at: "image", text: "不是 arm64 就拒绝", tone: "wait" }] },
+    { caption: "用 docker compose up -d 只更新这个服务，旧容器被新容器替换。", focus: ["up"], tokens: [{ id: "svc", label: "identity", at: "up" }] },
+    { caption: "验货：轮询健康接口等它变健康，再核对运行中的容器用的镜像，确实是期望的版本。两项都过才算数。", focus: ["verify"], tokens: [{ id: "svc", label: "identity", at: "verify" }], notes: [{ at: "verify", text: "具体怎么验，后面的篇目细讲", tone: "wait" }] },
+    { caption: "验货通过，立刻把这个提交号记成这个服务的“上一个好版本”。每个服务一份记录，通过一个记一个，不等整批。", focus: ["note"], tokens: [{ id: "svc", label: "identity", at: "note" }], notes: [{ at: "note", text: "为回滚备好底气", tone: "ok" }] }
+  ]}
+  guesses={[
+    { before: 5, question: "名单里有三个服务，第二个验货失败了。第三个还会被部署吗？", options: ["不会，一个失败就整体停止", "会，脚本继续处理名单里剩下的服务，最后整体以失败退出"], answer: "B", explain: "脚本逐个服务处理，一个失败只影响它自己（并触发它自己的回滚），其余照常，最后汇总成失败，让你知道有服务出了问题。" }
+  ]}
+/>
+
+记账的位置是 mini 上的一个文件，每个服务各一份，内容是一个提交号：
+
+<CodeRef at="patra-infra/cd/deploy.sh@2197850b5a624ed4dbaa97df71e144c343e28baa" lines="105-135" />
+
+## 部署不能被打断
+
+最后看 cd.yml 里的一个设置：
+
+<CodeRef at=".github/workflows/cd.yml@b6e01875bb5692356021c8a19562f557f319fc54" lines="50-52" />
+
+`cancel-in-progress: false` 的意思是：新的一次部署到来时，**不取消**正在进行的那次，排队等它做完。这和 CI 相反：CI 的旧检查过时就没价值，可以取消；部署做到一半被杀掉，会留下半新半旧的服务。
+
+打包完成后还有一步“归档推送”：把镜像也推到镜像仓库留一份。它被设为“允许失败”，推不上去只报警告，不拦部署，因为这只是回滚时的备份来源。
+
+<Quiz
+  questions={[
+    {
+      question: "services.json 里条目的顺序有什么作用？",
+      options: ["只是方便阅读", "就是 deploy.sh 的部署顺序"],
+      answer: "B",
+      explain: "脚本直接按这个顺序遍历，被依赖的服务排在前面。"
+    },
+    {
+      question: "两次合并几乎同时发生，第二次的部署到来时，第一次还在部署。会怎样？",
+      options: ["第一次被取消，只部署第二次", "第二次排队等第一次结束"],
+      answer: "B",
+      explain: "部署用 cancel-in-progress: false，不打断正在进行的部署。"
+    }
+  ]}
+/>
+
+<Transfer
+  prompt="一次合并同时改了 identity 和 gateway 的代码。请按顺序说出 CD 会发生什么；如果 identity 验货失败，会怎样？"
+  points={[
+    { label: "算名单", text: "detect-changes 得到要部署的服务名单里有 identity 和 gateway（还要看是否触发了更广的全量规则）。" },
+    { label: "打包", text: "一次 Gradle 调用打出两个 jar，再各自构建 arm64 镜像，tag 是同一个提交号。" },
+    { label: "按顺序换新", text: "deploy.sh 按 services.json 的顺序，先 identity、后 gateway。" },
+    { label: "identity 失败", text: "它回滚到自己的上一个好版本；脚本不会因此中止，会继续处理 gateway，最后整体以失败退出，提醒你有问题。" }
+  ]}
+/>

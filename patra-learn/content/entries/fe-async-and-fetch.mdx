@@ -1,0 +1,177 @@
+---
+title: 异步与 fetch：前端怎么调接口
+summary: 请求发出去要等，等的时候程序不能停住，所以 fetch 先交给你一个 Promise（一张「取餐号」）。await 让你按顺序写等待；失败要分两种：没拿到响应会抛异常，拿到了 404、500 却不会。看门户怎么调网关。
+type: concept
+difficulty: basic
+tags: [frontend, network]
+prerequisites: [fe-typescript-basics, http-request-and-response]
+personalEnv: false
+---
+
+<Diagnose
+  question="门户向后端要一篇文献，后端回了状态码 404。这说明什么？"
+  options={["网络没通，请求没送到后端", "请求送到了，后端回答：没有这篇", "后端程序崩了"]}
+  answer="B"
+  ifRight="对。404 是后端给的一个正常回答，只是内容是「没有」。记住这一点，后面讲 fetch 怎么区分「没拿到回答」和「拿到了一个坏消息」时会用到。"
+  ifWrong="答案是 B：状态码是后端写在响应里的，能收到 404，说明请求送到了、后端也回话了，只是说「没有这一篇」。网络不通时根本收不到任何状态码。这题考的是 HTTP 请求与响应的基本结构。"
+  suggest="http-request-and-response"
+/>
+
+## 等网络的时候，程序不能停住
+
+一次请求要几十毫秒到几秒。要是程序在这段时间里什么都不做、干等着，页面就卡死了：点不动、滚不动。所以 JavaScript 里发请求是**异步**的：请求发出去，程序先去干别的，结果回来时再接着处理。
+
+<Callout kind="analogy">
+
+像在快餐店点餐。收银员不会让你站在柜台前等汉堡做好，而是给你一张取餐号，你先去找座位。汉堡做好了叫号，你再去取；卖完了也会叫号，告诉你换一样。这张取餐号就是 **Promise**：一个「现在还没有、以后会有结果」的承诺。
+
+</Callout>
+
+`fetch(地址)` 是浏览器和 Node.js 都自带的发请求函数。它不直接返回数据，而是立刻返回一个 Promise。
+
+## await：把「等」写成顺序的样子
+
+拿到 Promise 以后，在它前面写 `await`，意思是「在这里等它有结果，再往下走」。用了 `await` 的函数要标上 `async`。门户在服务器上取首页文献流，就是这么写的：
+
+<CodeRef at="patra-portal/src/lib/portal-api/publications.ts@6ead12db647bcd3e56f651af791d56e418cb79ff" lines="13-21" />
+
+```ts
+export async function fetchFeed(tab: FeedTab, page = 1, pageSize = 14): Promise<PageResult<Paper>> {
+  const res = await gatewayFetch(
+    `/patra-catalog/portal/publications?tab=${tab}&page=${page}&pageSize=${pageSize}`,
+  );
+  if (!res.ok) {
+    throw new Error(`文献流加载失败：${res.status}`);
+  }
+  return (await res.json()) as PageResult<Paper>;
+}
+```
+
+读起来像普通的一步接一步：发请求、等响应、检查、把响应体读成 JSON。注意有两个 `await`：第一个等响应头到达，第二个 `res.json()` 等响应体读完、解析好。
+
+返回类型写的是 `Promise<PageResult<Paper>>`：async 函数自己也返回一张取餐号，调用它的人同样要 `await`。
+
+<Callout kind="warn">
+
+忘了写 `await`，拿到的是 Promise 本身，不是数据。`const res = gatewayFetch(…)` 之后读 `res.ok`，得到的是 undefined（Promise 上没有这个字段）。TypeScript 会把这种写法标红，这也是前一篇讲的类型的用处。
+
+</Callout>
+
+## 404 算不算失败？
+
+代码里那句 `if (!res.ok)` 看起来多余：请求失败了，`await` 那一行不就该报错吗？先猜一下。
+
+<Quiz
+  questions={[
+    {
+      question: "网关回了 404，`const res = await gatewayFetch(…)` 这一行会怎样？",
+      options: ["抛出异常，下面的代码不再执行", "正常往下走，res.status 是 404，res.ok 是 false", "一直卡在这里，等网关回 200"],
+      answer: "B",
+      explain: "对 fetch 来说，拿到了响应就算兑现，不管状态码是几。只有根本没拿到响应（网络断了、连不上、超时被掐断）它才拒绝。所以状态码要你自己查。"
+    }
+  ]}
+/>
+
+一个 Promise 只会落到两种结局之一：**兑现**（拿到结果）或**拒绝**（出了异常）。对 fetch 来说，分界线是「有没有收到响应」。点事件按钮推进：
+
+<StateMachine
+  title="fetch 返回的 Promise 怎么落定"
+  subject="await fetch(…)"
+  states={[
+    { id: "pending", label: "等待中", sub: "请求已发出", col: 1, desc: "请求发出去了，程序在 await 这里等着。" },
+    { id: "fulfilled", label: "兑现", sub: "拿到 Response", col: 2, row: 1, desc: "await 正常返回一个 Response。状态码可能是 200，也可能是 404、500，要自己看 `res.ok` 和 `res.status`。" },
+    { id: "rejected", label: "拒绝", sub: "抛出异常", col: 2, row: 2, desc: "await 这一行抛出异常，下面的代码不执行。没人接住，就一层层往上冒。" }
+  ]}
+  start="pending"
+  events={[
+    { id: "ok", label: "网关回了 200" },
+    { id: "notfound", label: "网关回了 404 或 500" },
+    { id: "network", label: "网络断了，连不上" },
+    { id: "timeout", label: "10 秒没回，被掐断" }
+  ]}
+  transitions={[
+    { from: "pending", event: "ok", to: "fulfilled", label: "200" },
+    { from: "pending", event: "notfound", to: "fulfilled", label: "404 / 500" },
+    { from: "pending", event: "network", to: "rejected", label: "没响应" },
+    { from: "pending", event: "timeout", to: "rejected", label: "超时" }
+  ]}
+/>
+
+## 两种失败，门户分开处理
+
+单篇文献详情把这几种情况分得很清楚：
+
+<CodeRef at="patra-portal/src/lib/portal-api/publications.ts@6ead12db647bcd3e56f651af791d56e418cb79ff" lines="34-47" />
+
+```ts
+export const fetchPublicationDetail = cache(async (id: string): Promise<PaperDetail | null> => {
+  if (!/^[1-9]\d*$/.test(id)) {
+    return null;
+  }
+  const res = await gatewayFetch(`/patra-catalog/portal/publications/${id}`);
+  // 404 不存在；400 / 422 是 BE 拒绝了 id（如超出范围），对读者同样是「没有这一页」
+  if (res.status === 404 || res.status === 400 || res.status === 422) {
+    return null;
+  }
+  if (!res.ok) {
+    throw new Error(`文献详情加载失败：${res.status}`);
+  }
+  return (await res.json()) as PaperDetail;
+});
+```
+
+| 情况 | fetch 的结局 | 门户怎么做 |
+|---|---|---|
+| 地址里的 id 不是正整数 | 根本不发请求 | 直接返回 null |
+| 网关回 404、400、422 | 兑现 | 返回 null，页面显示「没有这一页」 |
+| 网关回 500 这类其他错误 | 兑现 | 自己 `throw`，交给全局的出错页 |
+| 网络断了、超时 | 拒绝 | fetch 自己抛异常，同样冒到出错页 |
+
+「没有这篇」是读者能理解的正常结果，返回 null；「后端坏了」才当异常处理。分清这两种，页面才不会把一个打错的链接显示成「服务器出错」。
+
+## 别让慢后端拖死页面
+
+`gatewayFetch` 是门户里唯一向网关发请求的地方（**网关**是后端所有服务的统一入口）。它的第一行是 `import "server-only"`：这段代码只在门户服务器上跑，不会被送进浏览器，网关的地址也只从服务器的环境变量 `PATRA_GATEWAY_BASE_URL` 里读。真正发请求的是这几行：
+
+<CodeRef at="patra-portal/src/lib/gateway.ts@4a13287485468f2c489027f1aac0bb6174643e8d" lines="52-59" />
+
+```ts
+  return fetch(`${baseUrl}${path}`, {
+    method: init.method ?? "GET",
+    headers,
+    cache: "no-store",
+    redirect: init.redirect ?? "manual",
+    signal: AbortSignal.timeout(init.timeoutMs ?? DEFAULT_TIMEOUT_MS),
+    ...(body === undefined ? {} : { body }),
+  });
+```
+
+- `signal: AbortSignal.timeout(…)`：到点没回就掐断，默认 10 秒（同文件第 5 行 `DEFAULT_TIMEOUT_MS = 10_000`）。掐断以后 Promise 进入「拒绝」。不设超时，后端一卡，页面就一直转圈。
+- `cache: "no-store"`：每次都真去问网关，不拿之前缓存的旧结果。
+- `method` 默认 `GET`，要提交数据时调用方传 `POST` 等。
+
+## 在浏览器里接住「拒绝」
+
+浏览器那边也会遇到拒绝：用户断网了，请求根本发不出去。门户有个小工具，把「拒绝」变成一个普通的值，调用方就不用到处写异常处理：
+
+<CodeRef at="patra-portal/src/lib/or-unavailable.ts@fe4c6bb68c591a9c9b5fe80f76bbfbbbc6aeae75" lines="6-9" />
+
+```ts
+/// 调 Server Action / 接口的 promise 被拒绝时（网络断开、请求没发出去）按服务不可用处理，调用方只需按 `reason` 分支
+export function orUnavailable<T>(promise: Promise<T>): Promise<T | Unavailable> {
+  return promise.catch(() => UNAVAILABLE);
+}
+```
+
+`.catch(…)` 是 Promise 的另一种写法：「要是被拒绝了，就改成这个结果」。返回类型 `T | Unavailable` 是前一篇讲的联合类型：要么是正常结果，要么是「服务不可用」，调用方 `await` 之后按 `reason` 分两路，提示用户「稍后再试」。
+
+<Transfer
+  prompt="你要给期刊详情页写一个 `fetchVenueDetail(id)`：期刊不存在时页面显示「没有这本期刊」；网关 3 秒内没回，就当后端出问题。参照上文，它会怎么写？每种情况分别走到哪里（返回 null、自己 throw、fetch 自己拒绝）？"
+  points={[
+    { label: "先挡坏 id", text: "id 不合法就直接返回 null，不发请求。" },
+    { label: "设超时", text: "调用时传 3 秒的超时；到点没回，fetch 自己拒绝，异常冒到出错页。" },
+    { label: "404 返回 null", text: "res.status 是 404 时返回 null，由页面显示「没有这本期刊」。fetch 在这里是兑现，不会自己报错。" },
+    { label: "其他非 2xx 自己 throw", text: "500 之类 res.ok 为 false，自己 throw，和网络错误一样交给出错页。" },
+    { label: "最后读 JSON", text: "检查都过了，再 await res.json()；两个 await 都要写。" }
+  ]}
+/>

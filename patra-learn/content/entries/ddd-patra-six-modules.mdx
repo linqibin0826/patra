@@ -1,0 +1,136 @@
+---
+title: Patra 一个服务的六个模块
+summary: 每个 Patra 服务都拆成 domain、app、infra、adapter、api、boot 六个 Gradle 模块。谁依赖谁写在构建文件里，依赖方向让所有箭头最终指向 domain。
+type: concept
+difficulty: advanced
+tags: [ddd, backend]
+prerequisites: [ddd-ports-and-adapters]
+personalEnv: false
+---
+
+<Diagnose
+  question="在 app 模块的某个 Handler 里，直接 import 了 infra 模块里的 CollectionRepositoryAdapter 这个类。你觉得这会发生什么？"
+  options={["能编译，只是不太好", "编译就失败：app 模块根本没有声明依赖 infra", "运行时才报错"]}
+  answer="B"
+  ifRight="对。Patra 把依赖方向写进了构建文件。app 模块没声明依赖 infra，类路径上就没有它，编译直接过不了。"
+  ifWrong="答案是 B。如果所有代码在一个模块里，import 什么都行，靠自觉。Patra 把层拆成独立模块，模块的依赖在构建文件里声明，没声明就看不见。这正是这篇要看的。"
+  suggest="ddd-ports-and-adapters"
+/>
+
+## 为什么要拆成独立模块
+
+上一篇讲了端口和适配器：核心定义接口，外面实现。要让这条规则不被悄悄破坏，光靠约定不行。Patra 的做法是把每一层拆成一个独立的 Gradle 模块，用构建文件决定谁能看见谁。
+
+所有服务都是同一个结构。以 interaction 为例：
+
+```
+patra-interaction/
+├── patra-interaction-domain    业务规则
+├── patra-interaction-app       用例编排
+├── patra-interaction-infra     出站适配器：存储、调别的服务
+├── patra-interaction-adapter   入站适配器：REST、定时任务
+├── patra-interaction-api       给别的服务看的契约
+└── patra-interaction-boot      启动与装配
+```
+
+## 每个模块放什么
+
+| 模块 | 放什么 | interaction 里的例子 |
+|---|---|---|
+| domain | 聚合、值对象、领域服务、仓库和端口接口、领域事件、领域异常 | `CommentAggregate`、`CollectionRepository`、`CollectionLimits` |
+| app | 命令与处理器、查询服务、各种 Gateway 的实现 | `CreateCollectionHandler`、`DiscussionQueryService` |
+| infra | 仓库与端口的实现（SQL、Redis、HTTP 调用） | `CollectionRepositoryAdapter`、`UserDirectoryAdapter` |
+| adapter | Controller、定时任务、内部接口的实现 | `MyCollectionController`、`SubjectEndpointImpl` |
+| api | 对外的契约：DTO、接口定义、集成事件 | `CommentPublished`（给通知服务消费的事件） |
+| boot | `@SpringBootApplication`、配置装配、架构测试 | `InteractionEventsConfiguration` |
+
+## 谁能依赖谁
+
+依赖写在每个模块的 `build.gradle.kts` 里。先看最里面的 domain：
+
+<CodeRef at="patra-api/patra-interaction/patra-interaction-domain/build.gradle.kts@3cf6fa5757b3be54c3b030e4cace871f53e2599c" lines="1-14" />
+
+domain 的构建文件里一个 `project(...)` 依赖都没有（`patra.hexagonal-domain` 插件只给它 patra-tool-core 和几个纯 Java 工具库）。再看 app 和 adapter：
+
+<CodeRef at="patra-api/patra-interaction/patra-interaction-app/build.gradle.kts@3cf6fa5757b3be54c3b030e4cace871f53e2599c" lines="11-17" />
+
+<CodeRef at="patra-api/patra-interaction/patra-interaction-adapter/build.gradle.kts@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="11-22" />
+
+app 依赖 domain，adapter 依赖 app，infra 依赖 domain，boot 最后把 adapter 和 infra 都装到一起。画成图：
+
+<Structure
+  title="六个模块的依赖方向"
+  intro="箭头表示「编译时依赖谁」。点方块看它管什么，点「发一条」看运行时的调用路径和编译依赖是两回事。"
+  nodes={[
+    { id: "adapter", label: "adapter", sub: "入站：Controller、定时任务", code: true, col: 2, row: 1, desc: "接收外部请求，转成命令交给 app。只依赖 app（和 api 的契约）。" },
+    { id: "app", label: "app", sub: "用例编排", code: true, col: 3, row: 1, desc: "命令处理器与查询服务。只依赖 domain。" },
+    { id: "boot", label: "boot", sub: "启动与装配", code: true, col: 1, row: 2, desc: "唯一同时看见 adapter 和 infra 的模块，负责把所有部件装配成一个应用。" },
+    { id: "domain", label: "domain", sub: "业务规则", code: true, col: 4, row: 2, desc: "最里面一层。不依赖任何别的业务模块，也不许依赖框架。" },
+    { id: "infra", label: "infra", sub: "出站：存储、远程调用", code: true, col: 2, row: 3, desc: "实现 domain 里定义的仓库和端口。依赖 domain，不依赖 app。" },
+    { id: "api", label: "api", sub: "服务契约", code: true, col: 3, row: 3, desc: "DTO、接口定义、集成事件。给别的服务依赖，本身不含业务逻辑。" }
+  ]}
+  edges={[
+    { from: "adapter", to: "app", label: "依赖" },
+    { from: "app", to: "domain", label: "依赖" },
+    { from: "infra", to: "domain", label: "依赖：实现它的接口" },
+    { from: "adapter", to: "api", label: "实现契约", dashed: true },
+    { from: "boot", to: "adapter", label: "装配" },
+    { from: "boot", to: "infra", label: "装配" }
+  ]}
+  traces={[
+    {
+      button: "发一条 POST /me/collections",
+      packet: "请求",
+      hops: [
+        { at: "adapter", caption: "Controller 收到请求，转成 CreateCollectionCommand。" },
+        { at: "app", caption: "命令总线找到 CreateCollectionHandler，开始编排。" },
+        { at: "domain", caption: "Handler 调领域层：CollectionName.parse 校验名称，CollectionRepository 接口数个数。" },
+        { at: "infra", caption: "运行时，接口背后是 infra 的适配器，执行 SQL。编译时 app 并不依赖 infra，是 boot 装配时把它接上的。" }
+      ]
+    }
+  ]}
+/>
+
+<Callout kind="insight">
+
+运行时的调用路径是 adapter → app → domain → infra，但编译时的依赖方向是 adapter → app → domain ← infra。最后一步看起来「app 调到了 infra」，实际上 app 调的是 domain 里的接口，接口的实现由 boot 在启动时接上。
+
+</Callout>
+
+## 为什么有 api 和 boot
+
+**api** 是服务间的契约，单独成模块是为了让别的服务能只依赖契约，不依赖你的业务代码。例如通知服务消费 interaction 的事件时，依赖的是 interaction 的 api 模块里的 `CommentPublished`，而不是它的 domain。
+
+<CodeRef at="patra-api/patra-interaction/patra-interaction-api/src/main/java/dev/patra/interaction/api/discussion/event/CommentPublished.java@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="28-48" />
+
+**boot** 是唯一能同时看见其他所有层的地方，所以启动类、配置装配，以及后面会讲的架构测试都放在这里。
+
+<CodeRef at="patra-api/patra-interaction/patra-interaction-boot/build.gradle.kts@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="14-25" />
+
+<Quiz
+  title="想一想"
+  questions={[
+    {
+      question: "domain 模块里想用 Spring 的某个工具类，该怎么办？",
+      options: ["在 domain 的 build.gradle.kts 里加 Spring 依赖", "不能加。领域层要保持纯净，把依赖框架的部分挪到 app 或 infra", "在代码里用反射"],
+      answer: "B",
+      explain: "领域层的编译类路径有白名单，加了名单外的依赖，构建检查会失败。下一个相关篇目讲这条检查怎么做。"
+    },
+    {
+      question: "通知服务想知道 interaction 发了什么评论事件，应该依赖 interaction 的哪个模块？",
+      options: ["domain", "api", "infra"],
+      answer: "B",
+      explain: "api 模块是专门给别的服务看的契约，里面有集成事件 record。domain 是 interaction 的内部事务，别的服务不该依赖。"
+    }
+  ]}
+/>
+
+<Transfer
+  prompt="你要在 interaction 里新增一个定时任务：每天凌晨清理已注销用户的收藏夹。任务入口、清理流程的编排、真正删数据的 SQL，分别放在哪个模块？这个任务的触发类能不能直接 import infra 里的适配器？"
+  points={[
+    { label: "入口", text: "定时任务的触发类放 adapter 模块（ScheduleJob），它只负责触发，把工作交给 app。" },
+    { label: "编排", text: "清理的流程放 app 模块的处理器，决定先清哪些、事务怎么划。" },
+    { label: "SQL", text: "删数据的 SQL 在 infra 模块，实现 domain 里的仓库接口。" },
+    { label: "不能直接 import", text: "adapter 的构建文件没有声明依赖 infra，编译就过不了；它只能通过 app 调到领域层的接口。" }
+  ]}
+/>

@@ -1,0 +1,114 @@
+---
+title: 消息重投了，邮件别发两封
+summary: 消费端的去重表只能保证「同一个事件在库里只处理一次」，挡不住「邮件已经发出、记录还没提交」时的重投。发信时带上一个重试不变的幂等键，让邮件服务商在 24 小时内对同一个键只送达一次。
+type: decision
+difficulty: practice
+tags: [messaging, backend]
+prerequisites: [msg-at-least-once-and-dedup]
+topics: [event-delivery]
+sources:
+  - version: v0.16
+    issue: PAP-105
+    pr: 343
+  - version: v0.16
+    issue: PAP-146
+    pr: 343
+personalEnv: false
+---
+
+<Diagnose
+  question="通知服务收到「发找回密码邮件」的事件：先查去重表没处理过，就发出邮件，再在一个事务里记下「这个事件处理过了」。邮件发出去之后、事务提交之前，进程崩了。消息被重投，用户会收到几封？"
+  options={["1 封，去重表会挡住", "2 封：去重记录没提交，重投时被当成第一次", "0 封，崩溃时邮件会被撤回"]}
+  answer="B"
+  ifRight="对。去重记录和发邮件不在同一个系统里，没法一起提交。这篇讲 Patra 用什么挡住第二封。"
+  ifWrong="答案是 B。去重表的那一行还没提交，重投时查不到它；邮件已经离开了你的系统，收不回来。这题考的是「至少一次投递 + 消费端去重」各管什么，先读那篇。"
+  suggest="msg-at-least-once-and-dedup"
+/>
+
+## 背景：去重表管不到库外面
+
+v0.16 通知中心那一版，事件按「至少一次」投递：补投、broker 重投、死信重放，同一个事件都可能到第二次。消费端靠一张「已处理事件」表去重，插入去重行和写业务数据在同一个事务里。
+
+对写库的副作用（生成一条站内提醒），这就够了：要么两样都提交，要么都回滚。
+
+发邮件不一样。邮件是发给外部服务商（线上是 Resend）的远程调用，按项目的事务规范，远程调用不进数据库事务。于是总有一个窗口：邮件已经发出，去重记录还没提交。
+
+<Stepper
+  title="一封安全邮件的处理，和那个崩溃窗口"
+  nodes={[
+    { id: "mq", label: "RabbitMQ", sub: "安全邮件队列" },
+    { id: "notify", label: "通知服务" },
+    { id: "db", label: "通知服务的库", sub: "去重 + 发送记录" },
+    { id: "resend", label: "Resend", sub: "邮件服务商" }
+  ]}
+  links={[
+    { from: "mq", to: "notify" },
+    { from: "notify", to: "db" },
+    { from: "notify", to: "resend" }
+  ]}
+  steps={[
+    { caption: "通知服务从队列取到「找回密码」事件，按投递 ID（就是事件 ID）查发送记录：没有，说明是第一次。", focus: ["mq", "notify", "db"], links: ["mq>notify", "notify>db"], tokens: [{ id: "evt", label: "事件 #e1", at: "notify" }] },
+    { caption: "在事务外发信，邮件头里带 Resend-Idempotency-Key: e1。Resend 收下了，邮件送到用户邮箱。", focus: ["notify", "resend"], links: ["notify>resend"], tokens: [{ id: "mail", label: "邮件 · 键 e1", at: "resend" }], notes: [{ at: "resend", text: "已送达 1 封", tone: "ok" }] },
+    { caption: "准备开短事务记下「处理过了」，进程在这里崩了。去重行和发送记录都没写进去。", focus: ["notify", "db"], notes: [{ at: "db", text: "没有记录", tone: "bad" }, { at: "resend", text: "已送达 1 封", tone: "ok" }] },
+    { caption: "消息没被 ack，RabbitMQ 重投。通知服务查发送记录：没有，又当成第一次，再发一次，带的还是同一个键 e1。", focus: ["mq", "notify", "resend"], links: ["mq>notify", "notify>resend"], tokens: [{ id: "mail2", label: "邮件 · 键 e1", at: "resend" }], notes: [{ at: "db", text: "没有记录", tone: "wait" }] },
+    { caption: "Resend 认出这个键 24 小时内已经接受过，不再投递。通知服务把「已接受过」当成发送成功，这次记录顺利提交。用户只收到 1 封。", focus: ["resend", "db"], links: ["notify>db"], tokens: [{ id: "mail2", label: "重复 · 不投递", at: "resend", state: "dropped" }], notes: [{ at: "db", text: "已处理 · 已发送", tone: "ok" }, { at: "resend", text: "仍是 1 封", tone: "ok" }] }
+  ]}
+  guesses={[
+    { before: 5, question: "重投后通知服务又发了一次，用的是同一个幂等键。用户会收到第二封吗？", options: ["会，通知服务确实又发了一次", "不会，服务商对同一个键只送达一次", "看第二次发信距第一次多久"], answer: "C", explain: "Resend 的幂等键 24 小时内有效：这个窗口里同一个键只送达一次；过了 24 小时，同一个键可能再送达一次。所以 Patra 还要管住「重试不能拖过 24 小时」。" }
+  ]}
+/>
+
+去重表和幂等键是两层，各防一种重复：去重表防「同一个事件在库里被处理两次」，幂等键防「邮件已发出、记录没提交」时重投造成的第二封。两层都要。
+
+<CodeRef at="patra-api/patra-notification/patra-notification-app/src/main/java/dev/patra/notification/app/mail/usecase/security/SendSecurityMailHandler.java@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="17-27" />
+
+## 选项：经 HTTP 接口发，还是经 SMTP 发
+
+Resend 的两种发信方式都支持幂等键，要选的是走哪条路：
+
+<DecisionOptions
+  options={[
+    { name: "Resend 的 HTTP 接口", summary: "调 Resend 的发信 API，幂等键放在请求头。", pros: "同步拿到邮件 ID，以后接退信回调时好对账。", cons: "本机开发和 e2e 用的 Mailpit 不认这个接口，要另写一套假实现。" },
+    { name: "SMTP", summary: "用 Spring Mail 走 SMTP，幂等键写成邮件头 Resend-Idempotency-Key。", pros: "本机与 e2e 继续用 Mailpit 收信，线上换成 Resend 的 SMTP；代码里只有幂等键这一个 Resend 专属的头。", cons: "拿不到 Resend 的邮件 ID；以后要接退信回调时得改走 HTTP。", chosen: true }
+  ]}
+/>
+
+## 选择与做法
+
+选 SMTP。键的取值和用法有三条规矩：
+
+**1. 键在重试时不变。** 键就是投递 ID：安全邮件用 identity 构造邮件时生成的事件 ID（补投时不变），提醒邮件用投递记录的 ID。同一封信每次重试都一样，`Message-ID` 也由它生成。
+
+<CodeRef at="patra-api/patra-notification/patra-notification-infra/src/main/java/dev/patra/notification/infra/mail/delivery/SmtpMailDeliveryAdapter.java@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="109-116" />
+
+**2. 同一个键对应同一份内容。** 邮件变量里不放随发送时刻变化的东西。同一个键带着不同内容再发，服务商会拒绝；适配器把「已接受过这个键」归为「当作已发」。
+
+**3. 重试不拖过 24 小时。** 幂等键只在 24 小时内有效。提醒邮件第一次调用发信接口之后，只在 24 小时内重试；过了这个窗口，再发可能重复送达，就改记「过期」，不再发。
+
+<CodeRef at="patra-api/patra-notification/patra-notification-domain/src/main/java/dev/patra/notification/domain/mail/model/aggregate/ReminderDelivery.java@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="14-24" />
+
+<Callout kind="insight">
+
+第 3 条是评审时补上的：原来的写法里，满 24 小时之后的重试仍会再发一次。同一次评审还发现，部署切换时新旧两轮「到点处理」可能重叠，给同一批提醒各建一封投递。修法是处理排队行之前先「认领」：`DELETE … RETURNING`，只处理自己真正删到的那几行，另一方拿到的是空列表。
+
+</Callout>
+
+## 代价
+
+<Callout kind="cost">
+
+- **依赖服务商的去重**：换一家不支持幂等键的服务商，这一层就没了，「邮件已发、记录未提交」的窗口会重新漏出重复。
+- **SMTP 回复码只能按文字判断**：Resend 的文档没写 SMTP 各种回复码的含义，「同一个键已接受过」「同一个键正在并发处理」目前是按回复文字里的 `idempotent`、`concurrent` 判断的，上线后看日志核实。
+- **拿不到邮件 ID**：退信、投诉回调这一版不做，以后要做得改走 HTTP 接口。
+
+</Callout>
+
+<Transfer
+  prompt="一个订单服务消费「支付成功」事件后，要调第三方支付平台的「分账」接口。消费端已经按事件 ID 去重了。你还担心什么？会怎么做？"
+  points={[
+    { label: "同一个窗口", text: "分账接口调成功了、去重记录还没提交时崩溃，重投会再调一次，钱可能被分两次。" },
+    { label: "带幂等键", text: "支付平台一般支持请求级的幂等键或「商户订单号唯一」，用一个重试不变的值（事件 ID 或分账单号）。" },
+    { label: "弄清有效期", text: "问清平台的幂等键保留多久，重试不能拖过这个期限；过期了就人工核对，而不是盲目重发。" },
+    { label: "同键同内容", text: "重试时请求内容要和第一次完全一样，金额、时间戳都不能重新计算。" }
+  ]}
+/>

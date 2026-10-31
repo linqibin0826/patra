@@ -1,0 +1,121 @@
+---
+title: 自托管 runner：家里的机器来干活
+summary: 部署要在容器所在的那台机器上执行，所以 Patra 在 Mac mini 上常驻了一个自己的 runner。它主动向 GitHub 问有没有活，不需要开任何入站端口。
+type: concept
+difficulty: advanced
+tags: [ci-cd, deployment]
+prerequisites: [ops-ci-pipeline]
+personalEnv: false
+---
+
+<Diagnose
+  question="部署机在家里，没有公网地址，GitHub 访问不到它。GitHub 的部署任务是怎么交到这台机器手上的？"
+  options={["GitHub 通过公网连进家里的网络，把任务推给它", "部署机上的 runner 主动向 GitHub 发起连接，问有没有活", "靠人工把任务复制到机器上"]}
+  answer="B"
+  ifRight="对。连接永远由家里的机器向外发起，所以不需要公网地址，也不需要在路由器上开任何洞。"
+  ifWrong="答案是 B。GitHub 连不进家里的网络，也不需要连：runner 主动向外长轮询问有没有活，任务沿着这条已经建立的连接递回来。"
+  suggest="ops-ci-pipeline"
+/>
+
+## 为什么云端机器不够用
+
+上一篇讲过，CI 的 job 跑在 GitHub 租来的云端机器上，用完即销毁。这很适合做检查，但部署做不了：
+
+- 云端机器在远处，**摸不到家里 Mac mini 上的容器**。
+- 要把新版本换上去，命令必须在容器所在的那台机器上执行。
+
+解决办法是在 Mac mini 上装一个常驻程序，把这台机器注册给 GitHub，当作“自己的 runner”。这就是 **self-hosted runner（自托管 runner）**。
+
+| | 云端 runner | 自托管 runner |
+|---|---|---|
+| 谁的机器 | GitHub 的 | 你自己的 |
+| 生命周期 | 每个 job 一台全新的，用完销毁 | 常驻，一直守着 |
+| 环境 | 干净，每次从零开始 | 持久，上次的东西可能还在 |
+| 能否摸到你的服务 | 不能 | 能，它就在服务旁边 |
+| Patra 用它做 | 合并前检查 | 打包、部署、推送配置 |
+
+## 领活：不是 GitHub 找上门，是机器主动去问
+
+最容易误解的地方：GitHub 怎么连进你的家庭网络？答案是**不连**。
+
+<Sequence
+  title="一个部署任务是怎么到 runner 手里的"
+  actors={[
+    { id: "github", label: "GitHub", sub: "任务台" },
+    { id: "runner", label: "runner", sub: "Mac mini 上常驻" },
+    { id: "docker", label: "Docker", sub: "同一台机器" }
+  ]}
+  messages={[
+    { from: "runner", to: "github", label: "有活吗？（主动向外发起的长轮询）", caption: "runner 一直保持着一条向外的连接，反复问：有没有属于我的任务？这条连接由家里这一端发起。" },
+    { from: "github", to: "runner", label: "有：build-deploy", caption: "合并进 main 之后，cd.yml 里的 build-deploy 任务排上了队。GitHub 沿着这条已有的连接，把任务递给 runner。", dashed: true },
+    { from: "runner", to: "docker", label: "docker build / compose up", caption: "任务里的命令就在本机执行：打包镜像、换新容器。机器就守在容器旁边，这是云端 runner 做不到的。" },
+    { from: "runner", to: "github", label: "回传日志与结果", caption: "执行过程的日志实时回传，结果标记成功或失败，你在 GitHub 页面上就能看到。" }
+  ]}
+  summary={{ caption: "整个过程中，家里的网络没有开放任何入站端口，连接永远是向外发起的。" }}
+/>
+
+这带来一个很好的性质：**家里的防火墙不用为它开任何口子**。不需要公网 IP，不需要端口转发。
+
+## 标签：这份活该谁接
+
+仓库可以有很多 runner，任务靠**标签**路由。Patra 的 runner 注册时带了自定义标签 `macmini`，加上内置的 `self-hosted`。部署的 job 这样声明需求：
+
+<CodeRef at=".github/workflows/cd.yml@b6e01875bb5692356021c8a19562f557f319fc54" lines="112-121" />
+
+`runs-on: [self-hosted, macmini]` 的意思是：两个标签都对得上的 runner 才能接。CI 里那些写着 `ubuntu-latest` 的 job，永远轮不到它。
+
+## 安全边界：陌生代码上不了这台机器
+
+仓库是公开的，任何人都能提 PR。如果 PR 的代码能跑在 Mac mini 上，就等于任何陌生人都能在你家里执行脚本。所以部署类 workflow 只订阅 `push` 到 main 和手动触发，**不订阅 `pull_request`**。
+
+再加上上面的“零入站”：陌生代码进不来，陌生连接也进不来。这台家用机器能当部署机，靠的就是这两道墙。（细节见“流水线安全”一篇。）
+
+## 常驻程序的生存环境
+
+runner 是 macOS 的 launchd 服务，在后台常驻。这带来一个隐蔽的差异：
+
+<Callout kind="insight">
+
+后台服务不会继承你终端里的任何环境变量。你在终端里能用的 JAVA_HOME、PATH，对 runner 统统不存在。
+
+</Callout>
+
+所以安装脚本要把必需的环境显式固化下来：
+
+- 一份 `.env` 文件：写入 JAVA_HOME 等变量，runner 启动时读取。
+- 一份 `.path` 文件：补上 docker 所在的目录，否则 runner 连 docker 命令都找不到。
+
+<CodeRef at="patra-infra/scripts/install-github-runner.sh@20f30c3a3a0b2f6b0bd6716ee66034c499ed6f65" lines="88-100" />
+
+另一个有意的选择是注册时加了 `--disableupdate`，关掉 runner 的自动更新。代价是升级要人工做：**闲时不带参数重新跑一次安装脚本**，它会比较版本、只更新程序本体，注册信息不动。
+
+还有两条运维红线：
+
+1. **任务执行期间不能重启 runner**，否则正在执行的任务会被当场杀掉，表现成莫名其妙的 cancelled。重启前先确认没有进行中的运行。
+2. **工作区是持久的**。每次运行前 `actions/checkout` 会清掉被 git 忽略的文件，所以密钥这类文件不能放在仓库目录里，要放在仓库之外的固定位置。
+
+<Quiz
+  questions={[
+    {
+      question: "runner 上的 job 声明了 runs-on: [self-hosted, macmini]。一台只带 self-hosted 标签、没有 macmini 标签的 runner 能接这个任务吗？",
+      options: ["能，self-hosted 就够了", "不能，两个标签都要匹配"],
+      answer: "B",
+      explain: "runs-on 里列出的标签是“全部都要有”。"
+    },
+    {
+      question: "你在终端里 export 了 JAVA_HOME，然后期望 runner 构建时能用到它。可靠吗？",
+      options: ["可靠，runner 继承终端环境", "不可靠，launchd 服务不继承终端环境，要写进 runner 自己的 .env"],
+      answer: "B",
+      explain: "后台常驻服务有自己独立的环境，只认安装时固化进去的那份。"
+    }
+  ]}
+/>
+
+<Transfer
+  prompt="假设你想再装第二台机器也当部署用的 runner，并给它同样的两个标签。会遇到什么问题？更稳妥的做法是什么？"
+  points={[
+    { label: "抢活", text: "两台机器标签一样，一个部署任务会被谁先问到就由谁接。你无法保证它落在有对应容器和密钥的那一台。" },
+    { label: "环境要对齐", text: "不管哪台接，它都需要 docker、JDK、密钥目录等同样的东西，否则任务会在奇怪的地方失败。" },
+    { label: "用标签区分", text: "给不同用途或不同机器分别打上不同标签，让每个 job 明确指定要去哪一台。" }
+  ]}
+/>

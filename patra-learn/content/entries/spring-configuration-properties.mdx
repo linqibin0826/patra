@@ -1,0 +1,206 @@
+---
+title: 配置：application.yml 与 @ConfigurationProperties
+summary: 可调的数字和开关不写死在代码里，而是写成配置键，由 Spring 绑定到一个配置类的字段上。同一个键可以出现在好几处，谁说了算有固定的先后。
+type: concept
+difficulty: basic
+tags: [spring, java, backend]
+prerequisites: [spring-boot-auto-configuration]
+sources:
+  - version: v0.9
+personalEnv: false
+---
+
+<Diagnose
+  question="identity 的登录失败限制里，「连续输错几次就锁定」在配置类的字段上写着默认值 `5`。现在在 Nacos 的 `patra-identity.yaml` 里加一行 `max-failures: 8`（放在 `patra.identity.login-throttle` 下面），重启后生效的是几？"
+  options={["5：代码里写的才算数", "8：配置文件里写了，就盖过字段上的默认值", "启动报错：代码里叫 `maxFailures`，配置里叫 `max-failures`，对不上"]}
+  answer="B"
+  ifRight="对。字段上的值只是「谁都没说时」的兜底。这篇讲配置怎么绑到对象上，以及同一个键写在好几处时听谁的。"
+  ifWrong="答案是 B：配置里写了的键会盖过字段默认值，`max-failures` 和 `maxFailures` 也能对上。这些都发生在启动时 Spring Boot 装配容器的过程里，上一篇讲过它怎么从清单把配置类装进来。"
+/>
+
+<Callout kind="lead">
+
+`@ConfigurationProperties` 把一组前缀相同的配置键，绑定到一个普通 Java 对象的字段上。代码里只读这个对象，不关心值是从 jar 里的 yml、Nacos 还是环境变量来的。
+
+</Callout>
+
+## 为什么不写死在代码里
+
+「输错 5 次锁 15 分钟」是一条规则，可这两个数字以后很可能要调：被人撞库了想收紧，误伤太多想放宽。写死在代码里，每调一次都要改代码、重新构建、重新发布。写成配置，改一行配置就行，代码不动。
+
+<Callout kind="analogy">
+
+代码像一台空调，配置像遥控器上的温度。出厂时设了 26 度（默认值），住进来的人按遥控器改成 24 度，用不着拆开空调改电路。
+
+</Callout>
+
+## 一个配置类长什么样
+
+<CodeRef at="patra-api/patra-identity/patra-identity-boot/src/main/java/dev/patra/identity/config/LoginThrottleProperties.java@b6e01875bb5692356021c8a19562f557f319fc54" lines="18-41" />
+
+```java
+@Data
+@Validated
+@ConfigurationProperties(prefix = "patra.identity.login-throttle")
+public class LoginThrottleProperties {
+
+  /// 计数窗口内允许的失败次数，到达即上锁。
+  @Min(1)
+  private volatile int maxFailures = 5;
+
+  /// 计数窗口。
+  @NotNull
+  @DurationMin(nanos = 1)
+  private volatile Duration window = Duration.ofMinutes(15);
+
+  /// 锁定时长。
+  @NotNull
+  @DurationMin(nanos = 1)
+  private volatile Duration lockDuration = Duration.ofMinutes(15);
+
+  /// 在途登记的过期时间。
+  @NotNull
+  @DurationMin(nanos = 1)
+  private volatile Duration inFlightTtl = Duration.ofSeconds(30);
+}
+```
+
+一行一行看：
+
+- `prefix = "patra.identity.login-throttle"`：这个类管哪一段配置。配置里 `patra.identity.login-throttle.max-failures` 绑到字段 `maxFailures`。
+- 名字的写法可以不一样：yml 里习惯写 `max-failures`（短横线），Java 字段写 `maxFailures`（驼峰），Spring 认得它们是同一个。环境变量里写成全大写下划线 `PATRA_IDENTITY_LOGIN_THROTTLE_MAX_FAILURES`，也能对上。
+- 类型自动转换：配置里写 `15m`，绑到 `Duration` 字段就是 15 分钟；写 `30s` 就是 30 秒。
+- `@Validated` 加上 `@Min(1)`、`@NotNull`：值不合法（比如写了 `0`），启动直接失败，不会带着一个荒唐的规则跑起来。
+- 字段上的 `= 5`、`= Duration.ofMinutes(15)`：谁都没写这个键时的默认值。Patra 现在的 Nacos 文件里就没写这几个键，线上用的就是这些默认值。
+
+这个类自己不会进容器，要有人用 `@EnableConfigurationProperties` 登记它。identity 的装配类登记了它，再用它造出领域层要的规则对象：
+
+<CodeRef at="patra-api/patra-identity/patra-identity-boot/src/main/java/dev/patra/identity/config/IdentityConfiguration.java@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="62-70" />
+
+```java
+  @Bean
+  public Supplier<LoginThrottlePolicy> loginThrottlePolicy(LoginThrottleProperties properties) {
+    return () ->
+        LoginThrottlePolicy.of(
+            properties.getMaxFailures(),
+            properties.getWindow(),
+            properties.getLockDuration(),
+            properties.getInFlightTtl());
+  }
+```
+
+领域层的 `LoginThrottlePolicy` 不知道有配置这回事，它只拿到几个数。配置类留在启动模块里，这也是六边形架构里「领域层不依赖框架」的一个体现。
+
+## record 写法：启动后就不变的配置
+
+identity 的其他配置用的是另一种写法，record 加 `@DefaultValue`（下面只截了开头几个字段）：
+
+<CodeRef at="patra-api/patra-identity/patra-identity-boot/src/main/java/dev/patra/identity/config/IdentityProperties.java@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="20-24" />
+
+```java
+@ConfigurationProperties(prefix = "patra.identity")
+public record IdentityProperties(
+    @DefaultValue PasswordHashing passwordHashing,
+    @DefaultValue Session session,
+    @DefaultValue Username username,
+```
+
+两种写法的区别只在一件事：**运行中能不能改**。record 造好就不能改，适合数据源、端口、会话策略这类启动后不变的；`LoginThrottleProperties` 写成可变的类、字段加 `volatile`，是为了配置中心推来新值时能原地改掉（v0.9 决策 D，Nacos 那篇细讲）。不需要在线改的，Patra 一律用 record。
+
+## 同一个键写在好几处，听谁的
+
+这里是大多数人第一次会卡住的地方。一个键可能出现在好几个地方，Spring 把它们排成一摞，**上面的盖住下面的**。Patra 按 v0.9 决策 C「配置分三层」排成这样，点「下一步」从最底下往上看：
+
+<Stepper
+  title="max-failures 最后取哪一层的值"
+  nodes={[
+    { id: "field", label: "字段默认值", sub: "= 5" },
+    { id: "jar", label: "jar 里的 yml", sub: "application.yml" },
+    { id: "common", label: "Nacos 公共", sub: "patra-common.yaml" },
+    { id: "service", label: "Nacos 本服务", sub: "patra-identity.yaml" },
+    { id: "env", label: "环境变量", sub: "启动参数同级" }
+  ]}
+  links={[
+    { from: "field", to: "jar" },
+    { from: "jar", to: "common" },
+    { from: "common", to: "service" },
+    { from: "service", to: "env" }
+  ]}
+  steps={[
+    { caption: "最底下是字段上的默认值。所有地方都没写这个键时，用它。", focus: ["field"], tokens: [{ id: "v", label: "5", at: "field" }] },
+    { caption: "jar 里的 `application.yml`：放代码默认值和启动必需的配置。identity 的这份特意没写登录失败限制，注释里写着「要调就在 Nacos 的 patra-identity.yaml 里加键」。", focus: ["jar"], links: ["field>jar"], tokens: [{ id: "v", label: "5", at: "jar" }] },
+    { caption: "Nacos 的 `patra-common.yaml`：几个服务共用的配置。它没写这个键，值还是 5。", focus: ["common"], links: ["jar>common"], tokens: [{ id: "v", label: "5", at: "common" }] },
+    { caption: "Nacos 的 `patra-identity.yaml`：只给 identity 的、随环境变的配置。假设这里写了 8，它盖住下面所有层。", focus: ["service"], links: ["common>service"], tokens: [{ id: "v", label: "8", at: "service" }], notes: [{ at: "service", text: "max-failures: 8", tone: "ok" }] },
+    { caption: "最上面是进程级的：环境变量、启动参数、系统属性。这一层写了就以它为准。", focus: ["env"], links: ["service>env"], tokens: [{ id: "v", label: "3", at: "env" }], notes: [{ at: "env", text: "…_MAX_FAILURES=3", tone: "ok" }] }
+  ]}
+  guesses={[
+    { before: 4, question: "jar 里的 `application.yml` 和 Nacos 的 `patra-identity.yaml` 都写了同一个键、值不一样，谁赢？", options: ["jar 里的：离代码近", "Nacos 的", "后启动的那个"], answer: "B", explain: "Patra 的启动器设了 `spring.cloud.nacos.config.preference=remote`，让 Nacos 盖过 jar。不设的话 Nacos 的 Spring 客户端默认本地优先，jar 里的反而赢。" }
+  ]}
+/>
+
+最后那个「Nacos 盖过 jar」不是天生的，是启动器 `PatraApplication` 放进去的：
+
+<CodeRef at="patra-tool/patra-tool-launch/src/main/java/dev/patra/tool/launch/PatraApplication.java@b6e01875bb5692356021c8a19562f557f319fc54" lines="55-64" />
+
+```java
+    Map<String, Object> properties = new LinkedHashMap<>();
+    properties.put("spring.application.name", applicationName);
+    // 后导入的覆盖先导入的：本服务的配置覆盖公共配置
+    properties.put(
+        "spring.config.import", "nacos:" + COMMON_DATA_ID + ",nacos:" + applicationName + ".yaml");
+    properties.put("spring.cloud.nacos.config.namespace", NAMESPACE);
+    // Nacos 的值覆盖 jar 里的默认值（SCA 默认是本地优先）
+    properties.put("spring.cloud.nacos.config.preference", "remote");
+    properties.put(ConfigSourceCheckPostProcessor.REQUIRED_PROPERTY, "true");
+    return properties;
+```
+
+这几行本身放在 Spring 的 default properties 里，那是比 jar 里的 yml 还低的一层，所以服务想改也改得了。
+
+决策 C 当时否掉的另一种做法是「本地优先，并要求同一个键不在两处出现」：只能靠人记，迟早出错。现在的做法是 Nacos 赢，再加一个测试（`JarConfigOverlapCheckerTest`）检查 jar 和 Nacos 有没有写重同一个键。
+
+<Params
+  title="动手试试：max-failures 最后是几"
+  controls={[
+    { type: "switch", id: "nacos", label: "Nacos 的 `patra-identity.yaml` 写了这个键", default: false },
+    { type: "slider", id: "value", label: "Nacos 里写的值", min: 0, max: 10, step: 1, default: 8, unit: "次" },
+    { type: "switch", id: "env", label: "容器设了环境变量 `PATRA_IDENTITY_LOGIN_THROTTLE_MAX_FAILURES=3`", default: false }
+  ]}
+  cases={[
+    { when: { env: true }, results: [{ label: "生效的值", value: "3 次", tone: "ok" }, { label: "来自", value: "环境变量" }], verdict: { tone: "ok", head: "进程级最大。", text: "环境变量盖住 Nacos 和下面所有层，Nacos 里写了什么都不看。" } },
+    { when: { nacos: true, value: [0, 0] }, results: [{ label: "生效的值", value: "0 次", tone: "bad" }, { label: "启动", value: "失败", tone: "bad" }], verdict: { tone: "bad", head: "校验拦住了。", text: "绑定后 `@Min(1)` 不通过，服务起不来。宁可起不来，也不带着「输错 0 次就锁」跑。" } },
+    { when: { nacos: true }, results: [{ label: "生效的值", value: "{value}", tone: "ok" }, { label: "来自", value: "Nacos 的 patra-identity.yaml" }], verdict: { tone: "ok", head: "Nacos 赢。", text: "Nacos 本服务的配置盖住 jar 里的 yml 和字段默认值。" } },
+    { results: [{ label: "生效的值", value: "5 次", tone: "ok" }, { label: "来自", value: "字段默认值" }], verdict: { tone: "ok", head: "谁都没说。", text: "所有地方都没写这个键，用 `LoginThrottleProperties` 字段上的默认值。现在线上就是这样。" } }
+  ]}
+/>
+
+## 环境变量覆盖：一个真实例子
+
+identity 的 jar 里写着 IP 属地数据文件的目录，默认在用户主目录下。容器里没有那个目录，于是 compose 给容器设了一个环境变量，把它改成挂载进来的目录：
+
+<CodeRef at="patra-api/patra-identity/patra-identity-boot/src/main/resources/application.yml@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="101-104" />
+
+```yaml
+    # IP 属地（PAP-99）：ip2region 两个 xdb 所在目录，由 patra-infra/scripts/fetch-ip2region.sh 下载；
+    # 容器里由 compose 设 PATRA_IDENTITY_IP_GEOLOCATION_DIRECTORY=/data/ip2region（只读挂载）。缺文件启动失败
+    ip-geolocation:
+      directory: ${user.home}/.patra/data/ip2region
+```
+
+同一份 jar，本机跑和容器里跑用的是不同的目录，代码和 yml 都不用改。
+
+<Callout kind="warn">
+
+真正的密钥（Redis 密码、外部 API key）不要写进任何一层配置文件。Patra 的配置文件里只写 `${变量}` 引用，值放在机器本地，由环境变量递进来（v0.9 决策 E）。
+
+</Callout>
+
+<Transfer
+  prompt="identity 要加一个可调参数：注册时用户名的最短长度，默认 3。上线后想在 mini 上改成 4；某天你在本机想临时用 2 试一下，又不想改任何文件。分别该怎么做？"
+  points={[
+    { label: "默认值写在配置类", text: "在一个 `@ConfigurationProperties` 配置类里加字段，默认值 3 写在字段（或 record 的 `@DefaultValue`）上，加 `@Min` 之类的校验。" },
+    { label: "线上改在 Nacos", text: "mini 上要改成 4，在 Nacos 的 `patra-identity.yaml` 里加这个键；它盖过字段默认值。不要同时写进 jar 的 yml。" },
+    { label: "本机临时用环境变量", text: "启动时设一个对应的环境变量（全大写、下划线），进程级最大，盖住 Nacos，关掉进程就没了。" },
+    { label: "要不要在线改", text: "只在重启时生效就用 record；要不重启就生效，才写成可变类。" }
+  ]}
+/>

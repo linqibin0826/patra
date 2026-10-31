@@ -1,0 +1,107 @@
+---
+title: 容器重建后 Nacos 选不出 leader
+summary: Nacos 控制台下线实例时报 do metadata operation failed。服务注册发现一切正常，只有这类操作失败。根因是容器重建后主机名变了，Raft 数据里记着的还是旧主机名，节点认不出自己，选不出 leader。
+type: troubleshooting
+difficulty: practice
+tags: [spring, docker]
+prerequisites: [spring-service-discovery, ops-docker-compose]
+sources:
+  - version: v0.9
+    issue: PAP-71
+personalEnv: false
+---
+
+<Diagnose
+  question="一个单节点的 Nacos 跑在 Docker 里，数据目录挂在宿主机上。服务注册、发现都正常，可在控制台点「下线实例」就报 500。你觉得问题更可能在哪？"
+  options={["网络不通，控制台连不上 Nacos", "Nacos 里只有一部分功能坏了，坏的是需要「多数派同意」的那一类", "数据库满了"]}
+  answer="B"
+  ifRight="对。注册发现和下线实例走的是 Nacos 里两套不同的一致性机制，一套坏了另一套照常。往下读坏的那套为什么坏。"
+  ifWrong="答案是 B。能注册、能发现，说明网络、进程、存储大体都好；只有特定操作失败，说明是其中一套机制坏了。这题要先知道服务注册到 Nacos、调用方从 Nacos 取实例是怎么回事，先读服务发现那篇。"
+  suggest="spring-service-discovery"
+/>
+
+<Callout kind="lead" label="结论先说">
+
+compose 里没给 Nacos 容器写 `hostname`，容器的主机名默认就是容器 ID。`docker compose up` 重建容器后主机名变了，可挂在宿主机上的 Raft 数据里记的成员还是旧主机名，新节点发现「自己不在成员名单里」，不参加选举，于是选不出 leader。
+
+- **怎么修**：停 Nacos，把 Raft 数据目录挪走，再启动，单节点会按现在的主机名重新初始化
+- **值得记住**：集群成员按主机名认人的系统，容器里一定要固定主机名
+
+</Callout>
+
+## 现象
+
+部署机上的 Nacos（3.0.2，单机模式）在控制台做「下线实例」「改权重」「改元数据」时报：
+
+```text
+server error: errCode 500, do metadata operation failed
+```
+
+服务注册、服务发现完全正常，平时一点感觉都没有。
+
+## 怎么查
+
+<DebugTrail
+  steps={[
+    { hypothesis: "Nacos 整体出问题了？", result: "各服务照常注册、互相调用都能找到对方，只有这几个控制台操作失败。不是整体故障。", verdict: "ruled-out" },
+    { hypothesis: "Nacos 自己的日志里说了什么？", result: "`nacos.log` 里是 `ConsistencyException: The Raft Group [naming_instance_metadata] did not find the Leader node`：负责元数据的那个 Raft 组没有 leader。", verdict: "closer" },
+    { hypothesis: "单节点为什么会选不出 leader？", result: "`alipay-jraft.log` 里是 `Node <…/0786f47b5b01:7848> can't do preVote as it is not in conf <conf=d43c8ce9a02e:7848>`：当前节点的身份和 Raft 配置里记录的成员对不上。", verdict: "closer" },
+    { hypothesis: "两个名字分别是什么？", result: "`docker exec patra-nacos hostname` 是 `0786f47b5b01`，正是当前容器的 ID；配置里那个是重建之前旧容器的 ID。compose 没写 `hostname:`，又设了 `PREFER_HOST_MODE=hostname`，节点身份随容器 ID 变了。", verdict: "found" }
+  ]}
+/>
+
+## 根因
+
+Nacos 里有两套一致性机制：
+
+| 机制 | 管什么 | 这次 |
+|---|---|---|
+| AP（Distro） | 临时实例的注册与发现，靠心跳 | 正常 |
+| CP（JRaft） | 实例元数据、持久化服务、分布式锁等，要多数派同意 | 坏了 |
+
+Raft 选 leader 要先知道「集群里有哪些成员」，这份名单和日志一起持久化在数据目录里。单节点模式下，名单里只有一个成员，名字是第一次启动时的主机名。
+
+<Compare
+  title="同一个 Nacos，两种重启方式"
+  variants={[
+    {
+      label: "docker restart",
+      steps: ["停掉同一个容器", "再启动同一个容器", "主机名还是原来的容器 ID", "节点在成员名单里，选自己当 leader"],
+      results: [{ label: "CP 操作", value: "正常", tone: "ok" }],
+      verdict: { tone: "ok", head: "什么都没变。", text: "容器还是那个容器，身份没变。" }
+    },
+    {
+      label: "docker compose up 重建",
+      steps: ["删掉旧容器，按 compose 建一个新容器", "新容器有新 ID，主机名跟着变", "数据目录挂在宿主机上，旧名单原样还在", "节点发现自己不在名单里，不参加选举"],
+      results: [{ label: "CP 操作", value: "永远没有 leader", tone: "bad" }],
+      verdict: { tone: "bad", head: "身份对不上。", text: "数据活过了容器的重建，可数据里记的「我是谁」已经不是现在的我。" }
+    }
+  ]}
+/>
+
+## 修法
+
+**立刻恢复**：停 Nacos，把数据卷里的 `protocol/raft` 目录挪到旁边（同一个卷里改名，瞬间完成、还能挪回来），再启动。单节点重启后按当前主机名重新初始化 Raft，日志里出现 `become leader … conf=<当前主机名>:7848`。
+
+挪走 Raft 数据只丢 CP 那部分元数据；临时实例的注册靠心跳几秒内就重建了，服务发现不受影响。顺带还回收了约 1 GB 的 Raft 日志。
+
+**防复发**：在 compose 里给 Nacos 固定主机名，之后重建容器身份也不变。v0.9 升级 Nacos 时加上了这一行，注释写明了原因：
+
+<CodeRef at="patra-infra/docker/docker-compose.core.yaml@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="68-72" />
+
+```yaml
+  nacos:
+    image: nacos/nacos-server:v3.2.4
+    container_name: patra-nacos
+    # 固定 hostname：容器重建后 hostname 一变，jraft 身份对不上，会选不出 leader
+    hostname: patra-nacos
+```
+
+<Transfer
+  prompt="你用 docker compose 跑一个三节点的 etcd（或 Consul、ZooKeeper）集群做测试，数据目录挂在宿主机上。某天 `docker compose down && docker compose up -d` 之后，集群一直不可用。你会先查什么？compose 里该怎么写才能避免？"
+  points={[
+    { label: "先查成员身份", text: "看日志里节点报的「我是谁」和持久化的成员名单是否一致；容器重建后主机名、IP 可能都变了。" },
+    { label: "固定身份", text: "compose 里给每个节点写死 `hostname`，节点之间用这些固定名字互相认，不要依赖容器 ID 或自动分配的 IP。" },
+    { label: "分清 restart 和重建", text: "`docker restart` 不换容器，身份不变；`compose up` 在配置变了时会重建容器，身份可能变。" }
+  ]}
+/>

@@ -1,0 +1,137 @@
+---
+title: 提交规范与提交前检查
+summary: 提交信息按固定格式写，让历史能读、能被机器解析；提交那一刻，本地钩子先查格式、密钥和提交信息。
+type: concept
+difficulty: basic
+tags: [git, ci-cd]
+prerequisites: [ops-git-basics]
+personalEnv: false
+---
+
+<Diagnose
+  question="Patra 的提交检查只接受 类型(范围): 标题 这种格式，类型必须是小写白名单词，标题末尾不能有英文句号。下面哪条提交信息能通过？"
+  options={["Feat(catalog): 新增期刊检索接口", "feat(catalog): 新增期刊检索接口", "fix: 修好了问题.", "update code"]}
+  answer="B"
+  ifRight="对。A 的类型大写，C 的标题以英文句号结尾，D 根本没有类型。这一篇讲这套规则为什么存在、谁在检查。"
+  ifWrong="答案是 B。A 的类型写成了大写 Feat；C 的标题以英文句号结尾；D 没有类型，不是约定的格式。"
+  suggest="ops-git-basics"
+/>
+
+## 一条提交信息是写给三类人看的
+
+提交信息不是随手写的备注。它至少有三类读者：
+
+- **以后翻历史的你**：半年后想知道某行代码为什么这样改，先看的就是它。
+- **评审的人**：PR 合并时（Patra 用 squash，一个 PR 压成一条提交），这条信息就是 main 历史上的一行。
+- **机器**：检查工具、变更记录生成器，都要靠固定格式来解析。
+
+格式统一，三类读者都省力。Patra 采用业界常见的 Conventional Commits：
+
+```text
+类型(范围): 标题
+```
+
+类型是一个小写英文词，范围可选，写这次改动属于哪个模块，标题用中文写“做了什么”。
+
+## 类型和规则
+
+仓库根目录的 `commitlint.config.cjs` 把规则定死了：
+
+<CodeRef at="commitlint.config.cjs@5d70c422611867be5ba1dcc441dc62e1f997ffdb" />
+
+| 类型 | 用在 |
+|---|---|
+| `feat` | 新功能 |
+| `fix` | 修 bug |
+| `docs` | 只改文档 |
+| `refactor` | 重构，行为不变 |
+| `test` | 加或改测试 |
+| `perf` | 性能优化 |
+| `style` | 只调格式，不改逻辑 |
+| `ci` | 改流水线 |
+| `build` | 改构建、依赖 |
+| `chore` | 其他杂务 |
+
+几条硬规则：
+
+- 类型必须小写，且在上面的名单里。
+- 标题不能为空，不能以英文句号结尾。
+- 整个标题行不超过 100 个字符。
+- 范围如果写，必须小写。
+
+还有两条来自标准预设，容易踩：**标题不能以大写字母开头**（所以别把类名或 Issue 编号放在标题最前面，用中文动词起头）；**正文每行不超过 100 个字符**，注意它按字符数而不是字节数算，用 awk 按字节数去量会误报。
+
+## 提交前，钩子先替你把关
+
+你执行 `git commit` 的那一刻，提交还没有真正生成。仓库里的 `.pre-commit-config.yaml` 先让一批检查程序（钩子）看一遍：
+
+<Stepper
+  title="一次 git commit 要过哪几关"
+  nodes={[
+    { id: "commit", label: "git commit", sub: "你按下回车" },
+    { id: "hook", label: "pre-commit 钩子", sub: "查文件内容" },
+    { id: "msg", label: "commit-msg 钩子", sub: "查提交信息" },
+    { id: "done", label: "提交生成", sub: "快照落地" }
+  ]}
+  links={[
+    { from: "commit", to: "hook" },
+    { from: "hook", to: "msg" },
+    { from: "msg", to: "done" }
+  ]}
+  steps={[
+    { caption: "你执行 git commit。Git 还没有生成快照，先把控制权交给钩子。", focus: ["commit"], tokens: [{ id: "c", label: "你的改动", at: "commit" }] },
+    { caption: "第一类检查看文件内容：行尾空格、换行符、合并冲突残留、超大文件、误带的私钥，以及 gitleaks 的密钥扫描。改的是 Java，还会自动格式化。", focus: ["hook"], links: ["commit>hook"], tokens: [{ id: "c", label: "你的改动", at: "hook" }], notes: [{ at: "hook", text: "有问题就拒绝", tone: "wait" }] },
+    { caption: "第二类检查看你写的提交信息：类型、格式、长度。commitlint 在这里把关。", focus: ["msg"], links: ["hook>msg"], tokens: [{ id: "c", label: "你的改动", at: "msg" }], notes: [{ at: "msg", text: "格式不对就拒绝", tone: "wait" }] },
+    { caption: "两关都过，快照才真正生成。任何一关失败，这次提交就没有发生，改动还留在你的工作区里。", focus: ["done"], links: ["msg>done"], tokens: [{ id: "c", label: "快照", at: "done" }], notes: [{ at: "done", text: "提交成功", tone: "ok" }] }
+  ]}
+  guesses={[
+    { before: 3, question: "钩子自动格式化了你的 Java 文件，然后提交失败了。再次提交前，你该做什么？", options: ["什么都不用做，直接再提交一次", "把被格式化改动过的文件重新加入暂存区再提交", "放弃这次改动"], answer: "B", explain: "钩子修改了文件，但新的内容还没有放进这次快照。需要重新 git add，再提交。" }
+  ]}
+/>
+
+在 Patra 里，这份配置分四块：
+
+<CodeRef at=".pre-commit-config.yaml@3cf6fa5757b3be54c3b030e4cace871f53e2599c" lines="7-51" />
+
+| 钩子 | 拦什么 | 为什么 |
+|---|---|---|
+| 通用检查 | 合并冲突残留、坏掉的 YAML / JSON、2 MB 以上的大文件、私钥、行尾空格 | 低级错误别进历史 |
+| gitleaks | 看起来像密钥的字符串 | 仓库是公开的，密钥一进历史就永久可读 |
+| spotless | Java 与 gradle 脚本的格式，自动改好 | 格式争论交给机器 |
+| commitlint | 提交信息格式 | 就是上面这些规则 |
+
+<Callout kind="warn">
+
+gitleaks 认的是“长得像密钥”，不是“确实是密钥”。测试里写一个名字含 TOKEN、长度 43 位的随机字面量，也会被当成密钥拒绝提交。Patra 的 identity 测试里改用 `"F".repeat(43)` 这种明显不随机的写法就过了。
+
+</Callout>
+
+## 钩子只在你电脑上，所以不是唯一一道
+
+钩子装在每个人自己的电脑上，`git commit --no-verify` 就能跳过。所以它不是安全的最后防线，只是**最快的第一道**：几秒钟就能拦下低级错误，不用等云端几分钟的检查再报错。真正兜底的在后面：PR 上的云端检查，以及评审工具里的密钥扫描。
+
+<Quiz
+  questions={[
+    {
+      question: "下面哪个标题能通过检查？",
+      options: ["fix(identity): 修复注销后会话未清理", "fix(identity): Fix session cleanup.", "FIX: 修复会话"],
+      answer: "A",
+      explain: "B 的标题以英文句号结尾，且以大写字母开头；C 的类型是大写。A 类型小写、标题是中文、末尾没有句号。"
+    },
+    {
+      question: "钩子能否保证仓库里永远不会出现密钥？",
+      options: ["能，所有提交都必须过钩子", "不能，钩子可以被跳过，只是最快的一道关"],
+      answer: "B",
+      explain: "钩子在本地运行，可以被 --no-verify 绕过，所以云端检查和评审工具里还有第二道。"
+    }
+  ]}
+/>
+
+<Transfer
+  prompt="为什么要把密钥扫描放在提交这一步，而不是只在云端检查时才扫？"
+  points={[
+    { label: "历史是永久的", text: "公开仓库一旦推送，哪怕随后删掉，历史里仍能被读到。最好在它进入历史之前就拦住。" },
+    { label: "越早越便宜", text: "本地拦下只要改一行再提交；推出去之后，就要轮换密钥、清理历史。" },
+    { label: "本地可绕过", text: "所以云端和评审工具里还要有一道扫描兜底，两道配合。" }
+  ]}
+/>

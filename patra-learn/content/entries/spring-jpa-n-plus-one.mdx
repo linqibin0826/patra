@@ -1,0 +1,132 @@
+---
+title: N+1 查询
+summary: 一次查出 N 个实体，再在循环里碰它们的懒加载集合，就会多出 N 条甚至 2N 条 SQL。Patra 查作者时用 JOIN FETCH 一次把子集合带回来。
+type: pitfall
+difficulty: advanced
+tags: [spring, database, backend]
+prerequisites: [spring-jpa-basics]
+personalEnv: false
+---
+
+<Diagnose
+  question="一条查询拿回 100 个作者实体。每个作者有两个懒加载的集合：名字变体和 ORCID。接着在循环里把每个作者转成领域对象，转换时两个集合都要读。整个过程一共发几条 SQL？"
+  options={["1 条", "3 条", "101 条", "201 条"]}
+  answer="D"
+  ifRight="对：1 条查作者，再给每个作者各补 2 条查集合，共 1 + 100 × 2 条。这篇讲它为什么会这样、Patra 怎么避开。"
+  ifWrong="答案是 201 条。懒加载的集合在第一次被读时才单独去查，100 个作者、每人两个集合，就是在 1 条主查询之外再补 200 条。这题考的是懒加载和持久化上下文，是读懂这篇的前提。"
+/>
+
+<Callout kind="lead" label="坑在哪">
+
+先查出 N 个实体，再在循环里读它们 `LAZY` 的关联，每读一个实体的一个关联，Hibernate 就单独补一条 SQL。查询本身只有 1 条，循环让它变成 1 + N 条。
+
+</Callout>
+
+## 坑：一条查询，循环里长出一串
+
+Patra 导入 PubMed 作者时，要按 ORCID 找出库里已有的作者，再转成领域对象 `AuthorAggregate`。转换在 `AuthorJpaMapper.toAggregate` 里，它会读实体的 `nameVariants` 和 `orcids` 两个集合。
+
+下面假设查询没做任何处理，看 SQL 怎么一条条长出来。
+
+<Stepper
+  title="循环里的懒加载：SQL 一条条长出来"
+  nodes={[
+    { id: "adapter", label: "AuthorRepositoryAdapter", sub: "循环转换" },
+    { id: "mapper", label: "toAggregate", sub: "读两个集合" },
+    { id: "db", label: "PostgreSQL", sub: "cat_author 等" }
+  ]}
+  links={[
+    { from: "adapter", to: "db", label: "查作者" },
+    { from: "adapter", to: "mapper" },
+    { from: "mapper", to: "db", label: "补查集合" }
+  ]}
+  steps={[
+    { caption: "一条 SQL 查出 3 个作者。集合字段是 `LAZY`，这时只是占位的代理，里面没有数据。", focus: ["adapter", "db"], links: ["adapter>db"], notes: [{ at: "db", text: "SQL · 1 条", tone: "ok" }] },
+    { caption: "循环到第 1 个作者，`toAggregate` 读 `getNameVariants()`。代理发现自己是空的，立刻去库里查这个作者的名字变体。", focus: ["mapper", "db"], links: ["adapter>mapper", "mapper>db"], tokens: [{ id: "a1", label: "作者 1", at: "mapper" }], notes: [{ at: "db", text: "SQL · 2 条", tone: "wait" }] },
+    { caption: "同一个作者接着读 `getOrcids()`，又查一次。", focus: ["mapper", "db"], links: ["mapper>db"], tokens: [{ id: "a1", label: "作者 1", at: "mapper" }], notes: [{ at: "db", text: "SQL · 3 条", tone: "wait" }] },
+    { caption: "第 2、第 3 个作者照样各补两条。3 个作者，SQL 已经 7 条。", focus: ["mapper", "db"], links: ["mapper>db"], tokens: [{ id: "a3", label: "作者 3", at: "mapper" }], notes: [{ at: "db", text: "SQL · 7 条", tone: "bad" }] },
+    { caption: "换成一批 5000 条的导入：每次往返哪怕只要 1 毫秒，光补查集合就要等上 10 秒。", focus: ["db"], notes: [{ at: "db", text: "SQL · 10001 条", tone: "bad" }] }
+  ]}
+  guesses={[
+    { before: 4, question: "第 1 个作者补了 2 条。第 2 个作者的集合会怎样？", options: ["第 1 次已经查过表了，不再查", "照样各补 1 条，每个作者都一样", "Hibernate 发现规律，自动合成一条"], answer: "B", explain: "补查是按「这个实体的这个集合」发的，第 1 个作者查过不代表第 2 个作者的也到手了。默认配置下每个作者都要再补两条。" }
+  ]}
+/>
+
+## 为什么：懒加载等到「第一次读」才查
+
+`AuthorEntity` 的两个集合都写着 `fetch = FetchType.LAZY`。查作者时 Hibernate 不去碰子表，只在集合位置放一个代理。代码第一次读这个集合，代理才发 SQL 把它填满。
+
+单看一个实体，这很划算：不用的集合就不查。问题出在循环。每个实体的代理各管各的，Hibernate 不知道你接下来要把 100 个都读一遍，只能一个一个补。
+
+这个坑难发现，是因为代码里看不到 SQL。`entity.getNameVariants()` 看起来只是取一个字段，背后却是一次数据库往返。
+
+<Callout kind="insight" label="怎么认出它">
+
+把 Hibernate 的 SQL 日志打开（`org.hibernate.SQL` 调到 DEBUG），跑一次批量操作，看日志里是不是同一条 `select … where author_id=?` 换着参数刷屏。条数随数据量线性增长，就是 N+1。
+
+</Callout>
+
+## 怎么避开：让主查询顺手把集合带回来
+
+Patra 的做法是在查询里写 `JOIN FETCH`：告诉 Hibernate 这次查作者时，把两个集合也一起 JOIN 进来，填好再交出去。
+
+<CodeRef at="patra-api/patra-catalog/patra-catalog-infra/src/main/java/dev/patra/catalog/infra/author/persistence/dao/AuthorDao.java@5073ab1358404ecd989e722373cd9f7edafe238b" lines="144-153" />
+
+```java
+  @Query(
+      """
+      SELECT DISTINCT a FROM AuthorEntity a
+      JOIN FETCH a.orcids
+      LEFT JOIN FETCH a.nameVariants
+      WHERE a.id IN (
+          SELECT DISTINCT ao.author.id FROM AuthorOrcidEntity ao WHERE ao.orcid IN :orcids
+      )
+      """)
+  List<AuthorEntity> findByOrcidIn(@Param("orcids") Collection<String> orcids);
+```
+
+这里有三个细节：
+
+- `orcids` 用 `JOIN FETCH`，`nameVariants` 用 `LEFT JOIN FETCH`：能按 ORCID 查到的作者一定有 ORCID，名字变体却可能为空，用左连接才不会把没有变体的作者漏掉。
+- 一个作者有 2 个 ORCID、3 个名字变体，JOIN 出来是 6 行。`DISTINCT` 把它们合回一个实体。
+- 作者的筛选放在子查询里，外层的 FETCH 不带条件。顺带避开一个常见陷阱：要是直接在被 FETCH 的集合上写 `WHERE o.orcid IN …`，装进实体的 `orcids` 只剩匹配上的那几个，实体就是残缺的。
+
+查回来以后，适配器照常循环调用 `toAggregate`，这时集合已经填好，读它们不再发 SQL。
+
+<CodeRef at="patra-api/patra-catalog/patra-catalog-infra/src/main/java/dev/patra/catalog/infra/author/persistence/AuthorRepositoryAdapter.java@5073ab1358404ecd989e722373cd9f7edafe238b" lines="230-246" />
+
+<Callout kind="warn">
+
+同时 FETCH 两个集合有个前提：它们得是 `Set`。两个 `List` 一起 FETCH，Hibernate 会直接报 `MultipleBagFetchException`，因为它没法从笛卡尔积里分清哪几行属于哪个列表。`AuthorEntity` 的注释专门写了「使用 Set 而非 List 的原因」。
+
+</Callout>
+
+<CodeRef at="patra-api/patra-catalog/patra-catalog-infra/src/main/java/dev/patra/catalog/infra/author/persistence/entity/AuthorEntity.java@5073ab1358404ecd989e722373cd9f7edafe238b" lines="105-133" />
+
+不想手写 JPQL 时，Spring Data 还提供 `@EntityGraph(attributePaths = …)` 注解，在派生查询方法上声明要一起加载哪些关联，效果和 `JOIN FETCH` 一样。Patra 目前的查询都写成显式的 `JOIN FETCH`，一眼能看出 SQL 长什么样。
+
+<Quiz
+  questions={[
+    {
+      question: "有人把 `findByOrcidIn` 改回 `findAllById(ids)`，然后照样循环调用 `toAggregate`。会怎样？",
+      options: ["结果一样，只是慢一点", "结果一样，SQL 回到 1 + 2N 条", "直接报错，集合读不出来"],
+      answer: "B",
+      explain: "结果还是对的，懒加载会把数据补齐；变的只有 SQL 条数。这正是 N+1 难发现的原因：功能测试全绿。"
+    },
+    {
+      question: "把 `nameVariants` 那行的 `LEFT JOIN FETCH` 改成 `JOIN FETCH`，会出什么问题？",
+      options: ["没有名字变体的作者查不出来", "SQL 条数变多", "名字变体会重复"],
+      answer: "A",
+      explain: "内连接要求两边都有行。没有名字变体的作者在 JOIN 后整行消失，导入时就以为库里没有这个作者。"
+    }
+  ]}
+/>
+
+<Transfer
+  prompt="一个文献列表页一次查 20 篇文献，每篇要显示它的期刊名（文献对期刊是多对一、懒加载）。页面上线后很慢。你会先怀疑什么？怎么确认？怎么改？"
+  points={[
+    { label: "先怀疑", text: "题目里期刊是懒加载的：渲染每一行时读期刊名，每篇文献补一条查期刊的 SQL，1 + 20 条。多对一默认其实是急加载，但查列表时急加载的关联同样可能逐行补查，所以别因为没写 LAZY 就排除它。" },
+    { label: "怎么确认", text: "打开 SQL 日志刷一次页面，看查期刊的那条语句是不是重复了 20 次、只换参数。" },
+    { label: "怎么改", text: "查文献时 `JOIN FETCH` 期刊，或用 `@EntityGraph` 声明一起加载；只要几个字段时也可以直接查成投影，不加载实体。" }
+  ]}
+/>

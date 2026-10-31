@@ -1,0 +1,197 @@
+---
+title: 集合与 Stream
+summary: List、Set、Map 是装一堆东西的三种容器；分清「能改的」「不能改的副本」和「只读视图」，再用 Stream 把「过滤、转换、收集」写成一条管道。
+type: concept
+difficulty: basic
+tags: [java]
+prerequisites: [java-classes-objects-interfaces]
+personalEnv: false
+---
+
+<Diagnose
+  question="List<String> names = List.of(「组会」, 「精读」); 接着执行 names.add(「综述」);。会怎样？"
+  options={["names 变成三个元素", "编译报错，List 没有 add 方法", "编译能过，运行到这一行抛异常"]}
+  answer="C"
+  ifRight="对。List.of 造出来的列表不能改，可 add 方法是 List 接口里约定好的，所以编译能过，运行时才报错。这篇讲清哪些集合能改、哪些不能，以及为什么 Patra 偏爱不能改的。"
+  ifWrong="答案是 C：List 是一个接口，约定了 add；List.of 返回的实现类不支持修改，调用 add 时抛 UnsupportedOperationException。要看懂「接口约定了方法、实现类可以不支持」，先读类与接口那篇。"
+  suggest="java-classes-objects-interfaces"
+/>
+
+<Callout kind="lead">
+
+**集合**是装一堆东西的容器，常用三种：`List`（有顺序、可以重复）、`Set`（不重复）、`Map`（按键找值）。同一种集合还分**能改**和**不能改**；Patra 规定能不改就不改。**Stream** 是对集合做「过滤、转换、收集」的一种写法，读起来像一条流水线。
+
+</Callout>
+
+## 三种容器
+
+<Callout kind="analogy">
+
+`List` 像排队名单：有先后，同一个人可以排两次。`Set` 像签到表：同一个人签多少次都只算一个。`Map` 像通讯录：按名字（键）查电话（值），名字不重复。
+
+</Callout>
+
+Patra 的代码里三种都常见。interaction 去 identity 批量取用户名片，传进去一组用户 ID，拿回「用户 ID → 名片」的对照表：
+
+<CodeRef at="patra-api/patra-interaction/patra-interaction-infra/src/main/java/dev/patra/interaction/infra/subject/user/UserDirectoryAdapter.java@5073ab1358404ecd989e722373cd9f7edafe238b" lines="38" />
+
+```java
+  public Map<Long, UserCard> findCards(Collection<Long> userIds, Long viewerUserId) {
+```
+
+`Map<Long, UserCard>` 读作「键是 `Long`、值是 `UserCard` 的 Map」。尖括号里写的是容器里装什么类型，叫**泛型**。`Collection` 是 `List` 和 `Set` 共同的上级接口，意思是「随便哪种一堆都行」。
+
+## 能改的、不能改的
+
+同样是 `List`，背后的实现类不一样，能不能改也就不一样：
+
+| 写法 | 能不能 add / remove | 用在 |
+|---|---|---|
+| `new ArrayList<>()` | 能 | 方法内部一边算一边往里装 |
+| `List.of(a, b)` | 不能 | 写死几个元素，或返回空列表 `List.of()` |
+| `List.copyOf(list)` | 不能 | 把别人给的列表复制一份自己留着 |
+| `Collections.unmodifiableList(list)` | 不能（但会跟着原列表变） | 把自己内部的列表借给别人看 |
+
+不能改的集合可以放心交给别人：谁拿到都改不了它，也就不会出现「我这里的列表被别处偷偷改了」。Patra 把用法写进了代码规范：
+
+<CodeRef at=".claude/rules/code-style.md@79a711f5ee5e7ea63b9b48d6e7bc29d664684f99" lines="50-67" />
+
+```java
+// ✅ 空集合
+return List.of();
+
+// ✅ 防御性拷贝（创建独立副本）
+this.items = List.copyOf(items);
+
+// ✅ 只读视图（反映内部集合的实时状态）
+public Set<String> getRegisteredIds() {
+  return Collections.unmodifiableSet(this.registeredIds);
+}
+```
+
+## 副本和视图，差在哪
+
+表里最后两行最容易混：`List.copyOf` 是**副本**，复制那一刻的内容，之后跟原列表再无关系；`Collections.unmodifiableList` 是**视图**，像一扇只能看不能伸手的窗户，原列表变了，透过窗户看到的也变。
+
+catalog 里的机构（大学、研究所）一个类里两种都有：
+
+<CodeRef at="patra-api/patra-catalog/patra-catalog-domain/src/main/java/dev/patra/catalog/domain/organization/model/aggregate/OrganizationAggregate.java@5073ab1358404ecd989e722373cd9f7edafe238b" lines="493-505" />
+
+```java
+  /// 获取机构关系（不可变视图）。
+  ///
+  /// @return 机构关系列表
+  public List<OrganizationRelation> getRelations() {
+    return Collections.unmodifiableList(relations);
+  }
+
+  /// 获取所有父级关系。
+  ///
+  /// @return 父级关系列表
+  public List<OrganizationRelation> getParents() {
+    return relations.stream().filter(OrganizationRelation::isParent).toList();
+  }
+```
+
+`relations` 是机构内部一个能改的 `ArrayList`，`addRelation` 会往里加。先各拿一次，再给机构加一条父级关系，看手里那两份列表：
+
+<Compare
+  title="先拿列表，再加一条父级关系"
+  variants={[
+    { label: "getRelations() 视图", steps: ["机构现有 2 条关系，其中 1 条是父级", "all = org.getRelations()", "org.addRelation(一条新的父级关系)", "读 all.size()"], results: [{ label: "all 里有几条", value: "3 条", tone: "wait" }, { label: "all.add(…) 能不能加", value: "不能，抛 UnsupportedOperationException", tone: "ok" }], verdict: { tone: "ok", head: "跟着变，但改不动。", text: "视图背后就是机构内部那个列表，机构加了它就看得到；拿着视图的人自己加不进去。" } },
+    { label: "getParents() 新列表", steps: ["机构现有 2 条关系，其中 1 条是父级", "parents = org.getParents()", "org.addRelation(一条新的父级关系)", "读 parents.size()"], results: [{ label: "parents 里有几条", value: "1 条", tone: "wait" }, { label: "parents.add(…) 能不能加", value: "不能，Stream 的 toList() 返回不可改的列表", tone: "ok" }], verdict: { tone: "ok", head: "定格在拿的那一刻。", text: "toList() 造的是一个新列表，之后机构怎么变都和它无关。想看最新的父级关系，要再调一次。" } }
+  ]}
+/>
+
+两种都没错，看你要什么：要「实时」用视图，要「那一刻的快照」用副本。
+
+## Stream：把循环写成流水线
+
+要从一个列表里挑出符合条件的、转成别的东西，传统写法是 `for` 循环加 `if`。Stream 把它拆成几道工序，一道接一道。机构的「官网地址」是这样取的：
+
+<CodeRef at="patra-api/patra-catalog/patra-catalog-domain/src/main/java/dev/patra/catalog/domain/organization/model/aggregate/OrganizationAggregate.java@5073ab1358404ecd989e722373cd9f7edafe238b" lines="277-285" />
+
+```java
+  /// 获取官网 URL。
+  ///
+  /// @return 官网 URL，如果不存在则返回 empty
+  public Optional<String> getWebsiteUrl() {
+    return links.stream()
+        .filter(OrganizationLink::isWebsite)
+        .map(OrganizationLink::value)
+        .findFirst();
+  }
+```
+
+- `links.stream()`：把链接列表变成一条流；
+- `filter(…)`：只留下是官网的链接（`OrganizationLink::isWebsite` 是「拿每个链接调它的 `isWebsite()`」的简写）；
+- `map(…)`：把链接换成它的地址字符串；
+- `findFirst()`：要第一个。可能一个都没有，所以结果是 `Optional<String>`，一个「可能为空的盒子」。
+
+假设一所大学有三个链接：Wikipedia、官网、另一个官网。点着走一遍：
+
+<Stepper
+  title="getWebsiteUrl() 怎么处理三个链接"
+  nodes={[
+    { id: "links", label: "links", sub: "3 个链接" },
+    { id: "filter", label: "filter", sub: "是官网吗" },
+    { id: "map", label: "map", sub: "取出地址" },
+    { id: "first", label: "findFirst", sub: "要第一个" }
+  ]}
+  links={[
+    { from: "links", to: "filter" },
+    { from: "filter", to: "map" },
+    { from: "map", to: "first" }
+  ]}
+  steps={[
+    { caption: "流准备好了：Wikipedia、官网 A、官网 B 三个链接排着队。", focus: ["links"], tokens: [{ id: "wiki", label: "Wikipedia", at: "links" }, { id: "a", label: "官网 A", at: "links" }, { id: "b", label: "官网 B", at: "links" }] },
+    { caption: "第一个元素 Wikipedia 进了 filter：不是官网，被筛掉。", focus: ["filter"], links: ["links>filter"], tokens: [{ id: "wiki", label: "Wikipedia", at: "filter", state: "dropped" }, { id: "a", label: "官网 A", at: "links" }, { id: "b", label: "官网 B", at: "links" }] },
+    { caption: "第二个元素官网 A 进了 filter：是官网，放行。", focus: ["filter"], links: ["links>filter"], tokens: [{ id: "a", label: "官网 A", at: "filter" }, { id: "b", label: "官网 B", at: "links" }] },
+    { caption: "官网 A 进了 map，换成它的地址字符串。", focus: ["map"], links: ["filter>map"], tokens: [{ id: "a", label: "https://…", at: "map" }, { id: "b", label: "官网 B", at: "links" }] },
+    { caption: "findFirst 拿到第一个结果，整条流水线停下。官网 B 从头到尾没被看过一眼。", focus: ["first"], links: ["map>first"], tokens: [{ id: "a", label: "https://…", at: "first" }, { id: "b", label: "官网 B", at: "links", state: "faded" }], notes: [{ at: "first", text: "Optional 里有值", tone: "ok" }] }
+  ]}
+  guesses={[
+    { before: 5, question: "官网 A 已经走到 map 了。官网 B 会不会也被 filter 检查一遍？", options: ["会，filter 先把三个都检查完，再交给 map", "不会，findFirst 拿到一个就停，后面的元素不再处理"], answer: "B", explain: "Stream 是一个元素一个元素往下走的，不是一道工序全做完再做下一道。findFirst 拿到第一个就叫停，剩下的元素不会被处理。" }
+  ]}
+/>
+
+## 收集成新的集合
+
+流水线的最后一步也可以是「装进一个新集合」。取用户名片的那段，就把 identity 返回的列表收集成了一个不能改的 Map：
+
+<CodeRef at="patra-api/patra-interaction/patra-interaction-infra/src/main/java/dev/patra/interaction/infra/subject/user/UserDirectoryAdapter.java@5073ab1358404ecd989e722373cd9f7edafe238b" lines="57-59" />
+
+```java
+    return summaries.stream()
+        .collect(
+            Collectors.toUnmodifiableMap(UserSummaryResp::userId, UserDirectoryAdapter::toCard));
+```
+
+意思是：每个摘要拿 `userId` 当键，用 `toCard` 换成名片当值，装进一个不能改的 Map。前面 `getParents()` 结尾的 `.toList()` 也是同一类收尾，收集成一个不能改的 List。
+
+<Quiz
+  questions={[
+    {
+      question: "一个方法要返回「什么都没有」的列表，按 Patra 的规范该写什么？",
+      options: ["return null;", "return new ArrayList<>();", "return List.of();"],
+      answer: "C",
+      explain: "返回空集合而不是 null，调用方不用判空；用 List.of() 造不能改的空列表，规范里明确禁止 Collections.emptyList()。"
+    },
+    {
+      question: "想把一堆评论的作者 ID 去重。Stream 的最后一步收集成哪种集合最合适？",
+      options: ["List", "Set", "Map"],
+      answer: "B",
+      explain: "Set 天然不重复，同一个作者出现多少次都只留一个。"
+    }
+  ]}
+/>
+
+<Transfer
+  prompt="一个机构有一串链接。现在要一个方法，返回它全部的 Wikipedia 地址，作为不能改的列表；一个都没有时返回空列表。用 Stream 怎么写？如果调用方拿到列表后，机构又加了一个 Wikipedia 链接，调用方手里那份会变吗？"
+  points={[
+    { label: "过滤", text: "links.stream().filter(OrganizationLink::isWikipedia)，只留 Wikipedia 链接。" },
+    { label: "转换", text: ".map(OrganizationLink::value)，换成地址字符串。" },
+    { label: "收集", text: ".toList()，得到不能改的新列表；一个都没有时它就是空列表，不是 null。" },
+    { label: "不会变", text: "toList() 造的是那一刻的副本，之后机构再加链接，调用方手里那份不受影响。要实时的才用视图。" }
+  ]}
+/>

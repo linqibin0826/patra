@@ -1,0 +1,67 @@
+---
+# 按 SKILL.md「1. 写新条目」第 3 步填；未知字段会报错
+title: 〔标题：一句话说出要点〕
+summary: 〔一两句话，列表、搜索、「今天读这一条」用〕
+type: decision
+difficulty: advanced         # intro 入门 | basic 基础 | advanced 进阶 | practice 实战
+tags: [backend]               # 至少 1 个，从 content/tags.yaml 里选
+prerequisites: []             # 直接前置的 slug，1～3 篇，必须已存在
+# topics: [<主题 slug>]       # 可选；挂主题必须有带 version 的出处
+# sources:
+#   - version: v0.17
+#     issue: PAP-xx
+#     pr: 123
+personalEnv: false            # 要作者同款工具或机器才会碰到时为 true
+# supersededBy: <新篇 slug>    # 被推翻时才写，指向取代它的条目
+---
+
+<Diagnose
+  question="〔给出约束，问读者会选哪个〕"
+  options={["〔选项甲〕", "〔选项乙〕", "〔选项丙〕"]}
+  answer="B"
+  ifRight="〔确认 + 一句「往下读会讲什么」〕"
+  ifWrong="〔正确答案是什么，这题考的是哪个前置知识〕"
+/>{/* 有前置时加 suggest="<前置 slug>"（须是 prerequisites 里的一篇）；组件见 README 第 1 节 */}
+
+## 背景
+
+当时要解决什么问题，有哪些约束。取代旧决策时，写清旧决策为什么不再成立，并链回旧篇。
+
+## 选项
+
+每个选项的好处与代价写进卡片；选了哪个、为什么写在后面。
+
+<DecisionOptions
+  options={[
+    { name: "〔选项甲〕", summary: "〔它是什么〕", pros: "〔好处〕", cons: "〔代价〕", chosen: true },
+    { name: "〔选项乙〕", summary: "〔它是什么〕", pros: "〔好处〕", cons: "〔代价〕" }
+  ]}
+/>
+
+{/* 选项之间有可比的维度、或「出意外才看出差别」时，加 Compare（README 第 9 节） */}
+
+## 选择
+
+<Callout kind="lead" label="选了什么">
+
+〔选了哪个，决定性的理由是哪一条〕
+
+</Callout>
+
+## 代价
+
+<Callout kind="cost">
+
+〔选了它要付出什么，什么情况下这个决策该被重新考虑〕
+
+</Callout>
+
+{/* <CodeRef at="<路径>@<40 位 SHA>" lines="40-72" /> */}
+
+<Transfer
+  prompt="〔迁移题：约束换一条，你还会这么选吗〕"
+  points={[
+    { label: "〔要点一〕", text: "〔参考答案的一条〕" },
+    { label: "〔要点二〕", text: "〔参考答案的一条〕" }
+  ]}
+/>

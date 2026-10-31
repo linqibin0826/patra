@@ -1,0 +1,170 @@
+---
+title: 限界上下文与微服务边界
+summary: 同一个词，在不同的业务环境里意思不同。限界上下文就是一个词只有一种精确含义的范围。Patra 按上下文划服务：identity 里的「用户」、interaction 里的「用户」、notification 里的「用户」是三个模型。
+type: concept
+difficulty: advanced
+tags: [ddd, backend]
+prerequisites: [ddd-subdomains]
+personalEnv: false
+---
+
+<Diagnose
+  question="identity 服务有一个 User 类（含邮箱、状态机、用户名）。interaction 服务只需要显示评论作者的昵称和头像。让 interaction 直接依赖并使用 identity 的 User 类，合适吗？"
+  options={["合适，复用代码，省事", "不合适，interaction 只需要几个字段，直接用 User 会把两个服务绑死", "合适，只要加个缓存"]}
+  answer="B"
+  ifRight="对。interaction 关心的是「名片」，不是整个账号。如果直接用 User，identity 改一个内部字段，interaction 也跟着受影响。"
+  ifWrong="答案是 B。User 里装着邮箱、状态机这些 interaction 不该碰的东西，而且 identity 一改，interaction 也得跟着改。同一个词「用户」，在两个服务里应该是两个不同的模型。这篇讲的就是这个。"
+  suggest="ddd-subdomains"
+/>
+
+## 同一个词，三种意思
+
+先看 Patra 里「用户」这个词。
+
+**在 identity 里**，用户是一个有生命周期的账号：邮箱、验证状态、用户名、一个四态状态机（正常 / 封禁 / 注销冷静期 / 已注销）。
+
+<CodeRef at="patra-api/patra-identity/patra-identity-domain/src/main/java/dev/patra/identity/domain/account/model/aggregate/User.java@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="19-38" />
+
+**在 interaction 里**，用户只是评论作者、收藏夹主人的一张名片：昵称、头像色号、账号是否正常、主页对这位访客是否可见。
+
+<CodeRef at="patra-api/patra-interaction/patra-interaction-domain/src/main/java/dev/patra/interaction/domain/subject/model/read/UserCard.java@5073ab1358404ecd989e722373cd9f7edafe238b" lines="1-27" />
+
+**在 notification 里**，用户是一个收件人：邮箱、邮箱是否验证、账号状态、用户名。它在发送的那一刻向 identity 现查，不存副本。
+
+<CodeRef at="patra-api/patra-notification/patra-notification-domain/src/main/java/dev/patra/notification/domain/kernel/model/read/Recipient.java@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="1-28" />
+
+<Compare
+  title="「用户」在三个服务里分别是什么"
+  variants={[
+    {
+      label: "identity：账号",
+      steps: ["关心：能不能登录、邮箱是否验证、什么状态", "有状态机：正常、封禁、注销冷静期、已注销", "用户名只存在这里"],
+      results: [
+        { label: "核心类", value: "User（聚合根）", tone: "ok" },
+        { label: "管什么", value: "账号的生命周期", tone: "ok" }
+      ],
+      verdict: { tone: "ok", head: "完整的账号模型。", text: "这里的「用户」是一个会变化、要守规则的东西。" }
+    },
+    {
+      label: "interaction：名片",
+      steps: ["关心：评论旁边显示谁", "昵称、头像色号、账号状态、主页是否对访客可见", "只存用户 ID，名字展示时现读"],
+      results: [
+        { label: "核心类", value: "UserCard（读模型）", tone: "ok" },
+        { label: "管什么", value: "展示", tone: "ok" }
+      ],
+      verdict: { tone: "ok", head: "只要展示需要的几项。", text: "同一个人，在这里只是一张卡片，没有邮箱，没有状态机。" }
+    },
+    {
+      label: "notification：收件人",
+      steps: ["关心：往哪发、能不能发", "邮箱、是否已验证、账号状态", "发送时现查，不存副本"],
+      results: [
+        { label: "核心类", value: "Recipient（读模型）", tone: "ok" },
+        { label: "管什么", value: "送达", tone: "ok" }
+      ],
+      verdict: { tone: "ok", head: "只要送达需要的几项。", text: "它要邮箱，interaction 不要；interaction 要头像，它不要。" }
+    }
+  ]}
+/>
+
+<Callout kind="lead">
+
+**限界上下文**：一个业务术语只有一种精确含义的范围。出了这个范围，同一个词可以指向完全不同的模型。
+
+</Callout>
+
+## 不只是「用户」
+
+再看一个例子。interaction 和 notification 各有一个叫 `SubjectType` 的枚举，表示被评论的对象的种类，但它们并不相同：
+
+<CodeRef at="patra-api/patra-interaction/patra-interaction-domain/src/main/java/dev/patra/interaction/domain/subject/model/enums/SubjectType.java@6d96ac9d6c2b8463cddf24d8b3461215b4ff8f4c" lines="1-45" />
+
+interaction 里有三种（文献、期刊、投稿经验），每一种带着「能收藏吗、能讨论吗」这样的能力。
+
+<CodeRef at="patra-api/patra-notification/patra-notification-domain/src/main/java/dev/patra/notification/domain/kernel/model/enums/SubjectType.java@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="1-22" />
+
+notification 里只有两种，因为提醒只涉及文献和投稿经验。它的 `parse` 遇到不认识的值不抛异常，因为对方以后可能新增种类，它要能容忍。
+
+同名但不是同一个类，这是有意的。每个上下文用自己的词、自己的模型，在边界处翻译。
+
+## 为什么不共用一个类
+
+共用一个类看起来省事，实际是把两个上下文焊在一起：
+
+- identity 给 User 加一个字段，所有用到 User 的服务都得重新编译、重新发布。
+- 一个服务为了自己的需要改了共享类，会不知不觉改变别人的含义。
+- 每个服务本来只要几个字段，却背着整个模型。
+
+分开的代价是翻译：两边的模型之间要有一道转换。Patra 的做法是通过 HTTP 接口取数据，在自己这边转成自己的模型（见后面的跨服务调用篇）。
+
+## Patra 的服务就是上下文
+
+Patra 的四个业务服务，大致对应四个上下文：
+
+| 服务 | 它是什么上下文 | 核心的词 |
+|---|---|---|
+| catalog | 文献目录 | 文献、期刊、作者、MeSH、机构 |
+| identity | 身份与账号 | 用户、会话、登录记录 |
+| interaction | 社区互动 | 对象、收藏夹、评论、有帮助 |
+| notification | 通知送达 | 提醒、偏好、邮件、实时推送 |
+
+它们的往来，用箭头表示谁依赖谁的数据：
+
+<Structure
+  title="四个服务怎么往来"
+  nodes={[
+    { id: "catalog", label: "catalog", sub: "文献目录", code: true, col: 1, row: 2, desc: "拥有文献、期刊的数据。别的服务要认某篇文献时来问它。" },
+    { id: "interaction", label: "interaction", sub: "社区互动", code: true, col: 2, row: 1, desc: "文献库、讨论、有帮助。登记互动对象时问 catalog，显示作者时问 identity。" },
+    { id: "identity", label: "identity", sub: "身份与账号", code: true, col: 2, row: 3, desc: "唯一保存用户名、邮箱、会话的地方。别的服务只存用户 ID，要名字时来问它。" },
+    { id: "notification", label: "notification", sub: "通知送达", code: true, col: 3, row: 2, desc: "收事件生成提醒，发送时向 identity 现查收件信息，向 interaction 查对象视图。" }
+  ]}
+  edges={[
+    { from: "interaction", to: "catalog", label: "解析文献", desc: "interaction 首次登记一篇文献时，向 catalog 的内部接口解析。" },
+    { from: "interaction", to: "identity", label: "用户摘要", desc: "interaction 通过 identity 的内部接口批量取用户名片。" },
+    { from: "notification", to: "identity", label: "收件信息", desc: "notification 通过 identity 的内部接口取邮箱等收件信息。" },
+    { from: "interaction", to: "notification", label: "事件（异步）", dashed: true, desc: "interaction 只发「发生了什么」的事件，由 notification 自己决定提醒谁。" }
+  ]}
+/>
+
+箭头方向总是「谁需要谁的数据」，而且每次只带走对方愿意给的那一部分。notification 还会回头向 interaction 查对象的显示信息，也是走内部接口，不是直接读对方的库。
+
+<Callout kind="insight">
+
+「用户名只存在 identity」就是边界的一个具体体现。其他服务的表里只存用户 ID，要显示名字时向 identity 现查；改名只改 identity 的一行，别处不用回刷。构建里还有检查（R6）守着这条边界。
+
+</Callout>
+
+## 子域和限界上下文的区别
+
+两个词容易混：
+
+- **子域**是在拆「业务问题」：这个生意由哪几块组成。
+- **限界上下文**是在划「模型边界」：一套术语和模型的适用范围。
+
+Patra 里两者大致对齐：一个服务是一个上下文，服务里再分子域。但这是实践上的对齐，不是定律。有的团队一个上下文里跨好几个子域，也有的一个子域被拆进几个上下文。
+
+<Quiz
+  title="想一想"
+  questions={[
+    {
+      question: "notification 发提醒邮件时，为什么向 identity 现查收件人的邮箱，而不是自己存一份？",
+      options: ["因为存不下", "邮箱的归属和变更在 identity，存副本就要保证两边同步，现查最不会错", "因为邮箱不重要"],
+      answer: "B",
+      explain: "用户的邮箱可能改、可能注销清空。让 identity 当唯一来源，别处现查，就没有同步问题。"
+    },
+    {
+      question: "interaction 里的 SubjectType 有 3 种，notification 里的只有 2 种。这是 bug 吗？",
+      options: ["是 bug，应该统一", "不是，各上下文按自己的需要定义自己的模型", "是，应该删掉一种"],
+      answer: "B",
+      explain: "notification 只关心提醒涉及的两种，用自己的枚举，并容忍对方新增种类。统一成一个共享类，反而会把两边绑死。"
+    }
+  ]}
+/>
+
+<Transfer
+  prompt="有同事提议：notification 每次要用户信息太慢了，干脆让它直接连 identity 的数据库去读用户表。从限界上下文的角度，这样做的问题是什么？你有什么折中办法？"
+  points={[
+    { label: "问题", text: "identity 的表结构是它内部的模型，别的服务直接读，就等于依赖了它的内部实现。表一改，notification 就坏，而且 identity 也不知道谁在读。" },
+    { label: "边界", text: "每个上下文拥有自己的数据，别人只能通过它公开的接口来取。" },
+    { label: "折中", text: "接口层面优化：批量取（一次取多个用户）、只取需要的字段；真有必要再做带失效机制的缓存。Patra 的做法是批量内部接口，一次最多取 100 个用户。" }
+  ]}
+/>
