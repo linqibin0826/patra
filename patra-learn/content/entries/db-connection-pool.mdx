@@ -1,0 +1,163 @@
+---
+title: 连接池
+summary: 建数据库连接很贵，所以先建好一批、借了用、用完还；池多大合适，为什么连接占着不还会拖垮整个服务。
+type: concept
+difficulty: basic
+tags: [database, backend, spring]
+prerequisites: [db-transactions]
+---
+
+<Diagnose
+  question="某个服务的连接池最多 20 条连接。某一刻有 25 个请求同时要查数据库，而且 20 条连接都被占用着。多出来的 5 个请求会怎样？"
+  options={["立刻新建 5 条连接，每个请求都不用等", "排队等别人还回连接；等得太久会超时报错", "直接被丢弃，用户看到空白"]}
+  answer="B"
+  ifRight="对。池上限就是上限，多出来的请求只能等。等多久、等不到怎么办，是配置里的一个参数。"
+  ifWrong="答案是 B。连接池的最大值是硬上限，不会无限制新建。其余请求排队等空闲连接，等到超时（Patra 配的是 30 秒）就抛异常。这一篇讲这个过程为什么存在。"
+  suggest="db-transactions"
+/>
+
+## 先问：为什么不每次用完就关掉
+
+后端服务访问数据库，要先和数据库建立一条**连接**，之后在这条连接上发 SQL。
+
+建一条连接不便宜：要经过网络握手、认证身份，PostgreSQL 还要为每条连接启动一个服务进程。如果每个请求都「新建、用一下、关闭」，大部分时间花在了建连接上，不是查数据上。
+
+办法是**连接池**：服务启动时先建好一批连接放在池子里。请求要用时从池里**借**一条，用完**还**回去（不关闭，只是放回池子）。下一个请求接着借。
+
+<Callout kind="analogy">
+
+连接池像一家共享单车站点：车是现成的，你扫码借走、骑完还到站点，下一个人接着骑。站点只有 20 辆车，第 21 个人来了只能等有人还车，或者等不及走人。
+
+</Callout>
+
+<Stepper
+  title="一次借用与还回，以及池空了怎么办"
+  nodes={[
+    { id: "req", label: "请求", sub: "要查库" },
+    { id: "pool", label: "连接池", sub: "最多 20 条" },
+    { id: "pg", label: "PostgreSQL" }
+  ]}
+  links={[
+    { from: "req", to: "pool", label: "借" },
+    { from: "pool", to: "pg", label: "SQL" }
+  ]}
+  steps={[
+    { caption: "一个请求到达，业务代码需要查库。它不自己建连接，而是找连接池要一条。", focus: ["req"], tokens: [{ id: "r1", label: "请求 1", at: "req" }] },
+    { caption: "池里有空闲连接：直接借走，不用重新握手认证，几乎没有等待。", focus: ["pool"], links: ["req>pool"], tokens: [{ id: "r1", label: "请求 1 借到连接", at: "pool" }], notes: [{ at: "pool", text: "空闲 19 / 共 20", tone: "ok" }] },
+    { caption: "请求 1 通过这条连接把 SQL 发给 PostgreSQL，拿到结果。这段时间里，这条连接是它独占的。", focus: ["pg"], links: ["pool>pg"], tokens: [{ id: "r1", label: "请求 1 在用连接", at: "pg" }] },
+    { caption: "用完，把连接还给池子。连接没有关闭，保持着和 PostgreSQL 的连接，等着下一个请求。", focus: ["pool"], tokens: [{ id: "r1", label: "归还", at: "pool" }], notes: [{ at: "pool", text: "空闲 20 / 共 20", tone: "ok" }] },
+    { caption: "另一种情形：20 条连接全被占着，第 21 个请求来了。池不会新建，这个请求只能在池口排队等。", focus: ["req", "pool"], links: ["req>pool"], tokens: [{ id: "r21", label: "请求 21 排队", at: "pool", state: "faded" }], notes: [{ at: "pool", text: "空闲 0 / 共 20，1 个在等", tone: "wait" }] },
+    { caption: "一直等不到连接，超过 connection-timeout（Patra 配的是 30 秒），这个请求抛出异常，用户看到出错。", focus: ["req"], tokens: [{ id: "r21", label: "请求 21 超时报错", at: "req", state: "dropped" }], notes: [{ at: "req", text: "等了 30 秒，放弃", tone: "bad" }] }
+  ]}
+  guesses={[
+    { before: 5, question: "20 条连接全被占用，第 21 个请求来了。这时数据库本身很空闲（CPU 几乎没用）。请求会怎样？", options: ["照样被服务处理，因为数据库有能力", "还是要排队，因为排队的是连接池，跟数据库忙不忙无关", "数据库会自动开一条新连接"], answer: "B", explain: "池是服务这一侧的限流阀。哪怕数据库很空，只要连接都被占着，新请求就得等。这也是一个常见的误判：数据库没压力，服务却因为连接被占满而卡住。" }
+  ]}
+/>
+
+## Patra 里的连接池配置
+
+Patra 的各个服务用 HikariCP（Spring Boot 默认的连接池）。看 catalog 的配置：
+
+<CodeRef at="patra-api/patra-catalog/patra-catalog-boot/src/main/resources/application.yml@3cf6fa5757b3be54c3b030e4cace871f53e2599c" lines="35-43" />
+
+```yaml
+  datasource:
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 5
+      connection-timeout: 30000    # 30 seconds
+      idle-timeout: 600000          # 10 minutes
+      max-lifetime: 1800000         # 30 minutes
+```
+
+| 配置 | 意思 |
+|---|---|
+| `maximum-pool-size: 20` | 池里最多 20 条连接，硬上限 |
+| `minimum-idle: 5` | 空闲时至少留 5 条备着 |
+| `connection-timeout` | 池空了，请求最长等多久借连接，超了抛异常（30 秒） |
+| `idle-timeout` | 多余的空闲连接闲置超过 10 分钟就关掉 |
+| `max-lifetime` | 一条连接最长活 30 分钟，到点换新，避免用到被数据库或网络设备悄悄断掉的旧连接 |
+
+同样的配置在 interaction 服务里是最大 10 条、最小空闲 2 条。数字没有放之四海皆准的答案，要看这个服务同时会有多少个请求在查库。
+
+## 池不是越大越好
+
+遇到「连接不够用」，直觉是把池调大。但是：
+
+- 数据库那一侧的连接上限有限（PostgreSQL 的 `max_connections`），所有服务的池加起来不能超过它。
+- 每条连接在数据库里是一个独立的服务进程，占内存，连接多了数据库自己也会被拖慢。
+- 一台机器的 CPU 和磁盘同时能高效干的活有限，多开连接不会多干活，只是多了切换开销。
+
+经验上，一个服务的池往往只要几十条以内就够，更重要的是：**每条连接占用的时间要短**。
+
+## 真正的瓶颈：连接占着不还
+
+池里 20 条连接，每条被占用多久，决定了每秒能处理多少次数据库访问。拖动开关看差别：
+
+<Params
+  title="动手试试：连接占用时间，决定一个池能撑多少请求"
+  guess={{ question: "池有 20 条连接。如果每个请求占用连接 10 毫秒，每秒大约能处理 2000 次。现在每个请求在事务里多调了一次要 2 秒的远程服务，占用连接 2 秒多，每秒大约只能处理多少次？", options: ["还是约 2000 次，因为连接数没变", "约 10 次，下降了两百倍", "约 1000 次，慢一半"], answer: "B", explain: "每条连接每秒能服务 1000 除以占用毫秒数个请求。10 毫秒能服务 100 个，2000 毫秒只有 0.5 个。20 条连接合计就是 2000 次对 10 次。" }}
+  controls={[
+    { type: "switch", id: "remote", label: "事务里夹了一次 2 秒的远程调用", default: false }
+  ]}
+  cases={[
+    { when: { remote: false }, results: [{ label: "每个请求占用连接", value: "约 10 毫秒", tone: "ok" }, { label: "每条连接每秒", value: "约 100 次", tone: "ok" }, { label: "20 条连接合计", value: "约 2000 次 / 秒", tone: "ok" }], verdict: { tone: "ok", head: "连接周转得快。", text: "占得短，同样 20 条连接能服务很多请求。" } },
+    { results: [{ label: "每个请求占用连接", value: "约 2 秒", tone: "bad" }, { label: "每条连接每秒", value: "约 0.5 次", tone: "bad" }, { label: "20 条连接合计", value: "约 10 次 / 秒", tone: "bad" }], verdict: { tone: "bad", head: "十几个并发就把池占满。", text: "占得久，同样的池一下子就被耗光，后面的请求全在排队，最后一起超时。数据库本身一点也不忙。" } }
+  ]}
+/>
+
+这就是上一篇说"事务里不要放远程调用"的另一个原因：事务期间连接一直被占着。
+
+Patra 里还有两处和这件事有关：
+
+- **关闭 OSIV**。Spring 默认的 open-in-view 会让连接从请求里第一次查库一直占到整个请求结束。catalog 的下载接口（PDF、图片）要很久才写完，连接就被一路占着。所以在配置里关掉了，注释里直接写了"连接池只有 20 条"：
+
+<CodeRef at="patra-api/patra-catalog/patra-catalog-boot/src/main/resources/application.yml@3cf6fa5757b3be54c3b030e4cace871f53e2599c" lines="50-53" />
+
+```yaml
+  # 关闭 OSIV：默认开着时，PDF / 图片下载请求从查库起一直占着 JDBC 连接直到写完（连接池只有 20 条）。
+  # 读端都是 native SQL 或在事务内组装，不依赖视图层懒加载。
+  jpa:
+    open-in-view: false
+```
+
+- **长任务占一条连接**。catalog 的导入任务用数据库的"咨询锁"保证同一时刻只跑一个（下面「锁」那一篇会讲）。持有锁的这条连接在整个任务期间都不还，代码里特意注明了：
+
+<CodeRef at="patra-api/patra-catalog/patra-catalog-infra/src/main/java/dev/patra/catalog/infra/kernel/lock/PgAdvisoryRunLockAdapter.java@5073ab1358404ecd989e722373cd9f7edafe238b" lines="18-21" />
+
+```java
+/// 基于 PostgreSQL 会话级 advisory lock 的互斥运行。
+///
+/// 在同一个连接上 `pg_try_advisory_lock` → 执行工作 → `pg_advisory_unlock`；连接在整次运行期间
+/// 一直占用（三个任务各占一条，连接池够用）。进程异常退出时连接断开，锁随会话自动释放。
+```
+
+"三个任务各占一条，连接池够用"是一个算过的账：长期占用的连接数得算进池子里，剩下的才够普通请求用。
+
+<Quiz
+  title="考考自己"
+  questions={[
+    {
+      question: "接口偶尔报「获取连接超时」，而数据库监控显示 CPU 很低。最先该怀疑什么？",
+      options: ["数据库坏了", "连接被某些请求占着不还（长事务、事务里的远程调用等），池被耗光", "网络线路断了"],
+      answer: "B",
+      explain: "数据库不忙说明不是查询慢。连接池空了而数据库很闲，说明连接都被占着在做别的事。"
+    },
+    {
+      question: "连接用完「还回池」，之后这条连接怎么样了？",
+      options: ["被关闭，下次重新建", "保持打开，放回池子等下一个请求", "被删除，池子缩小一条"],
+      answer: "B",
+      explain: "还回去是放回池子，不是关闭。这才省掉了反复建立连接的开销。"
+    }
+  ]}
+/>
+
+<Transfer
+  prompt="一个导出接口：先用一个事务查出 10 万行数据，然后在事务里一行行格式化成 CSV 再写到用户的下载流里，整个过程要 3 分钟。池只有 10 条连接。如果同时有 10 个人点导出，会发生什么？你会怎么改？"
+  points={[
+    { label: "会发生什么", text: "10 条连接全部被导出占 3 分钟，其他所有请求（包括普通页面）都借不到连接，排队直到超时。" },
+    { label: "问题在哪", text: "事务里混进了耗时的格式化和网络写出，连接占用被拉长到分钟级。" },
+    { label: "怎么改", text: "把查询和下载拆开：事务里只查出需要的数据（或分批、游标读），读完立刻提交并还连接，格式化和写下载流在事务外做；必要时限制导出的并发数。" }
+  ]}
+/>

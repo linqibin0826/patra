@@ -1,0 +1,131 @@
+---
+title: 约束与 NULL
+summary: 让数据库替你挡住脏数据的四种约束，以及 NULL 为什么不是 0 也不是空字符串，它让比较多出了第三种结果。
+type: concept
+difficulty: basic
+tags: [database, backend]
+prerequisites: [db-sql-write]
+---
+
+<Diagnose
+  question="表里有一行 country_code 是 NULL（国家没填）。执行 SELECT ... WHERE country_code <> 'CN'，这一行会出现在结果里吗？"
+  options={["会，因为 NULL 肯定不等于 CN", "不会，数据库既不认为它等于 CN，也不认为它不等于 CN", "会报错，NULL 不能参与比较"]}
+  answer="B"
+  ifRight="对。NULL 的意思是「不知道」，「不知道是不是 CN」的行，既不能说它是，也不能说它不是。这就是 NULL 反直觉的地方，往下会讲怎么应对。"
+  ifWrong="答案是 B。NULL 表示「值未知」。拿未知的东西去比较，结果也是未知，而 WHERE 只放行结果为真的行，所以这一行被筛掉了。不报错，却和很多人的直觉不同。"
+  suggest="db-sql-write"
+/>
+
+## 约束：数据库替你守的底线
+
+上一篇说过，数据库在写入时会检查规则，不满足就整条语句失败。这些规则叫**约束**。常见四种，加上上一篇讲过的主键和外键：
+
+| 约束 | 一句话 | Patra 里的例子 |
+|---|---|---|
+| `NOT NULL` | 这一格必须有值 | `cat_venue.title`：每本期刊都有标题 |
+| `UNIQUE` | 这一列（或几列的组合）不能重复 | `idn_user.email`：一个邮箱只能注册一个账号 |
+| `CHECK` | 值必须满足一个条件 | 状态只能是 `ACTIVE`、`BANNED`、`PENDING_DELETION`、`DELETED` 之一 |
+| `FOREIGN KEY` | 值必须是另一张表里真实存在的主键 | 个人资料的 `user_id` 必须是真实用户 |
+
+为什么要让数据库来守，而不是只在代码里判断？因为代码有很多入口：接口、批量导入、定时任务、人工修数据的脚本……每个入口都得记着判断，总有漏的。数据库是所有写入的必经之路，放在这里是最后一道防线，漏了也不会写进脏数据。
+
+## 看几条真实的 CHECK
+
+用户表 `idn_user` 的约束很能说明问题：
+
+<CodeRef at="patra-api/patra-identity/patra-identity-infra/src/main/resources/db/migration/V1__init_identity_schema.sql@af8cd13c3ec367ccba78615b72e6ff19535cef90" lines="36-46" />
+
+```sql
+    CONSTRAINT uk_idn_user_email UNIQUE (email),
+    CONSTRAINT uk_idn_user_username UNIQUE (username),
+    CONSTRAINT ck_idn_user_email_lowercase CHECK (email IS NULL OR email = lower(email)),
+    CONSTRAINT ck_idn_user_email_deleted CHECK ((status = 'DELETED') = (email IS NULL)),
+    ...
+    CONSTRAINT ck_idn_user_status CHECK (status IN ('ACTIVE', 'BANNED', 'PENDING_DELETION', 'DELETED')),
+    CONSTRAINT ck_idn_user_banned_at CHECK ((status = 'BANNED') = (banned_at IS NOT NULL)),
+```
+
+逐条读：
+
+- `ck_idn_user_status`：状态只能是这四个词之一，写错一个字母就被挡下。
+- `ck_idn_user_email_deleted`：**状态是已注销，当且仅当邮箱是空的**。注销的账号一定没有邮箱，没注销的一定有。两个字段之间的关系，也能靠约束守住。
+- `ck_idn_user_banned_at`：被封禁了就必须有封禁时间，没被封禁就不能有。
+- 每条约束都有名字（`ck_` 开头是 CHECK，`uk_` 是唯一）。约束失败时错误里会带这个名字，一看就知道违反了哪条规矩。
+
+注意这里的邮箱列既要 `UNIQUE`，又允许 `NULL`。这两件事不冲突：**唯一约束只比较有值的格子，多个 NULL 互不冲突**。所以所有已注销的账号（邮箱都是空的）不会互相撞车。
+
+## NULL：不是 0，也不是空字符串
+
+`NULL` 的意思是「没有值 / 值未知」。它不是数字 0（0 是一个确切的数），也不是空字符串（空字符串是一个确切的、长度为 0 的文字）。
+
+麻烦出在比较上。拿「未知」去和任何东西比较，答案都是「未知」：
+
+- `NULL = 5`，结果是**未知**（不是真，也不是假）
+- `NULL <> 5`，也是**未知**
+- 连 `NULL = NULL` 也是未知：两个不知道的东西，你没法说它们相等
+
+于是 SQL 的条件有**三种**结果：真、假、未知。`WHERE` 只放行结果为**真**的行，未知和假一样被筛掉。
+
+<Params
+  title="动手试试：一个条件的三种结果"
+  guess={{ question: "某行 a 是 NULL。条件 a <> 5 对这一行的结果是什么？", options: ["真", "假", "未知"], answer: "C", explain: "NULL 参与比较，结果是未知。WHERE 只放行真，所以这一行不会出现在 WHERE a <> 5 的结果里。" }}
+  controls={[
+    { type: "switch", id: "isnull", label: "a 的值是 NULL", default: true },
+    { type: "slider", id: "a", label: "a 的值（不是 NULL 时）", min: 0, max: 10, step: 1, default: 5 }
+  ]}
+  cases={[
+    { when: { isnull: true }, results: [{ label: "a = 5", value: "未知", tone: "wait" }, { label: "a <> 5", value: "未知", tone: "wait" }, { label: "a IS NULL", value: "真", tone: "ok" }, { label: "WHERE a <> 5 会选中这行吗", value: "不会", tone: "bad" }], verdict: { tone: "bad", head: "NULL 两头都不选。", text: "a = 5 和 a <> 5 都选不中它。要找空值只能写 a IS NULL；要「不是 5，包括空」，写 a IS DISTINCT FROM 5。" } },
+    { when: { a: [5, 5] }, results: [{ label: "a = 5", value: "真", tone: "ok" }, { label: "a <> 5", value: "假", tone: "bad" }, { label: "a IS NULL", value: "假", tone: "bad" }, { label: "WHERE a <> 5 会选中这行吗", value: "不会", tone: "bad" }], verdict: { tone: "ok", head: "有值时是普通的真假。", text: "a 等于 5：a = 5 为真，a <> 5 为假。" } },
+    { results: [{ label: "a = 5", value: "假", tone: "bad" }, { label: "a <> 5", value: "真", tone: "ok" }, { label: "a IS NULL", value: "假", tone: "bad" }, { label: "WHERE a <> 5 会选中这行吗", value: "会", tone: "ok" }], verdict: { tone: "ok", head: "有值时是普通的真假。", text: "a 是 {a}，不等于 5：a <> 5 为真。" } }
+  ]}
+/>
+
+记住两条应对办法：
+
+- 判断是不是空，写 `IS NULL` / `IS NOT NULL`，不能写 `= NULL`。
+- 想要「不相等，并且把 NULL 当成一个确切的值来比」，写 `IS DISTINCT FROM`。
+
+<Callout kind="warn" label="CHECK 遇到未知会放行">
+
+`WHERE` 里，未知被当作"不选中"；而 `CHECK` 约束正相反，**只要结果不是假就放行**，未知也放行。所以 `CHECK (a <> 5)` 挡不住 `a` 是 NULL 的行。想把 NULL 也纳入判断，要显式写出来。
+
+</Callout>
+
+Patra 的"有帮助"明细表里有一条正是这样写的：
+
+<CodeRef at="patra-api/patra-interaction/patra-interaction-infra/src/main/resources/db/migration/reaction/V20261029200100__create_reaction_tables.sql@b554d996121f219ca9dc8a6ea08baf4f93648f5a" lines="18-20" />
+
+```sql
+    PRIMARY KEY (user_id, target_type, target_id),
+    CONSTRAINT ck_helpful_target_type CHECK (target_type IN ('COMMENT', 'POST')),
+    CONSTRAINT ck_helpful_not_self CHECK (credited_user_id IS DISTINCT FROM user_id)
+```
+
+`credited_user_id` 是"这次点赞给谁加获赞数"，匿名发表的内容这一列是 NULL。规则是"不能给自己点"。用 `IS DISTINCT FROM`，匿名（NULL）和用户 ID 比较得到"确实不同"，语义清楚，不依赖"未知放行"这个容易忘的特性。
+
+<Quiz
+  title="考考自己"
+  questions={[
+    {
+      question: "表里有 100 行，其中 30 行的 nlm_id 是 NULL。SELECT count(*) FROM cat_venue WHERE nlm_id <> 'X'（X 在表里有 20 行）会数到多少行？",
+      options: ["80 行", "50 行", "70 行"],
+      answer: "B",
+      explain: "100 行减去 NULL 的 30 行，再减去等于 X 的 20 行，剩 50 行。NULL 的 30 行条件结果是未知，被筛掉了，所以不是 100 减 20 得 80。"
+    },
+    {
+      question: "给 cat_venue.nlm_id 加了 UNIQUE。能同时存在多少行 nlm_id 是 NULL？",
+      options: ["最多 1 行", "任意多行", "0 行，唯一列不能为空"],
+      answer: "B",
+      explain: "唯一约束只比较有值的格子，多个 NULL 互不冲突。Patra 的 V12 迁移注释里就写着「允许为空（多个 NULL 互不冲突）」。"
+    }
+  ]}
+/>
+
+<Transfer
+  prompt="你要给「投稿经验」表加一列 final_decision_on（最终决定日期）和一条规则：如果填了，就必须不早于 first_decision_on（首次决定日期）。进行中的投稿这两列可能还是空。这条 CHECK 怎么写才对？如果直接写 final_decision_on >= first_decision_on，空值时会怎样？"
+  points={[
+    { label: "朴素写法", text: "CHECK (final_decision_on >= first_decision_on)。任何一边是 NULL 时结果是未知，CHECK 放行，所以进行中的投稿能正常存。" },
+    { label: "更明确的写法", text: "CHECK (final_decision_on IS NULL OR first_decision_on IS NULL OR final_decision_on >= first_decision_on)，把空值的情况写出来，读的人不用靠记忆。" },
+    { label: "要注意什么", text: "这条规则靠的是「CHECK 对未知放行」。如果换成 WHERE 里写同样的条件，会把空值的行筛掉。同一个表达式放在 CHECK 和 WHERE 里，对 NULL 的处理相反。" }
+  ]}
+/>

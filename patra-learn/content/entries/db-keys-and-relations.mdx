@@ -1,0 +1,162 @@
+---
+title: 主键、外键与表之间的关系
+summary: 用主键给每一行一个不会重复的身份，用外键把表连起来；一对一、一对多、多对多分别怎么建。
+type: concept
+difficulty: intro
+tags: [database, backend]
+prerequisites: [db-what-is-a-database]
+---
+
+<Diagnose
+  question="用户表里有两位都叫「李明」的人。订单表想记下「这是谁的订单」。下面哪种记法不会搞混？"
+  options={["在订单里记用户的姓名", "给每位用户一个独一无二的编号，订单里记这个编号", "在订单里记用户的注册日期"]}
+  answer="B"
+  ifRight="对。名字会重复，编号不会。「独一无二的编号」就是主键，「订单里记这个编号」就是外键，这一篇讲的就是它们。"
+  ifWrong="答案是 B。姓名、注册日期都可能重复，只有专门发的编号能保证一个人对一个号。这个编号叫主键，订单里记着它的那一列叫外键。"
+  suggest="db-what-is-a-database"
+/>
+
+## 主键：每一行的身份证号
+
+上一篇说过，表里一行是一条记录。要在几百万行里准确找到「那一行」，就需要一列**永远不重复、永远有值**的东西来认人，这一列（或几列）叫**主键**。
+
+数据库会替你守两条规矩：主键不能为空，也不能重复。插入一个已经存在的主键，数据库直接拒绝。
+
+Patra 的用户表 `idn_user` 的主键就是 `id`，注释里写得很直白：
+
+```sql
+COMMENT ON COLUMN idn_user.id IS 'PK (snowflake), never reused';
+```
+
+「snowflake」是雪花算法，一种在多台机器上各自生成、也不会撞号的编号方式；「never reused」是说编号用过就不再发给别人，哪怕那个用户注销了。
+
+<Callout kind="analogy">
+
+主键像身份证号，不是姓名。姓名可以重名、可以改名，身份证号一个人只有一个，别的系统只要记着这串号就能找到他。
+
+</Callout>
+
+## 外键：用「别的表的主键」表示「属于谁」
+
+用户有一份个人资料（昵称、简介、职业）。这些放在另一张表 `idn_user_profile` 里。资料表怎么说明「这份资料是谁的」？在资料表里加一列 `user_id`，里面写用户表的主键值。这一列就是**外键**：它的值必须是另一张表里真实存在的主键。
+
+看 Patra 里是怎么声明的：
+
+<CodeRef at="patra-api/patra-identity/patra-identity-infra/src/main/resources/db/migration/V1__init_identity_schema.sql@af8cd13c3ec367ccba78615b72e6ff19535cef90" lines="215-216" />
+
+```sql
+    CONSTRAINT uk_idn_user_profile_user UNIQUE (user_id),
+    CONSTRAINT fk_idn_user_profile_user FOREIGN KEY (user_id) REFERENCES idn_user (id),
+```
+
+第二行就是外键：`user_id` 引用 `idn_user` 的 `id`。声明之后，数据库会替你挡住两件事：
+
+- 往资料表插一行 `user_id = 999`，而用户表里根本没有 999 号用户，会被拒绝；
+- 删除一个还有资料指向它的用户，也会被拒绝（除非你另外声明了级联删除）。
+
+## 一对一、一对多：差别只在那一列唯一不唯一
+
+同样是「资料表有一列 `user_id` 指向用户表」，可以表达两种关系，区别在于这一列允许不允许重复。
+
+- **一对一**：一个用户最多一份资料。给 `user_id` 加唯一约束（上面第一行 `UNIQUE (user_id)`），同一个用户就插不进第二份。
+- **一对多**：一个用户可以有好几条个人链接（博客、主页……）。链接表 `idn_user_profile_link` 里 `user_id` 不唯一，同一个用户能有多行；Patra 另外规定每人最多 5 条，用 `position` 列编号 0 到 4。
+
+<CodeRef at="patra-api/patra-identity/patra-identity-infra/src/main/resources/db/migration/V1__init_identity_schema.sql@af8cd13c3ec367ccba78615b72e6ff19535cef90" lines="298-300" />
+
+```sql
+    CONSTRAINT uk_idn_user_profile_link_position UNIQUE (user_id, position),
+    CONSTRAINT fk_idn_user_profile_link_user FOREIGN KEY (user_id) REFERENCES idn_user (id),
+    CONSTRAINT ck_idn_user_profile_link_position CHECK (position BETWEEN 0 AND 4),
+```
+
+注意第一行：唯一的是 `(user_id, position)` 这个**组合**，不是 `user_id` 一列。同一个用户可以有位置 0、1、2，但不能有两条位置 0。
+
+<Structure
+  title="idn_user 周围的表：谁属于谁"
+  intro="点连线看这种关系是怎么用 SQL 约束出来的"
+  nodes={[
+    { id: "user", label: "idn_user", sub: "主键 id", code: true, col: 2, row: 1, desc: "用户。每个用户一行，id 是主键。" },
+    { id: "profile", label: "idn_user_profile", sub: "外键 user_id，唯一", code: true, col: 1, row: 2, desc: "个人资料。user_id 又是外键又唯一，所以一个用户最多一行。" },
+    { id: "link", label: "idn_user_profile_link", sub: "外键 user_id，不唯一", code: true, col: 3, row: 2, desc: "个人链接。user_id 是外键但不唯一，所以一个用户可以有多行（上限 5）。" }
+  ]}
+  edges={[
+    { from: "profile", to: "user", label: "一对一", desc: "user_id 加了唯一约束 uk_idn_user_profile_user：同一个 user_id 只能出现一次。" },
+    { from: "link", to: "user", label: "一对多", desc: "user_id 不唯一：多行可以指向同一个用户。CHECK 把 position 限制在 0 到 4，所以最多 5 条。" }
+  ]}
+/>
+
+<Quiz
+  questions={[
+    {
+      question: "想让「每个用户只能有一份个人资料」，只靠外键够吗？",
+      options: ["够，外键就保证一对一", "不够，还要在外键那一列上加唯一约束", "不够，要把两张表合成一张"],
+      answer: "B",
+      explain: "外键只保证「指向的人存在」，不管几行指向同一个人。要限定最多一行，得再加唯一约束。"
+    }
+  ]}
+/>
+
+## 多对多：必须多一张中间表
+
+一篇文献有好几位作者，一位作者也写过好几篇文献。这是**多对多**。如果硬把它塞进某一张表：文献表里放「作者列表」，一格里要装多个值，查「某位作者写过哪些文献」就得拆开字符串去找，数据库帮不上忙。
+
+办法是多建一张**中间表**，一行代表「某篇文献有某位作者」。Patra 的 `cat_publication_author` 就是这样：
+
+<CodeRef at="patra-api/patra-catalog/patra-catalog-infra/src/main/resources/db/migration/V3__create_author.sql@da049982156cfbb1f3c7bd753948df3a5b9bc06c" lines="109-130" />
+
+```sql
+CREATE TABLE cat_publication_author (
+    id                       BIGINT          NOT NULL,
+    publication_id           BIGINT          NOT NULL,
+    author_id                BIGINT          NULL,
+    author_order             INTEGER         NOT NULL DEFAULT 1,
+    display_name             VARCHAR(200)    NOT NULL,
+    -- 省略若干列
+    is_first_author          BOOLEAN         NOT NULL DEFAULT false,
+    is_corresponding_author  BOOLEAN         NOT NULL DEFAULT false,
+    PRIMARY KEY (id),
+    CONSTRAINT uk_author_order UNIQUE (publication_id, author_order)
+);
+```
+
+三点值得看：
+
+- 中间表有两个指向别处的列：`publication_id`（哪篇文献）和 `author_id`（哪位作者）。多对多就这样拆成了两个一对多。
+- 中间表**自己也有信息**：这位作者在这篇里排第几（`author_order`）、是不是第一作者。这类信息既不属于文献、也不属于作者，只属于「这一对」，所以正好放中间表。
+- `author_id` 允许为空（`NULL`）：Patra 只在能确定是哪位已知作者时才填，其余作者只存名字。这是个设计取舍，不是中间表的必备写法。
+
+再往下一层，作者在这篇文献里隶属哪些机构，又是一张中间表 `cat_publication_author_affiliation`，它的 `pub_author_id` 指向上面这张。于是形成一条链：文献，作者条目，机构。
+
+<Callout kind="warn">
+
+上面这些「指向」，catalog 的建表脚本里并没有写 `FOREIGN KEY`。关系是由代码保证的，数据库只保存列。外键不是必须声明的：它带来「挡住脏数据」的好处，也带来每次写入多一次检查、删除要顾及引用的成本。Patra 里 identity 服务声明了外键，interaction 服务则按情况取舍。例如收藏夹条目表不对收藏夹声明外键，因为删夹时本来就在同一个事务里显式删掉它的条目。
+
+</Callout>
+
+<Quiz
+  title="选关系类型"
+  questions={[
+    {
+      question: "「一本期刊每年有一行发文统计」属于哪种关系？（期刊一行，统计表多行）",
+      options: ["一对一", "一对多", "多对多"],
+      answer: "B",
+      explain: "一本期刊对应多个年份的统计行。统计表里 (venue_id, year) 组合唯一，保证同一年不会有两行。"
+    },
+    {
+      question: "「读者收藏文献」：一个读者收藏多篇文献，一篇文献被多个读者收藏。要建什么？",
+      options: ["在文献表加一列读者编号", "在读者表加一列文献编号列表", "一张中间表，一行记一次收藏"],
+      answer: "C",
+      explain: "多对多都要中间表。Patra 的文献库条目表 collection.library_item 就是这样，主键是 (user_id, subject_id)。"
+    }
+  ]}
+/>
+
+<Recap
+  prompt="不看上文，用自己的话讲：主键和外键各是什么？一对多和多对多在建表上差在哪？"
+  points={[
+    { label: "主键", text: "一行的唯一身份，不能为空、不能重复，别的表靠它指向这一行。" },
+    { label: "外键", text: "一列，值必须是另一张表里存在的主键；用来表达「这行属于谁」。" },
+    { label: "一对多", text: "多的一方的表里放一列外键指向一的一方，不用额外加表。" },
+    { label: "多对多", text: "要多一张中间表，一行记一对关系；这对关系自己的信息（排第几）也放这里。" }
+  ]}
+/>

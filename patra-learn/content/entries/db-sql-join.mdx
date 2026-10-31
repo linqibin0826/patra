@@ -1,0 +1,135 @@
+---
+title: 连表查询：JOIN
+summary: 把两张表按「谁属于谁」拼成一张结果表；内连接和左连接的区别，以及连表后行数为什么会变多。
+type: concept
+difficulty: basic
+tags: [database, backend]
+prerequisites: [db-sql-select]
+---
+
+<Diagnose
+  question="评论表里有 3 条评论。其中评论 B 从来没人点过有帮助，所以「有帮助统计表」里没有它的行。用普通的 JOIN 把评论表和统计表连起来、查所有评论，结果里会有几条？"
+  options={["3 条，B 的有帮助数显示 0", "2 条，B 不见了", "报错，因为 B 找不到对应的统计行"]}
+  answer="B"
+  ifRight="对。普通 JOIN 只保留两边都能对上的行。这篇要讲的正是它和 LEFT JOIN 的差别。"
+  ifWrong="答案是 B：2 条。普通 JOIN（内连接）只留下两边都配得上的行，B 在统计表里没有对应行，就从结果里消失了。想让 B 留下来，要用 LEFT JOIN，往下读。"
+  suggest="db-sql-select"
+/>
+
+## 为什么要连表
+
+上一篇的查询都只涉及一张表。可数据常常分在好几张表里：评论的正文在评论表，评论被点了几次有帮助在另一张统计表。页面要一次展示「正文 + 有帮助数」，就得把两张表按某一列对上，拼成一行。这就是**连表查询（JOIN）**。
+
+对上的依据，就是前面讲过的外键关系：统计表的 `target_id` 对应评论表的 `comment_id`。
+
+## 内连接：两边都对得上才留下
+
+```sql
+SELECT c.comment_id, c.body, hs.helpful_count
+FROM discussion.comment c
+JOIN reaction.target_stats hs
+  ON hs.target_type = 'COMMENT' AND hs.target_id = c.comment_id;
+```
+
+（示意，表名取自 Patra，写法已简化。）`ON` 后面写「怎么对上」。表名后的 `c`、`hs` 是别名，省得每次写长名字。
+
+写 `JOIN`（也叫 `INNER JOIN`，内连接）时，只有 `ON` 条件成立的行对才会出现在结果里。评论 B 在统计表里没有行，它就被"连丢"了。
+
+## 左连接：左边的行一个都不丢
+
+要让所有评论都出现，把 `JOIN` 换成 `LEFT JOIN`。它的规则是：**左边表（FROM 后面的那张）的每一行都保留；右边找不到对应行时，右边那几列填 NULL**。
+
+Patra 读评论时用的就是它：
+
+<CodeRef at="patra-api/patra-interaction/patra-interaction-infra/src/main/java/dev/patra/interaction/infra/discussion/persistence/CommentRows.java@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="44-58" />
+
+```java
+  static final String RECORD_SELECT =
+      """
+      SELECT c.comment_id, c.subject_id, c.root_id, c.parent_id, c.author_id, c.state, c.body,
+             c.created_at, c.revised_at, p.author_id AS parent_author_id, p.state AS parent_state,
+             EXISTS (SELECT 1 FROM discussion.comment r WHERE r.parent_id = c.comment_id)
+                 AS has_replies,
+             COALESCE(hs.helpful_count, 0) AS helpful_count
+        FROM discussion.comment c
+        LEFT JOIN discussion.comment p ON p.comment_id = c.parent_id
+        LEFT JOIN reaction.target_stats hs
+               ON hs.target_type = 'COMMENT' AND hs.target_id = c.comment_id
+      """;
+```
+
+这段里有三个值得读的点：
+
+- 评论表**连了自己**（`p` 是父评论）。顶层评论没有父评论，`LEFT JOIN` 让它仍然留在结果里，只是 `p` 的几列是 NULL。
+- 统计表按设计「有过一次有帮助才有行」，表注释写着 `a missing row means 0`，没有行就是 0 个。所以用 `LEFT JOIN`，再用 `COALESCE(hs.helpful_count, 0)` 把 NULL 换成 0。
+- 同一个 `FROM` 后面可以连多张表，每个 `LEFT JOIN` 各管各的。
+
+<Compare
+  title="同样三条评论，JOIN 和 LEFT JOIN 的结果"
+  variants={[
+    {
+      label: "JOIN",
+      steps: ["评论表有 A、B、C 三条评论", "统计表有 A（5 次）、C（2 次），没有 B", "按评论号对上，对不上的行丢掉"],
+      results: [{ label: "结果行数", value: "2 行", tone: "bad" }, { label: "评论 B", value: "不在结果里", tone: "bad" }],
+      verdict: { tone: "bad", head: "B 消失了。", text: "用在「必须两边都有」的场合才对；这里页面会少一条评论。" }
+    },
+    {
+      label: "LEFT JOIN",
+      steps: ["评论表有 A、B、C 三条评论", "统计表有 A（5 次）、C（2 次），没有 B", "每条评论都保留；B 对不上，统计那一列填 NULL", "COALESCE 把 NULL 换成 0"],
+      results: [{ label: "结果行数", value: "3 行", tone: "ok" }, { label: "评论 B 的有帮助数", value: "0", tone: "ok" }],
+      verdict: { tone: "ok", head: "三条都在。", text: "以左边为主：要展示的主体放左边，附加信息放右边，缺了就是 NULL。" }
+    }
+  ]}
+/>
+
+## 一对多连表之后，行数会变多
+
+连表还有一个让新手意外的地方：左边一行如果对上了右边的好几行，结果里它就出现好几次。
+
+比如一篇文献有 3 位作者，作者在中间表 `cat_publication_author` 里是 3 行。把文献表连上作者中间表，这篇文献的标题会在结果里出现 3 次，每次配一位作者。
+
+<Params
+  title="动手试试：连表后结果有几行"
+  guess={{ question: "一篇文献有 3 位作者。用 JOIN 把这篇文献和它的作者行连起来，结果有几行？", options: ["1 行，因为只有一篇文献", "3 行，每位作者一行，标题重复 3 次", "4 行，文献 1 行加作者 3 行"], answer: "B", explain: "连表按配对出行：一篇文献配 3 位作者就是 3 个配对，所以 3 行。标题在每行里重复一遍。" }}
+  controls={[
+    { type: "slider", id: "authors", label: "这篇文献的作者数", min: 0, max: 8, step: 1, default: 3 }
+  ]}
+  cases={[
+    { when: { authors: [0, 0] }, results: [{ label: "JOIN 的行数", value: "0 行", tone: "bad" }, { label: "LEFT JOIN 的行数", value: "1 行", tone: "ok" }], verdict: { tone: "bad", head: "没有作者的文献，JOIN 会丢掉它。", text: "LEFT JOIN 保留文献，作者那几列是 NULL。" } },
+    { when: { authors: [1, 1] }, results: [{ label: "JOIN 的行数", value: "1 行", tone: "ok" }, { label: "LEFT JOIN 的行数", value: "1 行", tone: "ok" }], verdict: { tone: "ok", head: "一对一时，行数不变。", text: "只有 1 位作者，文献标题出现 1 次。" } },
+    { results: [{ label: "JOIN 的行数", value: "{authors} 行", tone: "wait" }, { label: "LEFT JOIN 的行数", value: "{authors} 行", tone: "wait" }], verdict: { tone: "bad", head: "标题重复了 {authors} 次。", text: "数「有几篇文献」不能数结果行数，要数 count(DISTINCT 文献号)，或者先把作者按文献分组。" } }
+  ]}
+/>
+
+<Callout kind="warn">
+
+连了一对多的表之后，`count(*)` 数的是**配对数**，不是左边实体的个数。想数有几篇文献，写 `count(DISTINCT p.id)`。
+
+</Callout>
+
+<Quiz
+  title="考考自己"
+  questions={[
+    {
+      question: "要列出所有用户，并带上每个人的资料（有些用户还没填资料）。该用哪个？",
+      options: ["用户 JOIN 资料", "用户 LEFT JOIN 资料", "资料 JOIN 用户"],
+      answer: "B",
+      explain: "用户是主体，一个都不能丢，所以用户放左边用 LEFT JOIN；没填资料的用户，资料那几列是 NULL。"
+    },
+    {
+      question: "LEFT JOIN 之后，右边没对上的行，右边的列是什么？",
+      options: ["0", "空字符串", "NULL"],
+      answer: "C",
+      explain: "没有对应行，就没有值，数据库填 NULL。想要 0 就用 COALESCE 换。"
+    }
+  ]}
+/>
+
+<Transfer
+  prompt="首页要列出最近 20 篇文献，每篇旁边显示「被多少人收藏」。收藏人数在 collection.subject_stats 里，而且没人收藏过的文献在这张表里没有行。你会选 JOIN 还是 LEFT JOIN？没人收藏的文献显示什么？"
+  points={[
+    { label: "LEFT JOIN", text: "文献是主体，放在左边，一篇都不能丢；统计表放在右边，没行时当 NULL。" },
+    { label: "NULL 换成 0", text: "用 COALESCE(统计.收藏数, 0)，没人收藏的显示 0。" },
+    { label: "为什么不用 JOIN", text: "JOIN 会把没人收藏的文献整条丢掉，首页只剩被收藏过的几篇。" }
+  ]}
+/>

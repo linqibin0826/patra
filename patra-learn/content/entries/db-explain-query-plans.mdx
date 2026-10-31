@@ -1,0 +1,142 @@
+---
+title: 看懂执行计划：EXPLAIN
+summary: 让数据库说出它打算怎么执行一条查询：顺序扫描还是索引扫描，每一步预计和实际花多少；以及查询为什么没用上你建的索引。
+type: concept
+difficulty: advanced
+tags: [database, backend]
+prerequisites: [db-indexes]
+---
+
+<Diagnose
+  question="你给 name_value 列建了普通的 B 树索引。查询写成 WHERE lower(name_value) = 'abc'，把列套了一层 lower() 函数。数据库会用这个索引吗？"
+  options={["会，索引建在 name_value 上，套不套函数都一样", "通常不会，索引里存的是 name_value 本身，不是 lower(name_value) 的结果", "会，数据库会自动改写查询"]}
+  answer="B"
+  ifRight="对。索引按列原来的值排好序，函数把值变了，数据库就没法在有序的索引里定位。怎么才能确定数据库到底有没有用索引？不靠猜，让它自己说，这就是 EXPLAIN。"
+  ifWrong="答案是 B。索引里排的是 name_value 的原始值。查询问的是 lower(name_value)，这个值索引里没有，数据库只能逐行计算再比较。凭猜容易猜错，这一篇讲怎么让数据库自己说出它的打算。"
+  suggest="db-indexes"
+/>
+
+## 同一条 SQL，数据库有很多种执行办法
+
+你写的 SQL 只说"要什么"。"怎么拿"是数据库的**查询规划器**决定的：先扫哪张表、用不用索引、先过滤还是先连表。规划器会估算各种办法的成本，挑一个它认为最便宜的。
+
+这个选择就是**执行计划**。有时它挑得不对，或者因为你写法的缘故根本没有好选项。要知道它挑了什么，在 SQL 前面加 `EXPLAIN`：
+
+```sql
+EXPLAIN
+SELECT * FROM cat_organization_name WHERE name_value ILIKE '%北京大学%';
+```
+
+数据库不执行这条查询，只把计划打印出来。
+
+## EXPLAIN ANALYZE：真的跑一遍
+
+`EXPLAIN` 给的是**估算**。想看**真实**耗时，用 `EXPLAIN ANALYZE`：它会真的执行查询，并给出每一步实际花了多少时间、实际返回多少行。
+
+<Callout kind="warn">
+
+`EXPLAIN ANALYZE` 会真的执行语句。对 `UPDATE`、`DELETE` 也是真改。想看这类语句的计划，要放在事务里，看完回滚：`BEGIN; EXPLAIN ANALYZE UPDATE ...; ROLLBACK;`。
+
+</Callout>
+
+Patra 在为机构联想接口选索引时，就是在 mini（作者家里常驻的 Mac mini 部署机，上面跑着开发环境的库）的真实数据上做的：开事务、建索引、跑每条查询的 `EXPLAIN (ANALYZE)`、最后 `ROLLBACK`，不在库里留任何痕迹。每条跑 3 次取第 3 次，这样看到的是数据已经在缓存里的耗时。
+
+## 读一份计划
+
+计划是一棵树。看缩进：最里面（缩得最深）的先执行，结果往外传。下面是示意输出（省略了成本等数字），查"名称里含北京大学"：
+
+```
+Bitmap Heap Scan on cat_organization_name
+  Recheck Cond: (name_value ~~* '%北京大学%'::text)
+  ->  Bitmap Index Scan on idx_org_name_value_trgm
+        Index Cond: (name_value ~~* '%北京大学%'::text)
+```
+
+从内往外读：先用 `idx_org_name_value_trgm` 这个索引找到可能的行位置（`Bitmap Index Scan`），再回表把这些行取出来复查一遍（`Bitmap Heap Scan`）。
+
+最常见的几种扫描方式：
+
+| 节点 | 意思 | 好不好 |
+|---|---|---|
+| `Seq Scan` | 顺序扫描：整张表从头读到尾 | 表很小，或要取的行占大头时是对的；表大而只要几行时很糟 |
+| `Index Scan` | 走索引，找到一行就回表取一行 | 取少数几行时很快 |
+| `Index Only Scan` | 要的列索引里都有，不用回表 | 最快 |
+| `Bitmap Index Scan` + `Bitmap Heap Scan` | 先走索引收集一批位置，再批量回表 | 命中行数中等时常见 |
+| `Parallel Seq Scan` | 多个进程分头顺序扫描 | 大表全扫的并行版本 |
+
+计划里还有几个值得看的字段：
+
+- **`Index Cond`**：走索引时用的条件。
+- **`Filter`**：取出行之后再逐行过滤的条件。条件出现在 `Filter` 而不是 `Index Cond`，说明没法靠索引定位。
+- **`rows`**：规划器估计会返回的行数。`EXPLAIN ANALYZE` 里会再给一个"实际行数"，**估计和实际差几十上百倍**通常意味着统计信息过期，规划器是凭错误的数字选的计划。
+- **`actual time`**：实际耗时，是 `EXPLAIN ANALYZE` 才有的。
+
+## 为什么我的索引没被用上
+
+动手试试：规划器在什么情况下会放着索引不用？
+
+<Params
+  title="动手试试：这条查询会走索引吗"
+  guess={{ question: "别名表 cat_organization_alias 只有 600 多行，alias 列上有一个索引，查询里也有匹配条件。规划器会选索引扫描吗？", options: ["一定会，有索引就用", "不一定，表这么小，直接顺序扫描整张表更便宜", "一定不会，小表不能建索引"], answer: "B", explain: "整张表只有几页，一次顺序读完比先查索引再回表来回跳还快。Patra 实测这张表规划器选了顺序扫描，只要 0.18 毫秒，规划器是对的。" }}
+  controls={[
+    { type: "switch", id: "hasindex", label: "查询的列上有索引", default: true },
+    { type: "switch", id: "wrapped", label: "查询把列套了函数，比如 lower(列)", default: false },
+    { type: "switch", id: "big", label: "表很大（二十几万行以上）", default: true }
+  ]}
+  cases={[
+    { when: { hasindex: false }, results: [{ label: "规划器的选择", value: "Seq Scan（顺序扫描）", tone: "bad" }, { label: "原因", value: "没有索引可用", tone: "bad" }], verdict: { tone: "bad", head: "只能全表扫。", text: "表大又只要几行时，考虑建索引；建之前先想想这条查询有多常用。" } },
+    { when: { wrapped: true }, results: [{ label: "规划器的选择", value: "Seq Scan（顺序扫描）", tone: "bad" }, { label: "原因", value: "列被函数包住，索引里没有这个值", tone: "bad" }], verdict: { tone: "bad", head: "索引形同虚设。", text: "要么去掉查询里的函数，要么对表达式 lower(列) 建函数索引。" } },
+    { when: { big: false }, results: [{ label: "规划器的选择", value: "Seq Scan（顺序扫描）", tone: "ok" }, { label: "原因", value: "表很小，全扫比走索引便宜", tone: "ok" }], verdict: { tone: "ok", head: "这是对的选择。", text: "不是所有 Seq Scan 都是问题，小表上它往往最快。" } },
+    { results: [{ label: "规划器的选择", value: "走索引（Index Scan 或 Bitmap Scan）", tone: "ok" }, { label: "原因", value: "有索引、条件能用、表又大", tone: "ok" }], verdict: { tone: "ok", head: "理想情况。", text: "用 EXPLAIN 确认计划里确实出现了索引节点。" } }
+  ]}
+/>
+
+规划器放弃索引的常见原因：
+
+1. **没有合适的索引**，或者联合索引缺了最左列。
+2. **列被函数包住**（`lower(col)`、`col + 1`、类型转换），索引里存的是原值。
+3. **要取的行太多**，占表的很大比例，顺序扫描反而更快。
+4. **表很小**，全扫比走索引便宜。
+5. **统计信息过期**，规划器以为只有几行，实际有几万行，选错了计划。（`ANALYZE` 可以刷新统计信息。）
+
+Patra 的机构联想正好撞上了第 2 条：为了让两个汉字的短查询（如「协和」）绕开一个麻烦，查询条件特意写成 `lower(n.name_value) LIKE lower(:contains)`。写成函数包列之后，规划器用不了 trigram 索引，两种计划都是顺序扫描，耗时稳定在 34 毫秒左右。为什么要绕开，下一篇会讲。
+
+看实测数据，同一套索引，不同查询的耗时差了两个数量级：
+
+<CodeRef at="docs/patra/specs/2026-10-21-catalog-org-mesh-suggest-design.md@af8cd13c3ec367ccba78615b72e6ff19535cef90" lines="366-372" />
+
+上面是设计文档里的实测表，下面取其中三行：
+
+| 机构查询 | 耗时 | 为什么 |
+|---|---|---|
+| 北京大学 | 0.1 毫秒 | 走了 trigram 索引，几乎不扫表 |
+| 协和 | 34.9 毫秒 | 只有两个汉字，凑不出索引需要的片段，全表扫 |
+| 医院 | 32.6 毫秒 | 同上 |
+
+<Quiz
+  title="考考自己"
+  questions={[
+    {
+      question: "EXPLAIN 输出里 Filter 一行写着条件，但没有 Index Cond。这说明什么？",
+      options: ["索引用得很好", "这个条件没法靠索引定位，是取出行之后逐行过滤的", "查询语句有语法错误"],
+      answer: "B",
+      explain: "能靠索引定位的条件会出现在 Index Cond 里。只出现在 Filter 里，说明是扫出行之后再丢掉不符合的。"
+    },
+    {
+      question: "想知道一条 DELETE 实际会删多少行、花多久，同时又不想真的删掉。该怎么做？",
+      options: ["直接 EXPLAIN ANALYZE DELETE ...", "BEGIN; EXPLAIN ANALYZE DELETE ...; ROLLBACK;", "EXPLAIN DELETE ... 就够了，它会告诉你实际行数"],
+      answer: "B",
+      explain: "ANALYZE 会真的执行；放进事务再回滚才不留痕迹。不带 ANALYZE 的 EXPLAIN 只有估算，没有实际行数。"
+    }
+  ]}
+/>
+
+<Transfer
+  prompt="一个页面接口变慢了。你怀疑是某条查询没用上索引。请说出你的排查步骤：用什么命令看计划、重点看哪些字段、怎么判断是不是该建索引。"
+  points={[
+    { label: "看计划", text: "拿到那条慢查询，在真实数据量上执行 EXPLAIN (ANALYZE)（改数据的语句放事务里回滚）。" },
+    { label: "重点看", text: "有没有大表上的 Seq Scan；条件在 Index Cond 还是只在 Filter；估计行数与实际行数差多少；哪一步 actual time 最大。" },
+    { label: "判断", text: "大表上只取少数行却在 Seq Scan，通常该建索引；如果列被函数包住，先改写查询；估计和实际差很大，先 ANALYZE 刷新统计信息再看。" },
+    { label: "建完再验证", text: "建索引后再跑一次 EXPLAIN，确认计划里出现了索引节点且耗时下降；别只凭「建了」就认为生效。" }
+  ]}
+/>

@@ -1,0 +1,203 @@
+---
+title: JSON 列：jsonb 什么时候用
+summary: 把半结构化的数据整块存进一个 jsonb 列的好处与代价；什么该放 JSON，什么该提成独立的列；应用里怎么读写。
+type: concept
+difficulty: advanced
+tags: [database, backend, java]
+prerequisites: [db-constraints-and-null]
+---
+
+<Diagnose
+  question="期刊有一块「出版概况」：出版历史、主要语言、宿主机构、被哪些库收录……不同数据来源给的字段还不一样，而且常常增减。你更倾向怎么存？"
+  options={["每个字段建一个独立的列，字段变了就改表结构", "整块存进一个 jsonb 列，字段增减不用改表结构", "存成一段普通文本，需要时再自己解析"]}
+  answer="B"
+  ifRight="对。形状多变、整体读写的数据，jsonb 很合适。但「什么都往里塞」会有代价，这篇会把边界划清。"
+  ifWrong="答案是 B。字段多变时每次都改表很笨重；存成普通文本数据库就看不懂它的内部结构了。jsonb 既灵活，数据库又认得里面的键和值。"
+  suggest="db-constraints-and-null"
+/>
+
+## 表的列是固定的，但数据的形状不一定
+
+前面几篇的表，每一列都有名字和类型，一行一行整整齐齐。可有些数据天生不整齐：
+
+- 不同来源给的元数据字段不同，而且会增减；
+- 一块内容内部有嵌套（一个对象里还有列表）；
+- 只需要整块存进去、整块取出来，很少单独查里面的某一项。
+
+这时可以用 **JSON 列**：在表里放一个类型为 `jsonb` 的列，里面存一段 JSON。
+
+## json 和 jsonb
+
+PostgreSQL 有两种 JSON 类型：
+
+| 类型 | 存法 | 特点 |
+|---|---|---|
+| `json` | 原样存文本 | 保留空格和键的顺序，每次读都要重新解析 |
+| `jsonb` | 解析后存成二进制 | 读得快，能建索引，能用丰富的查询操作符；不保留空格、键顺序，重复的键只留最后一个 |
+
+一般情况选 `jsonb`。Patra 里的 JSON 列都用 `jsonb`。
+
+## Patra 里的 jsonb
+
+catalog 的期刊表就是一张"列加 JSON 混合"的表：
+
+<CodeRef at="patra-api/patra-catalog/patra-catalog-infra/src/main/resources/db/migration/V1__create_venue.sql@0d51a79f0e608944fc44907891b4b37c22a68e6c" lines="33-38" />
+
+```sql
+    cited_by_count      INTEGER                     NULL,
+    publication_profile JSONB                       NULL,
+    citation_metrics    JSONB                       NULL,
+    open_access         JSONB                       NULL,
+    affiliated_societies JSONB                      NULL,
+    record_remarks      JSONB                       NULL,
+```
+
+出版概况、引用指标、开放获取信息、关联学会，各自是一块内部结构复杂、不同来源详略不同的数据，整块放进 jsonb。
+
+interaction 的对象登记表也有一个：
+
+<CodeRef at="patra-api/patra-interaction/patra-interaction-infra/src/main/resources/db/migration/subject/V20261024200000__create_subject_registry.sql@3cf6fa5757b3be54c3b030e4cace871f53e2599c" lines="23-25" />
+
+```sql
+    state        VARCHAR(16)     NOT NULL,
+    snapshot     jsonb           NOT NULL,
+    snapshot_at  timestamptz(6)  NOT NULL,
+```
+
+`snapshot` 存的是被互动过的文献的展示快照（标题、期刊、发表日期这几项），用来在源数据暂时取不到时顶一下。它是个"整块存、整块取"的典型：展示用，从不按里面的字段过滤。
+
+## 什么该放 JSON，什么该拆成列
+
+这是用 jsonb 最该想清楚的事。判断标准很简单：**要不要对它做查询、排序、约束、连表**？
+
+- 要 → 拆成独立的列。有类型、能建索引、能加 `NOT NULL` 和 `CHECK`，数据库能替你把关；
+- 不要，只是整块存取、展示 → 放 jsonb。
+
+Patra 的期刊表自己就做了这个区分。看实体里怎么映射：
+
+<CodeRef at="patra-api/patra-catalog/patra-catalog-infra/src/main/java/dev/patra/catalog/infra/venue/persistence/entity/VenueEntity.java@5073ab1358404ecd989e722373cd9f7edafe238b" lines="126-148" />
+
+```java
+  // 嵌入式值对象（JSON 字段）
+  @JdbcTypeCode(SqlTypes.JSON)
+  @Column(name = "publication_profile", columnDefinition = "JSON")
+  private PublicationProfile publicationProfile;
+
+  @JdbcTypeCode(SqlTypes.JSON)
+  @Column(name = "citation_metrics", columnDefinition = "JSON")
+  private CitationMetrics citationMetrics;
+  ...
+```
+
+你会注意到，期刊表里同时有 `cited_by_count` 这样的独立列（上面建表里那一行），它的值和 `citation_metrics` 这个 JSON 里的被引次数是同一个数。映射器里写着：
+
+<CodeRef at="patra-api/patra-catalog/patra-catalog-infra/src/main/java/dev/patra/catalog/infra/venue/persistence/mapper/VenueJpaMapper.java@cfec9c9f30270dcf03f5cd7b6e54a0cd3b59296b" lines="71-74" />
+
+```java
+  @Mapping(target = "abbreviatedTitle", source = "publicationProfile.abbreviatedTitle")
+  @Mapping(target = "primaryLanguage", source = "publicationProfile.mainLanguage")
+  @Mapping(target = "countryCode", source = "publicationProfile.countryCode")
+  @Mapping(target = "citedByCount", source = "citationMetrics.citedByCount")
+```
+
+这就是常见做法："快速访问字段"：**完整的数据放 JSON，要拿来过滤、排序的那几项另外抄一份到独立的列里**。`cited_by_count` 有专门的索引（`idx_cited_by_count`），按被引次数排序的查询走它；国家代码有 `CHECK` 约束。如果这些只存在 JSON 里，上面这些索引和约束就都用不上了。
+
+<Compare
+  title="按被引次数排序，取前 20 本期刊（示意）"
+  variants={[
+    {
+      label: "只存在 JSON 里",
+      steps: ["期刊表有 publication_profile、citation_metrics 等 JSONB 列", "查询：ORDER BY (citation_metrics ->> 'citedByCount')::int DESC LIMIT 20", "没有对应的索引，数据库只能逐行取出 JSON、取值、转成数字、再排序"],
+      results: [{ label: "能用的索引", value: "没有（除非另建表达式索引）", tone: "bad" }, { label: "数据库对这个值的约束", value: "没有，JSON 里什么都能写", tone: "bad" }],
+      verdict: { tone: "bad", head: "查得动，但越来越慢。", text: "能写，但每次查询都在做解析和转换。表越大越吃力。" }
+    },
+    {
+      label: "抄一份成独立的列",
+      steps: ["期刊表有 cited_by_count INTEGER，并建了索引 idx_cited_by_count", "查询：ORDER BY cited_by_count DESC LIMIT 20", "数据库顺着索引直接取前 20 个，不用读 JSON"],
+      results: [{ label: "能用的索引", value: "idx_cited_by_count", tone: "ok" }, { label: "数据库对这个值的约束", value: "是整数，可以加 CHECK", tone: "ok" }],
+      verdict: { tone: "ok", head: "要查的值拿出来。", text: "代价是同一个数存了两份，写入时要保证两份一致，Patra 靠映射器在保存时同步。" }
+    }
+  ]}
+/>
+
+## 在 SQL 里查 JSON
+
+如果确实要查 JSON 里的内容，jsonb 提供了一组操作符。下面是示意（键名是假设的）：
+
+| 写法 | 意思 |
+|---|---|
+| `data -> 'author'` | 取出键 `author` 对应的 JSON（还是 jsonb） |
+| `data ->> 'title'` | 取出键 `title` 对应的值，当作文字 |
+| `data @> '{"isOa": true}'` | `data` 是否包含这一小块 |
+| `data ? 'doi'` | 有没有 `doi` 这个键 |
+
+要让这类查询快，可以对 jsonb 列建 **GIN 索引**，或者对某个表达式单独建 B 树索引。不过那已经说明你在频繁查询里面的内容了，多半该考虑提成列。
+
+## 在 Java 里读写
+
+Patra 里有两种方式用 JSON 列：
+
+1. 实体上用 Hibernate 的 `@JdbcTypeCode(SqlTypes.JSON)` 标记，字段是 Java 对象（上面的 `PublicationProfile`），保存时自动转 JSON，读取时转回对象。
+2. 用 JdbcClient 写原生 SQL 时，把对象先转成 JSON 文本，再 `CAST(:snapshot AS jsonb)`：
+
+<CodeRef at="patra-api/patra-interaction/patra-interaction-infra/src/main/java/dev/patra/interaction/infra/subject/persistence/SubjectRepositoryAdapter.java@5073ab1358404ecd989e722373cd9f7edafe238b" lines="86-89" />
+
+```java
+            INSERT INTO subject.registry
+                   (subject_id, target_type, natural_key, source_id, state, snapshot, snapshot_at)
+            VALUES (:subjectId, :type, :naturalKey, :sourceId, 'ACTIVE', CAST(:snapshot AS jsonb),
+                    :snapshotAt)
+```
+
+JSON 的编解码统一用容器里的 `JsonMapper`，保证写进库里的 JSON 和应用其他地方的形态一致。JPA 映射里还有一个转换器 `JsonColumnCodec`，把空值的几种情形规定清楚：
+
+<CodeRef at="patra-tool/patra-tool-jpa/src/main/java/dev/patra/tool/jpa/json/JsonColumnCodec.java@b6e01875bb5692356021c8a19562f557f319fc54" lines="15-20" />
+
+```java
+/// 空值语义：
+///
+/// - [#read]：空白文本得到 `null`
+/// - [#write]：`null` 节点得到 `null`
+/// - [#fromMap]：`null` 或空 Map 得到 `null`，列保持 NULL
+/// - [#toMap]：`null`、JSON `null`、缺失节点都得到空 Map
+```
+
+这里有一个新手容易混淆的点：JSON 列有**两种"空"**：
+
+- 数据库层面的 `NULL`：这一格没有值；
+- JSON 里的 `null`：这一格有值，值是 JSON 文本 `null`。
+
+两者不一样。对应地，`NOT NULL` 约束只管第一种。写 JSON 列的代码要想清楚："没有"到底落成哪一种。
+
+<Callout kind="cost">
+
+jsonb 的代价：数据库不替你检查内部结构（键拼错了、类型错了它都不管）；要查里面的内容很费劲；同一份数据存了两处时要自己保持一致。所以只给"形状多变、整块存取"的数据用。
+
+</Callout>
+
+<Quiz
+  title="考考自己"
+  questions={[
+    {
+      question: "用户个人页要支持「按职业筛选用户列表」。职业信息放 jsonb 还是独立的列？",
+      options: ["jsonb，灵活", "独立的列（可以建索引、加 CHECK）", "两种都一样"],
+      answer: "B",
+      explain: "要拿来过滤的字段就该是独立的列。Patra 的资料表里职业就是单独的 occupation 列，而且有 CHECK 限定取值。"
+    },
+    {
+      question: "一个 jsonb 列声明了 NOT NULL，往里写 JSON 文本 null（四个字符 n-u-l-l）会怎样？",
+      options: ["被拒绝，因为是空", "能写进去，因为它不是数据库的 NULL，而是一个有值的 JSON null", "自动变成 {}"],
+      answer: "B",
+      explain: "NOT NULL 只拦数据库层面的 NULL。JSON 的 null 是一个合法的 JSON 值，数据库认为这一格有值。"
+    }
+  ]}
+/>
+
+<Transfer
+  prompt="你要给「投稿经验」存一份审稿过程的时间线：每次修改都可能多出或少掉几个字段（审稿人意见、返修轮数、编辑决定……）。这份时间线你会放 jsonb 还是拆成表？如果要支持「找出所有被拒稿的经验」呢？"
+  points={[
+    { label: "时间线本身", text: "形状多变、整块展示，适合放 jsonb（Patra 的帖子修改历史就是按 jsonb 存的）。" },
+    { label: "要筛选的字段", text: "「是否被拒稿」要拿来查询和统计，应该是独立的列，并建索引；不要靠去 JSON 里翻。" },
+    { label: "两者的关系", text: "JSON 里是完整的记录，独立列是从中提取出来、用于查询的副本；保存时在同一个事务里同时写，保持一致。" }
+  ]}
+/>

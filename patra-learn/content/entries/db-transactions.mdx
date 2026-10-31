@@ -1,0 +1,189 @@
+---
+title: 事务：要么全成，要么全不成
+summary: 把几次写入捆成一个整体：全部生效或全部撤销。讲 ACID、提交与回滚，以及「一个用例一个事务」、事务里为什么不能放远程调用。
+type: concept
+difficulty: basic
+tags: [database, backend]
+prerequisites: [db-sql-write]
+---
+
+<Diagnose
+  question="用户点「有帮助」，程序先往明细表插一行，再把这条评论的有帮助计数加 1。插完明细后，进程突然崩溃，计数那一步没执行。两条语句各自独立提交。重启后数据是什么样？"
+  options={["两样都没有，数据库会自动撤销", "明细有一行，计数却没加，两边对不上了", "明细和计数都有，数据库会自动补完"]}
+  answer="B"
+  ifRight="对。每条语句各自提交，已经提交的就是已经算数了，不会因为后面崩了而撤销。要让这两步同生共死，就需要事务。"
+  ifWrong="答案是 B。每条语句单独提交时，插明细那条已经落盘，数据库不会替你撤销它，也不会替你补上第二步。结果是明细有、计数没加。这类「做了一半」的状态，正是事务要解决的问题。"
+  suggest="db-sql-write"
+/>
+
+## 事务：把几步捆成一个整体
+
+转账是最经典的例子：A 给 B 转 100 元，要做两件事，A 的账户减 100，B 的账户加 100。如果只做了第一步就出了意外，钱凭空消失了。我们要的是：**这两步要么都成，要么都不成**。
+
+数据库用**事务**来保证这件事：
+
+- `BEGIN`：开始一个事务；
+- 接着写若干条语句；
+- `COMMIT`（提交）：全部生效，别人这才能看到；
+- 或者 `ROLLBACK`（回滚）：全部撤销，好像什么都没发生过。
+
+提交之前，事务里的修改只有自己看得到；提交的一瞬间，一起生效；中途崩溃或回滚，一起消失。
+
+## 事务的四个保证：ACID
+
+数据库界用四个字母概括事务提供的保证：
+
+| 字母 | 名字 | 用转账的话说 |
+|---|---|---|
+| A | 原子性 | 两步捆在一起，要么都做，要么都不做 |
+| C | 一致性 | 事务前后，账都是对得上的，约束没有被破坏 |
+| I | 隔离性 | 别人同时在转账，互相看不到对方做到一半的状态（细节在「隔离级别」那一篇） |
+| D | 持久性 | 一旦提交，就算马上断电，数据也不会丢 |
+
+初学阶段最重要的是 A：一起成功，一起失败。
+
+## 用 Patra 的场景比一比
+
+Patra 的"有帮助"功能，要在明细表插一行，同时把评论的计数加 1，不能只做一半。拖动开关，看崩溃发生时三种写法各留下什么：
+
+<Compare
+  title="点「有帮助」，在中间崩溃会怎样"
+  failureLabel="在最后一步之前崩溃"
+  variants={[
+    {
+      label: "各自提交",
+      steps: ["插入明细（自动提交）", "计数加 1（自动提交）"],
+      results: [{ label: "明细", value: "有 1 行", tone: "ok" }, { label: "计数", value: "已加 1", tone: "ok" }],
+      verdict: { tone: "ok", head: "顺利时没问题。", text: "不崩的时候，两种写法看起来一模一样。" },
+      failure: { after: 1, results: [{ label: "明细", value: "有 1 行", tone: "ok" }, { label: "计数", value: "没加", tone: "bad" }], verdict: { tone: "bad", head: "明细和计数对不上。", text: "第一步已经提交，没法撤销。以后每次要靠重新数一遍才能修正。" } }
+    },
+    {
+      label: "同一个事务",
+      steps: ["BEGIN", "插入明细", "计数加 1", "COMMIT"],
+      results: [{ label: "明细", value: "有 1 行", tone: "ok" }, { label: "计数", value: "已加 1", tone: "ok" }],
+      verdict: { tone: "ok", head: "两样一起生效。", text: "COMMIT 的一瞬间，明细和计数同时对外可见。" },
+      failure: { after: 3, results: [{ label: "明细", value: "没有", tone: "ok" }, { label: "计数", value: "没加", tone: "ok" }], verdict: { tone: "ok", head: "一起消失，仍然一致。", text: "COMMIT 之前崩溃，事务整个撤销，数据库回到点击之前。用户再点一次就好。" } }
+    }
+  ]}
+/>
+
+这正是 Patra v0.15 的决策 A：**有帮助的明细和计数，在同一个事务里写**。同库同事务天然一致，不需要再建一套异步的计数管线。
+
+看真实代码里事务包着什么：
+
+<CodeRef at="patra-api/patra-interaction/patra-interaction-app/src/main/java/dev/patra/interaction/app/reaction/usecase/helpful/MarkHelpfulHandler.java@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="61-76" />
+
+```java
+    return transactions.execute(
+        status -> {
+          guard.admit(userId, PublishKind.HELPFUL);
+          helpful.lockTarget(target);
+          targets.require(target).requireAvailable();
+          Long credited = profile.creditedUserId();
+          if (helpful.insert(userId, target, credited, now)) {
+            helpful.adjustTargetCount(target, 1);
+            if (credited != null) {
+              helpful.adjustReceived(credited, 1);
+            }
+            events.publishEvent(marked(target, profile, userId, facts, now));
+          }
+          return HelpfulResult.of(true, helpful.countOf(target));
+        });
+```
+
+读法：`transactions.execute(...)` 里面这一段整个是一个事务。里面做了：额度计数、加锁、重读目标、**插明细；如果真的插进去了（返回 true），才给目标计数 +1、给作者的获赞 +1**。三处写入同生共死。
+
+## 事务的生命周期
+
+一个事务从开始到结束，有几种状态。PostgreSQL 里有一个新手容易忽略的：**事务里任何一条语句报错，整个事务就作废了**，后面的语句都会被拒绝，只能回滚。
+
+<StateMachine
+  title="一个事务的一生"
+  subject="PostgreSQL 的事务"
+  states={[
+    { id: "idle", label: "没有事务", col: 1, desc: "连接处于空闲状态，每条语句各自是一个小事务，自动提交。" },
+    { id: "active", label: "事务进行中", sub: "BEGIN 之后", col: 2, desc: "修改已经执行，但还没提交，只有自己看得到。" },
+    { id: "aborted", label: "事务已作废", sub: "出过错", col: 2, row: 2, desc: "有语句报了错。此后除了 ROLLBACK，任何语句都会被拒绝。" },
+    { id: "committed", label: "已提交", col: 3, desc: "所有修改一起生效，别人这才能看见，之后不能撤销。" },
+    { id: "rolledback", label: "已回滚", col: 3, row: 2, desc: "所有修改一起撤销，好像没发生过。" }
+  ]}
+  start="idle"
+  events={[
+    { id: "begin", label: "BEGIN" },
+    { id: "write", label: "执行一条语句" },
+    { id: "error", label: "一条语句报错" },
+    { id: "commit", label: "COMMIT" },
+    { id: "rollback", label: "ROLLBACK" }
+  ]}
+  transitions={[
+    { from: "idle", event: "begin", to: "active", label: "开始" },
+    { from: "active", event: "write", to: "active", label: "写" },
+    { from: "active", event: "error", to: "aborted", label: "报错" },
+    { from: "active", event: "commit", to: "committed", label: "提交" },
+    { from: "active", event: "rollback", to: "rolledback", label: "回滚" },
+    { from: "aborted", event: "rollback", to: "rolledback", label: "回滚" },
+    { from: "aborted", event: "commit", to: "rolledback", label: "COMMIT 变回滚" }
+  ]}
+/>
+
+这条"报错就作废"的规则对写代码有直接影响：Patra 的事务规范里明确写着，**禁止捕获唯一约束异常后继续用同一个事务**，应该用 `INSERT ... ON CONFLICT DO NOTHING`，冲突时不报错，事务继续可用（上一篇讲过）。
+
+## 一个用例一个事务，事务越短越好
+
+两条实用规矩，Patra 的规范 `.claude/rules/tech/transaction.md` 里都有：
+
+1. **一个业务用例对应一个事务**：用户点一次"有帮助"就是一个事务，不要拆成几个，也不要把几个无关的用例合进一个。
+2. **事务里只放数据库操作，越短越好**。不要在事务里调用远程服务、发消息或邮件、读写文件、做耗时计算。
+
+<CodeRef at=".claude/rules/tech/transaction.md@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="7" />
+
+第二条的原因，是因为事务没结束时，它改过的行都被**锁着**，别的事务要改同样的行只能等；同时它还占着一个数据库连接（下一篇讲连接池）。事务拖得越久，被它挡住的人越多。更糟的是，远程调用没法跟着回滚。
+
+<Compare
+  title="事务里夹了一个发邮件，崩了会怎样"
+  failureLabel="在第 3 步之后崩溃"
+  variants={[
+    {
+      label: "事务里发邮件",
+      steps: ["BEGIN", "写库", "调邮件服务发出邮件", "COMMIT"],
+      results: [{ label: "数据库", value: "已提交", tone: "ok" }, { label: "邮件", value: "已发出", tone: "ok" }],
+      verdict: { tone: "ok", head: "顺利时没问题。", text: "但邮件服务慢的时候，事务一直开着，锁一直不放。" },
+      failure: { after: 3, results: [{ label: "数据库", value: "整体回滚", tone: "bad" }, { label: "邮件", value: "已经发出，收不回", tone: "bad" }], verdict: { tone: "bad", head: "对不上了。", text: "用户收到一封「操作成功」的邮件，库里却什么都没有。远程调用不会随事务回滚。" } }
+    },
+    {
+      label: "先提交，再发邮件",
+      steps: ["BEGIN", "写库", "COMMIT", "调邮件服务发出邮件"],
+      results: [{ label: "数据库", value: "已提交", tone: "ok" }, { label: "邮件", value: "已发出", tone: "ok" }],
+      verdict: { tone: "ok", head: "事务很短。", text: "事务里只剩数据库操作，锁很快放开。" },
+      failure: { after: 3, results: [{ label: "数据库", value: "已提交", tone: "ok" }, { label: "邮件", value: "没发出", tone: "wait" }], verdict: { tone: "ok", head: "不会出现假成功。", text: "最坏是邮件没发出，可以补发。怎么保证一定补发，是「发件箱」那一类问题，属于消息路线。" } }
+    }
+  ]}
+/>
+
+<Quiz
+  title="考考自己"
+  questions={[
+    {
+      question: "一个事务里执行到第 3 条语句时报错了，前两条语句已经执行。此时直接 COMMIT 会怎样？",
+      options: ["前两条生效，第三条丢弃", "整个事务回滚，前两条也撤销", "再执行一次第 3 条"],
+      answer: "B",
+      explain: "PostgreSQL 的事务出过错就作废了，这时 COMMIT 实际上等同于 ROLLBACK，前两条一起撤销。"
+    },
+    {
+      question: "下面哪件事不应该放进数据库事务里？",
+      options: ["插入明细行", "给计数加 1", "调用另一个服务的 HTTP 接口"],
+      answer: "C",
+      explain: "远程调用慢、会失败、而且不能随事务回滚，放在事务里既拖长了持锁时间，又会造成事务和外部状态不一致。"
+    }
+  ]}
+/>
+
+<Transfer
+  prompt="用户注销账号：要把账号状态改成「待删除」，写一条审计记录，然后给用户发一封确认邮件。你会怎么安排事务？邮件放在事务的哪里？如果邮件发送失败了，已经提交的数据要不要回滚？"
+  points={[
+    { label: "事务里放什么", text: "改账号状态和写审计记录这两条写入放在同一个事务里，要么都成要么都不成。" },
+    { label: "邮件放哪", text: "放在事务提交之后。事务里只有数据库操作，邮件服务慢或失败都不会拖住或破坏事务。" },
+    { label: "邮件失败怎么办", text: "不回滚已提交的数据。注销已经生效，邮件失败是另一件事：记日志或补发，不能反过来撤销业务。" },
+    { label: "想更稳", text: "要保证邮件「一定会发」，需要发件箱：把待发邮件作为一行和业务数据同事务写入，提交后再投递。" }
+  ]}
+/>
