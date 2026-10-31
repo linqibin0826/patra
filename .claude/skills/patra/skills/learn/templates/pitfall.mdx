@@ -14,26 +14,50 @@ prerequisites: []             # 直接前置的 slug，1～3 篇，必须已存�
 personalEnv: false            # 要作者同款工具或机器才会碰到时为 true
 ---
 
-<Diagnose question="〔给出要做的事，问读者觉得会发生什么〕">
-〔答案与一句解释〕
-</Diagnose>
+<Diagnose
+  question="〔给出要做的事，问读者觉得会发生什么〕"
+  options={["〔选项甲〕", "〔选项乙〕", "〔选项丙〕"]}
+  answer="B"
+  ifRight="〔确认 + 一句「往下读会讲什么」〕"
+  ifWrong="〔正确答案是什么，这题考的是哪个前置知识〕"
+/>{/* 有前置时加 suggest="<前置 slug>"（须是 prerequisites 里的一篇）；组件见 README 第 1 节 */}
 
 ## 坑
 
-一句话：做 A 时会 B。
+<Callout kind="lead" label="坑在哪">
 
-{/* 〔待对齐 PAP-157：你猜会怎样〕答案折起来 */}
+〔一句话：做 A 时会 B〕
+
+</Callout>
 
 ## 为什么
 
 机制，一到两段。
 
+<Callout kind="insight" label="怎么认出它">
+
+〔现象或日志里的什么特征说明踩到了这个坑〕
+
+</Callout>
+
 ## 怎么避开
 
 要做 C。
 
+<Callout kind="warn">
+
+〔避开时最容易再出错的地方〕
+
+</Callout>
+
+{/* 参数组合才踩坑时，用 Params 让读者拖着试（README 第 8 节） */}
+
 {/* <CodeRef at="<路径>@<40 位 SHA>" lines="40-72" /> */}
 
-<Transfer prompt="〔迁移题：还有哪些地方会踩到同一个坑〕">
-〔参考答案〕
-</Transfer>
+<Transfer
+  prompt="〔迁移题：还有哪些地方会踩到同一个坑〕"
+  points={[
+    { label: "〔要点一〕", text: "〔参考答案的一条〕" },
+    { label: "〔要点二〕", text: "〔参考答案的一条〕" }
+  ]}
+/>

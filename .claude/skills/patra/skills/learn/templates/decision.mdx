@@ -15,9 +15,13 @@ personalEnv: false            # 要作者同款工具或机器才会碰到时为
 # supersededBy: <新篇 slug>    # 被推翻时才写，指向取代它的条目
 ---
 
-<Diagnose question="〔给出约束，问读者会选哪个〕">
-〔答案与一句解释〕
-</Diagnose>
+<Diagnose
+  question="〔给出约束，问读者会选哪个〕"
+  options={["〔选项甲〕", "〔选项乙〕", "〔选项丙〕"]}
+  answer="B"
+  ifRight="〔确认 + 一句「往下读会讲什么」〕"
+  ifWrong="〔正确答案是什么，这题考的是哪个前置知识〕"
+/>{/* 有前置时加 suggest="<前置 slug>"（须是 prerequisites 里的一篇）；组件见 README 第 1 节 */}
 
 ## 背景
 
@@ -25,22 +29,39 @@ personalEnv: false            # 要作者同款工具或机器才会碰到时为
 
 ## 选项
 
-每个选项一节或一行：它是什么、好在哪、代价是什么。
+每个选项的好处与代价写进卡片；选了哪个、为什么写在后面。
 
-{/* 〔待对齐 PAP-157：对比切换〕选项之间有可比的维度时用 */}
+<DecisionOptions
+  options={[
+    { name: "〔选项甲〕", summary: "〔它是什么〕", pros: "〔好处〕", cons: "〔代价〕", chosen: true },
+    { name: "〔选项乙〕", summary: "〔它是什么〕", pros: "〔好处〕", cons: "〔代价〕" }
+  ]}
+/>
+
+{/* 选项之间有可比的维度、或「出意外才看出差别」时，加 Compare（README 第 9 节） */}
 
 ## 选择
 
-{/* 〔待对齐 PAP-157：你猜会怎样〕放在揭晓选择之前 */}
+<Callout kind="lead" label="选了什么">
 
-选了哪个，决定性的理由是哪一条。
+〔选了哪个，决定性的理由是哪一条〕
+
+</Callout>
 
 ## 代价
 
-选了它要付出什么，什么情况下这个决策该被重新考虑。
+<Callout kind="cost">
+
+〔选了它要付出什么，什么情况下这个决策该被重新考虑〕
+
+</Callout>
 
 {/* <CodeRef at="<路径>@<40 位 SHA>" lines="40-72" /> */}
 
-<Transfer prompt="〔迁移题：约束换一条，你还会这么选吗〕">
-〔参考答案〕
-</Transfer>
+<Transfer
+  prompt="〔迁移题：约束换一条，你还会这么选吗〕"
+  points={[
+    { label: "〔要点一〕", text: "〔参考答案的一条〕" },
+    { label: "〔要点二〕", text: "〔参考答案的一条〕" }
+  ]}
+/>

@@ -9,7 +9,7 @@ description: 维护公开学习站 patra-learn 时使用：版本收尾时把本
 
 **开始时宣布：**「我正在使用 patra:learn 技能维护学习站。」
 
-> 文中 `〔待对齐 PAP-157：…〕` 是教学组件库定稿前留的空位，定稿后换成真实组件名。
+> 组件怎么写（参数、示例、常见错误）只读 `patra-learn/src/teaching/README.md`，本技能里的「README 第 N 节」都指它。
 
 ## 内容放在哪
 
@@ -42,7 +42,7 @@ description: 维护公开学习站 patra-learn 时使用：版本收尾时把本
    git fetch origin main && git log -1 --format=%H origin/main -- <路径>
    ```
    代码还没合进 main（功能分支上写的条目），写 `<路径>@pending`，代码进 main 后重钉。只引用讲清道理所需的那几行。
-4. **交互只用教学组件库**：正文只能用 Markdown（含 GFM 表格）和登记表里的组件；不许 import / export、小写 HTML 标签、`{表达式}`（`{/* 注释 */}` 除外），属性只写字面量。要的交互库里没有，先在登记表和 `mdx-components.tsx` 里加一个通用组件（含测试），再在条目里用。
+4. **交互只用教学组件库**：正文只能用 Markdown（含 GFM 表格）和登记表里的组件（用法见 README）；不许 import / export、小写 HTML 标签、`{表达式}`（`{/* 注释 */}` 除外），属性只写字面量。要的交互库里没有，先在登记表和 `mdx-components.tsx` 里加一个通用组件（含测试），再在条目里用。
 5. **教学写法**：照 [teaching.md](teaching.md) 写。正文第一块必须是 `Diagnose`，最后一块必须是 `Recap` 或 `Transfer`。
 
 ## 选哪一块
@@ -112,7 +112,7 @@ description: 维护公开学习站 patra-learn 时使用：版本收尾时把本
    | `secret` / `private-address` | 立即改成占位 |
    | `code-ref-missing` / `code-ref-invalid` | 按下表 `missing` 处理，或改正写法 |
    | `diagnostic-missing` / `recap-missing` | 按 teaching.md 补诊断题或结尾题 |
-   | `component-*` / `mdx-*` | 按登记表里组件的现有接口改 |
+   | `component-*` / `mdx-*` | 按 README 里该组件那一节改（报错信息带参数路径） |
 
 3. 处理 `codeRefs`，按 `status`：
 
@@ -131,7 +131,7 @@ description: 维护公开学习站 patra-learn 时使用：版本收尾时把本
 ## 5. 改版式与发布
 
 - **加条目类型、改元数据、加页面**：改 `src/lib/content/` 里的内容模型、校验与索引，同时改本技能的类型表、frontmatter 说明和 `templates/`。
-- **加组件**：登记表 `src/teaching/registry.ts` 加一条、`src/mdx-components.tsx` 加实现、补测试；校验自动认得新组件。
+- **加组件**：登记表 `src/teaching/registry.ts` 加一条、`src/mdx-components.tsx` 加实现、补测试，并在 README 加一节带示例；校验自动认得新组件。
 - **改模板**：改完跑 `pnpm content:check-file ../.claude/skills/patra/skills/learn/templates/*.mdx`，无输出才算过。学习站的测试不扫模板目录。
 - **本地验证**（在 `patra-learn/` 下）：`pnpm test`、`pnpm typecheck`、`pnpm lint`、`pnpm build` 全绿；动了页面就 `pnpm dev` 看桌面布局，手机宽度只查正文能读、不横向溢出；`pnpm test:e2e` 只在本地跑。
 - **发布**：合进 main 后 `.github/workflows/learn-cd.yml` 自动构建并部署（`patra-learn/**` 下的改动触发，`.md` 不触发，`.mdx` 触发），合并即对公网生效，没有手动部署步骤。回滚：手动触发该 workflow，`image_tag` 填旧提交的 SHA。
