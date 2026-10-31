@@ -7,7 +7,7 @@ import { formatUnread, UnreadBadge } from "@/components/notifications/UnreadBadg
 import { useNotificationsEnabled, useUnreadCounts } from "@/lib/notifications/queries";
 import { cn } from "@/lib/utils";
 
-/// 在不在提醒列表页（两个标签）
+/// 在不在提醒列表页（三个标签）
 export function isNotificationsPath(pathname: string): boolean {
   return pathname === "/notifications" || pathname.startsWith("/notifications/");
 }

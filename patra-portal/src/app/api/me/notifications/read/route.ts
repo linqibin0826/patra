@@ -1,5 +1,5 @@
 import type { NextResponse } from "next/server";
-import { markAllNotificationsRead } from "@/lib/interaction/notifications";
+import { markAllNotificationsRead } from "@/lib/notification/inbox";
 import { forbidden, readReply } from "@/lib/route-reply";
 import { isSameOrigin } from "@/lib/same-origin";
 

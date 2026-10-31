@@ -1,15 +1,16 @@
 import "server-only";
+import { READ_TIMEOUT_MS, type Read, toRead } from "@/lib/interaction/read";
 import {
   type NotificationPage,
   type NotificationTab,
   notificationPageSchema,
   type UnreadCounts,
   unreadCountsSchema,
-} from "@/lib/interaction/notification-schema";
-import { READ_TIMEOUT_MS, type Read, toRead } from "@/lib/interaction/read";
-import { callInteraction } from "@/lib/interaction/request";
+} from "@/lib/notification/inbox-schema";
+import { callNotification } from "@/lib/notification/request";
 
 const UNREAD_PATH = "/me/notifications/unread-count";
+const LIST_PATH = "/me/notifications";
 
 /// 取未读数的结果：`not-modified` 是网关回了 304（计数没变，没有响应体）
 export type UnreadRead =
@@ -20,7 +21,7 @@ export type UnreadRead =
 
 /// 未读数：`ifNoneMatch` 原样转给网关，没变化时网关回 304。304 先于解析响应体判断（它没有响应体）
 export async function fetchUnreadCounts(ifNoneMatch: string | null): Promise<UnreadRead> {
-  const reply = await callInteraction(UNREAD_PATH, { timeoutMs: READ_TIMEOUT_MS, ifNoneMatch });
+  const reply = await callNotification(UNREAD_PATH, { timeoutMs: READ_TIMEOUT_MS, ifNoneMatch });
   if (reply.kind === "ok" && reply.res.status === 304) {
     return { kind: "not-modified", etag: reply.res.headers.get("ETag") };
   }
@@ -40,16 +41,19 @@ export async function fetchUnreadCounts(ifNoneMatch: string | null): Promise<Unr
   }
 }
 
-/// 一个标签下的一页提醒
+/// 一个标签下的一页提醒；游标不透明，原样回传
 export async function fetchNotifications(
   tab: NotificationTab,
   cursor?: string,
 ): Promise<Read<NotificationPage>> {
-  const path = `/me/notifications?tab=${tab}${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ""}`;
+  const query = new URLSearchParams({ tab });
+  if (cursor) {
+    query.set("cursor", cursor);
+  }
   return toRead(
-    await callInteraction(path, { timeoutMs: READ_TIMEOUT_MS }),
+    await callNotification(LIST_PATH, { timeoutMs: READ_TIMEOUT_MS }, { query }),
     notificationPageSchema,
-    path,
+    LIST_PATH,
   );
 }
 
@@ -57,17 +61,17 @@ export async function fetchNotifications(
 export async function markNotificationRead(notificationId: string): Promise<Read<UnreadCounts>> {
   const path = `/me/notifications/${notificationId}/read`;
   return toRead(
-    await callInteraction(path, { method: "PUT", timeoutMs: READ_TIMEOUT_MS }),
+    await callNotification(path, { method: "PUT", timeoutMs: READ_TIMEOUT_MS }),
     unreadCountsSchema,
     path,
   );
 }
 
-/// 全部已读（两个标签一起），返回新的未读数
+/// 全部已读（三个标签一起），返回新的未读数
 export async function markAllNotificationsRead(): Promise<Read<UnreadCounts>> {
   const path = "/me/notifications/read";
   return toRead(
-    await callInteraction(path, { method: "PUT", timeoutMs: READ_TIMEOUT_MS }),
+    await callNotification(path, { method: "PUT", timeoutMs: READ_TIMEOUT_MS }),
     unreadCountsSchema,
     path,
   );

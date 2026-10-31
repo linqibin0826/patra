@@ -13,8 +13,8 @@ import { UnreadBadge } from "@/components/notifications/UnreadBadge";
 import { fetchCurrentUser } from "@/lib/auth/current-user-query";
 import { authPageHref } from "@/lib/auth/next-path";
 import { useNow } from "@/lib/discussion/use-now";
-import type { NotificationTab } from "@/lib/interaction/notification-schema";
-import { groupByDay } from "@/lib/notifications/groups";
+import type { NotificationTab } from "@/lib/notification/inbox-schema";
+import { flattenPages, groupByDay } from "@/lib/notifications/groups";
 import { useMarkAllRead, useMarkRead } from "@/lib/notifications/mark-read";
 import { useNotificationList, useUnreadCounts } from "@/lib/notifications/queries";
 import { btnSecondary } from "@/lib/portal-ui";
@@ -28,10 +28,12 @@ const TAB =
 const TABS = [
   { tab: "replies", label: "回复我的", href: "/notifications" },
   { tab: "mentions", label: "@ 我的", href: "/notifications/mentions" },
+  { tab: "helpful", label: "有帮助", href: "/notifications/helpful" },
 ] as const;
 
-/// 提醒列表页（简报 §3.19；分组与版式见 spec 2026-10-28-notification-inbox-redesign 4.2）：h1 + 「全部标为已读」、
-/// 两个标签（未读胶囊）、按今天 / 昨天 / 更早分组的列表（一页 20 条）与「加载更多提醒」。
+/// 提醒列表页（简报 §3.19；分组与版式见 spec 2026-10-28-notification-inbox-redesign 4.2；有帮助标签见 v0.16 简报
+/// §3.1）：h1 + 「全部标为已读」（三个标签一起）、三个标签（各自的未读胶囊）、按今天 / 昨天 / 更早分组的列表（一页
+/// 20 条，保持服务端顺序）与「加载更多提醒」。
 /// 列表在客户端取（已读是乐观写、与铃铛共用缓存）；页面壳同步渲染，加载中只有列表区是骨架。会话过期时去登录页
 export function NotificationInbox({ tab }: { tab: NotificationTab }) {
   const list = useNotificationList(tab);
@@ -50,7 +52,8 @@ export function NotificationInbox({ tab }: { tab: NotificationTab }) {
   const markRead = useMarkRead();
   const { markAll, pending, failed } = useMarkAllRead();
   const now = useNow(Date.now());
-  const items = list.data?.pages.flatMap((page) => page.items) ?? [];
+  const items = list.data ? flattenPages(list.data.pages) : [];
+  const anyUnread = counts ? counts.replies + counts.mentions + counts.helpful > 0 : false;
   return (
     <div className="mx-auto max-w-page px-gutter pt-10 pb-24 max-[880px]:pt-6">
       <div className="flex max-w-190 flex-col gap-6">
@@ -62,7 +65,7 @@ export function NotificationInbox({ tab }: { tab: NotificationTab }) {
           <button
             type="button"
             aria-label="全部标为已读"
-            disabled={!counts?.total || pending}
+            disabled={!anyUnread || pending}
             onClick={markAll}
             className={cn(
               btnSecondary,

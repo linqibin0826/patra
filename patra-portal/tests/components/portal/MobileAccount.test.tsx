@@ -151,7 +151,7 @@ describe("MobileAccount · 提醒", () => {
   it("已登录：四个按钮排成 2×2（主页、文献库 / 提醒、设置），「提醒」挂未读数", () => {
     vi.stubGlobal(
       "fetch",
-      vi.fn(async () => Response.json({ total: 5, replies: 5, mentions: 0 })),
+      vi.fn(async () => Response.json({ total: 5, replies: 5, mentions: 0, helpful: 0 })),
     );
     renderAccount(USER);
     const links = screen.getAllByRole("link").map((link) => link.getAttribute("href"));
@@ -162,7 +162,7 @@ describe("MobileAccount · 提醒", () => {
   it("「提醒」的名称带未读数，点了先关闭菜单", async () => {
     vi.stubGlobal(
       "fetch",
-      vi.fn(async () => Response.json({ total: 5, replies: 5, mentions: 0 })),
+      vi.fn(async () => Response.json({ total: 5, replies: 5, mentions: 0, helpful: 0 })),
     );
     const { user, onClose } = renderAccount(USER);
     await user.click(await screen.findByRole("link", { name: "提醒，5 条未读" }));
@@ -183,7 +183,7 @@ describe("MobileAccount · 提醒", () => {
   it("「提醒」的未读徽标收在按钮内的右上角", async () => {
     vi.stubGlobal(
       "fetch",
-      vi.fn(async () => Response.json({ total: 5, replies: 5, mentions: 0 })),
+      vi.fn(async () => Response.json({ total: 5, replies: 5, mentions: 0, helpful: 0 })),
     );
     renderAccount(USER);
     const link = await screen.findByRole("link", { name: "提醒，5 条未读" });

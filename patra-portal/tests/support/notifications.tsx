@@ -26,7 +26,7 @@ export function renderNotifications(
 
 /// 未读数接口的响应：200 带 ETag，或 304
 export function unreadResponse(
-  counts: { total: number; replies: number; mentions: number } | 304,
+  counts: { total: number; replies: number; mentions: number; helpful: number } | 304,
   etag = '"x"',
 ): Response {
   return counts === 304

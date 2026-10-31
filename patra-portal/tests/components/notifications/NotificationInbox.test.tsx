@@ -5,7 +5,7 @@ import { renderNotifications } from "@tests/support/notifications";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import "@testing-library/jest-dom/vitest";
 import { NotificationInbox } from "@/components/notifications/NotificationInbox";
-import type { Notification } from "@/lib/interaction/notification-schema";
+import type { Notification } from "@/lib/notification/inbox-schema";
 import { queryKeys } from "@/lib/query-keys";
 
 const mockReplace = vi.fn();
@@ -26,7 +26,7 @@ function at(id: string, ms: number, excerpt: string): Notification {
   return makeNotification({
     notificationId: id,
     commentId: id,
-    createdAt: new Date(ms).toISOString(),
+    occurredAt: new Date(ms).toISOString(),
     excerpt,
   });
 }
@@ -35,19 +35,19 @@ function at(id: string, ms: number, excerpt: string): Notification {
 function stubApi(routes: {
   pages?: { items: Notification[]; nextCursor: string | null }[];
   list?: () => Response;
-  counts?: { total: number; replies: number; mentions: number };
+  counts?: { total: number; replies: number; mentions: number; helpful: number };
   markAll?: () => Response;
 }) {
   let page = 0;
   const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
     if (url.startsWith("/api/me/notifications/unread-count")) {
-      return Response.json(routes.counts ?? { total: 1, replies: 1, mentions: 0 });
+      return Response.json(routes.counts ?? { total: 1, replies: 1, mentions: 0, helpful: 0 });
     }
     if (url === "/api/me/notifications/read" && init?.method === "PUT") {
-      return routes.markAll?.() ?? Response.json({ total: 0, replies: 0, mentions: 0 });
+      return routes.markAll?.() ?? Response.json({ total: 0, replies: 0, mentions: 0, helpful: 0 });
     }
     if (url.endsWith("/read")) {
-      return Response.json({ total: 0, replies: 0, mentions: 0 });
+      return Response.json({ total: 0, replies: 0, mentions: 0, helpful: 0 });
     }
     if (routes.list) {
       return routes.list();
@@ -68,7 +68,7 @@ afterEach(() => {
 describe("NotificationInbox", () => {
   it("h1、两个标签（当前项、未读胶囊）、全部标为已读", async () => {
     stubApi({
-      counts: { total: 3, replies: 2, mentions: 1 },
+      counts: { total: 3, replies: 2, mentions: 1, helpful: 0 },
       pages: [{ items: [makeNotification()], nextCursor: null }],
     });
     renderNotifications(<NotificationInbox tab="replies" />);
@@ -84,6 +84,67 @@ describe("NotificationInbox", () => {
     expect(await within(replies).findByText("2")).toBeInTheDocument();
     expect(within(tabs).getByRole("link", { name: /@ 我的/ })).toHaveTextContent("1");
     expect(screen.getByRole("button", { name: "全部标为已读" })).toBeEnabled();
+  });
+
+  it("第三个标签「有帮助」：链到 /notifications/helpful，胶囊是有帮助自己的未读数", async () => {
+    stubApi({
+      counts: { total: 3, replies: 2, mentions: 1, helpful: 4 },
+      pages: [{ items: [], nextCursor: null }],
+    });
+    renderNotifications(<NotificationInbox tab="helpful" />);
+    const tabs = screen.getByRole("navigation", { name: "提醒分类" });
+    const helpful = within(tabs).getByRole("link", { name: /有帮助/ });
+    expect(helpful).toHaveAttribute("href", "/notifications/helpful");
+    expect(helpful).toHaveAttribute("aria-current", "page");
+    expect(await within(helpful).findByText("4")).toBeInTheDocument();
+  });
+
+  it("只有有帮助有未读时「全部标为已读」可点，点了三个标签一起清零", async () => {
+    const fetchMock = stubApi({
+      counts: { total: 0, replies: 0, mentions: 0, helpful: 2 },
+      pages: [{ items: [], nextCursor: null }],
+    });
+    renderNotifications(<NotificationInbox tab="helpful" />);
+    const button = screen.getByRole("button", { name: "全部标为已读" });
+    await vi.waitFor(() => expect(button).toBeEnabled());
+    await userEvent.click(button);
+    expect(fetchMock).toHaveBeenCalledWith("/api/me/notifications/read", { method: "PUT" });
+    const tabs = screen.getByRole("navigation", { name: "提醒分类" });
+    await vi.waitFor(() =>
+      expect(within(tabs).getByRole("link", { name: /有帮助/ })).not.toHaveTextContent(/\d/),
+    );
+  });
+
+  it("四个数都是 0 时「全部标为已读」禁用", async () => {
+    const fetchMock = stubApi({
+      counts: { total: 0, replies: 0, mentions: 0, helpful: 0 },
+      pages: [{ items: [], nextCursor: null }],
+    });
+    renderNotifications(<NotificationInbox tab="replies" />);
+    await vi.waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith(
+        "/api/me/notifications/unread-count",
+        expect.anything(),
+      ),
+    );
+    expect(screen.getByRole("button", { name: "全部标为已读" })).toBeDisabled();
+  });
+
+  it("同一条在两页里出现时只渲染一行", async () => {
+    stubApi({
+      pages: [
+        {
+          items: [at("1", Date.now(), "第一条"), at("2", Date.now(), "会挪的那条")],
+          nextCursor: "c2",
+        },
+        { items: [at("2", Date.now(), "会挪的那条")], nextCursor: null },
+      ],
+    });
+    renderNotifications(<NotificationInbox tab="helpful" />);
+    await screen.findByText("第一条");
+    await userEvent.click(screen.getByRole("button", { name: "加载更多提醒" }));
+    await screen.findByText("提醒保留 5 个月。");
+    expect(screen.getAllByText("会挪的那条")).toHaveLength(1);
   });
 
   it("加载中 6 行骨架；没有未读时「全部标为已读」禁用", () => {
@@ -103,6 +164,11 @@ describe("NotificationInbox", () => {
       "在文献页参与讨论、在期刊页分享投稿经验，别人的回复会出现在这里。",
     ],
     ["mentions", "还没有人 @ 你", "别人在评论里 @ 你时，会出现在这里。"],
+    [
+      "helpful",
+      "还没有收到「有帮助」",
+      "别人觉得你的评论或投稿经验有帮助时，同一条内容每天合成一条，出现在这里。",
+    ],
   ] as const)("%s 为空", async (tab, title, body) => {
     stubApi({ pages: [{ items: [], nextCursor: null }] });
     renderNotifications(<NotificationInbox tab={tab} />);
@@ -211,7 +277,7 @@ describe("NotificationInbox", () => {
 
   it("全部标为已读失败：顶部提示条，圆点恢复", async () => {
     stubApi({
-      counts: { total: 1, replies: 1, mentions: 0 },
+      counts: { total: 1, replies: 1, mentions: 0, helpful: 0 },
       pages: [{ items: [makeNotification()], nextCursor: null }],
       markAll: () => Response.json({ reason: "unavailable" }, { status: 502 }),
     });
@@ -246,10 +312,10 @@ describe("NotificationInbox", () => {
       "fetch",
       vi.fn((url: string, init?: RequestInit) => {
         if (url.startsWith("/api/me/notifications/unread-count")) {
-          return Promise.resolve(Response.json({ total: 1, replies: 1, mentions: 0 }));
+          return Promise.resolve(Response.json({ total: 1, replies: 1, mentions: 0, helpful: 0 }));
         }
         if (url === "/api/me/notifications/read" && init?.method === "PUT") {
-          return Promise.resolve(Response.json({ total: 0, replies: 0, mentions: 0 }));
+          return Promise.resolve(Response.json({ total: 0, replies: 0, mentions: 0, helpful: 0 }));
         }
         return listResponse;
       }),

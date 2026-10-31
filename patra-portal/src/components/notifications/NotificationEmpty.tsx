@@ -1,5 +1,5 @@
-import { AtSign, MessageSquare } from "lucide-react";
-import type { NotificationTab } from "@/lib/interaction/notification-schema";
+import { AtSign, MessageSquare, ThumbsUp } from "lucide-react";
+import type { NotificationTab } from "@/lib/notification/inbox-schema";
 
 const COPY = {
   replies: {
@@ -8,9 +8,14 @@ const COPY = {
     body: "在文献页参与讨论、在期刊页分享投稿经验，别人的回复会出现在这里。",
   },
   mentions: { icon: AtSign, title: "还没有人 @ 你", body: "别人在评论里 @ 你时，会出现在这里。" },
+  helpful: {
+    icon: ThumbsUp,
+    title: "还没有收到「有帮助」",
+    body: "别人觉得你的评论或投稿经验有帮助时，同一条内容每天合成一条，出现在这里。",
+  },
 } as const;
 
-/// 一个标签下没有提醒（简报 §3.19）：居中，上方 48px 线性图标
+/// 一个标签下没有提醒（简报 §3.19；有帮助一份见 v0.16 简报 §3.1）：居中，上方 48px 线性图标
 export function NotificationEmpty({ tab }: { tab: NotificationTab }) {
   const { icon: Icon, title, body } = COPY[tab];
   return (

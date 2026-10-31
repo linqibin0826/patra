@@ -9,7 +9,7 @@ import type {
   NotificationPage,
   NotificationTab,
   UnreadCounts,
-} from "@/lib/interaction/notification-schema";
+} from "@/lib/notification/inbox-schema";
 import { queryKeys } from "@/lib/query-keys";
 
 /// 未读数在缓存里的样子：ETag 跟着数存，下一次轮询带成 `If-None-Match`；为 null 时下一次不带（第一次、刚被已读覆盖过）

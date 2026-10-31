@@ -210,7 +210,7 @@ describe("NavAccount · 提醒入口", () => {
   it("已登录：「文献库」与头像之间是铃铛", () => {
     const { client } = renderNav(USER);
     client.setQueryData(queryKeys.notificationUnread, {
-      counts: { total: 3, replies: 2, mentions: 1 },
+      counts: { total: 3, replies: 2, mentions: 1, helpful: 0 },
       etag: null,
     });
     const links = screen.getAllByRole("link").map((link) => link.getAttribute("href"));
@@ -225,7 +225,7 @@ describe("NavAccount · 提醒入口", () => {
   it("用户菜单：「我的文献库」后是「提醒」，右端是未读数；0 不写数字", async () => {
     vi.stubGlobal(
       "fetch",
-      vi.fn(async () => Response.json({ total: 3, replies: 2, mentions: 1 })),
+      vi.fn(async () => Response.json({ total: 3, replies: 2, mentions: 1, helpful: 0 })),
     );
     const { client, menu } = await openMenu();
     await waitFor(() =>
@@ -240,7 +240,7 @@ describe("NavAccount · 提醒入口", () => {
       "/notifications",
     );
     client.setQueryData(queryKeys.notificationUnread, {
-      counts: { total: 0, replies: 0, mentions: 0 },
+      counts: { total: 0, replies: 0, mentions: 0, helpful: 0 },
       etag: null,
     });
     await waitFor(() =>

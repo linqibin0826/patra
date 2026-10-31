@@ -10,7 +10,7 @@ import { GET as getUnread } from "@/app/api/me/notifications/unread-count/route"
 vi.mock("next/headers", () => import("@tests/stubs/cookie-jar"));
 
 const fetchMock = vi.fn<typeof fetch>();
-const COUNTS = { total: 3, replies: 2, mentions: 1 };
+const COUNTS = { total: 3, replies: 2, mentions: 1, helpful: 4 };
 const ORIGIN = "http://localhost:4000";
 
 beforeEach(() => {
@@ -43,6 +43,9 @@ describe("未读数的 Route Handler", () => {
     fetchMock.mockResolvedValue(new Response(null, { status: 304, headers: { ETag: '"2-1"' } }));
     const res = await getUnread(
       get("/api/me/notifications/unread-count", { "If-None-Match": '"2-1"' }),
+    );
+    expect(gatewayCall()[0]).toBe(
+      "http://gw.test/patra-notification/me/notifications/unread-count",
     );
     expect(new Headers(gatewayCall()[1]?.headers).get("If-None-Match")).toBe('"2-1"');
     expect(res.status).toBe(304);
@@ -77,8 +80,15 @@ describe("提醒列表的 Route Handler", () => {
     expect(res.status).toBe(200);
     expect(res.headers.get("cache-control")).toBe("private, no-store");
     expect(gatewayCall()[0]).toBe(
-      "http://gw.test/patra-interaction/me/notifications?tab=mentions&cursor=c1",
+      "http://gw.test/patra-notification/me/notifications?tab=mentions&cursor=c1",
     );
+  });
+
+  it("有帮助标签照转", async () => {
+    fetchMock.mockResolvedValue(Response.json({ items: [], nextCursor: null }));
+    const res = await getList(get("/api/me/notifications?tab=helpful"));
+    expect(res.status).toBe(200);
+    expect(gatewayCall()[0]).toBe("http://gw.test/patra-notification/me/notifications?tab=helpful");
   });
 
   it("标签不认识时 404，不打网关", async () => {
@@ -103,6 +113,7 @@ describe("已读的 Route Handler", () => {
     fetchMock.mockResolvedValueOnce(Response.json(COUNTS));
     const ok = await markOne(put("/api/me/notifications/7/read"), params({ id: "7" }));
     expect(await ok.json()).toEqual(COUNTS);
+    expect(gatewayCall()[0]).toBe("http://gw.test/patra-notification/me/notifications/7/read");
     expect(gatewayCall()[1]?.method).toBe("PUT");
     fetchMock.mockResolvedValueOnce(Response.json({ status: 404 }, { status: 404 }));
     expect((await markOne(put("/api/me/notifications/7/read"), params({ id: "7" }))).status).toBe(
@@ -112,8 +123,10 @@ describe("已读的 Route Handler", () => {
 
   it("全部：跨站 403；同站返回新的计数", async () => {
     expect((await markAll(put("/api/me/notifications/read", "http://evil.test"))).status).toBe(403);
-    fetchMock.mockResolvedValue(Response.json({ total: 0, replies: 0, mentions: 0 }));
+    const zero = { total: 0, replies: 0, mentions: 0, helpful: 0 };
+    fetchMock.mockResolvedValue(Response.json(zero));
     const res = await markAll(put("/api/me/notifications/read"));
-    expect(await res.json()).toEqual({ total: 0, replies: 0, mentions: 0 });
+    expect(await res.json()).toEqual(zero);
+    expect(gatewayCall()[0]).toBe("http://gw.test/patra-notification/me/notifications/read");
   });
 });

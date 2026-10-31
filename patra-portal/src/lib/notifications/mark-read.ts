@@ -6,17 +6,14 @@ import {
 } from "@tanstack/react-query";
 import { useCallback } from "react";
 import { toast } from "sonner";
-import type {
-  Notification,
-  NotificationPage,
-  UnreadCounts,
-} from "@/lib/interaction/notification-schema";
+import type { Notification, NotificationPage, UnreadCounts } from "@/lib/notification/inbox-schema";
 import type { UnreadData } from "@/lib/notifications/queries";
+import { tabOf } from "@/lib/notifications/row";
 import { queryKeys } from "@/lib/query-keys";
 
 type ListData = InfiniteData<NotificationPage>;
 
-/// 已缓存的两个标签里，`match` 命中的提醒都标为已读
+/// 已缓存的三个标签里，`match` 命中的提醒都标为已读
 function markInLists(client: QueryClient, match: (n: Notification) => boolean): void {
   client.setQueriesData<ListData>({ queryKey: queryKeys.notificationListAll }, (data) =>
     data
@@ -53,13 +50,13 @@ function onSignedOut(client: QueryClient, res: Response): void {
   }
 }
 
-/// 这条提醒减掉之后的未读数：回复类减「回复我的」，@ 减「@ 我的」，都不低于 0
+/// 这条提醒减掉之后的未读数：减它所在标签的数，都不低于 0；回复与 @ 还减铃铛的 `total`，有帮助不计入 `total`
 function minusOne(counts: UnreadCounts, n: Notification): UnreadCounts {
-  const mention = n.type === "MENTION";
+  const tab = tabOf(n.type);
   return {
-    total: Math.max(0, counts.total - 1),
-    replies: mention ? counts.replies : Math.max(0, counts.replies - 1),
-    mentions: mention ? Math.max(0, counts.mentions - 1) : counts.mentions,
+    ...counts,
+    [tab]: Math.max(0, counts[tab] - 1),
+    total: tab === "helpful" ? counts.total : Math.max(0, counts.total - 1),
   };
 }
 
@@ -103,7 +100,7 @@ interface Snapshot {
   lists: [readonly unknown[], ListData | undefined][];
 }
 
-/// 全部已读（两个标签一起）：乐观清零；成功后用返回的计数并提示「已全部标为已读」；失败时圆点与计数恢复，
+/// 全部已读（三个标签一起）：乐观清零；成功后用返回的计数并提示「已全部标为已读」；失败时圆点与计数恢复，
 /// `failed` 为真（页面顶部提示条，不出 toast）
 export function useMarkAllRead(): { markAll: () => void; pending: boolean; failed: boolean } {
   const client = useQueryClient();
@@ -124,7 +121,7 @@ export function useMarkAllRead(): { markAll: () => void; pending: boolean; faile
       };
       markInLists(client, () => true);
       if (snapshot.unread) {
-        setCounts(client, { total: 0, replies: 0, mentions: 0 });
+        setCounts(client, { total: 0, replies: 0, mentions: 0, helpful: 0 });
       }
       return snapshot;
     },

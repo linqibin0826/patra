@@ -27,7 +27,7 @@ function renderTopNav(user: CurrentUser | null = null) {
     "fetch",
     vi.fn(async (url: string) =>
       url.startsWith("/api/me/notifications/unread-count")
-        ? Response.json({ total: 3, replies: 2, mentions: 1 })
+        ? Response.json({ total: 3, replies: 2, mentions: 1, helpful: 0 })
         : Response.json({ user }),
     ),
   );
