@@ -201,9 +201,8 @@ TRANSIENT 异常抛回监听容器 → 本地重试 1、2、4 秒 → 仍失败�
 | SMTP 回复码 4xx（421、450、451、452，含限流） | `TRANSIENT` | RFC 5321：4yz 是临时失败 |
 | SMTP 回复码 530、534、535，或鉴权异常（JavaMail `AuthenticationFailedException`、Spring `MailAuthenticationException`） | `TRANSIENT` | 鉴权失败是配置问题，每封都会失败；判成永久会让提醒邮件把每封都跳过 |
 | 其余 SMTP 回复码 5xx（550、551、553 收件人被拒，552 太大，554 事务失败） | `REJECTED` | RFC 5321：5yz 是永久失败 |
-| 连不上、超时、其他 IO 异常 | `TRANSIENT` | — |
-| 本地就组不出来：收件地址不合法、模板渲染失败 | `REJECTED` | 重试也一样；模板错误要改代码，跳过比卡住整轮好 |
-| 认不出的 | `TRANSIENT` | 保守：安全邮件会进死信，看得见、能重放 |
+| 本地就组不出来：收件地址不合法、模板渲染失败（交给发信器之前就失败） | `REJECTED` | 重试也一样；模板错误要改代码，跳过比卡住整轮好 |
+| 其余：连不上、超时等 IO 异常（没有回复码），以及认不出的 | `TRANSIENT` | 保守：安全邮件会进死信，看得见、能重放 |
 
 **拿不准的地方**：Resend 文档只写了 HTTP 接口的 409 与错误名，没写 SMTP 回复码。「同键不同内容」经 SMTP 时回什么码不知道，这里按回复文字里的错误名匹配。上线后在 mini 日志里看到真实回复再核对（runbook 7.x 排查表）；匹配不上时会落到「其余 5xx → REJECTED」或「认不出 → TRANSIENT」，安全邮件分别记一行或进死信，都看得见。
 
@@ -273,7 +272,7 @@ CREATE TABLE mail.mail_delivery
 |---|---|
 | 13 类安全邮件都由通知服务发出 | boot IT `SecurityMailFlowIT`：真 RabbitMQ + GreenMail + PG，向 `identity.events` 按路由键发 13 个 record（带类型头，和 identity 外送的形状一样），每类收到一封，收件人与主题对，`mail_delivery` 与 `processed_event` 各一行 |
 | 同一次投递重试时幂等键不变 | 同一 IT：第一次记录时让仓储抛一次异常（信已发出），消息重试后 GreenMail 收到两封，`Resend-Idempotency-Key` 都等于事件 ID；渲染器单测：同一封渲染两次逐字节相等 |
-| SMTP 临时不通按退避重试，超过上限进死信并有日志可查 | IT `SecurityMailRetryIT`：发信器第一次抛异常、第二次正常 → 收到一封，记录一行；IT `SecurityMailDeadLetterIT`（不挂 GreenMail，SMTP 指向关着的端口）→ 消息进 `notification.security-mail.dlq`，日志有「Retries exhausted」与事件 ID，日志里没有链接与收件地址 |
+| SMTP 临时不通按退避重试，超过上限进死信并有日志可查 | `SecurityMailFlowIT.should_retry_and_deliver_after_transient_failure`：发信器第一次抛异常、第二次正常 → 收到一封，记录一行；IT `SecurityMailDeadLetterIT`（不挂 GreenMail，SMTP 指向关着的端口）→ 消息进 `notification.security-mail.dlq`，日志有「Retries exhausted」与事件 ID，日志里没有链接与收件地址 |
 | 发送记录里没有邮件正文 | infra IT：`mail.mail_delivery` 的列恰好是四列；流程 IT 断言记录里任何列都不含链接、地址 |
 | identity 不再依赖 SMTP | 由 PAP-104 交付（第 4 节拍板 1），本 Issue 的验收汇报指向它的提交 |
 | 去重 | 流程 IT：同一个事件发两次只收到一封；handler 单测：已有记录返回 `DUPLICATE`、不调端口 |
@@ -338,6 +337,7 @@ IT 用 GreenMail 而不是 Mailpit：仓库惯例（`GreenMailSmtpInitializer`�
 | 3 | `.env.common` 加 `PATRA_PORTAL_BASE_URL=https://patra.linqibin.dev` | 编排会话 10/31 决定：identity 一直在用 Nacos 默认的 tailnet 地址，公网用户打不开 |
 | 4 | 不信任类型的消息也会重试 3 次再进死信 | Boot 的重试不区分反序列化失败；只多耗约 1 秒，不改 |
 | 5 | 转换器的单测是在监听 IT 驱动下写全分支后补的 | 用变异检查（改键名、调换 IP 与属地）确认 9 个用例会失败 |
+| 6 | 删掉了最初证明监听形状的 `SecurityMailListenerIT` | 它证明的是被替换掉的写法；它的命令总线是桩，缓存的上下文若没暂停会悄悄吞掉共享队列上的消息，让别的 IT 偶发超时；13 类的分发由 `SecurityMailFlowIT` 覆盖 |
 
 ### 17.2 独立评审（Opus，只看代码与本 spec）
 

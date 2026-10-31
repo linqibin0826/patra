@@ -119,7 +119,7 @@ public final class SmtpMailDeliveryAdapter implements MailDeliveryPort {
   /// 把交给 `JavaMailSender` 之后的失败分类（spec 6.6）：沿 cause 链与 Spring 收集的各封失败逐个看。
   ///
   /// 依次：回复里有 `idempotent`（带 `concurrent` 为临时，否则为已接受过）；鉴权失败为临时；第一个 SMTP
-  /// 回复码 4xx 为临时、5xx 为永久；链上有 IO 异常为临时；认不出的为临时。
+  /// 回复码 4xx 为临时、5xx 为永久；其余（连不上、超时等 IO 异常，以及认不出的）都为临时。
   ///
   /// @param failure 发送失败
   /// @return 类别

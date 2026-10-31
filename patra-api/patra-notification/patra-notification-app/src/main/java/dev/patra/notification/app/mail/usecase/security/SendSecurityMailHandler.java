@@ -57,30 +57,50 @@ public class SendSecurityMailHandler
     try {
       mailDelivery.deliver(mail.compose());
     } catch (MailDeliveryFailedException e) {
-      switch (e.failure()) {
-        case ALREADY_ACCEPTED ->
-            log.info("服务商已接受过这个幂等键，按已发处理: kind={}, eventId={}", mail.kind(), mail.eventId());
-        case REJECTED -> {
-          record(
-              command,
-              MailDelivery.rejected(mail.eventId(), mail.kind().template(), clock.instant()));
-          log.warn(
-              "安全邮件被永久拒收，不再重试: kind={}, eventId={}, {}",
-              mail.kind(),
-              mail.eventId(),
-              e.getMessage());
-          return SendSecurityMailResult.REJECTED;
-        }
-        case TRANSIENT -> {
-          log.warn(
-              "安全邮件发送失败，交给重试或死信: kind={}, eventId={}, {}",
-              mail.kind(),
-              mail.eventId(),
-              e.getMessage());
-          throw e;
-        }
-      }
+      return onFailure(command, e);
     }
+    return recordSent(command);
+  }
+
+  /// 发信失败按类别处理（spec 6.6）；穷举 switch 表达式，加了新类别而这里没跟上时编译不过。
+  ///
+  /// @param command 命令
+  /// @param e 发信失败
+  /// @return 结果
+  /// @throws MailDeliveryFailedException 临时失败，原样抛出交给重试与死信
+  private SendSecurityMailResult onFailure(
+      SendSecurityMailCommand command, MailDeliveryFailedException e) {
+    SecurityMail mail = command.mail();
+    return switch (e.failure()) {
+      case ALREADY_ACCEPTED -> {
+        log.info("服务商已接受过这个幂等键，按已发处理: kind={}, eventId={}", mail.kind(), mail.eventId());
+        yield recordSent(command);
+      }
+      case REJECTED -> {
+        record(
+            command,
+            MailDelivery.rejected(mail.eventId(), mail.kind().template(), clock.instant()));
+        log.warn(
+            "安全邮件被永久拒收，不再重试: kind={}, eventId={}, {}", mail.kind(), mail.eventId(), e.getMessage());
+        yield SendSecurityMailResult.REJECTED;
+      }
+      case TRANSIENT -> {
+        log.warn(
+            "安全邮件发送失败，交给重试或死信: kind={}, eventId={}, {}",
+            mail.kind(),
+            mail.eventId(),
+            e.getMessage());
+        throw e;
+      }
+    };
+  }
+
+  /// 记已发并返回 `SENT`。
+  ///
+  /// @param command 命令
+  /// @return `SENT`
+  private SendSecurityMailResult recordSent(SendSecurityMailCommand command) {
+    SecurityMail mail = command.mail();
     record(command, MailDelivery.sent(mail.eventId(), mail.kind().template(), clock.instant()));
     log.info("安全邮件已发送: kind={}, eventId={}", mail.kind(), mail.eventId());
     return SendSecurityMailResult.SENT;
