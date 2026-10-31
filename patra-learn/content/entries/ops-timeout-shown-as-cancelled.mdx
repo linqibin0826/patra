@@ -1,0 +1,94 @@
+---
+title: 超时了，却显示「已取消」
+summary: GitHub Actions 的任务超过 timeout-minutes 被杀时，界面显示的是「已取消」而不是「失败」或「超时」。排查时很容易当成误触略过，其实要去看日志末尾的提示。
+type: pitfall
+difficulty: practice
+tags: [ci-cd, deployment]
+prerequisites: [ops-ci-pipeline]
+personalEnv: false
+---
+
+<Diagnose
+  question="一个任务设了 `timeout-minutes: 20`，运行到第 20 分钟还没完成。GitHub 的界面上，这个任务最可能显示成什么？"
+  options={["失败（failure）", "已取消（cancelled）", "超时（timed out）"]}
+  answer="B"
+  ifRight="对。超过时限被平台终止的任务，结论是 cancelled，不是 failure。所以它很容易被误读成「有人点了取消」。"
+  ifWrong="答案是 B。GitHub 把因超时被终止的任务标成「已取消」，不单独有「超时」这一类结论。这题考的是任务结论的几种取值。"
+  suggest="ops-ci-pipeline"
+/>
+
+<Callout kind="lead" label="坑在哪">
+
+任务因为超过 `timeout-minutes` 被杀，界面显示「已取消」。看到「已取消」，人的第一反应是「是不是我误触了」「是不是被新的提交顶掉了」，而不是「它超时了」。
+
+</Callout>
+
+## 它是怎么发生的
+
+Patra 早期的部署任务，镜像在云端构建，推到 GHCR，再由部署机经代理拉回来。部署任务的时限设的是 20 分钟。
+
+<Stepper
+  title="一次拉取拖过了时限"
+  nodes={[
+    { id: "mini", label: "部署机", sub: "执行部署任务" },
+    { id: "proxy", label: "代理", sub: "出国的那段路" },
+    { id: "ghcr", label: "GHCR", sub: "镜像仓库" }
+  ]}
+  links={[
+    { from: "mini", to: "proxy" },
+    { from: "proxy", to: "ghcr" }
+  ]}
+  steps={[
+    { caption: "部署任务开始，计时器启动：最多 20 分钟。第一件事是拉取几百 MB 的镜像。", focus: ["mini"], notes: [{ at: "mini", text: "第 0 分钟", tone: "ok" }] },
+    { caption: "镜像经代理从国外的仓库往下传。网络一抖，传输断了，拉取重试。", focus: ["proxy", "ghcr"], links: ["mini>proxy", "proxy>ghcr"], tokens: [{ id: "layer", label: "镜像层", at: "proxy" }], notes: [{ at: "proxy", text: "抖动、重试", tone: "wait" }] },
+    { caption: "反复重试和等待，时间一分一分流过去。拉取还没完成，部署还没开始。", focus: ["mini"], notes: [{ at: "mini", text: "第 19 分钟", tone: "wait" }] },
+    { caption: "第 20 分钟，时限到。平台终止任务，界面显示：已取消。", focus: ["mini"], notes: [{ at: "mini", text: "已取消", tone: "bad" }] }
+  ]}
+  guesses={[
+    { before: 4, question: "时限一到任务被平台终止。你在 Actions 页面最先看到的结论会是什么？", options: ["failure：因为任务没完成", "cancelled：和手动取消的结论一样", "skipped：任务被跳过"], answer: "B", explain: "平台终止任务的结论一律是 cancelled。手动取消、被新的运行顶掉、超过时限，看上去是同一个标签。" }
+  ]}
+/>
+
+## 怎么分辨
+
+能让一个任务显示成「已取消」的原因不止一个：
+
+| 原因 | 在哪里能分辨 |
+|---|---|
+| 有人手动取消 | 运行记录里有谁在什么时候取消的 |
+| 被更新的运行顶掉（`cancel-in-progress`） | 同一分组里有更新的运行 |
+| 超过 `timeout-minutes` | 任务日志末尾和页面的提示信息里写着超过最长执行时间 |
+| 在任务执行期间重启了 runner | 执行任务的进程被杀掉，任务同样显示为已取消；对照 runner 的重启时间 |
+
+所以看到「已取消」不要停在标签上，先翻到日志的最后几行和页面上方的提示。
+
+<Quiz
+  title="考考自己"
+  questions={[
+    {
+      question: "一个部署任务显示「已取消」，你没有点过取消，也没有新的提交。第一件事做什么？",
+      options: ["重新触发一次，当作误触", "看任务页面的提示和日志末尾，确认是不是超过了最长执行时间", "把时限直接调大一倍"],
+      answer: "B",
+      explain: "先确认原因，再决定怎么办。直接重跑可能再来一次同样的超时，直接调大时限则掩盖了「为什么这么慢」。"
+    }
+  ]}
+/>
+
+## 怎么避开
+
+**根治：不再从外网拉镜像。** 构建搬回部署机本机之后，部署任务不再经代理拉大镜像，拉取拖慢导致超时这条路径整个消失（另一篇讲了这个决定）。
+
+**时限要有理由。** 现在的部署任务时限是 40 分钟，旁边的注释写明了依据：冷缓存的全量构建约 30 分钟，热缓存的单个服务约 5 到 10 分钟。配置检查任务是 15 分钟，热缓存约 1 分钟。时限是「正常情况再加一点余量」，不是随手写的数字。
+
+<CodeRef at=".github/workflows/cd.yml@b6e01875bb5692356021c8a19562f557f319fc54" lines="119-121" />
+
+**不让「取消」混过必过检查。** 合并前的汇总检查对待各个任务的结论时，只放行成功和被跳过的，拒绝失败和已取消。因此一个超时任务不会被当成「没跑」而溜过去。
+
+<Transfer
+  prompt="你给一个会拉取外部大文件的测试任务设了 10 分钟时限，结果它有时显示「已取消」。下一步你会怎么查？怎么改？"
+  points={[
+    { label: "先确认原因", text: "看任务页面的提示和日志末尾，是不是超过最长执行时间；对照运行记录，排除手动取消和被顶掉。" },
+    { label: "再问为什么慢", text: "慢在拉取外部文件。看能不能缓存、换近的源，或者把这一步拆出去，让任务不依赖不稳定的外网。" },
+    { label: "最后才调时限", text: "时限要按正常耗时加余量来定，并在旁边写下依据；调大不能代替治本。" }
+  ]}
+/>

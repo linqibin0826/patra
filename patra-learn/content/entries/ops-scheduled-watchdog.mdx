@@ -1,0 +1,144 @@
+---
+title: 定时巡检：cron、时区与四项体检
+summary: 流水线只在有人推送代码时才跑，设施自己悄悄坏了没人知道。Patra 每天定点巡检一次：先从云端查部署机的 runner 在不在，再让部署机自己做四项体检。
+type: concept
+difficulty: advanced
+tags: [ci-cd, deployment, docker]
+prerequisites: [ops-self-hosted-runner]
+personalEnv: false
+---
+
+<Diagnose
+  question="一个 GitHub Actions 定时任务写着 `cron: '0 23 * * *'`，没有设置时区。它会在北京时间几点运行？"
+  options={["每天 23:00", "每天次日早上 07:00", "每天 15:00"]}
+  answer="B"
+  ifRight="对。GitHub 按 UTC 解释 cron，UTC 23:00 加 8 小时是北京时间次日 07:00。这篇的巡检就定在这个点。"
+  ifWrong="答案是 B。GitHub 的定时任务没有配置时区时按 UTC 解释，北京时间是 UTC+8，23:00 加 8 小时是次日 07:00。这题考的是 cron 与时区。"
+  suggest="ops-self-hosted-runner"
+/>
+
+<Callout kind="lead">
+
+CI 防的是「代码坏了」。可设施自己坏了呢：部署机上的 runner 悄悄掉线、磁盘悄悄塞满、某个容器悄悄不健康？这些事没有任何一次推送会触发检查，它们只会安静地烂下去。
+
+Patra 的答案朴素到近乎笨：**每天定点巡一圈**。
+
+</Callout>
+
+## 闹钟怎么定：cron、UTC 与北京时间
+
+GitHub Actions 的定时触发器叫 `schedule`，时间用 cron 表达式写。巡检的配置是：
+
+<CodeRef at=".github/workflows/runner-watchdog.yml@b17d50a57c6018323b79bf842d06109a9931beda" lines="15-18" />
+
+```yaml
+on:
+  schedule:
+    - cron: '0 23 * * *'   # 每日 UTC 23:00（北京 07:00）
+  workflow_dispatch:
+```
+
+cron 的五个位置从左到右是「分 时 日 月 星期」。`0 23 * * *` 就是每天 23 点 0 分。
+
+这里有个所有人都会踩一次的坑：时间按 UTC 算。想在北京时间早上 7 点跑，要把北京时间**减** 8 小时，得到前一天的 UTC 23:00。把换算结果写在行尾的注释里，是防半年后的自己看不懂。
+
+<Quiz
+  title="换算一次"
+  questions={[
+    {
+      question: "想让一个任务在北京时间每天 06:30 运行，cron 应该怎么写？",
+      options: ["`30 6 * * *`", "`30 22 * * *`", "`30 14 * * *`"],
+      answer: "B",
+      explain: "北京时间 06:30 减 8 小时是前一天 UTC 22:30，分钟写 30、小时写 22。"
+    }
+  ]}
+/>
+
+配置里还留了 `workflow_dispatch`：刚改完设施想立刻验证，或者怀疑哪里不对，不用等明早七点，手动触发就行：
+
+```bash
+gh workflow run runner-watchdog.yml
+```
+
+## 为什么拆成两个任务：病人不能给自己量体温
+
+巡检一份文件里有两个 job：
+
+<Structure
+  title="巡检的两个任务"
+  nodes={[
+    { id: "cloud", label: "check-runner", sub: "GitHub 云端机器", code: true, col: 1, desc: "跑在 GitHub 提供的云机器上，不依赖部署机是否活着。它向 GitHub 的接口询问：名叫 macmini 的 runner 在线吗？" },
+    { id: "gh", label: "GitHub 的点名册", sub: "记着每台 runner 的状态", col: 2, desc: "runner 和 GitHub 本来就保持着长连接，GitHub 一直知道它在不在。云端任务只是去读这份记录。" },
+    { id: "canary", label: "canary", sub: "部署机本机", code: true, col: 3, desc: "跑在部署机自己身上，做四项体检：docker、runner 版本、磁盘、容器健康。它能被派发，本身就证明了「领任务、执行」这条链是通的。" }
+  ]}
+  edges={[
+    { from: "cloud", to: "gh", label: "查 runner 状态" },
+    { from: "cloud", to: "canary", label: "needs：在线才放行", desc: "canary 声明了依赖 check-runner。runner 离线时，check-runner 红灯，canary 被直接跳过，不会滞留在队列里。" }
+  ]}
+  traces={[
+    {
+      button: "runner 掉线了",
+      packet: "巡检",
+      hops: [
+        { at: "cloud", caption: "云端任务照常启动：它不依赖部署机。" },
+        { at: "gh", caption: "点名册上 macmini 的状态不是 online。" },
+        { at: "canary", caption: "check-runner 当场失败，canary 被跳过，红灯亮起。", drop: true }
+      ]
+    },
+    {
+      button: "runner 在线，磁盘满了",
+      packet: "巡检",
+      hops: [
+        { at: "cloud", caption: "云端任务启动。" },
+        { at: "gh", caption: "runner 是 online，放行。" },
+        { at: "canary", caption: "canary 在部署机上执行，磁盘余量检查不通过，红灯亮起。" }
+      ]
+    }
+  ]}
+/>
+
+关键在于第一个任务**不在部署机上跑**。如果所有检查都放在部署机上，那么部署机整个挂掉时，这些检查根本没有人认领，不会失败，不会告警，只有沉默。
+
+为什么要有 `needs` 这一层？runner 离线时，把 canary 派给一台不在线的机器，它会一直显示排队中，比红灯更迷惑。让它依赖前一个任务，离线时直接跳过。
+
+## 查岗怎么查：一条接口
+
+云端那个任务只做一件事：
+
+<CodeRef at=".github/workflows/runner-watchdog.yml@b17d50a57c6018323b79bf842d06109a9931beda" lines="26-34" />
+
+它调用 GitHub 的接口列出仓库里注册过的 runner，挑出名字叫 `macmini` 的，读它的状态。`online` 放行，其他情况当场失败。报错文案分两种：离线是机器掉线了；查不到则是注册记录已经被平台删除，需要重装（另一篇专门讲）。
+
+这个接口需要凭据。工作流自带的 `GITHUB_TOKEN` 没有权限列出自托管 runner，所以用了一把 fine-grained 的个人访问令牌，保存在仓库的 secrets 里，名字是 `RUNNER_ADMIN_TOKEN`。它是最小权限的写法：只授权给这一个仓库，只勾一项只读权限。名字里虽有 Admin，拿到它也只能看 runner 在不在，改不了任何东西。
+
+## 四项体检
+
+canary 在部署机上依次做四项检查，每一项对着一种「悄悄坏」的死法：
+
+<CodeRef at=".github/workflows/runner-watchdog.yml@b17d50a57c6018323b79bf842d06109a9931beda" lines="36-65" />
+
+| 检查 | 防的是 |
+|---|---|
+| Docker 引擎还活着 | 引擎停了，整台机器上的容器都没法管 |
+| runner 版本没有落后 | 自更新被关掉了，GitHub 要求新版发布 30 天内手动升级，否则停止派任务 |
+| 磁盘余量不少于 20G | 构建缓存、镜像、日志无声地吃磁盘，满盘时各种操作会以奇怪的姿势失败 |
+| 没有 unhealthy 的容器 | 容器自查报告不健康，名单直接打在报错里 |
+
+每项失败的提示文案都写明了该做什么，告警即行动指南。
+
+版本检查用的是严格不等号：最新版一出就告警，不等 30 天的倒计时走完。它不是事故，只是行动信号：找个空闲时段重跑一遍安装脚本就升级完了。
+
+## 巡检失败了，谁来知道
+
+没有单独的通知通道。巡检失败时，GitHub 原生的通知会发邮件、推 App，和你收到构建失败的通知是一回事。每天早上七点跑完，手机没响，就是全绿。
+
+最后一个已知的边界：GitHub 对公开仓库有一条规则，仓库长期没有活动时，定时任务会被平台自动停用。项目彻底搁置时，守夜的任务自己也会睡着。恢复也简单，回来后到 Actions 页面手动启用一下即可。
+
+<Transfer
+  prompt="你想在巡检里加一项：确认部署机上负责对公网开放的隧道进程还在运行。这一项该放在 check-runner 还是 canary？如果你换成「从外面访问一次公网域名看能不能打开」，答案又会变吗？"
+  points={[
+    { label: "放哪里", text: "检查隧道进程是否在运行，要在部署机本机查进程状态，所以放 canary。" },
+    { label: "换成外部访问", text: "从外面访问公网域名，不需要在部署机上执行，放在云端任务更合适：部署机整个挂掉时它也能报出来。" },
+    { label: "原则", text: "能从外面观察的，放到外面；只有进到机器里才看得到的，才放在本机。这样「病人给自己量体温」的盲区才最小。" }
+  ]}
+/>

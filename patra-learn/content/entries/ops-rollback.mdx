@@ -1,0 +1,154 @@
+---
+title: 上线与回滚
+summary: 验货失败时部署脚本自己退回上一个好版本；上线后才发现的问题，手动填服务名和旧版本号就能回滚。回滚是常规操作，但有几个它管不到的边界。
+type: concept
+difficulty: advanced
+tags: [ci-cd, deployment, docker]
+prerequisites: [ops-health-checks]
+personalEnv: false
+---
+
+<Diagnose
+  question="新版本的 catalog 没通过验货，部署脚本自动把它回滚到上一个好版本，网站恢复正常。这次流水线最后会显示什么？"
+  options={["绿色：服务已经恢复，部署算成功", "红色：回滚成功了，但这次部署仍然算失败", "黄色：跳过"]}
+  answer="B"
+  ifRight="对。回滚只是把服务救回来，不等于这次上线成功。流水线仍然以失败收场，这样你才会收到通知。"
+  ifWrong="答案是 B。服务虽然恢复了，但你想上的新版本没有上去。如果流水线也显示成功，就是在骗人。所以回滚之后整个任务仍然以失败退出。这题考的是「兜住」和「成功」是两回事。"
+  suggest="ops-health-checks"
+/>
+
+<Callout kind="lead">
+
+新版本出问题是常态，退回去只是流程里的一个分支。Patra 的回滚分两种：
+
+- **自动回滚**：验货没过，部署脚本自己翻出「上一个好版本」换回去
+- **手动回滚**：上线后才发现问题，手动触发流水线，填服务名和旧版本号
+
+</Callout>
+
+## 自动回滚：靠一本小账
+
+每个服务验货通过后，部署脚本立刻把当前版本号写进一个文件，位置在部署机的 `~/.patra/cd/last-good-<服务名>`。文件里只有一行：一个提交的 SHA，意思是「这个服务上一次确认好用的版本」。
+
+<CodeRef at="patra-infra/cd/deploy.sh@2197850b5a624ed4dbaa97df71e144c343e28baa" lines="122-130" />
+
+注意两个细节：
+
+1. **每个服务一份账**。catalog 的和 identity 的各记各的，回滚时互不牵连。
+2. **通过一个记一个**，不等整批结束。一批里最后一个服务翻车了，前面成功的几个也已经记好了新版本。
+
+验货失败时，脚本先把容器最近 80 行日志打出来，这是你回头排查的第一现场，然后调用 `rollback()`：
+
+<CodeRef at="patra-infra/cd/deploy.sh@2197850b5a624ed4dbaa97df71e144c343e28baa" lines="88-95" />
+
+读出 last-good，把那个版本的镜像拿来、`up`、再走一遍健康检查。
+
+先猜：下面这几种情况，脚本各会怎么办？点着走一遍。
+
+<StateMachine
+  title="一个服务验货之后的几种结局"
+  subject="某个服务的一次部署"
+  states={[
+    { id: "checking", label: "验货中", sub: "三道检查", col: 1, desc: "新版本刚换上，部署脚本在轮询健康检查、核对版本。" },
+    { id: "good", label: "上线成功", sub: "记 last-good", col: 2, desc: "三道全过。当前版本写进 last-good，下次回滚就回到这里。" },
+    { id: "rolling", label: "回滚中", sub: "换回 last-good", col: 2, row: 2, desc: "验货没过。脚本读 last-good，把旧镜像换回去并复检。" },
+    { id: "restored", label: "已恢复，整单仍失败", sub: "旧版本在跑", col: 3, row: 2, desc: "旧版本健康了，服务恢复。但这一单仍以失败退出，通知照发：兜住了，不等于上线成功。" },
+    { id: "manual", label: "需要人工介入", col: 3, row: 3, desc: "没法自动恢复：没有 last-good 记录，或者复检仍然不健康。日志已留在流水线记录里。" }
+  ]}
+  start="checking"
+  events={[
+    { id: "pass", label: "三道检查全过" },
+    { id: "fail", label: "验货失败" },
+    { id: "has", label: "有 last-good 且是别的版本" },
+    { id: "none", label: "没有记录，或记的就是这个版本" },
+    { id: "ok", label: "复检健康" },
+    { id: "bad", label: "复检仍然不健康" }
+  ]}
+  transitions={[
+    { from: "checking", event: "pass", to: "good", label: "通过" },
+    { from: "checking", event: "fail", to: "rolling", label: "失败" },
+    { from: "rolling", event: "has", to: "rolling", label: "开始回滚" },
+    { from: "rolling", event: "none", to: "manual", label: "无从回滚" },
+    { from: "rolling", event: "ok", to: "restored", label: "复检健康" },
+    { from: "rolling", event: "bad", to: "manual", label: "复检失败" }
+  ]}
+/>
+
+最容易想错的是「已恢复，整单仍失败」。回滚成功后，脚本会打印「已回滚并恢复健康」，然后整体 `exit 1`。于是流水线是红的，GitHub 的通知（App 推送加邮件）会找上你。反过来也成立：手机没响，就是这次上线成功了。
+
+没有 last-good 的典型场景是服务第一次上线就失败：账本里还没有它，脚本不硬来，直接标记需要人工介入。
+
+## 手动回滚：填两个空
+
+自动验货抓不住的是另一类问题：上线一切健康，第二天才发现新版逻辑有 bug。这时用流水线留的手动按钮 `workflow_dispatch`：
+
+<CodeRef at=".github/workflows/cd.yml@b6e01875bb5692356021c8a19562f557f319fc54" lines="39-48" />
+
+```bash
+gh workflow run cd.yml -f service=catalog -f image_tag=<旧提交的 SHA>
+```
+
+填了 `image_tag` 之后，流水线里所有构建、打镜像、归档推送的步骤都会跳过（它们的条件是 `IMAGE_TAG_INPUT == ''`），直接拿这个版本去跑 `deploy.sh`。整个过程不用重新编译，两分钟上下。
+
+旧 SHA 去哪找？这靠合并方式埋的伏笔：合并进 main 时用 squash，main 的历史一行一件事，每个提交都是一个可以部署的版本号。翻 `git log` 按提交号精确点名就行。
+
+门户和学习站各有自己的流水线，手动触发时只填 `image_tag`，因为每条流水线只管一个服务。
+
+旧版本的镜像通常还在部署机本地：部署脚本先看本地有没有，缺了才去镜像仓库拉。这就是镜像仓库虽然不再是部署的必经之路，仍然要保留一份备份的原因。
+
+先对比一下两种回滚：
+
+<Compare
+  title="自动回滚与手动回滚"
+  variants={[
+    {
+      label: "自动回滚",
+      steps: ["新版本换上，健康检查没过", "脚本读 last-good", "旧镜像换回去并复检", "整单标记失败，通知你"],
+      results: [{ label: "谁触发", value: "部署脚本自己", tone: "ok" }, { label: "适合", value: "上线当场就坏了" }],
+      verdict: { tone: "ok", head: "你不用出手。", text: "上线当场就能被三道检查抓到的问题，脚本自己兜住，你只需要事后看日志。" }
+    },
+    {
+      label: "手动回滚",
+      steps: ["上线健康，几小时后发现新版有逻辑 bug", "手动触发流水线，填服务名和旧版本号", "跳过构建，直接用旧版本号跑部署脚本", "旧版本验货通过后，它成了新的 last-good"],
+      results: [{ label: "谁触发", value: "你", tone: "wait" }, { label: "适合", value: "健康检查发现不了的问题" }],
+      verdict: { tone: "ok", head: "两分钟的事。", text: "旧镜像在部署机本地，不用重新构建；回滚走的也是同一个部署脚本，同样会验货。" }
+    }
+  ]}
+/>
+
+## 回滚管不到的两件事
+
+回滚换的是镜像，别的东西不会跟着退。
+
+<Callout kind="warn">
+
+**配置写错时，回滚镜像没用。** Patra 的 CD 先把配置推到 Nacos，再部署。如果配置值不合法，服务启动失败或刷新失败，回滚到旧镜像后，旧镜像读的还是同一份坏配置。要恢复得改配置本身：`git revert` 那次配置修改，让 CD 重新推送。
+
+</Callout>
+
+<Callout kind="warn">
+
+**回滚用的是当前检出的 compose 文件和环境文件。** 如果新版本删掉了旧镜像还需要的环境变量，回滚旧镜像就会因为缺变量起不来。例如某个版本删了一个 Redis 地址的环境变量，之前的版本要回滚前，得先把这一行补回密钥文件。
+
+</Callout>
+
+<Quiz
+  title="考考自己"
+  questions={[
+    {
+      question: "周一上线的 identity 通过了验货，last-good 记的是周一的版本。周三发现有 bug，你手动回滚到周日的版本，部署通过。这时 last-good 里是什么？",
+      options: ["还是周一的版本", "周日的版本：验货通过的版本就会被记下", "清空了"],
+      answer: "B",
+      explain: "手动回滚走的是同一个部署脚本，旧版本验货通过后同样被记成 last-good。"
+    }
+  ]}
+/>
+
+<Transfer
+  prompt="周五晚上你合并了一个只改 gateway 的变更，验货全绿。周六发现登录偶发失败，怀疑是这次改动。你怎么回滚？回滚完之后要注意什么？"
+  points={[
+    { label: "怎么触发", text: "`gh workflow run cd.yml -f service=gateway -f image_tag=<周五之前那个版本的 SHA>`，从 main 的提交历史里找那个 SHA。" },
+    { label: "为什么快", text: "填了 `image_tag` 就跳过构建；旧镜像若在部署机本地，也不用重新拉取。" },
+    { label: "注意什么", text: "回滚成功后旧版本会成为新的 last-good。要修好问题再上线，需要一个新的提交；如果改动里包含配置变更，镜像回滚不会动配置。" }
+  ]}
+/>
