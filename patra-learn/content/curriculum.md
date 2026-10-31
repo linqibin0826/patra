@@ -74,7 +74,7 @@
 | db-trigram-search | 模糊搜索：pg_trgm 与 GIN 索引 | 概念 | 进阶 | db-explain-query-plans | 三元组切分；LIKE '%词%' 怎么也能走索引 | `db/migration/V9__add_suggest_trigram_indexes.sql`（机构与 MeSH 联想） | PAP-158 |
 | db-schema-per-subdomain | 一个库、多个 schema、一份迁移历史 | 决策 | 进阶 | db-schema-migrations-flyway | 每个子域一个 schema 还是一个库；共用 Flyway 历史的代价 | v0.13 决策 B | PAP-161 |
 | db-orphan-connections | too many clients：孤儿连接堆积 | 排查 | 实战 | db-connection-pool | 连接数不知不觉涨满；怎么确认是孤儿连接而不是真负载 | 排查记录 | PAP-161 |
-| db-check-passes-null | CHECK 约束遇到 NULL 直接放行 | 坑 | 实战 | db-constraints-and-null | 三值逻辑下 NULL 让 CHECK 结果为「未知」，等于通过；约束测试要断言约束名 | catalog 迁移里的 CHECK；计划缺陷清单 | PAP-161 |
+| db-check-passes-null | CHECK 约束遇到 NULL 直接放行 | 坑 | 实战 | db-constraints-and-null | 三值逻辑下 NULL 让 CHECK 结果为「未知」，等于通过；约束测试要断言约束名 | interaction 迁移 `subject/V20261027120000__extend_registry_for_journal_and_post.sql` 里的 CHECK；计划缺陷清单 | PAP-161 |
 | db-jsonb-not-null-json-null | jsonb 的 NOT NULL 挡不住 JSON 的 null | 坑 | 实战 | db-jsonb-columns | SQL 的 NULL 与 JSON 里的 `null` 是两回事 | `JsonColumnCodec.java`；计划缺陷清单 | PAP-161 |
 | db-trigram-short-pattern-full-scan | 短关键词让 GIN 索引全扫 | 排查 | 实战 | db-trigram-search | 一两个字的联想在通用计划下扫遍整个索引；怎么发现、怎么改 | `V9__add_suggest_trigram_indexes.sql`；计划缺陷清单 | PAP-161 |
 
@@ -94,9 +94,9 @@
 | spring-configuration-properties | 配置：application.yml 与 @ConfigurationProperties | 概念 | 基础 | spring-boot-auto-configuration | 配置绑定到对象；配置来源的优先级；环境变量覆盖 | `LoginThrottleProperties.java`；v0.9 决策 C「配置分三层」 | PAP-158 |
 | spring-mvc-controller | 写一个接口：从 Controller 到 JSON | 概念 | 基础 | spring-dependency-injection、http-rest-api-design | 路由映射、参数绑定、返回值变成 JSON | `patra-identity-adapter/.../session/rest/MeSessionController.java` | PAP-158 |
 | spring-json-jackson | 对象和 JSON 怎么互转：Jackson | 概念 | 基础 | spring-mvc-controller、http-json-and-content-type | 序列化与反序列化；Long 为什么要转成字符串（JS 数字精度） | `patra-tool-web/.../json/LongToStringHttpMessageConvertersCustomizer.java` | PAP-158 |
-| spring-proxies-and-transactional | 代理：@Transactional 为什么有时不生效 | 概念 | 进阶 | spring-dependency-injection、db-transactions | Spring 用代理包住 Bean；类内自调用绕过代理 | 应用层 `@Transactional` 的位置（`build-logic/.../patra.hexagonal-app.gradle.kts` 把事务限定在 app 层） | PAP-158 |
+| spring-proxies-and-transactional | 代理：@Transactional 为什么有时不生效 | 概念 | 进阶 | spring-dependency-injection、db-transactions | Spring 用代理包住 Bean；类内自调用绕过代理 | 应用层 `@Transactional` 的位置：`patra-tool-test` 的 `HexagonalArchitectureRules`（ArchUnit 规则）把事务限定在 app 层，`build-logic/.../patra.hexagonal-app.gradle.kts` 只负责加依赖 | PAP-158 |
 | spring-jpa-basics | JPA：用对象读写表 | 概念 | 进阶 | spring-dependency-injection、db-keys-and-relations | Entity、Repository、持久化上下文与 flush | `patra-catalog-infra/.../author/persistence/entity/AuthorEntity.java`、`dao/AuthorDao.java` | PAP-158 |
-| spring-jpa-n-plus-one | N+1 查询 | 坑 | 进阶 | spring-jpa-basics | 懒加载在循环里一条一条查；`@EntityGraph` 与 JOIN FETCH | `AuthorDao.java` 的 `@EntityGraph` | PAP-158 |
+| spring-jpa-n-plus-one | N+1 查询 | 坑 | 进阶 | spring-jpa-basics | 懒加载在循环里一条一条查；`@EntityGraph` 与 JOIN FETCH | `AuthorDao.java` 的 `findByOrcidIn`（`JOIN FETCH` 一次带回两个集合） | PAP-158 |
 | spring-http-interface-clients | 调别的服务：HTTP Interface | 概念 | 进阶 | spring-mvc-controller、http-status-codes | 用接口声明远程调用；契约放在 `-api` 模块；失败统一成 RemoteCallException | `patra-identity-api/.../session/endpoint/SessionEndpoint.java` | PAP-158 |
 | spring-service-discovery | 服务发现：`lb://` 怎么找到服务 | 概念 | 进阶 | spring-http-interface-clients | 注册中心、实例列表、客户端负载均衡 | catalog `config/HttpClientConfiguration.java` 里的 `lb://` | PAP-158 |
 | spring-nacos-config-and-refresh | Nacos：配置中心与动态刷新 | 概念 | 进阶 | spring-configuration-properties | 配置放 git，CD 推到 Nacos；刷新就是重新绑定，所以要刷新的配置写成可变类 | v0.9 决策 B、D；`IdentityConfigRefreshIT.java`；`patra-infra/scripts/nacos-push.sh` | PAP-158 |
@@ -108,7 +108,7 @@
 | spring-no-custom-refreshable-properties | 取消自研的 RefreshableProperties | 决策 | 实战 | spring-nacos-config-and-refresh | 自研刷新组件与 Spring Cloud 自带重新绑定的取舍；主流做法优先 | v0.9 决策 D（2026-10-14 改定） | PAP-161 |
 | spring-json-single-source | JSON 只从容器拿一个 JsonMapper | 决策 | 实战 | spring-json-jackson | 到处 new ObjectMapper 的后果；只在 Web 层做 Long 转字符串 | v0.10 决策 F | PAP-161 |
 | spring-batch-context-java-types-only | Batch 上下文只认 java.* 类型 | 坑 | 实战 | spring-batch-jobs | 往 ExecutionContext 里放自定义类型，重启时反序列化失败 | 计划缺陷清单 | PAP-161 |
-| spring-stepscope-proxy-fields | @StepScope 代理别碰字段 | 坑 | 实战 | spring-batch-jobs、spring-proxies-and-transactional | 拿到的是代理，直接读字段读到的是代理自己的空字段 | `AuthorImportJobConfig.java`、`AuthorItemReader.java`；计划缺陷清单 | PAP-161 |
+| spring-stepscope-proxy-fields | @StepScope 代理别碰字段 | 坑 | 实战 | spring-batch-jobs、spring-proxies-and-transactional | 拿到的是代理，直接读字段读到的是代理自己的空字段 | `PubmedImportCounters.java`、`PubmedImportJobConfig.java`；计划缺陷清单 | PAP-161 |
 | spring-flush-order-insert-before-delete | 先删后插却撞了唯一约束 | 坑 | 实战 | spring-jpa-basics、db-constraints-and-null | Hibernate flush 时先插后删，派生 delete 方法挡不住唯一键冲突 | 计划缺陷清单 | PAP-161 |
 
 ### 1.4 消息与事件（主路线 `messaging`）
@@ -230,9 +230,9 @@
 | fe-server-and-client-components | 服务端组件与客户端组件 | 概念 | 进阶 | fe-nextjs-pages-and-routing、fe-react-hooks-and-effects | 哪些组件在服务器上渲染、哪些发到浏览器；边界怎么划 | 门户页面里的 `"use client"` 边界 | PAP-160 |
 | fe-rendering-static-and-dynamic | 静态生成与动态渲染 | 概念 | 进阶 | fe-server-and-client-components | 构建时生成还是请求时生成；什么让一页变成动态的；预取 | 学习站本身是纯静态站（v0.17 决策 B）；门户的动态页面 | PAP-160 |
 | fe-hydration | 水合：服务端 HTML 怎么「活」过来 | 概念 | 进阶 | fe-server-and-client-components | 服务端 HTML 与客户端首次渲染必须一致，不一致会报错 | `patra-portal/src/components/settings/profile/MeshInterestPicker.tsx`（拖拽排序） | PAP-160 |
-| fe-server-actions | Server Action：表单直接调服务端 | 概念 | 进阶 | fe-server-and-client-components、fe-forms-and-validation | 不写接口也能提交表单；它适合和不适合做什么 | `patra-portal/src/lib/auth/actions.ts`、`src/lib/identity/profile-actions.ts` | PAP-160 |
+| fe-server-actions | Server Action：表单直接调服务端 | 概念 | 进阶 | fe-server-and-client-components、fe-forms-and-validation | 不写接口也能提交表单；它适合和不适合做什么；门户在 `onSubmit` 里调用 Server Action，不用 `<form action>` | `patra-portal/src/lib/auth/actions.ts`、`src/components/auth/LoginForm.tsx` | PAP-160 |
 | fe-route-handler-bff | Route Handler 透传：门户当中间层 | 概念 | 进阶 | fe-server-and-client-components、http-same-origin-and-cors | 浏览器只跟门户说话，门户带着会话转给网关 | `patra-portal/src/app/api/me/notifications/route.ts`、`src/lib/gateway.ts` | PAP-160 |
-| fe-auth-state | 前端怎么管登录态 | 概念 | 进阶 | fe-route-handler-bff、http-cookie-and-session | 会话 Cookie 只在服务端读；请求入口统一拦截 | `patra-portal/src/lib/auth/session-cookie.ts`、`src/proxy.ts` | PAP-160 |
+| fe-auth-state | 前端怎么管登录态 | 概念 | 进阶 | fe-route-handler-bff、http-cookie-and-session | 会话 Cookie 只在服务端读；入口 `proxy.ts` 只做乐观跳转，要登录的页面自己调 `requireUser` 守门 | `patra-portal/src/lib/auth/session-cookie.ts`、`src/proxy.ts`、`src/lib/auth/require-user.ts` | PAP-160 |
 | fe-optimistic-updates | 乐观更新：先改界面再等结果 | 概念 | 进阶 | fe-react-hooks-and-effects、fe-async-and-fetch | 失败时怎么回滚；计数类交互为什么适合乐观更新 | v0.15 决策 D「有帮助乐观更新」；`components/portal/browse/BrowseQueryProvider.tsx` | PAP-160 |
 | fe-realtime-eventsource | 前端接收推送：EventSource | 概念 | 进阶 | web-server-push-and-sse、fe-react-hooks-and-effects | 浏览器订阅事件流、断线重连 | `patra-portal/src/lib/notifications/stream.ts`、`src/app/api/me/notifications/stream/route.ts` | PAP-160 |
 | fe-rsc-try-catch-swallows-dynamic | try/catch 吞掉了动态渲染信号 | 坑 | 实战 | fe-rendering-static-and-dynamic | 框架靠抛异常标记动态渲染，被 catch 住后只有构建时才暴露 | `unstable_rethrow`：`patra-portal/src/app/u/[username]/page.tsx`；计划缺陷清单 | PAP-161 |
@@ -240,7 +240,7 @@
 | fe-dev-logs-action-args | 开发终端打印出了明文密码 | 坑 | 实战 | fe-server-actions | 开发模式默认记录 Server Action 参数；关掉它 | `patra-portal/next.config.ts` 的 `serverFunctions`；排查记录 | PAP-161 |
 | fe-grapheme-and-bytes | 字数要按字素算，还要卡字节 | 坑 | 实战 | fe-forms-and-validation | 一个表情可能是好几个码点；前端按字素数，后端按字节限 | `patra-portal/src/lib/grapheme.ts`；计划缺陷清单 | PAP-161 |
 | fe-dnd-kit-needs-useid | 拖拽库不给 id 就水合不一致 | 坑 | 实战 | fe-hydration | 自动生成的 id 在服务端和客户端不同；用 useId | `MeshInterestPicker.tsx`；计划缺陷清单 | PAP-161 |
-| fe-combobox-item-press | 组合框点选后没回填 | 坑 | 实战 | fe-react-hooks-and-effects | 无样式组件库的选中事件与输入框回填 | `patra-portal/src/components/portal/QuickSearch.tsx`；计划缺陷清单 | PAP-161 |
+| fe-combobox-item-press | 组合框点选后没回填 | 坑 | 实战 | fe-react-hooks-and-effects | 无样式组件库的选中事件与输入框回填 | `patra-portal/src/components/settings/profile/MeshInterestPicker.tsx`、`OrganizationPicker.tsx`；计划缺陷清单 | PAP-161 |
 | fe-extension-hydration-mismatch | 浏览器扩展改了 `<html>`，开发模式报水合不一致 | 坑 | 实战 | fe-hydration | 差异来自翻译类扩展加的属性，不是代码问题；怎么分辨 | 排查记录 | PAP-161 |
 
 ## 2. 路线（按阅读顺序）
