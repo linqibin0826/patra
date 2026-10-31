@@ -1,0 +1,120 @@
+---
+title: 把提醒搬出 interaction，新建通知服务
+summary: 提醒原来和评论在同一个服务、同一个事务里。要加邮件、偏好、退订和实时推送时，Patra 把它拆成独立的通知服务：interaction 只发「发生了什么」，谁该收到提醒由通知服务自己算。代价是从强一致变成最终一致。
+type: decision
+difficulty: practice
+tags: [ddd, messaging]
+prerequisites: [ddd-bounded-contexts, ddd-domain-vs-integration-events]
+topics: [service-boundaries]
+sources:
+  - version: v0.16
+    issue: PAP-139
+    pr: 343
+personalEnv: false
+---
+
+<Diagnose
+  question="评论写在 interaction 的库里，提醒搬到了另一个服务、另一个库。如果评论提交成功了，写提醒那一步失败，结果会是？"
+  options={["评论跟着回滚，两边都没有", "评论保留，提醒要靠事后的重试补上", "两个库可以放进同一个事务，不会出现这种情况"]}
+  answer="B"
+  ifRight="对。两个库放不进同一个事务，评论不会因为提醒失败而回滚，只能靠后面的重试把提醒补上。这一篇讲 Patra 为什么接受这个代价。"
+  ifWrong="答案是 B。两个服务各有自己的数据库，没法让它们在同一个事务里一起提交或回滚；评论提交了就是提交了，提醒只能事后补，这叫最终一致。这题考的是限界上下文拆开后，数据一致性怎么变。"
+/>
+
+## 背景：提醒越长越大
+
+v0.16 通知中心那一版开工前（2026-10-30）核对的现状：
+
+- 站内提醒是 interaction 服务里的一个子域，只有三类：回复了你的评论、评论了你的投稿经验、@ 了你。
+- 提醒和评论在**同一个事务**里写入：发评论时，监听器同步算出收件人、写提醒，要么一起成功，要么一起回滚。这叫**强一致**。
+- 铃铛上的未读数每 60 秒轮询一次，没有任何偏好设置。
+
+这一版要加的是：提醒邮件、每类提醒的「不发 / 逐条 / 每日汇总」三档偏好、邮件里的一键退订、实时推送未读数。这些新概念（偏好、退订令牌、在不在站上、汇总窗口）只属于「通知」这块业务，和评论本身无关。再塞在 interaction 里，评论模块就要知道「这个人要不要收邮件」。
+
+作者的判断是：提醒和通知是一块以后还会长大的业务，单独成一个限界上下文，新建 `patra-notification` 服务，接管信箱、偏好、邮件、汇总和推送。
+
+## 第一个问题：怎么告诉通知服务「有人回复了」
+
+拆开以后，interaction 和通知服务之间要通信。两种方式在顺利时没区别，差别出在通知服务停机的时候：
+
+<Compare
+  title="同步调用还是发事件"
+  failureLabel="通知服务正好停机"
+  variants={[
+    { label: "同步调用", steps: ["interaction 写评论", "调通知服务的接口写提醒", "提交事务，告诉用户发表成功"], results: [{ label: "评论", value: "发表成功", tone: "ok" }, { label: "提醒", value: "已写入", tone: "ok" }], verdict: { tone: "ok", head: "两样都成功。", text: "顺利的时候和发事件没有区别。" }, failure: { after: 1, results: [{ label: "评论", value: "发不出去或很慢", tone: "bad" }, { label: "提醒", value: "没有", tone: "bad" }], verdict: { tone: "bad", head: "评论被提醒拖累。", text: "通知服务不在，发评论这个主业务跟着失败或卡住。" } } },
+    { label: "发事件", steps: ["interaction 写评论，同一事务里登记一条「评论已发表」事件", "提交事务，告诉用户发表成功", "事件经 RabbitMQ 送到通知服务，写提醒"], results: [{ label: "评论", value: "发表成功", tone: "ok" }, { label: "提醒", value: "毫秒级后写入", tone: "ok" }], verdict: { tone: "ok", head: "两样都成功。", text: "顺利的时候和同步调用没有区别。" }, failure: { after: 2, results: [{ label: "评论", value: "发表成功", tone: "ok" }, { label: "提醒", value: "等通知服务恢复后补上", tone: "wait" }], verdict: { tone: "ok", head: "提醒晚到，不会丢。", text: "事件留在登记表和队列里，通知服务回来后照样处理。" } } }
+  ]}
+/>
+
+Patra 选了发事件。事件怎么做到「不丢」（发件箱、发布确认、补投、去重）是消息路线的内容，这里只关心边界：interaction 不再知道通知服务的存在，只宣布事实。
+
+## 第二个问题：谁来决定通知谁
+
+事件里写什么，有两种做法：
+
+<DecisionOptions
+  options={[
+    { name: "事实型事件", summary: "interaction 只说「C 回复了 B 的评论，正文里 @ 了 D」，由通知服务自己算出该提醒谁。", pros: "收件人规则跟着提醒走；以后别的功能也想知道有新评论，订阅同一个事件就行，interaction 不用改。", cons: "事件里要带齐算收件人用的事实；新增一种提醒时，事件可能要多带字段。", chosen: true },
+    { name: "指令型调用", summary: "interaction 自己算好收件人，直接说「给 B 发一条回复提醒」。", pros: "通知服务很薄，只负责投递。", cons: "通知的规则留在了评论模块里，等于没拆。Novu、Knock 这类通知平台用这种，因为平台本来就不懂业务。" }
+  ]}
+/>
+
+产品内部拆服务时多用事实型。Patra 把 interaction 原来的收件人规则原样搬进了通知服务：先列被回复的人，再列经验作者（只对经验下的根评论），最后列 @ 到的人；同一个人只按第一次出现的类型提醒；最后去掉作者本人。
+
+<CodeRef at="patra-api/patra-notification/patra-notification-domain/src/main/java/dev/patra/notification/domain/inbox/policy/RecipientRules.java@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="13-41" />
+
+```java
+public static List<Recipient> forPublished(CommentFacts facts) {
+  Map<Long, NotificationType> recipients = new LinkedHashMap<>();
+  if (facts.parentAuthorId() != null) {
+    recipients.putIfAbsent(facts.parentAuthorId(), NotificationType.COMMENT_REPLY);
+  }
+  if (facts.rootOnPost()) {
+    recipients.putIfAbsent(facts.subjectOwnerId(), NotificationType.POST_COMMENT);
+  }
+  for (Long mentioned : facts.mentionedUserIds()) {
+    recipients.putIfAbsent(mentioned, NotificationType.MENTION);
+  }
+  recipients.remove(facts.authorId());
+  // ……
+}
+```
+
+事件里带齐了算收件人要的事实：作者、被回复评论的作者、@ 到的用户 ID、是否匿名。通知服务不回头调 interaction 查数据。这种让事件携带对方需要的状态的做法，Martin Fowler 称为「事件携带状态转移」。
+
+<Quiz
+  questions={[
+    {
+      question: "以后要做「关注动态」：你关注的人发了评论，动态里出现一条。按 Patra 现在的做法，interaction 要改代码吗？",
+      options: ["要，得在发评论时再调一次关注服务", "不用，关注功能订阅同一个「评论已发表」事件即可", "要，事件里要加一个「通知关注者」的指令"],
+      answer: "B",
+      explain: "事件只说事实，不说该谁做什么。新的订阅方自己接这个事件，发布方一行不改。这就是选事实型的好处。"
+    }
+  ]}
+/>
+
+## 通知服务里面怎么分
+
+新服务一开始就按子域分好：底座 `kernel`（提醒类别、取用户名的端口、在站信号等被几个子域共用的东西），加上 `inbox` 信箱、`preference` 偏好与退订、`mail` 邮件、`realtime` 实时推送。子域之间只有三条允许的依赖，写在架构测试里，违反就让构建失败：
+
+<CodeRef at="patra-api/patra-notification/patra-notification-boot/src/test/java/dev/patra/notification/architecture/NotificationArchitectureTest.java@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="42-57" />
+
+## 代价
+
+<Callout kind="cost">
+
+- **提醒晚一点出现**：平时是毫秒级；RabbitMQ 或通知服务挂了，就要等它恢复。
+- **不再一起回滚**：「评论成功、提醒失败」时，靠事件的补投和消费端的重试最终送达，两边都要处理重复和乱序。
+- **事件契约要维护**：新增一种提醒时，interaction 可能要在事件里多带字段。
+- **旧提醒没有迁移**：interaction 里原有的提醒随旧子域一起删掉，切换后信箱从空开始。门户对外开放后几位测试者已有的提醒因此消失了。
+
+</Callout>
+
+<Transfer
+  prompt="一个电商系统：订单服务在订单发货后，要让短信服务给买家发一条「已发货」短信，以后营销服务也想知道哪些订单发货了。你会让订单服务发什么样的消息？短信服务要自己知道哪些事？"
+  points={[
+    { label: "发事实", text: "订单服务发「订单 123 已发货」这样的事实事件，不发「给 138xxxx 发短信」这样的指令；营销服务订阅同一个事件即可。" },
+    { label: "带齐事实", text: "事件里带上短信服务算收件人、拼内容要用的信息（买家 ID、物流单号），或者约定由短信服务按 ID 现查。" },
+    { label: "接受最终一致", text: "订单发货不因短信服务停机而失败；短信晚到、可能重复，短信服务要按事件 ID 去重。" }
+  ]}
+/>

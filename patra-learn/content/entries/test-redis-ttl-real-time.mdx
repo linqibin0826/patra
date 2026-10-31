@@ -1,0 +1,81 @@
+---
+title: Redis 过期走真实时间，注入的 Clock 管不到
+summary: 应用里注入的 Clock 在测试里可以拨快，Redis 服务端的时钟却拨不动：键的 TTL 照真实时间倒数。要测「没续期」，得设计成两种结果的 TTL 差得足够大。
+type: pitfall
+difficulty: practice
+tags: [testing, redis]
+prerequisites: [test-controlling-time, db-redis-basics]
+sources:
+  - version: v0.8
+    issue: PAP-64
+personalEnv: false
+---
+
+<Diagnose
+  question="测试里给会话存储注入了一个假时钟，建好会话后把假时钟往前拨 59 秒。这时去 Redis 里查这个会话键的剩余 TTL，它会少多少？"
+  options={["少了 59 秒左右", "几乎没少，只过去了几毫秒的真实时间", "键已经过期了"]}
+  answer="B"
+  ifRight="对。假时钟只骗得了应用自己，Redis 的 TTL 按它自己的真实时间倒数。下面讲这会让哪种测试写错、怎么写对。"
+  ifWrong="答案是 B。注入的 Clock 只影响应用代码里读到的「现在」；TTL 是 Redis 服务端按真实时间倒数的，测试拨不动它。这题考的是怎么在测试里控制时间：能换掉的只有你注入进去的那个时钟。"
+  suggest="test-controlling-time"
+/>
+
+## 坑
+
+Patra 的会话存储注入了 `Clock`，测试可以把它拨快，用来测「60 秒内不续期、满 60 秒才续期」。但 Redis 里键的 TTL 走的是 Redis 服务端的真实时间：拨假时钟，`PTTL` 不会变。想靠「TTL 少了多少」来判断有没有续期，很容易写出一个怎样都通过的测试。
+
+## 为什么
+
+应用算 TTL 的时候用的是注入的时钟：比如「绝对过期时间减去现在」。算出来的数字交给 Redis 设置，此后 Redis 自己倒数，和应用的时钟再无关系。
+
+这组测试里会话的不活跃过期是 30 天。如果测试用它建会话，然后检查「没续期时 TTL 还是约 30 天」，那续期了也是约 30 天：续期就是把 TTL 重设成 30 天。两种结果分不开，测试永远绿。
+
+<Stepper
+  title="怎么让「续期了」和「没续期」的 TTL 分得开"
+  nodes={[
+    { id: "test", label: "测试", sub: "拨假时钟" },
+    { id: "app", label: "会话存储", sub: "用注入的 Clock 算 TTL" },
+    { id: "redis", label: "Redis", sub: "按真实时间倒数" }
+  ]}
+  links={[
+    { from: "test", to: "app" },
+    { from: "app", to: "redis" }
+  ]}
+  steps={[
+    { caption: "建会话时把绝对过期设成 1 小时后（不用默认的 30 天）。应用算出 TTL = 1 小时，交给 Redis。", focus: ["app", "redis"], links: ["app>redis"], notes: [{ at: "redis", text: "TTL ≈ 1 小时", tone: "ok" }] },
+    { caption: "测试把假时钟往前拨 59 秒。应用以为过去了 59 秒，真实时间只过去了几毫秒。", focus: ["test", "app"], links: ["test>app"], notes: [{ at: "app", text: "现在 = 开始 + 59 秒", tone: "wait" }] },
+    { caption: "测试查会话。不满 60 秒，按规则不该续期：应用只读、不写回，Redis 里的 TTL 保持约 1 小时。", focus: ["app", "redis"], notes: [{ at: "redis", text: "没续期：TTL ≈ 1 小时", tone: "ok" }] },
+    { caption: "假如代码写错了、提前续了期：应用会按假时钟重算，TTL = 1 小时减 59 秒，写回 Redis。和上一步差了 59 秒，测试允许的误差只有 5 秒，一眼能分开。", focus: ["app", "redis"], links: ["app>redis"], notes: [{ at: "redis", text: "续了期：TTL ≈ 1 小时 − 59 秒", tone: "bad" }] }
+  ]}
+  guesses={[
+    { before: 3, question: "假时钟拨了 59 秒，应用也没续期。此时 Redis 里的 TTL 大约是多少？", options: ["1 小时减 59 秒", "约 1 小时", "已经过期"], answer: "B", explain: "没续期就没有写回，Redis 只按真实时间倒数，几毫秒而已，还是约 1 小时。" }
+  ]}
+/>
+
+## 怎么避开
+
+测试用较短的绝对过期，让「续了期」和「没续期」算出的 TTL 至少差出几十秒，再用一个比差值小的容差去断言：
+
+<CodeRef at="patra-api/patra-identity/patra-identity-infra/src/integrationTest/java/dev/patra/identity/infra/session/store/RedisSessionStoreIT.java@5073ab1358404ecd989e722373cd9f7edafe238b" lines="157-172" />
+
+```java
+Duration oneHour = Duration.ofHours(1);
+SessionToken token =
+    store.create(newSession(42L, 7001L).expiresAt(START.plus(oneHour)).build()).token();
+clock.advance(Duration.ofSeconds(59));
+
+store.findAndTouch(token).orElseThrow();
+
+// 续期会把 TTL 重算成 1 小时减 59 秒；没续期就还是约 1 小时（Redis 的 TTL 走真实时间）
+assertThat(ttl(sessionKey))
+    .isBetween(oneHour.toMillis() - TOLERANCE_MILLIS, oneHour.toMillis());
+```
+
+<Transfer
+  prompt="另一个功能：登录失败 5 次锁定 15 分钟，锁存在 Redis 里带 TTL。你想测「15 分钟后自动解锁」。拨假时钟有用吗？你会怎么测？"
+  points={[
+    { label: "拨时钟没用", text: "锁的过期由 Redis 按真实时间执行，拨应用的时钟不会让键提前消失。" },
+    { label: "测应用算对了什么", text: "断言写进 Redis 的 TTL 约等于 15 分钟（带小容差），这一步应用说了算。" },
+    { label: "过期本身", text: "Redis 到点删键是它自己的功能，不必在单测里等 15 分钟；真要测，就在测试配置里把锁定时长设成一两秒，用真实时间等。" }
+  ]}
+/>

@@ -1,0 +1,75 @@
+---
+title: 测试上下文一多，CI 报 too many clients
+summary: 每个被缓存的 Spring 测试上下文都各开一个数据库连接池。CI 机器核数少、测试进程少，单个进程里缓存的上下文更多，连接数就顶满了 PostgreSQL 的上限，本地却不报。
+type: pitfall
+difficulty: practice
+tags: [testing, database, ci-cd]
+prerequisites: [test-integration-testcontainers, db-connection-pool]
+sources:
+  - version: v0.11
+personalEnv: false
+---
+
+<Diagnose
+  question="一批集成测试在本地全部通过，到了 CI 上报 PostgreSQL 的 too many clients already。CI 机器的核数比本地少。最先该怀疑什么？"
+  options={["CI 上的 PostgreSQL 配置更小", "测试代码有连接泄漏，借了不还", "每个缓存的测试上下文各占一个连接池，CI 上单个测试进程里缓存的上下文更多"]}
+  answer="C"
+  ifRight="对。连接不是泄漏了，是被一个个闲着的连接池占着。下面讲为什么核数少反而更容易撞上。"
+  ifWrong="答案是 C。Testcontainers 起的是同一个 PG 镜像，配置一样；连接也没泄漏，而是每个 Spring 测试上下文都带一个连接池，池里常驻着连接。这题考的是连接池：池子开着就占着连接，不管有没有人在用。"
+  suggest="db-connection-pool"
+/>
+
+## 坑
+
+集成测试类一多，每个被缓存的 Spring 上下文都各占一个 Hikari 连接池（默认常驻 10 个连接）。几十个上下文加起来，就把 PostgreSQL 默认的 100 个连接耗尽了。本地不报、只有 CI 报。
+
+<Callout kind="insight" label="怎么认出它">
+
+- 报错是 `too many clients already`，只在 CI 上出现，本地重跑通过。
+- 出事的模块刚新增了一批集成测试类，或者测试类里用了不同的配置组合（每种组合是一个新上下文）。
+- 本地用 `--max-workers=1` 跑，能复现。
+
+</Callout>
+
+## 为什么
+
+Spring 的测试框架会把建好的应用上下文缓存起来，后面配置相同的测试类直接复用，省掉重复启动。代价是缓存里的每个上下文都还活着，连同它的连接池。
+
+Patra 的测试按 CPU 核数的一半开并行的测试进程（`maxParallelForks`）。核数少的 CI 机器，进程少，每个进程要跑的测试类就多，缓存下来的上下文也更多；而每个上下文的池子按默认值常驻 10 个连接。
+
+<Quiz
+  questions={[
+    {
+      question: "同样 40 个集成测试类、8 种不同的上下文配置。本地 12 核开 6 个测试进程，CI 2 核只开 1 个。哪边单个进程里缓存的上下文多？",
+      options: ["本地：进程多，上下文就多", "CI：8 种配置全落在同一个进程里，各缓存一个", "一样多，缓存是全局的"],
+      answer: "B",
+      explain: "缓存在每个进程（JVM）里各自一份。本地 6 个进程分摊，每个进程只遇到其中几种配置；CI 只有 1 个进程，8 种全在它里面。连到同一个数据库的池子总数，CI 反而更集中。"
+    }
+  ]}
+/>
+
+## 怎么避开
+
+在集成测试的配置里把连接池限小：最多 4 个、空闲时只留 1 个、空闲 10 秒就释放。
+
+<CodeRef at="patra-api/patra-catalog/patra-catalog-infra/src/testFixtures/resources/application-test.yml@77eee9de087082d0c83a374fda135078594e8eac" lines="10-16" />
+
+```yaml
+spring:
+  datasource:
+    hikari:
+      maximum-pool-size: 4
+      minimum-idle: 1
+      idle-timeout: 10000
+```
+
+在 v0.11 全文阅读那一版，catalog 的集成测试限池前后，连接峰值从 97 降到 24。以后某个模块要新增一批集成测试类，先看它的测试配置有没有限池。
+
+<Transfer
+  prompt="除了数据库连接，还有哪些资源也是「每个缓存的测试上下文各占一份」？如果某个模块的集成测试在 CI 上随机报 Redis 连接数过多或端口被占，你会先查什么？"
+  points={[
+    { label: "同类资源", text: "Redis 连接、HTTP 客户端连接池、线程池、测试里起的桩服务器端口，都会随上下文一起常驻。" },
+    { label: "先数上下文", text: "先看这个模块有多少种不同的测试配置（不同的属性、@Import、@MockitoBean 组合），每一种都是一个新上下文。" },
+    { label: "两头下手", text: "要么把每个上下文占的资源限小，要么合并配置减少上下文数量。" }
+  ]}
+/>

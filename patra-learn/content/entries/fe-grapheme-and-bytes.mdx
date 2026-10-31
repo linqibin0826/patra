@@ -1,0 +1,92 @@
+---
+title: 字数要按字素算，还要卡字节
+summary: 用户眼里的「一个字」可能由好几个码点组成，一个组合表情就有二十多个字节。前端按字素计数才和用户的感觉一致，但还得同时检查后端的字节上限，否则计数器显示合法，提交却被拒。
+type: pitfall
+difficulty: practice
+tags: [frontend, backend]
+prerequisites: [fe-forms-and-validation]
+sources:
+  - version: v0.12
+    issue: PAP-101
+personalEnv: false
+---
+
+<Diagnose
+  question="昵称限 30 个字。用户输入了一个「一家四口」的组合表情。在 JavaScript 里，这个字符串的 length 是多少？"
+  options={["1", "4", "11"]}
+  answer="C"
+  ifRight="对。它由 4 个人物表情和 3 个连接符组成，人物表情各占 2 个 UTF-16 单元，加起来是 11。下面讲 Patra 为什么既不按 length、也不只按字数来限长度。"
+  ifWrong="答案是 C。这个表情是 4 个人物码点用 3 个零宽连接符拼起来的，每个人物码点在 JavaScript 里占 2 个 UTF-16 单元，一共 11。用户只看见一个字。这题考的是表单校验里「长度」到底怎么数。"
+/>
+
+## 坑
+
+同一段文字有好几种「长度」：
+
+| 怎么数 | 「一家四口」表情 |
+|---|---|
+| 字素（用户眼里的字） | 1 |
+| 码点 | 7（4 个人物 + 3 个连接符） |
+| JavaScript 的 `length`（UTF-16 单元） | 11 |
+| UTF-8 字节 | 25（4 个人物各 4 字节，3 个连接符各 3 字节） |
+
+```js
+const family = "\u{1F468}‍\u{1F469}‍\u{1F467}‍\u{1F466}";
+family.length;                        // 11
+new TextEncoder().encode(family).length; // 25
+graphemeCount(family);                // 1
+```
+
+前端按字素计数，用户看到的「12/30」才和他感觉的一致。可 Patra 的后端对文字字段同时限两样：字素数和 UTF-8 字节数。只按字素数校验的前端，会让一个全是组合表情的昵称在计数器上显示合法，提交后却被后端拒掉。
+
+## 为什么
+
+字素数能表达「用户感觉的长短」，却管不住实际占多大：一个字素可以由任意多个码点组成。字节上限管的就是这一头。Patra 后端的这几处文字字段同时有这两个上限，字节上限按字素上限 × 4 定：昵称 30 字素、120 字节，投稿经验正文 2,000 字素、8,000 字节，评论 5,000 字素、20,000 字节。
+
+<CodeRef at="patra-api/patra-identity/patra-identity-domain/src/main/java/dev/patra/identity/domain/account/policy/DisplayNamePolicy.java@5073ab1358404ecd989e722373cd9f7edafe238b" lines="19-26" />
+
+昵称是至少 2、最多 30 个字素，UTF-8 最多 120 字节。
+
+<Params
+  title="动手试试：昵称全用「一家四口」表情"
+  guess={{ question: "昵称里放 5 个「一家四口」表情：5 个字素，125 字节。只按字素计数的前端会怎么显示？提交后呢？", options: ["前端显示合法，提交成功", "前端显示 5/30 合法，提交后被后端拒", "前端直接提示超长"], answer: "B", explain: "5 个字素远低于 30，计数器显示合法；但 125 字节超过了 120 字节的上限，后端拒绝。" }}
+  controls={[
+    { type: "slider", id: "n", label: "表情个数", min: 1, max: 30, step: 1, default: 3, unit: "个" },
+    { type: "switch", id: "bytes", label: "前端也检查字节上限", default: false }
+  ]}
+  cases={[
+    { when: { n: [1, 4] }, results: [{ label: "字素", value: "{n}，未超 30", tone: "ok" }, { label: "字节", value: "不超过 100，未超 120", tone: "ok" }, { label: "提交", value: "成功", tone: "ok" }], verdict: { tone: "ok", head: "两样都没超。", text: "4 个以内的组合表情，字节也在上限之内。" } },
+    { when: { bytes: true }, results: [{ label: "字素", value: "{n}，未超 30", tone: "ok" }, { label: "字节", value: "超过 120", tone: "bad" }, { label: "前端", value: "提交前就提示太长", tone: "ok" }], verdict: { tone: "ok", head: "当场拦下。", text: "前端和后端用同一套规则，用户在输入时就知道不行。" } },
+    { results: [{ label: "字素", value: "{n}，未超 30", tone: "ok" }, { label: "字节", value: "超过 120", tone: "bad" }, { label: "提交", value: "被后端拒绝", tone: "bad" }], verdict: { tone: "bad", head: "这就是坑。", text: "计数器说合法，后端说太长，用户不知道错在哪。" } }
+  ]}
+/>
+
+## 怎么避开
+
+前端计数用 `Intl.Segmenter` 按字素切，和后端计长度的口径一致：
+
+<CodeRef at="patra-portal/src/lib/grapheme.ts@fe4c6bb68c591a9c9b5fe80f76bbfbbbc6aeae75" lines="1-16" />
+
+同时按后端的规则规整（换行统一、NFC、去首尾空白）后，再量一次 UTF-8 字节数，两个上限一起判：
+
+<CodeRef at="patra-portal/src/lib/discussion/limits.ts@d0ca49caf72d9d9aacd7459c1054cf9131b3759e" lines="1-33" />
+
+```ts
+export const COMMENT_LIMITS = { graphemes: 5000, bytes: 20000, mentions: 10 } as const;
+
+export function measure(text: string): { graphemes: number; bytes: number } {
+  const normalized = normalizeForCount(text);
+  return { graphemes: graphemeCount(normalized), bytes: ENCODER.encode(normalized).length };
+}
+```
+
+计数器显示字素数，超了字节上限时给单独的提示（`over-bytes`）。
+
+<Transfer
+  prompt="数据库里某列是 VARCHAR(50)，前端提示「最多 50 字」。换到 PostgreSQL 和 MySQL（utf8mb4）上，这个 50 分别在数什么？用户输入 50 个组合表情会怎样？"
+  points={[
+    { label: "数据库数的是字符", text: "这两种数据库的 VARCHAR(n) 都按字符（码点）数，不按字素；一个组合表情要占好几个字符。" },
+    { label: "会超", text: "50 个「一家四口」表情是 350 个码点，远超 50，写库失败；前端按字素算是 50，显示合法。" },
+    { label: "对齐口径", text: "前端提示、后端校验、数据库列宽要用同一种数法，或者后端在写库前按列的口径再校验一次，并给出能看懂的错误。" }
+  ]}
+/>

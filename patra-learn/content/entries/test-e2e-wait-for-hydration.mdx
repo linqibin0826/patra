@@ -1,0 +1,72 @@
+---
+title: 端到端测试要等页面水合完再操作
+summary: 开发模式冷编译或机器忙的时候，页面打开了，React 却还没接管。这时点链接是浏览器原生的整页跳转、离开输入框也不触发校验，测试在 bug 还在时照样通过。要先等元素被 React 接管再操作。
+type: pitfall
+difficulty: practice
+tags: [testing, frontend]
+prerequisites: [test-e2e-playwright, fe-hydration]
+sources:
+  - version: v0.8
+    issue: PAP-68
+personalEnv: false
+---
+
+<Diagnose
+  question="一条端到端测试：打开注册页，在邮箱框里填一个不合法的地址，离开输入框，断言「出现格式错误提示」。页面 HTML 已经到了，但 React 还没接管页面。这时离开输入框，会出现错误提示吗？"
+  options={["会，HTML 里已经有输入框了", "不会，校验逻辑是 React 绑上去的，还没接管就没有", "会，浏览器自己会校验"]}
+  answer="B"
+  ifRight="对。服务端渲染出的 HTML 只是一张「画」，事件处理要等水合完成才绑上。下面讲这会让测试怎样骗过你。"
+  ifWrong="答案是 B。服务端渲染给的是静态 HTML，失焦校验、点击跳转这些行为是水合时由 React 绑上去的；接管之前操作，事件根本没人处理。这题考的是水合：页面看得见，不等于能用。"
+  suggest="fe-hydration"
+/>
+
+## 坑
+
+Playwright 的 `page.goto` 返回时，页面的 HTML 到了，React 不一定已经接管。门户在开发模式下冷编译、或机器负载高时，这段空档会变长。测试在空档里操作：
+
+- 点 `<Link>`，走的是浏览器原生的整页跳转，不是前端路由；
+- 离开输入框，不触发前端校验。
+
+结果是测试在 bug 还在时也能通过。v0.8 账号登录那一版写注册页时，回放计划里先写好的三条「应该失败」的测试，三条全过了，查下来就是这个原因。
+
+<Callout kind="warn">
+
+输入框有焦点也不能说明已经接管：React 19 的服务端渲染会直接输出 `autofocus` 属性，焦点是浏览器给的。Next 自己的 `window.__NEXT_HYDRATED` 标记只在它内部的测试模式下才有，项目里用不了。
+
+</Callout>
+
+## 为什么
+
+React 接管（水合）一个 DOM 元素时，会在这个元素对象上挂一个以 `__reactProps$` 开头的属性，里面是它的事件处理函数。还没挂上这个属性，就说明这个元素上还没有 React 的事件处理。
+
+## 怎么避开
+
+操作之前，先等目标元素上出现 `__reactProps$` 开头的属性：
+
+<CodeRef at="patra-portal/tests/e2e/support/account.ts@598dc3eeb2f5209dcc858393eff510a2a3c8a332" lines="26-41" />
+
+```ts
+export async function waitForTakeover(page: Page, selector: string) {
+  await page.waitForFunction(
+    (target) => {
+      const element = document.querySelector(target);
+      return (
+        element !== null && Object.keys(element).some((key) => key.startsWith("__reactProps$"))
+      );
+    },
+    selector,
+    { timeout: 60_000 },
+  );
+}
+```
+
+用法是 `goto` 之后紧跟一句 `await waitForTakeover(page, "form")`，再去填表、点按钮。最多等 60 秒：元素一直不出现时尽快报错，不必干等到整条用例超时。
+
+<Transfer
+  prompt="一个用 Vue 做服务端渲染的项目，端到端测试也偶尔「该失败的没失败」。你会怎么验证是不是同一个问题？等待条件又该怎么定？"
+  points={[
+    { label: "先验证", text: "故意保留一个已知 bug，在机器忙或冷启动时跑测试，看它会不会在 bug 还在时通过；再对比加上等待之后的结果。" },
+    { label: "等接管而不是等出现", text: "等的不是元素出现在 DOM 里（服务端渲染时它一开始就在），而是框架已经把事件绑到这个元素上。" },
+    { label: "找框架留下的标记", text: "看框架在接管后留下了什么可检测的痕迹（元素上的内部属性、根节点上的标记），或者让应用在挂载完成后自己设一个标记给测试用。" }
+  ]}
+/>

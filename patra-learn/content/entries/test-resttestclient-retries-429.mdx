@@ -1,0 +1,71 @@
+---
+title: 测试客户端自动重发了 429
+summary: 起真实端口的流程测试里，RestTestClient 底层的 HTTP 客户端遇到 429 会照 Retry-After 自己重发。限流到明天零点的接口，测试就一直卡到超时，永远断言不到那个 429。
+type: pitfall
+difficulty: practice
+tags: [testing, spring]
+prerequisites: [test-spring-slice-tests, web-rate-limiting]
+sources:
+  - version: v0.14
+    issue: PAP-122
+personalEnv: false
+---
+
+<Diagnose
+  question="投稿经验每人每天最多发 10 篇，超了回 429，并带 Retry-After 告诉客户端「明天零点后再试」。流程测试发第 11 篇，想断言拿到 429。测试结果会是？"
+  options={["拿到 429，测试通过", "测试卡住，直到 30 秒超时失败", "拿到 500"]}
+  answer="B"
+  ifRight="对，前提是测试用的客户端会自动重试。这一篇讲哪个客户端会这么做、怎么绕开。"
+  ifWrong="答案是 B。测试用的客户端看到 429 和 Retry-After，会按服务器说的时间等着重发；离明天零点还早，它就一直等，直到测试本身超时。这题考的是限流的约定：429 加 Retry-After 是在告诉客户端什么时候可以重试。"
+  suggest="web-rate-limiting"
+/>
+
+## 坑
+
+用 `RestTestClient` 打真实端口（`webEnvironment = RANDOM_PORT`）的流程测试，底层是 Apache HttpClient 5。它遇到 429 会按响应里的 `Retry-After` 自动重发。被测接口的限流窗口一长（这次是到明天零点），测试就卡到 30 秒的集成测试超时，永远断言不到 429。
+
+## 为什么
+
+Apache HttpClient 5 自带一个默认的重试策略：对 429、503 这类「服务器说稍后再来」的响应，读 `Retry-After`，等到时间再发一次。这对真实客户端是好事，对测试却是障碍：测试想看的恰恰是第一次拿到的 429。
+
+`RestTestClient` 在 RANDOM_PORT 下用的就是这个客户端，测试代码里看不出来。
+
+<Callout kind="warn">
+
+MOCK 环境（不起真实端口）的 `RestTestClient` 走 MockMvc，不经过这个 HTTP 客户端，表现不一样。换了测试环境，同一段断言的行为可能跟着变。
+
+</Callout>
+
+## 怎么避开
+
+断言 429 的那一次请求，不经 `RestTestClient`，改用 JDK 自带的 `HttpClient` 直接发。它不会自动重试，拿到的就是服务器的第一个响应：
+
+<CodeRef at="patra-api/patra-interaction/patra-interaction-boot/src/integrationTest/java/dev/patra/interaction/post/ExperienceFlowIT.java@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="547-558" />
+
+```java
+private HttpResponse<String> postWithoutRetry(long user, Map<String, Object> body)
+    throws Exception {
+  HttpRequest.Builder request =
+      HttpRequest.newBuilder(URI.create("http://localhost:" + port + POSTS))
+          .header("Content-Type", "application/json")
+          .POST(HttpRequest.BodyPublishers.ofString(JSON.writeValueAsString(body)));
+  TestIdentity.headers(user)
+      .forEach((name, values) -> values.forEach(v -> request.header(name, v)));
+  try (HttpClient client = HttpClient.newHttpClient()) {
+    return client.send(request.build(), HttpResponse.BodyHandlers.ofString());
+  }
+}
+```
+
+用它发第 11 篇，断言状态码、`Retry-After` 头和错误码：
+
+<CodeRef at="patra-api/patra-interaction/patra-interaction-boot/src/integrationTest/java/dev/patra/interaction/post/ExperienceFlowIT.java@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="208-217" />
+
+<Transfer
+  prompt="另一个测试要验证「下游服务挂了时，网关回 503 并带 Retry-After」。用同一个 RestTestClient 去断言，会遇到什么？还有哪些测试客户端的「好意」会挡住你想看的原始响应？"
+  points={[
+    { label: "503 一样会被重发", text: "默认重试策略对 503 加 Retry-After 也会重发，测试看到的可能是重发之后的结果，或者干脆等到超时。" },
+    { label: "其他好意", text: "自动跟随 302 重定向、自动解压、自动带 Cookie，都会让测试看不到第一手响应；测重定向本身时要关掉跟随。" },
+    { label: "做法", text: "要断言原始响应的那一次，用不带这些行为的客户端直接发，比如 JDK HttpClient 并显式关掉重定向跟随。" }
+  ]}
+/>

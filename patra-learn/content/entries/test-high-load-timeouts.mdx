@@ -1,0 +1,78 @@
+---
+title: 机器负载高时前端测试随机超时
+summary: 机器被别的进程占满时，Vitest 默认开的并行 worker 越多越糟：用例随机 5 秒超时，每次失败的都不一样。限住 worker 数才是解法，放宽超时只会让整轮测试挂几个小时。
+type: pitfall
+difficulty: practice
+tags: [testing, frontend]
+prerequisites: [test-flaky-tests, test-frontend-unit]
+sources:
+  - version: v0.8
+    issue: PAP-67
+  - version: v0.16
+personalEnv: false
+---
+
+<Diagnose
+  question="门户的前端单元测试连跑两次都失败，每次失败的用例都不一样，报错是 Test timed out in 5000ms。这时最该先做的是？"
+  options={["把这几个用例的超时改大", "看机器负载；负载远高于核数时，限住并行 worker 数再跑", "逐个排查失败用例的代码"]}
+  answer="B"
+  ifRight="对。每次失败的用例都不同，说明不是哪个用例写错了，而是环境整体太慢。"
+  ifWrong="答案是 B。失败的用例每次都变，这是环境问题的信号；改超时或逐个查代码都找错了方向。这题考的是不稳定测试的判断：先看失败是不是随机分布的。"
+  suggest="test-flaky-tests"
+/>
+
+## 坑
+
+机器负载很高时（别的进程、好几个同时跑的构建把 CPU 占满），用默认 worker 数跑 Vitest 全量，用例会随机超时。这时放宽超时不但没用，还会让整轮测试一直挂着不结束。要做的是把 worker 数限到 2。
+
+<Callout kind="insight" label="怎么认出它">
+
+- 报错是 `[vitest-pool]: Failed to start forks worker … Timeout waiting for worker to respond` 和 `Test timed out in 5000ms`。
+- 每次失败的用例都不一样。
+- `uptime` 看到的 1 分钟负载远高于 CPU 核数。
+
+</Callout>
+
+## 两次实际遇到
+
+- **第一次**（v0.8 账号登录那一版，2026-10-10）：门户全量测试连续两次失败。第一次 5 个组件测试超时，95 个文件只跑完 79 个；第二次跑了 593 秒（平时 9 秒），失败的又是另外 2 个。当时机器 12 核，1 分钟负载在 50 到 90 之间，起因是后台进程占满了 CPU，和改动无关。负载约 1.5 分钟后降到 12 以下，这时再跑，95 个文件、810 个用例全绿。
+- **第二次**（v0.16 通知中心那一版，2026-10-31）：好几个会话同时在跑 Gradle 构建，负载到了 140 到 380。用默认 worker 数、再加上 `--testTimeout=30000` 放宽超时去跑全量，跑了近 7 个小时不结束：Vitest 一直在起新 worker，把整机负载拖到 300 到 400，最后被手动停掉。
+
+## 为什么放宽超时更糟
+
+<Params
+  title="同样的高负载下，两种调法"
+  guess={{ question: "机器负载 300 以上。把每个用例的超时从 5 秒放宽到 30 秒，全量测试会怎样？", options: ["变慢一点，但能全绿跑完", "照样随机失败", "可能几个小时都不结束"], answer: "C", explain: "超时放宽后，卡住的 worker 也不会失败退出，Vitest 继续起新 worker，负载越推越高，整轮就挂在那里。v0.16 那次跑了近 7 小时。" }}
+  controls={[
+    { type: "switch", id: "timeout", label: "放宽超时：`--testTimeout=30000`", default: false },
+    { type: "switch", id: "workers", label: "限 worker 数：`--maxWorkers=2`", default: false }
+  ]}
+  cases={[
+    { when: { workers: true }, results: [{ label: "结果", value: "约 4 分钟全绿（355 个文件）", tone: "ok" }, { label: "超时", value: "默认 5 秒就够", tone: "ok" }], verdict: { tone: "ok", head: "这才是解法。", text: "worker 少了，每个 worker 分到的 CPU 够用，默认超时内就能跑完。" } },
+    { when: { timeout: true }, results: [{ label: "结果", value: "近 7 小时不结束", tone: "bad" }, { label: "负载", value: "被拖到 300～400", tone: "bad" }], verdict: { tone: "bad", head: "越放宽越糟。", text: "卡住的 worker 不再超时失败，Vitest 不停起新的，整机越来越慢。" } },
+    { results: [{ label: "结果", value: "随机超时，每次失败的用例不同", tone: "bad" }, { label: "负载", value: "远高于核数", tone: "wait" }], verdict: { tone: "bad", head: "随机失败。", text: "默认 worker 数按核数来，CPU 被别人占着时，每个 worker 都分不到时间。" } }
+  ]}
+/>
+
+## 怎么避开
+
+全量测试一律限住 worker 数：
+
+```bash
+pnpm exec vitest run --maxWorkers=2
+```
+
+v0.16 那次换成这条命令后，同样的负载下用默认 5 秒超时，约 4 分钟全绿（355 个文件、3457 个用例）。
+
+- 不要靠加 `--testTimeout` 硬跑全量。
+- 运行在 node 环境、不渲染组件的测试受影响小，可以先跑。
+- 单个文件的第一个用例偶发超过 5 秒、重跑能过的，算负载，在汇报里写明，不改代码。
+
+<Transfer
+  prompt="后端的 Gradle 测试也在负载高时偶发超时。你会照搬「限并行数」的做法吗？要先确认哪些事？"
+  points={[
+    { label: "先确认是负载", text: "看失败是否随机分布、负载是否远高于核数；没改动的模块单独重跑能否通过。" },
+    { label: "找到并行旋钮", text: "Gradle 有并行测试进程数（maxParallelForks）和 --max-workers，限小它们的效果与 Vitest 限 worker 数相同。" },
+    { label: "不放宽超时", text: "超时用来发现卡死的测试，放宽它只会让问题更晚暴露。" }
+  ]}
+/>

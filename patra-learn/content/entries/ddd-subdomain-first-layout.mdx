@@ -1,0 +1,123 @@
+---
+title: 层内先按子域分包
+summary: 六个服务原来有六种分包写法。Patra 定下「Gradle 模块按层、模块内先按子域、再按组件类型」，用 ArchUnit 规则在构建里强制，五个服务一次迁完。
+type: decision
+difficulty: practice
+tags: [ddd, java]
+prerequisites: [ddd-subdomains]
+topics: [service-boundaries]
+sources:
+  - version: v0.15
+    pr: 313
+personalEnv: false
+---
+
+<Diagnose
+  question="interaction 服务里有「讨论」和「收藏夹」两个子域。收藏夹的代码想拿某条评论的数据，按 Patra 的规则，能直接调讨论子域的 CommentRepository 吗？"
+  options={["能，同一个服务里随便用", "不能，只能经讨论子域公开的读端口、读模型或事件", "能，只要在同一个事务里"]}
+  answer="B"
+  ifRight="对。子域是服务内部的业务边界，跨子域只能走对方公开的那几个包。下面讲这条边界怎么落到包结构上、又怎么被构建守住。"
+  ifWrong="答案是 B。子域之间也有边界：对方的仓储、实体、用例都是内部实现，只能经它在领域层公开的读端口（port.read）、读模型（model.read）和事件（event）交互。这题考的是子域的概念。"
+/>
+
+## 背景：六个服务六种写法
+
+2026-10-29 盘点时，Patra 的后端服务各分各的：
+
+| 服务 | 分包取向 |
+|---|---|
+| interaction | 层模块内子域优先，ArchUnit 守子域边界 |
+| identity | 领域层、基础设施层按类型，应用层按子域 |
+| catalog | 按类型，应用层里再按子域 |
+| ingest | 按类型，十几种职责包混在一起 |
+| registry | 按类型，没有用例层 |
+| object-storage | 按类型 |
+
+起因是写新代码（interaction）时发现它和老模块（catalog）的分包逻辑对不上。放任漂移的原因有三个：分层规则文件的路径写错了，从来没有被自动加载；ArchUnit 只在 interaction 守包结构；规则文件、技能模板、各服务 README 彼此矛盾，也和代码不符。
+
+## 选项
+
+<DecisionOptions
+  options={[
+    { name: "按组件类型分", summary: "所有 Handler 一个包、所有 Repository 一个包、所有 Controller 一个包。", pros: "新人一眼看懂，找某类组件方便。", cons: "改一个功能要在好几个包之间跳；子域边界看不出来，也守不住。调研里用这种写法的样本，要么只有一个子域，要么是领域逻辑很薄的增删改查。" },
+    { name: "层模块内子域优先", summary: "Gradle 模块按层（domain、app、infra、adapter），每个模块里第一级包是子域，子域下再按组件类型。", pros: "一个子域的代码聚在一起，改一个功能只动一处；子域以后要整体拆出去也容易。阿里 COLA 3.1、美团的 DDD 实践都是这样。", cons: "单子域的小服务也要多一层包；跨子域依赖要显式声明。", chosen: true },
+    { name: "Spring Modulith 的模块", summary: "让 Modulith 按顶层包识别模块并检查边界。", pros: "现成的边界检查。", cons: "它只认「顶层包就是模块」，识别不了「层模块里再套子域包」这种结构。" }
+  ]}
+/>
+
+## 选择：模板
+
+`{根}` 是服务的根包，`{子域}` 是服务声明的子域名：
+
+```
+{根}.domain.{子域}   model / policy / service / event / exception / port
+{根}.app.{子域}      usecase.<用例族> / usecase.query / service / listener / config
+{根}.infra.{子域}    persistence / <与端口同名的协作者包> / support / config
+{根}.adapter.{子域}  rest / internal / scheduler / mq / config
+{根}.api.{子域}      endpoint / dto / event
+```
+
+<CodeRef at=".claude/rules/tech/package-layout.md@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="9-46" />
+
+子域之间的规矩：
+
+- **底座**（DDD 里叫共享内核）：每个服务恰好一个，对同服务其他子域完全公开，自己不依赖任何其他子域，**只放被两个以上子域共用的东西**。业务上有自然的公共概念就用业务名（interaction 的 `subject`、identity 的 `session`），没有就叫 `kernel`。
+- **普通子域**只公开领域层的三个包：`port.read`、`model.read`、`event`。
+- **跨子域的写**不直接调对方仓储：发本子域的事件，对方用同步监听器在同一个事务里处理。
+- 跨子域依赖要在架构测试里声明，子域之间不许成环。
+
+<Quiz
+  questions={[
+    {
+      question: "identity 有 account（账号）和 session（会话，底座）两个子域。`IpAddressScope`（判断 IP 属于公网还是内网）原来放在 account 里，可 session 的查询也要用它。迁移时它该放哪？",
+      options: ["留在 account，session 声明一条依赖 account 的边", "挪进 session 底座，因为两个子域都用", "复制一份到 session"],
+      answer: "B",
+      explain: "底座不能依赖普通子域，而「被两个以上子域共用」正是进底座的条件。identity 迁移时，一批这样放错位置的公共件全部归进了 session。"
+    }
+  ]}
+/>
+
+## 机器强制
+
+规则写进 `patra-tool-test` 的 `SubdomainArchitectureRules`，共 9 条：层下面只能是已声明的子域、子域下的包必须在白名单里、基础设施层的包名要和领域层的端口包同名、跨子域只经公开包、依赖边要声明、底座不依赖别人、子域之间无环、每个声明的子域在领域层都有类、层外的类只放根包和配置包。每个服务的架构测试声明自己的子域、底座和依赖边，然后执行 `allRules()`：
+
+<CodeRef at="patra-api/patra-notification/patra-notification-boot/src/test/java/dev/patra/notification/architecture/NotificationArchitectureTest.java@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="42-57" />
+
+```java
+private static final SubdomainArchitectureRules subdomainRules =
+    new SubdomainArchitectureRules("dev.patra.notification", FOUNDATION, Set.copyOf(SUBDOMAINS))
+        .allowingDependency("realtime", "inbox")
+        .allowingDependency("mail", "inbox")
+        .allowingDependency("mail", "preference");
+```
+
+起了白名单之外的包名、跨子域碰了对方内部的类，`./gradlew check` 就失败。
+
+## 五个服务怎么迁过去
+
+catalog、identity、registry、object-storage、interaction 五个服务在一个 PR（#313）里迁完，ingest 因为去留未定没有迁（后来整个删了）。迁移给自己定了几条「技术上做完了也算失败」的反目标：
+
+- 迁移改变了运行时行为。只允许少数几处等价改写，比如跨子域写改成同事务的同步事件、新增读端口代替直接读对方的数据访问对象。
+- 为了过规则造空壳包或空壳子域。
+- 子域切得过碎：一个子域只有一两个类，却要在每一层各建一个包。
+- 规则里的例外清单越写越长。出现例外，先怀疑子域划错了。
+- 底座变成杂物间：只被一个子域用的东西也放进底座。
+
+## 代价
+
+<Callout kind="cost">
+
+- 单子域的服务也要多一层包（把唯一的子域声明为底座）。
+- 每新增一个子域，都要改该服务架构测试里的子域清单。
+- ArchUnit 只看 Java 类型依赖，看不见 SQL。读适配器可以用 SQL 读本服务库里任何一张表，这一层边界靠约定（不 import 对方的实体、数据访问对象、行类型）。
+
+</Callout>
+
+<Transfer
+  prompt="interaction 以后要做「关注」：用户可以关注别的用户。你会把它放进底座 subject，新建一个 follow 子域，还是塞进 discussion？依据 Patra 的规则说出理由，以及它和 discussion 之间该怎么交互。"
+  points={[
+    { label: "新建子域", text: "关注有自己的数据和规则（谁关注谁、取消关注），是一块独立业务，适合新建 follow 子域，并在架构测试的清单里登记。" },
+    { label: "不进底座", text: "底座只放被两个以上子域共用的东西；关注目前只有它自己用，放进底座会让底座变成杂物间。" },
+    { label: "经公开包交互", text: "关注动态要知道有新评论，就订阅 discussion 的事件（声明一条订阅边），不直接调 discussion 的仓储。" }
+  ]}
+/>
