@@ -30,3 +30,7 @@ entries:
   - spring-batch-context-java-types-only
   - spring-stepscope-proxy-fields
   - spring-flush-order-insert-before-delete
+  - java-jvm-proxy-no-cidr
+  - java-ide-and-gradle-share-build-dir
+  - java-gjf-breaks-markdown-doc-comments
+  - spring-nacos-raft-hostname-changed

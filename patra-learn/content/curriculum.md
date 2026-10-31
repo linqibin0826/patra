@@ -50,6 +50,7 @@
 | web-gateway-sse-buffered | 网关把事件流攒住了 | 排查 | 实战 | web-server-push-and-sse | 推送经网关后迟迟不到：底层客户端读满 16 KB 才返回，推送路由改成逐字节读、按事件刷出 | `config/PushProxyHandlerFunction.java`、`GatewayPushRouteIT.java`；排查记录 | PAP-161 |
 | web-gateway-lb-invalid-scheme | 网关报 Invalid scheme [lb] | 排查 | 实战 | web-reverse-proxy-and-gateway、spring-service-discovery | 换了底层 HTTP 客户端工厂后 `lb://` 不再被解析；客户端工厂的设置顺序 | 排查记录；`IdentityClientConfiguration.java`、`patra-tool-http-client/.../HttpClientInterfaceAutoConfiguration.java`（写作时核对修复落点） | PAP-161 |
 | web-security-adds-cache-control | 代理的响应被补上了 Cache-Control | 坑 | 实战 | http-caching、web-reverse-proxy-and-gateway | 安全框架默认给响应加禁止缓存的头，连转发的下游响应也加 | `security/GatewaySecurityConfiguration.java`；排查记录 | PAP-161 |
+| web-no-proxy-matches-ip-literal-only | no_proxy 的网段只管 IP 字面量，不管主机名 | 坑 | 实战 | web-reverse-proxy-and-gateway、web-url-anatomy | 命令行工具只认代理环境变量、不看代理软件的规则；网段只和网址里的 IP 比，主机名不先解析 | 排查记录（shell no_proxy、fake-ip 排查里的误判） | PAP-161 |
 
 ### 1.2 数据库与事务（主路线 `database`）
 
@@ -110,6 +111,10 @@
 | spring-batch-context-java-types-only | Batch 上下文只认 java.* 类型 | 坑 | 实战 | spring-batch-jobs | 往 ExecutionContext 里放自定义类型，重启时反序列化失败 | 计划缺陷清单 | PAP-161 |
 | spring-stepscope-proxy-fields | @StepScope 代理别碰字段 | 坑 | 实战 | spring-batch-jobs、spring-proxies-and-transactional | 拿到的是代理，直接读字段读到的是代理自己的空字段 | `PubmedImportCounters.java`、`PubmedImportJobConfig.java`；计划缺陷清单 | PAP-161 |
 | spring-flush-order-insert-before-delete | 先删后插却撞了唯一约束 | 坑 | 实战 | spring-jpa-basics、db-constraints-and-null | Hibernate flush 时先插后删，派生 delete 方法挡不住唯一键冲突 | 计划缺陷清单 | PAP-161 |
+| java-jvm-proxy-no-cidr | JVM 的代理例外列表不认 CIDR | 坑 | 实战 | web-reverse-proxy-and-gateway、spring-http-interface-clients | macOS 的 JDK 继承系统代理与例外列表；`nonProxyHosts` 只认通配符，网段写法全部失效 | 排查记录（v0.8 PAP-69 本机对照） | PAP-161 |
+| java-ide-and-gradle-share-build-dir | IDE 和命令行 Gradle 同时写 build 目录 | 坑 | 实战 | java-build-with-gradle | 两个进程删写同一个输出目录，冒出说不通的编译错误；先查第二个编译进程 | 排查记录（IDEA 自动构建、构建脚本自动重新加载） | PAP-161 |
+| java-gjf-breaks-markdown-doc-comments | 格式化工具把 /// 文档注释折成了 // | 坑 | 实战 | ops-commit-conventions | google-java-format 不认 `///`，超长行的续行补 `//`，文档注释断成两段且不报错 | 排查记录（v0.7 PAP-52，PR #192） | PAP-161 |
+| spring-nacos-raft-hostname-changed | 容器重建后 Nacos 选不出 leader | 排查 | 实战 | spring-service-discovery、ops-docker-compose | Raft 成员按主机名认人；容器重建换了主机名，持久化的名单对不上；AP 与 CP 两套机制 | `patra-infra/docker/docker-compose.core.yaml` 的 `hostname: patra-nacos`；排查记录 | PAP-161 |
 
 ### 1.4 消息与事件（主路线 `messaging`）
 
@@ -213,6 +218,10 @@
 | ops-bash32-fullwidth-punctuation | 一个全角标点炸了整个脚本 | 坑 | 实战 | ops-scheduled-watchdog | macOS 自带 bash 3.2 把紧跟变量的全角字符并进变量名；变量一律加大括号 | 旧事故档案 #5 | PAP-160 |
 | ops-typo-reports-success | 服务名拼错，流水线却报部署成功 | 坑 | 实战 | ops-rollback | 脚本静默跳过不认识的服务名再报成功；入参校验，不认识就拒绝 | 旧事故档案 #6 | PAP-160 |
 | ops-solo-ops-restraint | 单人环境的运维克制：拆掉独立通知通道 | 决策 | 实战 | ops-scheduled-watchdog | 告警要有人看才有用；一个人的项目不套生产级运维模板 | 旧站「通知哲学」 | PAP-160 |
+| ops-proxy-dial-timeout-as-tls-handshake | 代理拨号超时，被 JVM 报成 TLS 握手被断 | 排查 | 实战 | java-jvm-proxy-no-cidr、http-https-and-certificates | 代理先回 200 再拨上游，拨号超时关隧道；JVM 报握手被断，Gradle 不重试这种异常 | 排查记录（v0.13 后端 CD 失败） | PAP-161 |
+| ops-ssh-controlmaster-forward-exits | 开了连接复用，ssh -N -L 转发立刻就退出了 | 坑 | 实战 | web-client-server-and-ports | ControlMaster 把转发交给主连接后退出；要独立转发就关掉这次的复用 | 排查记录（v0.8 收尾测线上容器） | PAP-161 |
+| ops-precommit-stashes-unstaged | 提交时 pre-commit 会先把没暂存的改动藏起来 | 坑 | 实战 | ops-commit-conventions | 钩子运行期间没暂存的改动被撤掉再还原，别的进程同时写会冲突或丢失 | 排查记录（v0.8 PAP-63） | PAP-161 |
+| ops-zsh-is-not-bash | zsh 不是 bash：三处按 bash 习惯写就错的地方 | 坑 | 实战 | ops-bash32-fullwidth-punctuation | 变量不分词、小写 path 即 PATH、变量后的冒号是修饰符 | 排查记录（v0.13 PAP-115、v0.16 PAP-128） | PAP-161 |
 
 ### 1.8 前端（主路线 `frontend`）
 
@@ -242,6 +251,7 @@
 | fe-dnd-kit-needs-useid | 拖拽库不给 id 就水合不一致 | 坑 | 实战 | fe-hydration | 自动生成的 id 在服务端和客户端不同；用 useId | `MeshInterestPicker.tsx`；计划缺陷清单 | PAP-161 |
 | fe-combobox-item-press | 组合框点选后没回填 | 坑 | 实战 | fe-react-hooks-and-effects | 无样式组件库的选中事件与输入框回填 | `patra-portal/src/components/settings/profile/MeshInterestPicker.tsx`、`OrganizationPicker.tsx`；计划缺陷清单 | PAP-161 |
 | fe-extension-hydration-mismatch | 浏览器扩展改了 `<html>`，开发模式报水合不一致 | 坑 | 实战 | fe-hydration | 差异来自翻译类扩展加的属性，不是代码问题；怎么分辨 | 排查记录 | PAP-161 |
+| fe-next15-build-clobbers-dev | Next 15 及以前，next build 会弄坏正在跑的 next dev | 坑 | 实战 | fe-nextjs-pages-and-routing | dev 与 build 共用 `.next`，build 覆盖 dev 正在用的文件；Next 16 起输出分开 | 排查记录（v0.8 PAP-59 升级前后实测） | PAP-161 |
 
 ## 2. 路线（按阅读顺序）
 
@@ -272,6 +282,7 @@ order 1｜从「打开一个网页时发生了什么」读到网关、限流与�
 19. web-gateway-sse-buffered（实战）
 20. web-gateway-lb-invalid-scheme（实战）
 21. web-security-adds-cache-control（实战）
+22. web-no-proxy-matches-ip-literal-only（实战）
 
 ### 2.2 数据库与事务 `database`
 
@@ -335,6 +346,10 @@ order 3｜从「Java 程序怎么跑起来」读到依赖注入、自动配置�
 26. spring-batch-context-java-types-only（实战）
 27. spring-stepscope-proxy-fields（实战）
 28. spring-flush-order-insert-before-delete（实战）
+29. java-jvm-proxy-no-cidr（实战）
+30. java-ide-and-gradle-share-build-dir（实战）
+31. java-gjf-breaks-markdown-doc-comments（实战）
+32. spring-nacos-raft-hostname-changed（实战）
 
 ### 2.4 消息与事件 `messaging`
 
@@ -440,6 +455,10 @@ order 7｜从「代码怎么变成线上服务」读到 CI 流水线、CD 部署
 25. ops-bash32-fullwidth-punctuation（实战）
 26. ops-typo-reports-success（实战）
 27. ops-solo-ops-restraint（实战）
+28. ops-proxy-dial-timeout-as-tls-handshake（实战）
+29. ops-ssh-controlmaster-forward-exits（实战）
+30. ops-precommit-stashes-unstaged（实战）
+31. ops-zsh-is-not-bash（实战）
 
 ### 2.8 前端 `frontend`
 
@@ -472,6 +491,7 @@ order 8｜从「网页由什么组成」读到服务端组件、水合与 Route 
 25. fe-combobox-item-press（实战）
 26. fe-extension-hydration-mismatch（实战）
 27. test-e2e-wait-for-hydration（实战）↗
+28. fe-next15-build-clobbers-dev（实战）
 
 ### 2.9 主题
 
@@ -487,7 +507,17 @@ order 8｜从「网页由什么组成」读到服务端组件、水合与 Route 
 
 ## 3. 不进路线的条目
 
-按决策 E，「个人环境」条目（只跟作者本机或家里网络有关的排查，例如本机 JVM 继承系统代理、本机代理劫持域名解析、本机防火墙拦截内置浏览器、部署机后台启动缺 docker.sock）不进路线、不进首页推荐，只在「个人环境」标签页可见。它们由 PAP-161 在自己的材料清单里逐条盘点并决定转不转，本大纲不列篇目，也不受第 5 节的路线检查约束。
+按决策 E，「个人环境」条目（`personalEnv: true`）不进路线、不进首页推荐，只在标签页可见，也不受第 5 节的路线检查约束。判定标准按维护技能：读者要装上作者同款工具组合（代理软件、出站防火墙、OrbStack、Tailscale 与 TUN 共存）才会碰到的，标个人环境；机制本身通用的（如 JVM 的代理例外列表不认 CIDR、shell 的 no_proxy 只匹配 IP 字面量）写成普通条目进路线，见第 1 节各表归属 PAP-161 的行。
+
+PAP-161 盘点 Agent 记忆里的排查记录后写了下面 5 篇（2026-10-31）：
+
+| slug | 标题 | 类型 | 难度 | 前置 | 讲什么 | 例子 | 归属 |
+|---|---|---|---|---|---|---|---|
+| env-fake-ip-hijacks-tailnet-names | 代理软件把内网主机名解析成假地址，每次打开都卡 6 秒 | 排查 | 实战 | web-what-happens-opening-a-page、web-reverse-proxy-and-gateway | fake-ip 接管 DNS，VPN 主机名得到假地址，经代理等超时才回退真地址；三条 curl 对照 | 排查记录 | PAP-161 |
+| env-firewall-blocks-app-dns | 按进程拦截的防火墙，让一个应用里的网页只剩 HTML | 排查 | 实战 | web-what-happens-opening-a-page | 出站防火墙对 Claude 进程全部拦截，内置浏览器的 DNS 预检被丢；终端正常不代表别的进程正常 | 排查记录 | PAP-161 |
+| env-orbstack-background-no-docker-sock | SSH 上去启动 OrbStack，CD 却连不上 docker | 坑 | 实战 | ops-docker-images-and-containers、ops-self-hosted-runner | 后台模式启动不建 `/var/run/docker.sock`；自定义 `DOCKER_CONFIG` 没有 context，只能连默认 socket | 排查记录 | PAP-161 |
+| env-proxy-stale-state-looks-like-port-block | 代理改完配置后的旧状态，伪装成了「按端口拦截」 | 排查 | 实战 | web-client-server-and-ports、env-fake-ip-hijacks-tailnet-names | 旧连接与假地址缓存要几小时才过期；三视角对照、新端口对照实验 | 排查记录 | PAP-161 |
+| env-vpn-route-taken-by-proxy-tun | ping 只要 0.5 毫秒：VPN 的路由被代理的虚拟网卡抢走了 | 排查 | 实战 | web-client-server-and-ports、env-fake-ip-hijacks-tailnet-names | 绑定网卡的路由普通流量查不到，落进 TUN 的大网段；看延迟判断包出没出本机 | 排查记录 | PAP-161 |
 
 ## 4. 旧学习站内容的去处
 
@@ -556,34 +586,34 @@ order 8｜从「网页由什么组成」读到服务端组件、水合与 Route 
 
 ### 5.1 分工汇总
 
-（由第 1 节统计，篇目数按难度分布）
+（由第 1 节统计，篇目数按难度分布；PAP-161 收尾时按记忆里的排查记录加了 10 篇路线条目，已计入。第 3 节的 5 篇个人环境条目不进路线，不计入下表）
 
 | 写作 Issue | 负责路线 | 篇数 | 入门 | 基础 | 进阶 | 实战 |
 |---|---|---|---|---|---|---|
 | PAP-158 | Web 与 HTTP、数据库与事务、Java 与 Spring | 53 | 8 | 25 | 20 | 0 |
 | PAP-159 | 消息与事件、DDD 与六边形 | 27 | 3 | 9 | 15 | 0 |
 | PAP-160 | 测试、部署与 CI/CD（含旧课程改写）、前端 | 57 | 5 | 19 | 25 | 8 |
-| PAP-161 | 由已有材料转写的决策 / 排查 / 坑（分布在 8 条路线） | 40 | 0 | 0 | 3 | 37 |
-| **合计** | | **177** | 16 | 53 | 63 | 45 |
+| PAP-161 | 由已有材料转写的决策 / 排查 / 坑（分布在 8 条路线） | 50 | 0 | 0 | 3 | 47 |
+| **合计** | | **187** | 16 | 53 | 63 | 55 |
 
-类型分布：概念 128、坑 26、决策 16、排查 7。PAP-160 的 8 篇实战全部来自旧课程（6 个旧事故 + 本机打包决策 + 通知哲学决策）。
+类型分布：概念 128、坑 34、决策 16、排查 9。PAP-160 的 8 篇实战全部来自旧课程（6 个旧事故 + 本机打包决策 + 通知哲学决策）。
 
 | 路线 | 篇数 | 入门 | 基础 | 进阶 | 实战 |
 |---|---|---|---|---|---|
-| Web 与 HTTP | 21 | 3 | 8 | 7 | 3 |
+| Web 与 HTTP | 22 | 3 | 8 | 7 | 4 |
 | 数据库与事务 | 25 | 2 | 8 | 10 | 5 |
-| Java 与 Spring | 28 | 3 | 9 | 9 | 7 |
+| Java 与 Spring | 32 | 3 | 9 | 9 | 11 |
 | 消息与事件 | 17 | 1 | 4 | 8 | 4 |
 | DDD 与六边形 | 21 | 2 | 5 | 8 | 6 |
 | 测试 | 20 | 1 | 6 | 6 | 7 |
-| 部署与 CI/CD | 27 | 2 | 6 | 11 | 8 |
-| 前端 | 27 | 2 | 8 | 9 | 8 |
+| 部署与 CI/CD | 31 | 2 | 6 | 11 | 12 |
+| 前端 | 28 | 2 | 8 | 9 | 9 |
 
 跨路线篇目 9 篇（第 2 节标 ↗），只由归属 Issue 写一次。
 
 ### 5.2 PAP-158 与 PAP-160 的写作分组
 
-两个 Issue 按主路线切成 5 组，每组一个写作会话。PAP-159（27 篇）与 PAP-161（40 篇）不再分组。
+两个 Issue 按主路线切成 5 组，每组一个写作会话。PAP-159（27 篇）与 PAP-161（50 篇，另有个人环境 5 篇）不再分组。
 
 | 组 | 组名 | 篇数 | 篇目（按总表顺序） |
 |---|---|---|---|
@@ -600,7 +630,7 @@ order 8｜从「网页由什么组成」读到服务端组件、水合与 Route 
 
 ### 5.3 自检
 
-用脚本对第 1、2 节逐项检查（2026-10-31，结果：全部通过）：
+用脚本对第 1、2 节逐项检查（2026-10-31，结果：全部通过；表中「177 篇」是当时的篇数。PAP-161 收尾时加的 10 篇路线条目与 5 篇个人环境条目，由 `pnpm test` 的跨篇规则检查，同日全绿）：
 
 | 检查 | 结果 |
 |---|---|

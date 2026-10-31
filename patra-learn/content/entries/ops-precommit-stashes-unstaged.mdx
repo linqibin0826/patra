@@ -1,0 +1,77 @@
+---
+title: 提交时 pre-commit 会先把没暂存的改动藏起来
+summary: pre-commit 发现工作区有没暂存的改动，会先把它们存成一个补丁、从工作区撤掉，跑完钩子再贴回去。这几秒里如果有别的进程正在写这些文件，写入可能冲突或被覆盖，而写的那一方察觉不到。
+type: pitfall
+difficulty: practice
+tags: [git, ci-cd]
+prerequisites: [ops-commit-conventions]
+sources:
+  - version: v0.8
+    issue: PAP-63
+personalEnv: false
+---
+
+<Diagnose
+  question="你只 `git add` 了 A 文件准备提交，B 文件也改了但没暂存。提交时 pre-commit 要跑格式化钩子。钩子运行的那几秒里，工作区里的 B 是什么样？"
+  options={["还是你改过的样子，钩子不碰没暂存的文件", "临时变回了上次提交时的样子", "被钩子一起格式化了"]}
+  answer="B"
+  ifRight="对。为了让钩子只检查「要提交的那份」，pre-commit 先把 B 的改动存成补丁、从工作区撤掉，跑完再贴回来。往下读这什么时候会出事。"
+  ifWrong="答案是 B。钩子检查的是工作区里的文件，为了让它看到的正好是暂存区那一份，pre-commit 会把没暂存的改动先藏起来。这题考的是提交前钩子在什么时候、对哪些文件运行，先读提交规范那篇。"
+  suggest="ops-commit-conventions"
+/>
+
+<Callout kind="lead" label="坑在哪">
+
+提交时工作区里有没暂存的改动，pre-commit 会打印：
+
+```text
+[WARNING] Unstaged files detected.
+[INFO] Stashing unstaged files to ~/.cache/pre-commit/patch….
+```
+
+接着把这些改动撤掉，跑完钩子再还原。如果这几秒里有别的进程（编辑器、后台脚本、另一个 Agent）正在写这些文件，还原时可能冲突，也可能把那次写入覆盖掉，写的那一方完全不知道。
+
+</Callout>
+
+## 为什么要藏
+
+钩子（格式化、检查行尾空格、扫密钥）读的是工作区里的文件。如果不藏，它看到的是「暂存的 + 没暂存的」混在一起的样子，检查通过了，真正提交进去的那份却可能不合格。所以 pre-commit 先让工作区和暂存区一致，检查完再把你的半成品放回来。
+
+<Stepper
+  title="一次提交里，B 文件经历了什么"
+  nodes={[
+    { id: "work", label: "工作区里的 B" },
+    { id: "patch", label: "补丁文件", sub: "~/.cache/pre-commit" },
+    { id: "other", label: "另一个进程", sub: "正在改 B" }
+  ]}
+  links={[
+    { from: "work", to: "patch" },
+    { from: "other", to: "work" }
+  ]}
+  steps={[
+    { caption: "提交开始。B 里有你没暂存的改动。", focus: ["work"], notes: [{ at: "work", text: "你的改动", tone: "ok" }] },
+    { caption: "pre-commit 把 B 的改动存成补丁，工作区里的 B 退回上次提交的样子。", focus: ["work", "patch"], links: ["work>patch"], notes: [{ at: "work", text: "上次提交的样子", tone: "wait" }, { at: "patch", text: "你的改动", tone: "ok" }] },
+    { caption: "钩子在跑。这时另一个进程往 B 里写了一段新内容。", focus: ["work", "other"], links: ["other>work"], notes: [{ at: "work", text: "旧内容 + 新写入", tone: "wait" }, { at: "patch", text: "你的改动", tone: "ok" }] },
+    { caption: "钩子跑完，pre-commit 要把补丁贴回 B，可 B 已经不是它藏起来时的样子了。", focus: ["work", "patch"], notes: [{ at: "work", text: "冲突或被覆盖", tone: "bad" }] }
+  ]}
+  guesses={[
+    { before: 4, question: "补丁贴回去时，B 已经被别的进程改过。另一个进程会知道自己的写入出了问题吗？", options: ["会，pre-commit 会通知它", "不会，它早就写完走了", "会，git 会锁住文件不让它写"], answer: "B", explain: "pre-commit 不知道还有别的写入者，git 也不锁工作区文件。写的那一方以为写成功了。" }
+  ]}
+/>
+
+v0.8 做 PAP-63 时，一个子代理正在改计划文件，作者同时提交了另一个任务的改动。计划文件没暂存，被藏起来又还原了。那几秒子代理恰好没写，才没出事。
+
+## 怎么避开
+
+- 有子代理、后台脚本或别的会话正在改仓库里的已跟踪文件时，先别提交，等它们停下。
+- 按任务分批提交，只 `git add` 本任务的路径，提交前用 `git diff --cached --name-only` 核对。
+- 钩子改了文件（格式化、去行尾空格）导致提交失败时，重新 `git add` 本任务的文件再提交，不要用 `--no-verify` 跳过钩子。
+
+<Transfer
+  prompt="你在编辑器里开着自动保存，一边改代码一边在终端里提交。偶尔发现刚写的几行代码不见了，或者文件里出现了奇怪的冲突标记。这和本篇是一回事吗？还有哪些工具会在提交时临时改动工作区？"
+  points={[
+    { label: "是同一类", text: "自动保存在 pre-commit 藏起改动的那几秒里写了文件，还原时冲突或覆盖。" },
+    { label: "怎么防", text: "提交前先保存好、停一下；或者把要提交的全部暂存，工作区里不留没暂存的改动，就没有东西需要藏。" },
+    { label: "同类工具", text: "lint-staged 等「只检查暂存内容」的工具也会临时藏起没暂存的改动；`git stash` 本身更是如此。" }
+  ]}
+/>

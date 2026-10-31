@@ -29,3 +29,7 @@ entries:
   - ops-bash32-fullwidth-punctuation
   - ops-typo-reports-success
   - ops-solo-ops-restraint
+  - ops-proxy-dial-timeout-as-tls-handshake
+  - ops-ssh-controlmaster-forward-exits
+  - ops-precommit-stashes-unstaged
+  - ops-zsh-is-not-bash

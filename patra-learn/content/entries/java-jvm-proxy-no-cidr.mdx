@@ -1,0 +1,98 @@
+---
+title: JVM 的代理例外列表不认 CIDR
+summary: macOS 上的 JDK 会把系统代理和例外列表读进 http.proxyHost、http.nonProxyHosts。Java 的例外列表只认通配符，不认 100.64.0.0/10 这种网段写法，于是去内网的请求全被送进代理，拿回一个空的 503。curl 能通不代表 JVM 能通。
+type: pitfall
+difficulty: practice
+tags: [java, network]
+prerequisites: [web-reverse-proxy-and-gateway, spring-http-interface-clients]
+sources:
+  - version: v0.8
+    issue: PAP-69
+personalEnv: false
+---
+
+<Diagnose
+  question="开发机开着代理，系统设置里的「不走代理」列表写了 192.168.0.0/16。终端里 curl 一台局域网机器上的服务，200；本机起的 Java 服务调同一个地址，拿到 503，响应头里有 Proxy-Connection。问题更可能出在哪？"
+  options={["那台局域网机器上的服务坏了", "Java 这边的请求被送进了代理", "Java 的 HTTP 客户端不支持 HTTP/1.1"]}
+  answer="B"
+  ifRight="对。目标服务对 curl 是好的；`Proxy-Connection` 这个头只有代理才会回。往下读：为什么同一份例外列表，curl 认、Java 不认。"
+  ifWrong="答案是 B。同一个地址 curl 能通，说明目标服务没坏；响应里带 `Proxy-Connection`，说明 Java 的请求根本没到目标，到的是代理。这题考的是正向代理站在客户端和目标之间这件事。"
+  suggest="web-reverse-proxy-and-gateway"
+/>
+
+<Callout kind="lead" label="坑在哪">
+
+macOS 上的 JDK 启动时会把系统代理读成 `http.proxyHost` / `https.proxyHost` / `socksProxyHost`，把系统的例外列表照抄进 `http.nonProxyHosts`。可 Java 的 `nonProxyHosts` 只认 `*` 通配符，不认 `100.64.0.0/10`、`192.168.0.0/16` 这种网段写法，抄过来的例外全部失效：去内网的请求一律进了代理。
+
+</Callout>
+
+## 当时看到什么
+
+v0.8 做本机与部署机的对照测试时，本机起的服务要连部署机上的 Nacos 和其他服务（部署机在 VPN 的地址段里，Nacos 注册的实例在局域网段里）。结果：
+
+- JDK `HttpClient`、Spring 的 `RestClient` 发出去的请求，全部拿回一个**空正文的 503**，响应头带 `Proxy-Connection: close`；
+- Nacos 3 的客户端（底层是 grpc-java）一直停在 `Client not connected, current status:STARTING`；
+- 同一台机器上，curl 访问这些地址全都正常。
+
+花了近一个小时才把注意力从「部署机上的服务坏了」挪到「Java 的请求走了哪条路」上。
+
+## 为什么
+
+两件事叠在一起：
+
+1. **JVM 会自动继承系统代理**。没在命令行写任何 `-Dhttp.proxyHost`，macOS 上的 JDK 也会从系统网络设置里读出代理地址和例外列表，填进这几个系统属性。你以为程序没配代理，其实已经配上了。
+2. **两种例外列表的语法不一样**。系统设置和 curl 的 `no_proxy` 都认网段；Java 的 `nonProxyHosts` 是一串用 `|` 隔开的主机名模式，只认开头或结尾的 `*`：
+
+| 写法 | 系统设置 / curl | Java `nonProxyHosts` |
+|---|---|---|
+| `192.168.0.0/16` | 认，整个网段直连 | 不认，当成一个叫这个名字的主机 |
+| `192.168.*` | 看具体程序 | 认，以 `192.168.` 开头的都直连 |
+| `localhost` | 认 | 认 |
+
+于是例外列表抄过来了，却一条都没生效。代理收到去内网地址的请求，连不上，回了个空的 503。gRPC 那边则是连接一直建不起来。
+
+<Quiz
+  questions={[
+    {
+      question: "下面哪种 `http.nonProxyHosts` 写法，能让 Java 访问 `192.0.2.7` 时不走代理？",
+      options: ["`192.0.2.0/24`", "`192.0.2.*`", "`192.0.2.1-192.0.2.254`"],
+      answer: "B",
+      explain: "Java 只认 `*` 通配符做前缀或后缀匹配。网段写法和范围写法都会被当成一个普通的主机名，匹配不上。"
+    },
+    {
+      question: "curl 通、Java 不通，为什么 curl 没被这个坑影响？",
+      options: ["curl 不支持代理", "curl 读的是环境变量 `http_proxy` / `no_proxy`，新版 curl 的 `no_proxy` 认网段", "curl 默认走 IPv6"],
+      answer: "B",
+      explain: "命令行工具不看系统网络设置，只认环境变量；而 JVM 读的是系统设置。两者走的根本不是同一套配置。"
+    }
+  ]}
+/>
+
+## 怎么避开
+
+起要连内网的 JVM（本地跑服务、跑测试）之前，用 `JAVA_TOOL_OPTIONS` 把三个例外列表都改成通配符写法。JVM 启动时会自动读这个环境变量：
+
+```bash
+NO_PROXY_HOSTS='localhost|127.*|100.*|192.168.*|172.*|10.*'
+export JAVA_TOOL_OPTIONS="-Dhttp.nonProxyHosts=${NO_PROXY_HOSTS} -Dhttps.nonProxyHosts=${NO_PROXY_HOSTS} -DsocksNonProxyHosts=${NO_PROXY_HOSTS}"
+```
+
+两点要留意：
+
+- 写进 shell 的启动文件也不一定够。作者自己的 shell 配置里早就有这一行，可 Agent 执行命令用的 shell 不加载那份配置，起出来的 JVM 照样踩坑。
+- 认出它的信号：**JVM 请求内网地址，拿到空的 503，响应头带 `Proxy-Connection`**。看到这个先想代理，别先去查目标服务。
+
+<Callout kind="warn">
+
+第三项的名字没有点：JDK 认的是 `socksNonProxyHosts`。当初写成 `socks.nonProxyHosts`，后来在部署机上查实它不生效，SOCKS 那条路照样进代理。详见另一篇：代理拨号超时被 JVM 报成 TLS 握手被断。
+
+</Callout>
+
+<Transfer
+  prompt="一个 Docker 容器里的 Java 服务要调同一个内网的另一个服务。容器的环境变量里有 `HTTPS_PROXY` 和 `NO_PROXY=10.0.0.0/8`，请求却还是被送进了代理。你会先怀疑什么？怎么改？"
+  points={[
+    { label: "Java 不看环境变量", text: "JVM 默认不读 `HTTPS_PROXY` / `NO_PROXY`，要看是谁把代理设进了 JVM（启动参数、框架、或者镜像里的 `JAVA_TOOL_OPTIONS`）。" },
+    { label: "网段写法对 Java 无效", text: "真正生效的是 `http.nonProxyHosts` 等系统属性，里面要写成 `10.*` 这种通配符，不能写 `10.0.0.0/8`。" },
+    { label: "先确认请求走了哪", text: "看响应头里有没有代理才会加的头，或在代理日志里找这条请求，确认是不是进了代理再改。" }
+  ]}
+/>

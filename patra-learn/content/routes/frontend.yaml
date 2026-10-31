@@ -29,3 +29,4 @@ entries:
   - fe-combobox-item-press
   - fe-extension-hydration-mismatch
   - test-e2e-wait-for-hydration
+  - fe-next15-build-clobbers-dev

@@ -1,0 +1,86 @@
+---
+title: 按进程拦截的防火墙，让一个应用里的网页只剩 HTML
+summary: Claude 桌面端内置浏览器打开外站，样式和字体加载不出，局域网和 VPN 里的地址干脆打不开；终端里 curl、dig 却一切正常。根因是本机的出站防火墙给 Claude 进程设了全部拦截，它自己发的 DNS 查询被丢了。
+type: troubleshooting
+difficulty: practice
+tags: [network]
+prerequisites: [web-what-happens-opening-a-page]
+personalEnv: true
+---
+
+<Diagnose
+  question="同一台电脑，终端里 curl 一个网站、dig 它的域名都正常；某个应用里打开同一个网站，HTML 出来了，样式、字体全加载不出。最值得先查的是什么？"
+  options={["网站的 CDN 坏了", "那个应用自己的网络流量是不是被单独拦了", "电脑的 DNS 服务器坏了"]}
+  answer="B"
+  ifRight="对。终端正常说明网站、DNS 服务器、出口都好；只有一个应用不正常，就要看针对这个进程的规则。往下读拦在哪一步。"
+  ifWrong="答案是 B。DNS 和网站对终端里的进程都是好的，坏的只在一个应用里，问题就出在这个应用自己的那条路上。这题考的是打开网页要先查域名再取资源，每个资源都可能走不同的路，先读打开网页那篇。"
+  suggest="web-what-happens-opening-a-page"
+/>
+
+<Callout kind="lead" label="结论先说">
+
+出站防火墙 LuLu 对 Claude 的几个进程（主程序、Helper、崩溃上报、更新器、Claude Code）都是「全部拦截」。内置浏览器加载每个跨域子资源前，会让 Claude 进程自己发一次 DNS 查询做预检；这些 UDP 53 的包被防火墙丢掉，等 20 秒超时，资源就被拦下。主文档走的是本机代理，防火墙默认放行本机回环，所以只有 HTML 能出来。
+
+- **怎么修**：保留「全部拦截」，只给 DNS 服务器的 53 端口和内网网段加按地址放行的规则
+- **值得记住**：终端里一切正常，不代表别的进程的网络也正常
+
+</Callout>
+
+背景：作者两天前装了 LuLu，并且有意把 Claude 设成全部拦截，当作断网保护（确保它只能经代理出网）。装了同款防火墙、同样设置的人才会碰到；值得带走的是「先按进程看」这个查法。
+
+## 现象
+
+- 内置浏览器打开外站：HTML 能出来，样式、字体加载不出；
+- 打开局域网或 VPN 里的地址：直接失败，导航报 `ERR_INVALID_HANDLE`；
+- 应用日志里有 `[PreviewContext] Blocked subresource to private-resolving host`；
+- 终端里 curl、dig 同样的地址，全部正常。
+
+症状很像代理或 fake-ip 出了问题，容易往那边走偏。
+
+## 怎么查
+
+<DebugTrail
+  steps={[
+    { hypothesis: "代理或 fake-ip 把这些名字解析坏了？", result: "终端里 dig 解析正常，curl 走代理、走直连都能取到资源。DNS 服务器和代理本身没问题，问题只在这个应用里。", verdict: "ruled-out" },
+    { hypothesis: "这个应用的 DNS 查询发出去了吗？", result: "`nettop -p <Claude 的进程号> -m udp` 看 Claude 进程到 DNS 服务器 53 端口的流：有流，但收发都是 0 字节。包发不出去。", verdict: "closer" },
+    { hypothesis: "谁丢的？", result: "打开 LuLu 的规则：Claude 的 5 条规则全是 Block、范围 `*:*`，其余一百多条规则都是 Allow。", verdict: "found" }
+  ]}
+/>
+
+## 根因
+
+<Structure
+  title="同一个页面，三种请求走了三条路"
+  nodes={[
+    { id: "app", label: "内置浏览器", sub: "Claude 进程", col: 1, desc: "主文档、子资源的 DNS 预检、内网地址，分别走不同的路。" },
+    { id: "proxy", label: "本机代理", sub: "回环地址", col: 2, row: 1, desc: "主文档交给本机代理。防火墙默认放行本机回环，所以 HTML 能拿到。" },
+    { id: "dns", label: "DNS 服务器", sub: "UDP 53", col: 2, row: 2, desc: "子资源加载前，Claude 进程自己发 DNS 查询预检。这些包被防火墙丢掉，20 秒超时后资源被拦。" },
+    { id: "lan", label: "内网地址", sub: "代理例外，直连", col: 2, row: 3, desc: "局域网和 VPN 网段在代理的例外列表里，走直连，同样被防火墙丢掉。" }
+  ]}
+  edges={[
+    { from: "app", to: "proxy", label: "放行" },
+    { from: "app", to: "dns", label: "被丢", dashed: true },
+    { from: "app", to: "lan", label: "被丢", dashed: true }
+  ]}
+/>
+
+终端里的 curl、dig 是别的进程，防火墙里它们是放行的，所以怎么试都正常。
+
+## 修法
+
+全部拦截是有意设的，不改成放行。只在它前面加几条按地址放行的规则（作者在防火墙里自己操作）：
+
+- Claude 主进程 → 本机用的几个 DNS 服务器的 53 端口；
+- Claude Helper → 局域网网段、VPN 网段。
+
+再遇到内置浏览器加载问题，先查防火墙里 Claude 的规则，再用 `nettop` 看 53 端口的流是不是 0 字节。
+
+<Transfer
+  prompt="你在公司电脑上装的某个 IDE，插件市场打不开、提示网络错误；同一台电脑上浏览器、终端都能访问插件市场的网址。公司装了终端安全软件。你会怎么一步步缩小范围？"
+  points={[
+    { label: "先确认是按进程的", text: "同一网址别的进程能通，说明网络和目标都好，问题在这个进程的那条路上。" },
+    { label: "看进程自己的流量", text: "用 `nettop`、`lsof -i` 之类的工具看 IDE 进程有没有发出连接、有没有字节往返。" },
+    { label: "查按进程的规则", text: "出站防火墙、安全软件里有没有针对这个程序的拦截规则；也查这个程序是否自己设了代理。" },
+    { label: "修法要窄", text: "只放行它需要的地址和端口，别为了省事把整条拦截规则删掉。" }
+  ]}
+/>
