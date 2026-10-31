@@ -1,0 +1,195 @@
+---
+title: 依赖注入：对象不自己 new 依赖
+summary: 一个类要用到的别的对象，不在自己肚子里 new，而是写在构造器参数里，由 Spring 容器造好递进来。这样换实现、写测试都不用改这个类。
+type: concept
+difficulty: basic
+tags: [java, spring, backend]
+prerequisites: [java-annotations]
+personalEnv: false
+---
+
+<Diagnose
+  question="Patra 的登出处理类 `LogoutUserHandler` 要用到「会话存储」`SessionStorePort`，它是一个接口，真正干活的是 `SessionStoreAdapter`。`LogoutUserHandler` 里有 `new SessionStoreAdapter(...)` 这样一行吗？"
+  options={["有，用到什么就得 new 什么", "没有，它只在构造器参数里声明要一个 `SessionStorePort`，由 Spring 造好递进来", "没有，它每次用的时候去全局变量里取"]}
+  answer="B"
+  ifRight="对。它连 `SessionStoreAdapter` 这个名字都不知道。这篇讲 Spring 怎么替它找到并递进来，以及这样做好在哪。"
+  ifWrong="答案是 B：`LogoutUserHandler` 只声明「我要一个 `SessionStorePort`」，由 Spring 容器把实现递进来。这件事靠 `@Component` 这类注解告诉 Spring，读懂注解「本身什么都不做、框架读它才生效」是这篇的前提。"
+/>
+
+<Callout kind="lead">
+
+依赖注入：一个对象要用的其他对象（它的「依赖」），不由它自己创建，而是由外面造好、通过构造器交给它。在 Spring 里，「外面」就是容器。
+
+</Callout>
+
+## 自己 new 的麻烦在哪
+
+先看不用依赖注入会怎样。假设登出处理类自己 new 会话存储：
+
+```java
+public class LogoutUserHandler {
+  // 想用会话存储，就得自己造一个
+  private final SessionStorePort sessions = new SessionStoreAdapter(new RedisSessionStore(...));
+}
+```
+
+问题马上冒出来：
+
+- 造 `SessionStoreAdapter` 要先造 `RedisSessionStore`，造它又要 Redis 的地址、密码、连接池……登出这个类本来只关心「删掉会话」，现在却要知道 Redis 怎么连。
+- 想写个单元测试，不连真 Redis，只想看「会话删掉后登录记录有没有被标成登出」，做不到：`new` 写死在类里，换不掉。
+- 另一个类也要会话存储，又 new 一份，两份连接池各管各的。
+
+<Callout kind="analogy">
+
+厨师做菜要用刀、锅、灶。一种做法是每个厨师上班先自己去铁匠铺打一把刀；另一种是后厨统一备好，厨师站到灶台前，东西已经摆在手边。依赖注入是后一种：厨师只说「我要一把刀」，不管刀从哪来。
+
+</Callout>
+
+## Bean 与容器
+
+Spring 启动时会建一个**容器**（官方叫 ApplicationContext），可以把它想成一个大仓库。仓库里放的每一个由 Spring 管理的对象叫 **Bean**。
+
+谁会进仓库？主要两种来源：
+
+1. 类上贴了 `@Component`（或 `@Repository`、`@Service` 这类同义注解），Spring 启动时扫描到它，就造一个放进去。`LogoutUserHandler` 贴的是 `@Component`，`SessionStoreAdapter` 也是 `@Component`。
+2. 配置类里写了 `@Bean` 方法，Spring 调这个方法，把返回值放进去。Patra 的 `Clock`（时钟）就是这样来的。
+
+下图是 `LogoutUserHandler` 构造器要的五样东西，以及每样在仓库里是谁放进去的。点方块看来历。
+
+<Structure
+  title="LogoutUserHandler 要的五样东西从哪来"
+  intro="点任意一块，看它在容器里是谁放进去的"
+  nodes={[
+    { id: "handler", label: "LogoutUserHandler", sub: "@Component", code: true, col: 1, row: 3, desc: "登出处理类。它只在构造器里列出要什么，自己一样都不 new。" },
+    { id: "current", label: "CurrentUserPort", sub: "当前登录的是谁", code: true, col: 2, row: 1, desc: "实现是安全工具模块里的 `SecurityContextCurrentUserAdapter`，由 `SecurityAutoConfiguration` 的 `@Bean` 方法放进容器。" },
+    { id: "sessions", label: "SessionStorePort", sub: "会话存储", code: true, col: 2, row: 2, desc: "实现是 infra 层的 `SessionStoreAdapter`，类上贴了 `@Component`，启动时被扫描进容器。" },
+    { id: "records", label: "UserLoginRecordRepository", sub: "登录记录", code: true, col: 2, row: 3, desc: "实现是 infra 层的 `UserLoginRecordRepositoryAdapter`，贴的是 `@Repository`，同样靠扫描进容器。" },
+    { id: "clock", label: "Clock", sub: "时钟", code: true, col: 2, row: 4, desc: "由工具模块 `patra-tool-launch` 的 `LaunchAutoConfiguration` 用 `@Bean` 方法提供，返回 `Clock.systemUTC()`。" },
+    { id: "tx", label: "TransactionOperations", sub: "开事务的工具", code: true, col: 2, row: 5, desc: "Spring Boot 自带的事务自动配置放进来的 `TransactionTemplate`，Patra 没写一行代码。" }
+  ]}
+  edges={[
+    { from: "handler", to: "current", label: "构造器参数" },
+    { from: "handler", to: "sessions", label: "构造器参数" },
+    { from: "handler", to: "records", label: "构造器参数" },
+    { from: "handler", to: "clock", label: "构造器参数" },
+    { from: "handler", to: "tx", label: "构造器参数" }
+  ]}
+/>
+
+注意图里右边写的都是**接口**名。`LogoutUserHandler` 只认接口，具体实现是谁，由容器决定。
+
+## 构造器注入：把要什么写在构造器上
+
+看真实代码：
+
+<CodeRef at="patra-api/patra-identity/patra-identity-app/src/main/java/dev/patra/identity/app/session/usecase/logout/LogoutUserHandler.java@5073ab1358404ecd989e722373cd9f7edafe238b" lines="23-32" />
+
+```java
+@Slf4j
+@Component
+@RequiredArgsConstructor
+public class LogoutUserHandler implements CommandHandler<LogoutUserCommand, Void> {
+
+  private final CurrentUserPort currentUserPort;
+  private final SessionStorePort sessions;
+  private final UserLoginRecordRepository records;
+  private final Clock clock;
+  private final TransactionOperations transactions;
+```
+
+这里看不到构造器，是因为 Lombok 的 `@RequiredArgsConstructor` 在编译时替它生成了一个：所有 `final` 字段按顺序当参数。展开后相当于：
+
+```java
+public LogoutUserHandler(
+    CurrentUserPort currentUserPort,
+    SessionStorePort sessions,
+    UserLoginRecordRepository records,
+    Clock clock,
+    TransactionOperations transactions) {
+  this.currentUserPort = currentUserPort;
+  // 其余四个同理
+}
+```
+
+字段都是 `final`：对象一造好，依赖就定了，之后不会被谁偷偷换掉，也不会出现「忘了设、用到时是 `null`」。类只有一个构造器时，Spring 会自动用它来造对象，构造器上不用再贴注解。
+
+## 容器是怎么把它拼起来的
+
+点「下一步」，看启动时容器怎么造出 `LogoutUserHandler`。
+
+<Stepper
+  title="启动时，容器造出 LogoutUserHandler"
+  nodes={[
+    { id: "scan", label: "扫描", sub: "找 @Component" },
+    { id: "container", label: "容器", sub: "仓库里的 Bean" },
+    { id: "handler", label: "LogoutUserHandler", sub: "等着被造" }
+  ]}
+  links={[
+    { from: "scan", to: "container" },
+    { from: "container", to: "handler" }
+  ]}
+  steps={[
+    { caption: "启动时扫描 identity 服务自己的包，找到所有贴了 `@Component`、`@Repository` 的类，记下要造哪些。", focus: ["scan"] },
+    { caption: "要造 `LogoutUserHandler`，先看它唯一的构造器：要五个参数，第二个的类型是 `SessionStorePort`。", focus: ["handler"] },
+    { caption: "在仓库里找「是 `SessionStorePort` 的 Bean」：只有 `SessionStoreAdapter` 实现了它，就用它。还没造就先造它，它自己要的 `RedisSessionStore` 也这样一层层往下找。", focus: ["container"], links: ["scan>container"], notes: [{ at: "container", text: "SessionStoreAdapter", tone: "ok" }] },
+    { caption: "五个参数都找齐，调用构造器造出 `LogoutUserHandler`，放进仓库。以后谁要它，递的都是这同一个对象。", focus: ["handler"], links: ["container>handler"], notes: [{ at: "handler", text: "已造好", tone: "ok" }] }
+  ]}
+  guesses={[
+    { before: 3, question: "构造器要的是接口 `SessionStorePort`，可接口不能 new。容器会怎么办？", options: ["启动报错：接口造不出来", "在仓库里找实现了这个接口的 Bean，递进去", "自动生成一个什么都不做的空实现"], answer: "B", explain: "容器按类型找：谁实现了 `SessionStorePort`，谁就符合。Patra 里只有 `SessionStoreAdapter` 一个。" }
+  ]}
+/>
+
+找不到或找到不止一个，都会让启动失败：没有实现，容器说「缺一个 `SessionStorePort`」；有两个实现又没说用哪个，容器说「不知道选谁」。这比运行到一半才发现 `null` 好得多。
+
+## 为什么这样更好测
+
+依赖从构造器进来，测试时就可以自己 new 这个类，递进去想要的替身。这是 `LogoutUserHandler` 的单元测试：
+
+<CodeRef at="patra-api/patra-identity/patra-identity-app/src/test/java/dev/patra/identity/app/session/usecase/logout/LogoutUserHandlerTest.java@5073ab1358404ecd989e722373cd9f7edafe238b" lines="38-47" />
+
+```java
+  private final CurrentUserPort currentUserPort = mock(CurrentUserPort.class);
+  private final SessionStorePort sessions = mock(SessionStorePort.class);
+  private final UserLoginRecordRepository records = mock(UserLoginRecordRepository.class);
+  private final LogoutUserHandler handler =
+      new LogoutUserHandler(
+          currentUserPort,
+          sessions,
+          records,
+          Clock.fixed(NOW, ZoneOffset.UTC),
+          TransactionOperations.withoutTransaction());
+```
+
+这里没有 Spring、没有 Redis、没有数据库：
+
+- `mock(...)` 造的是假的会话存储和登录记录，测试里可以规定「`revoke` 返回 `true`」，再检查登录记录有没有被保存。
+- `Clock.fixed(NOW, ...)` 是一只停住的表，测试里「现在」永远是同一刻，断言登出时间时不会差几毫秒。
+- `TransactionOperations.withoutTransaction()` 是一个不开事务、直接执行的替身。
+
+这几样能换，全因为 `LogoutUserHandler` 不自己 new。Patra 的测试约定里「注入 `Clock`，不直接调 `Instant.now()`」，也是同一个道理。
+
+<Quiz
+  questions={[
+    {
+      question: "有人把 `LogoutUserHandler` 里的 `private final Clock clock;` 删了，改成用到时直接写 `Instant.now()`。程序照样能跑，坏处在哪？",
+      options: ["没有坏处，还少了一个参数", "测试里没法让「现在」固定，断言登出时间会时好时坏", "Spring 启动会报错"],
+      answer: "B",
+      explain: "`Instant.now()` 读的是真实的系统时间，测试换不掉。把时钟当依赖递进来，测试才能递一只停住的表。"
+    },
+    {
+      question: "以后会话存储从 Redis 换成别的存储，写了一个新的 `SessionStorePort` 实现，删掉了 `SessionStoreAdapter`。`LogoutUserHandler` 要改吗？",
+      options: ["要改，构造器参数类型变了", "不用改，它只认 `SessionStorePort` 这个接口", "要改，得把 new 的类名换掉"],
+      answer: "B",
+      explain: "它的构造器要的是接口。容器里换成哪个实现，它都不知道，也不需要知道。"
+    }
+  ]}
+/>
+
+<Transfer
+  prompt="你要写一个新的处理类：用户改了邮箱后，给旧邮箱发一封提醒信。它要用到「发信」和「当前时间」两样东西。你会怎么写它的字段和构造器？单元测试里怎么避免真的发出一封信？"
+  points={[
+    { label: "依赖写成接口", text: "定义一个发信的接口（比如 `MailSenderPort`），处理类的 `final` 字段类型写接口，不写具体实现。" },
+    { label: "从构造器进来", text: "发信接口和 `Clock` 都做构造器参数（或用 `@RequiredArgsConstructor` 生成），类里不 new 任何依赖。" },
+    { label: "测试递替身", text: "测试里自己 new 这个处理类，递进去 `mock(MailSenderPort.class)` 和 `Clock.fixed(...)`，再检查发信接口被调用时的参数。" }
+  ]}
+/>

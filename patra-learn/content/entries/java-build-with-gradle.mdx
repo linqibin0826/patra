@@ -1,0 +1,197 @@
+---
+title: "构建：Gradle 把代码变成能跑的包"
+summary: 构建工具替你下载别人写的库、按顺序编译各个模块、最后打出 jar。看 Patra 怎么用 Gradle 把几十个模块组织起来。
+type: concept
+difficulty: intro
+tags: [java]
+prerequisites: [java-how-a-program-runs]
+personalEnv: false
+---
+
+<Diagnose
+  question="Patra 的代码大量用到 Spring 框架，可仓库里找不到一行 Spring 的源码，也没有 Spring 的 jar 文件。编译时，Spring 的代码是从哪来的？"
+  options={["开发者事先手动下载 jar，放在自己电脑上", "构建工具按代码里写的依赖清单，从网上的公共仓库自动下载", "JVM 自带 Spring"]}
+  answer="B"
+  ifRight="对。这件事是构建工具做的。下面看 Gradle 除了下载依赖，还替你做了哪些事。"
+  ifWrong="答案是 B：项目只写「我要用哪个库的哪个版本」，构建工具负责下载。要明白下载下来的东西用在哪，先读懂源码怎么变成 jar。"
+  suggest="java-how-a-program-runs"
+/>
+
+<Callout kind="lead">
+
+**构建工具**把「源码变成能跑的 jar」这一路上的杂活全包了：下载要用的库（**依赖**）、按先后顺序编译各个模块、跑测试、打包。Patra 用的构建工具是 **Gradle**。
+
+</Callout>
+
+## 为什么需要构建工具
+
+上一篇讲了三步：编译、打包、运行。一个只有几个文件的小程序，手敲 `javac` 和 `jar` 命令也就够了。Patra 不行：
+
+- 它用了大量别人写的库（Spring、数据库驱动、测试工具……），每个还要对上版本；
+- 它自己被拆成了几十个**模块**（一个模块就是一组放在一起编译、打成一个包的代码），模块之间谁用谁有先后；
+- 每次改完都要把一大批测试跑一遍。
+
+这些靠手做一定会出错。构建工具把它们写成配置，每次都按同一套规矩来。
+
+<Callout kind="analogy">
+
+构建工具像一位装修工长。你只告诉他「要什么材料、哪个房间先做」，他去建材市场买材料（下载依赖）、安排工序（任务排队）、最后验收交房（打出 jar）。你不用亲自跑建材市场。
+
+</Callout>
+
+## 依赖从哪来：写清单，不放文件
+
+一个模块要用什么库，写在它自己的 `build.gradle.kts` 里。看 identity 服务的应用层模块：
+
+<CodeRef at="patra-api/patra-identity/patra-identity-app/build.gradle.kts@b6e01875bb5692356021c8a19562f557f319fc54" lines="7-16" />
+
+```kotlin
+plugins {
+    id("patra.hexagonal-app")
+}
+
+dependencies {
+    api(project(":patra-api:patra-identity:patra-identity-domain"))
+    api(project(":patra-tool:patra-tool-core"))
+    api(project(":patra-tool:patra-tool-cqrs"))
+    api("org.springframework:spring-tx")
+}
+```
+
+`dependencies` 里有两种写法：
+
+- `project(":…")`：依赖本仓库里的另一个模块；
+- `"org.springframework:spring-tx"`：依赖一个外部库，格式是「组织:名字」。版本号不在这里写，Patra 在一个统一的版本清单里集中管，保证所有模块用同一个版本。
+
+外部库从哪下载，写在仓库根目录的 `settings.gradle.kts`：
+
+<CodeRef at="settings.gradle.kts@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="23-29" />
+
+```kotlin
+dependencyResolutionManagement {
+    repositories {
+        maven { url = uri("https://maven.aliyun.com/repository/public") }
+        mavenCentral()
+    }
+    repositoriesMode = RepositoriesMode.FAIL_ON_PROJECT_REPOS
+}
+```
+
+先去阿里云的镜像找，找不到再去 Maven Central（Java 世界最大的公共库仓库）。下载过的库存在本机的缓存里，下次就不用再下。
+
+## 多模块：一个服务拆成几层
+
+同一个文件里登记了仓库里所有的模块。identity 服务一共六个：
+
+<CodeRef at="settings.gradle.kts@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="83-89" />
+
+```kotlin
+includeAt(":patra-api:patra-identity:patra-identity-api", "patra-api/patra-identity/patra-identity-api")
+includeAt(":patra-api:patra-identity:patra-identity-domain", "patra-api/patra-identity/patra-identity-domain")
+includeAt(":patra-api:patra-identity:patra-identity-app", "patra-api/patra-identity/patra-identity-app")
+includeAt(":patra-api:patra-identity:patra-identity-infra", "patra-api/patra-identity/patra-identity-infra")
+includeAt(":patra-api:patra-identity:patra-identity-adapter", "patra-api/patra-identity/patra-identity-adapter")
+includeAt(":patra-api:patra-identity:patra-identity-boot", "patra-api/patra-identity/patra-identity-boot")
+mapParent(":patra-api:patra-identity", "patra-api/patra-identity")
+```
+
+每行把一个模块的名字（冒号分隔的那串）对上它在硬盘上的目录。这些模块之间互相依赖，箭头的意思是「我要用它」：
+
+<Structure
+  title="identity 的几个模块，谁依赖谁"
+  intro="点一块看它管什么；箭头从使用方指向被使用方"
+  nodes={[
+    { id: "boot", label: "identity-boot", sub: "启动入口", code: true, col: 1, desc: "放启动类和 main 方法，把下面几层装到一起，最后打成可以运行的 jar。" },
+    { id: "adapter", label: "identity-adapter", sub: "对外的接口", code: true, col: 2, desc: "接收网页发来的请求，转交给应用层。" },
+    { id: "infra", label: "identity-infra", sub: "数据库、Redis", code: true, col: 2, row: 2, desc: "真正连数据库、连 Redis 的代码，比如登录限次的 LoginThrottleAdapter。" },
+    { id: "app", label: "identity-app", sub: "用例编排", code: true, col: 3, desc: "一个个用例，比如登录 LoginUserHandler。" },
+    { id: "domain", label: "identity-domain", sub: "业务规则", code: true, col: 4, desc: "最核心的业务概念和规则，不依赖任何框架。" }
+  ]}
+  edges={[
+    { from: "boot", to: "adapter" },
+    { from: "boot", to: "infra" },
+    { from: "adapter", to: "app" },
+    { from: "app", to: "domain" },
+    { from: "infra", to: "domain" }
+  ]}
+/>
+
+依赖关系决定了编译顺序：被依赖的先编译。`identity-domain` 不依赖本服务的其他模块（只用公共工具库），它最先编；`identity-boot` 用到所有人，它最后编。这个顺序 Gradle 自己从 `dependencies` 里算出来，不用你排。
+
+## 任务：一件件串起来的活
+
+Gradle 把每件活叫一个**任务**：编译是 `compileJava`，跑测试是 `test`，打可运行的 jar 是 `bootJar`。任务之间也有先后：要 `bootJar`，得先 `compileJava`；而编译 boot 模块，又得先把它依赖的模块编好。
+
+所以你只要在仓库根目录敲一行：
+
+```bash
+./gradlew :patra-api:patra-identity:patra-identity-boot:bootJar
+```
+
+Gradle 会顺着依赖往回找，把需要的任务全排好、按顺序跑完。开头的 `./gradlew` 是仓库自带的启动脚本，它会先下载仓库指定版本的 Gradle 再运行，所以每台机器用的都是同一个版本：
+
+<CodeRef at="gradle/wrapper/gradle-wrapper.properties@f99990e4e2d7069e566b984c7bbe493b2483962a" lines="3" />
+
+```properties
+distributionUrl=https\://services.gradle.org/distributions/gradle-9.5.0-bin.zip
+```
+
+<Callout kind="insight">
+
+Gradle 会记住每个任务上次的输入和输出。什么都没改，再跑一遍，大多数任务会显示 `UP-TO-DATE`，直接跳过。所以第一次构建慢，之后快得多。
+
+</Callout>
+
+## 约定插件：规矩写一次，几十个模块共用
+
+回头看 identity-app 的配置，第一段是 `id("patra.hexagonal-app")`。这是 Patra 自己写的**约定插件**，放在仓库根目录的 `build-logic/` 里。每个模块只写一行「我是哪一层」，那一层该用的 Java 版本、测试工具、检查规则，都由插件统一配好。
+
+比如领域层的插件加了一条检查：领域层只许用白名单里的几个库，不许偷偷依赖 Spring 这类框架。
+
+<CodeRef at="build-logic/src/main/kotlin/patra.hexagonal-domain.gradle.kts@cfec9c9f30270dcf03f5cd7b6e54a0cd3b59296b" lines="35-48" />
+
+```kotlin
+tasks.register<DomainPurityCheck>("checkDomainPurity") {
+    group = "verification"
+    description = "R3：domain 模块编译类路径只允许白名单构件"
+    modulePath.set(project.path)
+    violations.set(provider {
+        configurations.getByName("compileClasspath").resolvedConfiguration.resolvedArtifacts
+            .map { "${it.moduleVersion.id.group}:${it.moduleVersion.id.name}" }
+            .let(DomainPurityRules::violations)
+    })
+}
+
+tasks.named("check") {
+    dependsOn("checkDomainPurity")
+}
+```
+
+不用读懂每一行，看最后三行就行：它注册了一个任务 `checkDomainPurity`，并让 `check`（「全部检查」）依赖它。于是任何人跑 `./gradlew check`，这条规矩都会被检查一遍，谁破了规矩构建就失败。
+
+<Quiz
+  questions={[
+    {
+      question: "想给 identity-app 加一个外部库。应该改哪里？",
+      options: ["把那个库的 jar 文件复制进 identity-app 目录", "在 identity-app 的 build.gradle.kts 的 dependencies 里加一行", "改 settings.gradle.kts，加一个 includeAt"],
+      answer: "B",
+      explain: "依赖写在用它的那个模块的 dependencies 里，Gradle 负责下载。includeAt 是登记本仓库自己的模块用的。"
+    },
+    {
+      question: "跑 identity-boot 的 bootJar，identity-domain 会被编译吗？",
+      options: ["不会，只编译 boot 模块", "会，boot 间接依赖 domain，Gradle 会先把它编好（没改动时会跳过）", "要手动先跑一遍 domain 的编译"],
+      answer: "B",
+      explain: "Gradle 顺着依赖往回找，把需要的模块都排进去；上次编过且没改的，会直接标 UP-TO-DATE。"
+    }
+  ]}
+/>
+
+<Transfer
+  prompt="Patra 要新加一个服务 patra-report，结构照 identity 来。在构建这一侧，你要做哪几件事，它才能被编译、被打成 jar？"
+  points={[
+    { label: "登记模块", text: "在 settings.gradle.kts 里用 includeAt 登记它的几个模块，对上目录。" },
+    { label: "每层选插件", text: "每个模块的 build.gradle.kts 里写对应层的约定插件，比如 patra.hexagonal-domain、patra.hexagonal-app。" },
+    { label: "写清依赖", text: "按层写 dependencies：app 依赖 domain，boot 依赖 adapter 和 infra，外部库写「组织:名字」。" },
+    { label: "交给 Gradle 排序", text: "不用手排编译顺序，跑它 boot 模块的 bootJar，Gradle 自己按依赖算出先后。" }
+  ]}
+/>

@@ -1,0 +1,191 @@
+---
+title: "注解：贴在代码上的标签"
+summary: "@Override、@Builder、@Component 这些注解本身什么都不做，只是贴在代码上的标签；是编译器、Lombok、Spring 或测试工具读到它，才让它生效。"
+type: concept
+difficulty: basic
+tags: [java, spring]
+prerequisites: [java-classes-objects-interfaces]
+personalEnv: false
+---
+
+<Diagnose
+  question="Patra 的用户名片 UserCard 上贴着 @Builder，代码里到处在用 UserCard.builder()。如果在构建配置里删掉 Lombok 的「注解处理器」那一行，别的都不动，会怎样？"
+  options={["照常能用，@Builder 还贴在那里", "编译报错：找不到 builder() 方法", "编译能过，运行到 builder() 时才报错"]}
+  answer="B"
+  ifRight="对。@Builder 只是个标签，builder() 方法是 Lombok 在编译时读到这个标签才写出来的。没人读，这个方法就不存在。下面看 Patra 里的几种注解分别是谁在读。"
+  ifWrong="答案是 B：builder() 不是 @Builder 自己变出来的，而是 Lombok 在编译时读到标签、替你生成的方法。不读，方法就没有，调用它的地方编译不过。注解贴在类和方法上，先确认自己熟悉类和方法。"
+  suggest="java-classes-objects-interfaces"
+/>
+
+<Callout kind="lead">
+
+**注解**是以 `@` 开头、贴在类、方法、字段上的标签。它自己不执行任何代码。**有人读它，它才有用**：编译器读、编译时的注解处理器读、运行时的框架读、测试工具读。同一个注解，没人读，就跟没写一样。
+
+</Callout>
+
+## 长什么样
+
+前面几篇已经见过不少：
+
+- `@Override`：贴在方法上，说「这个方法是在兑现接口或父类里的某一条」；
+- `@Builder`：贴在 `UserCard` 上，让它多出一个 `builder()`；
+- `@SpringBootApplication`：贴在每个服务的启动类上。
+
+注解还可以带参数，比如 `@Transactional(propagation = MANDATORY)`，括号里是给读它的人看的设置。
+
+<Callout kind="analogy">
+
+注解像贴在快递箱上的「易碎」「此面朝上」。贴纸本身不会让箱子变结实；是快递员看到贴纸，才轻拿轻放。换一个不识字的快递员，贴纸就没用了。
+
+</Callout>
+
+下面按「谁在读、什么时候读」看四种。
+
+## 读者一：编译器
+
+`@Override` 是给编译器看的。登录限次的实现类里，每个兑现接口的方法都贴着它：
+
+<CodeRef at="patra-api/patra-identity/patra-identity-infra/src/main/java/dev/patra/identity/infra/account/throttle/LoginThrottleAdapter.java@5073ab1358404ecd989e722373cd9f7edafe238b" lines="89-92" />
+
+```java
+  @Override
+  public void recordSuccess(LoginAttempt attempt) {
+    settle(attempt, "SUCCESS");
+  }
+```
+
+编译器看到它，会去核对：接口或父类里真有一个 `recordSuccess(LoginAttempt)` 吗？没有就编译报错。
+
+这能防住两类手滑。一类是重写父类已有的方法时写错了：比如想重写所有对象都有的 `toString()`，却拼成了 `toStirng()`，不贴标签，编译器以为你新写了一个方法，照常通过，运行时用的还是旧的 `toString()`；贴了标签，编译直接报错。另一类是接口改了：哪天 `LoginThrottlePort` 删掉了 `recordSuccess`，实现类里那个旧方法贴着 `@Override`，编译就会报错，提醒你它已经不对应任何约定了。
+
+`@Override` 不改变代码做什么，只让编译器多帮你查一件事。
+
+## 读者二：注解处理器，在编译时替你写代码
+
+**注解处理器**是挂在编译器上的小程序，编译时扫描源码里的注解，按注解生成新的代码。Lombok 就是一个注解处理器。
+
+catalog 里的字典解析适配器贴了 `@RequiredArgsConstructor`：
+
+<CodeRef at="patra-api/patra-catalog/patra-catalog-infra/src/main/java/dev/patra/catalog/infra/kernel/registry/DictionaryResolverAdapter.java@5073ab1358404ecd989e722373cd9f7edafe238b" lines="30-37" />
+
+```java
+@Slf4j
+@Component
+@RequiredArgsConstructor
+public class DictionaryResolverAdapter implements DictionaryResolverPort {
+
+  private static final String STATUS_RESOLVED = "RESOLVED";
+
+  private final DictionaryEndpoint dictionaryEndpoint;
+```
+
+源码里没有构造器。Lombok 编译时看到 `@RequiredArgsConstructor`，就替它生成一个「把每个 `final` 字段都作为参数」的构造器，等于你手写了：
+
+```java
+public DictionaryResolverAdapter(DictionaryEndpoint dictionaryEndpoint) {
+  this.dictionaryEndpoint = dictionaryEndpoint;
+}
+```
+
+`@Slf4j` 同理，生成一个叫 `log` 的日志对象；`@Builder` 生成 `builder()` 和一整套按名字填值的方法。这些代码只出现在编译出的 `.class` 里，源码里看不到。
+
+Lombok 要被挂到编译器上才会工作，这一步写在 Patra 的构建约定插件里：
+
+<CodeRef at="build-logic/src/main/kotlin/patra.java-base.gradle.kts@b6e01875bb5692356021c8a19562f557f319fc54" lines="180-191" />
+
+```kotlin
+// ==================== Annotation Processors ====================
+// extendsFrom 不传递 annotationProcessor configuration，需要为每个 suite 显式声明
+dependencies {
+    // Lombok
+    compileOnly(libs.findLibrary("lombok").get())
+    annotationProcessor(libs.findLibrary("lombok").get())
+    testCompileOnly(libs.findLibrary("lombok").get())
+    testAnnotationProcessor(libs.findLibrary("lombok").get())
+    "integrationTestCompileOnly"(libs.findLibrary("lombok").get())
+    "integrationTestAnnotationProcessor"(libs.findLibrary("lombok").get())
+    "e2eTestCompileOnly"(libs.findLibrary("lombok").get())
+    "e2eTestAnnotationProcessor"(libs.findLibrary("lombok").get())
+```
+
+两种写法各管一件事：`compileOnly` 让编译器认得 `@Builder` 这个名字；`annotationProcessor` 才是把 Lombok 挂上去、让它真的去生成代码。开头那道题删的就是后者：标签还认得，但没人照着标签干活，`builder()` 就不存在。
+
+## 读者三：Spring，在服务启动时
+
+`DictionaryResolverAdapter` 上还有一个 `@Component`，它是给 Spring 看的。
+
+服务启动时，Spring 从启动类所在的包开始，往下扫描所有的类，看见贴着 `@Component` 的，就替你 `new` 一个对象，交给需要它的地方（这件事叫依赖注入，下一篇讲）。catalog 的启动类在 `dev.patra.catalog` 包里：
+
+<CodeRef at="patra-api/patra-catalog/patra-catalog-boot/src/main/java/dev/patra/catalog/PatraCatalogApplication.java@cfec9c9f30270dcf03f5cd7b6e54a0cd3b59296b" lines="31-40" />
+
+`@SpringBootApplication` 里就包含了「从这个包开始扫描」。`DictionaryResolverAdapter` 在 `dev.patra.catalog.infra.kernel.registry`，是它下面的包，所以会被扫到、被创建。整个过程里，`@Component` 自己一行代码都没执行，干活的是 Spring。
+
+## 读者四：测试工具
+
+注解也可以被测试读，用来守规矩。Patra 不许把 `@Transactional`（开启数据库事务的注解）贴在整个类上，这条规矩由一个架构测试检查：
+
+<CodeRef at="patra-tool/patra-tool-test/src/main/java/dev/patra/tool/test/archunit/HexagonalArchitectureRules.java@cfec9c9f30270dcf03f5cd7b6e54a0cd3b59296b" lines="438-447" />
+
+```java
+  /// 禁止类级 `@Transactional`：注解只加在 public 方法上，事务范围一眼可见。
+  ///
+  /// @return ArchRule 规则实例
+  public ArchRule noClassLevelTransactions() {
+    return noClasses()
+        .should()
+        .beAnnotatedWith(Transactional.class)
+        .as("禁止类级 @Transactional")
+        .because("类级注解会把每个方法都包进事务，见 .claude/rules/tech/transaction.md 第 4 节");
+  }
+```
+
+测试工具 ArchUnit 读取编译好的所有类，看哪个类上贴了 `@Transactional`，有就让测试失败。同一个 `@Transactional`，服务运行时 Spring 读它去开事务，跑测试时 ArchUnit 读它去查规矩，两个读者各取所需。
+
+## 四种读者放在一起
+
+<Structure
+  title="每个注解都有它的读者"
+  intro="点一块看是谁在读、什么时候读、读到之后做什么"
+  nodes={[
+    { id: "override", label: "@Override", code: true, col: 1, desc: "贴在方法上，声明这是在兑现接口或父类里的方法。" },
+    { id: "builder", label: "@Builder", sub: "@RequiredArgsConstructor 同类", code: true, col: 1, row: 2, desc: "Lombok 的注解，声明「请替我生成这些代码」。" },
+    { id: "component", label: "@Component", code: true, col: 1, row: 3, desc: "声明「这个类请 Spring 来创建和管理」。" },
+    { id: "tx", label: "@Transactional", sub: "贴在类上", code: true, col: 1, row: 4, desc: "Patra 禁止贴在整个类上，只许贴在方法上。" },
+    { id: "javac", label: "编译器", sub: "编译时", col: 2, desc: "核对被标记的方法确实存在于接口或父类里，不存在就编译报错。" },
+    { id: "lombok", label: "Lombok", sub: "编译时 · 注解处理器", col: 2, row: 2, desc: "按注解生成构造器、builder 等代码，写进 .class。没挂上去就什么都不生成。" },
+    { id: "spring", label: "Spring", sub: "服务启动时", col: 2, row: 3, desc: "扫描启动类所在包及其下的所有包，给贴了 @Component 的类创建对象。" },
+    { id: "archunit", label: "ArchUnit", sub: "跑测试时", col: 2, row: 4, desc: "读取编译好的类，发现类上贴了 @Transactional 就让架构测试失败。" }
+  ]}
+  edges={[
+    { from: "javac", to: "override", label: "读" },
+    { from: "lombok", to: "builder", label: "读" },
+    { from: "spring", to: "component", label: "读" },
+    { from: "archunit", to: "tx", label: "读" }
+  ]}
+/>
+
+<Quiz
+  questions={[
+    {
+      question: "一个类贴了 @Component，但它放在 Spring 扫描不到的包里。服务启动后会怎样？",
+      options: ["Spring 照样会创建它，注解贴上就生效", "Spring 不会创建它，这个注解等于没写", "编译报错"],
+      answer: "B",
+      explain: "@Component 只是一个标签。Spring 只扫描启动类所在包及其下的包，扫不到就读不到标签，也就不会创建对象。"
+    },
+    {
+      question: "DictionaryResolverAdapter 的源码里没有构造器，Spring 是怎么创建它的？",
+      options: ["Spring 用反射直接给 final 字段赋值", "Lombok 在编译时按 @RequiredArgsConstructor 生成了构造器，Spring 运行时调用它", "Java 会给每个类自动生成带参数的构造器"],
+      answer: "B",
+      explain: "两个读者接力：Lombok 在编译时写出构造器，Spring 在启动时调用这个构造器把依赖交进去。"
+    }
+  ]}
+/>
+
+<Transfer
+  prompt="有人在一个新类上贴了 @Component，类放在 dev.patra.shared 包里，打算让 catalog 和 identity 两个服务都用它。结果 catalog 启动时报错，说找不到这个类型的对象。按这篇讲的，最可能是什么原因？你会怎么改？"
+  points={[
+    { label: "没人读到标签", text: "catalog 的启动类在 dev.patra.catalog，Spring 只从这里往下扫描，dev.patra.shared 不在范围里，@Component 没被读到，对象就没被创建。" },
+    { label: "注解不会自己生效", text: "贴了 @Component 不等于注册成功，要确认读它的人（这里是 Spring 的扫描）真的经过这个类。" },
+    { label: "改法", text: "把类挪进服务自己的包下面；或者不靠扫描，用别的方式明确告诉 Spring 去创建它（Patra 的公共工具库走的是自动配置，后面的篇目讲）。" }
+  ]}
+/>

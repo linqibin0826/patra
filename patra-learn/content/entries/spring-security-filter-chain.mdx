@@ -1,0 +1,192 @@
+---
+title: Spring Security：请求要过的一串过滤器
+summary: 请求到 Controller 之前先过一串过滤器：先认出你是谁（认证），再判断你能不能进（授权），不行就在过滤器里直接回 401 或 403。以 Patra 网关的两条过滤器链为例。
+type: concept
+difficulty: advanced
+tags: [spring, security, backend]
+prerequisites: [spring-mvc-controller, http-cookie-and-session]
+sources:
+  - version: v0.12
+    issue: PAP-106
+    pr: 274
+personalEnv: false
+---
+
+<Diagnose
+  question="浏览器请求 `GET /patra-identity/me`（要登录才能看），但请求里没带会话令牌。这个请求会走到 identity 的 Controller 吗？"
+  options={["会，Controller 发现没登录，自己回 401", "不会，网关在转发之前就回了 401", "会，identity 回 403", "不会，网关直接断开连接"]}
+  answer="B"
+  ifRight="对：没登录的请求在网关的过滤器里就被拦下了，后面的服务根本看不到它。这篇讲这串过滤器怎么排、401 和 403 分别在哪一步产生。"
+  ifWrong="答案是 B。「要登录」这件事 Patra 在网关统一检查，没带令牌就是没登录，请求在网关的过滤器里被拦下，回 401。这题考的是会话令牌的作用：服务靠它认出你是谁，没有它就只能当你是匿名。"
+  suggest="http-cookie-and-session"
+/>
+
+<Callout kind="lead">
+
+Spring Security 是插在 Controller 前面的一串过滤器。每个请求从头到尾过一遍：前面的过滤器负责**认证**（认出你是谁），后面的负责**授权**（判断你能不能访问这个路径）。不能访问的请求在过滤器里就被回掉，走不到 Controller。
+
+</Callout>
+
+## 过滤器是什么
+
+servlet 程序里，请求到达 Controller 之前会先经过一组过滤器（`Filter`）。每个过滤器拿到请求，做点事，再决定交给下一个，还是自己直接写响应结束。
+
+<Callout kind="analogy">
+
+像进写字楼：门口保安先看你的工牌，认出你是谁（认证）；到了楼层，门禁再看这张工牌能不能刷开这扇门（授权）。没有工牌的人也能进大堂，只是刷不开要权限的门。
+
+</Callout>
+
+Spring Security 在这一组里只占一个位置，但它内部又是一串自己的过滤器，叫**过滤器链**（`SecurityFilterChain`）。一个应用可以声明好几条链，每个请求只会走其中一条：按顺序找第一条匹配得上的。
+
+<Callout kind="insight" label="顺带想通的">
+
+Spring Cloud Gateway 有两种实现：响应式的 WebFlux 版和 servlet 的 WebMVC 版。Patra 的网关用的是 **WebMVC 版**（`patra-gateway-boot/build.gradle.kts` 写着「WebMVC 版，servlet 栈」），所以这里讲的是 servlet 的 `SecurityFilterChain` 和 `HttpSecurity`。网上不少网关鉴权的教程写的是 WebFlux 的 `SecurityWebFilterChain`，写法不通用。
+
+</Callout>
+
+## 网关的两条链
+
+<CodeRef at="patra-api/patra-gateway-boot/src/main/java/dev/patra/gateway/security/GatewaySecurityConfiguration.java@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="47-49" />
+
+```java
+  static final String[] BLOCKED_PATHS = {"/*/_internal/**", "/*/admin/**", "/*/actuator/**"};
+```
+
+- **第一条链**（`@Order(1)`）只匹配拒绝名单：各服务的内部接口、后台接口、actuator。对任何人都回 403。
+- **第二条链**（`@Order(2)`）匹配其余所有请求：查会话、按路径决定要不要登录。
+
+第一条链的写法有个讲究。链里没有认证过滤器，所有人在这条链上都是匿名的。匿名的人撞上 `denyAll`，框架默认走的是「未登录」入口，回 401。网关把入口换成了「拒绝访问」的输出，这样无论带不带令牌，拿到的都是同一个 403，网关也不用为这些路径去查会话：
+
+<CodeRef at="patra-api/patra-gateway-boot/src/main/java/dev/patra/gateway/security/GatewaySecurityConfiguration.java@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="84-98" />
+
+```java
+  @Bean
+  @Order(1)
+  public SecurityFilterChain blockedPathsFilterChain(
+      HttpSecurity http, SecurityProblemWriter problemWriter) {
+    http.securityMatcher(BLOCKED_PATHS);
+    StatelessSecurityDefaults.apply(http, problemWriter);
+    http.exceptionHandling(
+            handling ->
+                handling.authenticationEntryPoint(
+                    (request, response, exception) ->
+                        problemWriter.handle(
+                            request, response, new AccessDeniedException("拒绝名单内的路径"))))
+        .authorizeHttpRequests(authorize -> authorize.anyRequest().denyAll());
+    return http.build();
+  }
+```
+
+## 第二条链：一个请求怎么走
+
+第二条链在框架默认的过滤器之间插了一个自己的认证过滤器，然后写了按路径的授权规则：
+
+<CodeRef at="patra-api/patra-gateway-boot/src/main/java/dev/patra/gateway/security/GatewaySecurityConfiguration.java@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="111-143" />
+
+```java
+    http.addFilterBefore(sessionFilter, AnonymousAuthenticationFilter.class)
+        .authorizeHttpRequests(
+            authorize ->
+                authorize
+                    .dispatcherTypeMatchers(DispatcherType.ERROR, DispatcherType.FORWARD)
+                    .permitAll()
+                    .requestMatchers(IDENTITY_PUBLIC_PATHS)
+                    .permitAll()
+                    .requestMatchers(IDENTITY_PATHS)
+                    .authenticated()
+                    .requestMatchers(PUSH_STREAM_PATH)
+                    .authenticated()
+                    .anyRequest()
+                    .permitAll());
+```
+
+跟着一个带了过期令牌的请求走一遍：
+
+<Stepper
+  title="GET /patra-identity/me，令牌已过期"
+  nodes={[
+    { id: "match", label: "选链", sub: "按 securityMatcher" },
+    { id: "session", label: "sessionFilter", sub: "查会话" },
+    { id: "anon", label: "匿名过滤器", sub: "AnonymousAuthenticationFilter" },
+    { id: "authz", label: "授权", sub: "按路径规则" },
+    { id: "route", label: "路由", sub: "转发给 identity" }
+  ]}
+  links={[
+    { from: "match", to: "session" },
+    { from: "session", to: "anon" },
+    { from: "anon", to: "authz" },
+    { from: "authz", to: "route" }
+  ]}
+  steps={[
+    { caption: "路径不在拒绝名单里，第一条链不匹配，请求进第二条链。", focus: ["match"], tokens: [{ id: "r", label: "请求", at: "match" }] },
+    { caption: "`sessionFilter` 从 `Authorization: Bearer` 里取出令牌，调 identity 的查会话接口。identity 回 `active: false`。", focus: ["session"], links: ["match>session"], tokens: [{ id: "r", label: "请求", at: "session" }], notes: [{ at: "session", text: "active: false", tone: "wait" }] },
+    { caption: "转换器返回 null，表示「认不出你」。过滤器什么都不设，把请求交给下一个。", focus: ["session", "anon"], links: ["session>anon"], tokens: [{ id: "r", label: "请求", at: "anon" }] },
+    { caption: "到这里还没有任何认证结果，`AnonymousAuthenticationFilter` 给请求贴上「匿名用户」。", focus: ["anon"], tokens: [{ id: "r", label: "匿名", at: "anon" }], notes: [{ at: "anon", text: "匿名" }] },
+    { caption: "授权规则从上往下找第一条匹配的：`/patra-identity/me` 不在公开名单里，命中 `/patra-identity/**` 要求 `authenticated()`。匿名不算登录，交给入口点回 401，请求到此为止。", focus: ["authz"], links: ["anon>authz"], tokens: [{ id: "r", label: "匿名", at: "authz", state: "dropped" }], notes: [{ at: "authz", text: "401", tone: "bad" }] }
+  ]}
+  guesses={[
+    { before: 3, question: "identity 说令牌无效。`sessionFilter` 这时会做什么？", options: ["直接回 401", "认不出就当匿名，接着往下走", "把请求转给登录页"], answer: "B", explain: "认证过滤器只负责认人，认不出不等于拒绝：`/patra-catalog/venues` 这种公开路径，匿名也该放行。要不要拒绝，留给后面的授权规则按路径决定。" }
+  ]}
+/>
+
+这就是「认证」和「授权」分开的意思：前面的过滤器只管认出你是谁，认不出就当匿名；能不能进由后面的规则按路径说了算。
+
+<Callout kind="warn">
+
+规则是**从上往下第一条匹配的生效**。公开名单 `IDENTITY_PUBLIC_PATHS`（注册、登录等）必须写在 `/patra-identity/**` 前面，否则登录接口自己也要求先登录，谁都登不进去。
+
+</Callout>
+
+## 401 和 403 从哪来
+
+两种失败在过滤器里产生，到不了 Controller，也就到不了全局异常处理器。Patra 统一交给 `SecurityProblemWriter` 写成 ProblemDetail：
+
+<CodeRef at="patra-tool/patra-tool-security/src/main/java/dev/patra/tool/security/autoconfigure/StatelessSecurityDefaults.java@b6e01875bb5692356021c8a19562f557f319fc54" lines="28-38" />
+
+| 情况 | 框架调谁 | 结果 |
+|---|---|---|
+| 需要登录，但当前是匿名 | 入口点 `authenticationEntryPoint` | 401，带 `WWW-Authenticate: Bearer` |
+| 登录了，但规则不允许 | `accessDeniedHandler` | 403 |
+| 认证过程本身出错（identity 暂时不可用） | 认证过滤器的失败处理器 | 503 / 500 |
+
+`StatelessSecurityDefaults` 还关了 HttpSession、CSRF 和框架自带的 `/logout`：网关是无状态的，凭据在请求头里，每个请求都重新查一次会话。它的注释特别提醒：关掉表单登录后，框架默认对未登录也回 403，所以入口点必须显式指定成 401。
+
+<Callout kind="insight" label="顺带想通的">
+
+`sessionFilter` 是在方法里 `new` 出来的，没有声明成 Bean。代码注释说明了原因：声明成 Bean 的话，Spring Boot 会把它当成普通的 servlet 过滤器再注册一遍，它就会在安全链之外对每个请求再跑一次。过滤器只该出现在它所属的那条链里。
+
+</Callout>
+
+<Quiz
+  questions={[
+    {
+      question: "带着有效令牌请求 `/patra-catalog/_internal/anything`，结果是？",
+      options: ["200，已登录就能访问", "401", "403"],
+      answer: "C",
+      explain: "路径匹配 `/*/_internal/**`，进的是第一条链，对任何人都 403，连会话都不查。"
+    },
+    {
+      question: "不带令牌请求 `/patra-catalog/venues`，结果是？",
+      options: ["请求被转发给 catalog", "401", "403"],
+      answer: "A",
+      explain: "第二条链里它只命中最后的 `anyRequest().permitAll()`。匿名也放行，catalog 自己再按业务判断。"
+    },
+    {
+      question: "带着有效令牌请求 `/patra-identity/me`，这时 identity 的会话存储宕了，查会话回了 503。网关回什么？",
+      options: ["401，因为没认出你", "503，认证过程本身失败了", "放行，让 identity 自己处理"],
+      answer: "B",
+      explain: "这不是「认不出」，而是「没法认」。转换器抛出认证服务异常，失败处理器把它写成 503，客户端知道该稍后重试，而不是去重新登录。"
+    }
+  ]}
+/>
+
+<Transfer
+  prompt="notification 新加了一组接口 `/patra-notification/me/settings/**`，只给登录用户用。你会在网关的哪里改、怎么改？改完要验证哪几种请求？"
+  points={[
+    { label: "改哪", text: "在第二条链的 `authorizeHttpRequests` 里加一条 `requestMatchers(…).authenticated()`，放在最后的 `anyRequest().permitAll()` 之前，否则永远轮不到它。" },
+    { label: "顺序", text: "如果这组路径里有个别要公开，公开的那条必须写在 `authenticated()` 那条前面，和 identity 的公开名单一样。" },
+    { label: "验证", text: "不带令牌回 401；带有效令牌放行；带过期令牌回 401；identity 不可用时回 503。" },
+    { label: "别只靠网关", text: "notification 自己也按身份断言再判断一次，网关的规则是第一道门，不是唯一一道。" }
+  ]}
+/>
