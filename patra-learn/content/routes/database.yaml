@@ -1,0 +1,29 @@
+title: 数据库与事务
+summary: 从「数据库和表」读到索引、事务、锁与迁移，再看 Patra 踩过的约束与连接坑。
+order: 2
+entries:
+  - db-what-is-a-database
+  - db-keys-and-relations
+  - db-sql-select
+  - db-sql-join
+  - db-sql-write
+  - db-constraints-and-null
+  - db-indexes
+  - db-transactions
+  - db-connection-pool
+  - db-redis-basics
+  - db-schema-migrations-flyway
+  - db-isolation-levels
+  - db-locks
+  - db-partial-unique-index
+  - db-jsonb-columns
+  - db-explain-query-plans
+  - db-trigram-search
+  - spring-jpa-basics
+  - spring-jpa-n-plus-one
+  - db-schema-per-subdomain
+  - db-orphan-connections
+  - db-check-passes-null
+  - db-jsonb-not-null-json-null
+  - db-trigram-short-pattern-full-scan
+  - spring-flush-order-insert-before-delete

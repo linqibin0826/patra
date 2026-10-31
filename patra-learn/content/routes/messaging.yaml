@@ -1,0 +1,21 @@
+title: 消息与事件
+summary: 从「为什么要异步」一直读到发件箱、去重、死信与乱序。
+order: 4
+entries:
+  - msg-why-async
+  - msg-what-is-a-message-queue
+  - msg-exchange-queue-binding
+  - msg-ack-and-redelivery
+  - msg-in-process-events
+  - msg-after-commit-listeners
+  - msg-dual-write-problem
+  - msg-transactional-outbox
+  - msg-publisher-confirms
+  - msg-at-least-once-and-dedup
+  - msg-dead-letter
+  - msg-ordering
+  - ddd-domain-vs-integration-events
+  - msg-why-rabbitmq
+  - msg-recipient-lookup-two-paths
+  - msg-mail-idempotency-key
+  - ddd-extract-notification-service

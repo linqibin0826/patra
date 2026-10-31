@@ -1,0 +1,32 @@
+title: Java 与 Spring
+summary: 从「Java 程序怎么跑起来」读到依赖注入、自动配置、JPA、批处理与配置中心。
+order: 3
+entries:
+  - java-how-a-program-runs
+  - java-classes-objects-interfaces
+  - java-build-with-gradle
+  - java-records-and-immutability
+  - java-exceptions
+  - java-collections-and-streams
+  - java-annotations
+  - spring-dependency-injection
+  - spring-boot-auto-configuration
+  - spring-configuration-properties
+  - spring-mvc-controller
+  - spring-json-jackson
+  - spring-proxies-and-transactional
+  - spring-jpa-basics
+  - spring-jpa-n-plus-one
+  - spring-http-interface-clients
+  - spring-service-discovery
+  - spring-nacos-config-and-refresh
+  - spring-security-filter-chain
+  - spring-batch-jobs
+  - spring-scheduled-jobs
+  - spring-nacos-revert-no-refresh
+  - spring-refresh-strict-enum
+  - spring-no-custom-refreshable-properties
+  - spring-json-single-source
+  - spring-batch-context-java-types-only
+  - spring-stepscope-proxy-fields
+  - spring-flush-order-insert-before-delete

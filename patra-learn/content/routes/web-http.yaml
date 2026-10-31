@@ -1,0 +1,25 @@
+title: Web 与 HTTP
+summary: 从「打开一个网页时发生了什么」读到网关、限流与服务器推送。
+order: 1
+entries:
+  - web-what-happens-opening-a-page
+  - web-client-server-and-ports
+  - web-url-anatomy
+  - http-request-and-response
+  - http-status-codes
+  - http-json-and-content-type
+  - http-rest-api-design
+  - http-cookie-and-session
+  - http-https-and-certificates
+  - http-same-origin-and-cors
+  - http-caching
+  - web-reverse-proxy-and-gateway
+  - web-rate-limiting
+  - web-timeouts-and-downstream-failures
+  - web-server-push-and-sse
+  - web-gateway-auth-by-session-lookup
+  - web-trusted-forwarded-headers
+  - ops-cloudflare-tunnel
+  - web-gateway-sse-buffered
+  - web-gateway-lb-invalid-scheme
+  - web-security-adds-cache-control

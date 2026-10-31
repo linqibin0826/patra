@@ -1,0 +1,25 @@
+title: DDD 与六边形
+summary: 从「为什么代码要分层」读到聚合、端口与适配器、子域与限界上下文。
+order: 5
+entries:
+  - ddd-why-layer-code
+  - ddd-rules-vs-plumbing
+  - ddd-entities-and-value-objects
+  - ddd-aggregates
+  - ddd-repositories
+  - ddd-domain-exceptions
+  - ddd-application-layer
+  - ddd-ports-and-adapters
+  - ddd-patra-six-modules
+  - ddd-architecture-guards
+  - ddd-cqrs-read-side
+  - ddd-subdomains
+  - ddd-bounded-contexts
+  - ddd-domain-vs-integration-events
+  - ddd-translate-remote-errors
+  - ddd-username-only-in-identity
+  - ddd-session-owned-by-identity
+  - ddd-extract-notification-service
+  - ddd-subdomain-first-layout
+  - ddd-tool-modules-by-capability
+  - ddd-remove-unused-service
