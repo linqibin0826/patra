@@ -1,6 +1,6 @@
 # 通知服务接管站内提醒：信箱工程设计（PAP-143）
 
-> 状态：设计定稿，实施中
+> 状态：已实施（2026-10-31，计划 `docs/patra/plans/2026-10-31-notification-inbox.md`）；实施中的偏离与独立评审处理见第 18 节
 > 日期：2026-10-31
 > Issue：PAP-143（GitHub #330），Linear Project P-PAP-13 v0.16 Notification，Milestone BE Ready
 > 依据：release spec `docs/patra/release-specs/v0.16-notification.md` 决策 A、D、H、J，第 3 节 C、L，第 5 节 D2；
@@ -536,3 +536,29 @@ UnreadCounts unreadCounts(long recipientId);   // replies、mentions、helpful�
 8. 名片、对象视图、摘录渲染、在站信号进底座（5）。
 9. Flyway 用前向迁移删 schema，旧脚本保留（11.2）。
 10. `processed_event` 清理留给事件模块（15）。
+
+## 18. 实施记录（2026-10-31）
+
+### 18.1 与本设计的偏离
+
+| 项 | 实际 | 理由 |
+|---|---|---|
+| 提醒行加 `created_at`、事件带 `createdAt` | 已按 6.2 / 10.2 落地 | spec 评审子代理指出提醒邮件的时间窗口要从写入信箱的时刻算（broker 补投会让事件时刻落后） |
+| `NotificationType`、`InboxCursor` 的包 | 都在 `domain.inbox.model.read`（公开包） | 前者是公开读模型的一部分（PAP-146 要按它写文案）；后者出现在公开读端口的签名里 |
+| 两个内部接口的 ID 个数 | 0 ~ 100（空列表回空） | 与 identity 的 `/summaries` 一致 |
+| 空白正文 | 不给摘录 | PAP-141 契约修订：正文只有 Markdown 结构时纯文本是空串 |
+| `body` 字段 | 保留 | 11.2 已写明 |
+| 控制器切片测试、两个内部接口的 `*EndpointImplIT` | 不另写 | 304 与 `Cache-Control` 只有完整安全过滤器链测得出，由 `InboxRestFlowIT` 覆盖；内部接口（含 422）由 `ExperienceFlowIT` 覆盖 |
+
+### 18.2 独立评审（opus，只给 spec 与代码）
+
+0 个 Critical；1 个 Important（「提醒生成」事件的注释写成提交后订阅），另有 3 个重评为 Important（越界游标落到数据库报错、`InboxCursor` 不在公开包、7.4 缺两条端到端测试），都已修复并有测试。
+
+不修的（留给后续）：
+
+- 监听类注释只写了「改并发前补锁」，没写多实例或新旧容器重叠同样会打破单消费线程的前提（现在 CD 先停后起，不会触发）。
+- 未登录且参数不合法时回 422 而不是 401（先解析参数、后判登录）；门户总是登录后才调。
+
+### 18.3 验证
+
+只跑受影响模块（编排会话在集成分支上跑全量）：notification 五个模块的 `check` 与 infra、boot 的 `integrationTest`（含真 RabbitMQ 的 `InboxEventFlowIT` 7 例）；interaction 六个模块的 `check` 与 infra、boot 的 `integrationTest`。
