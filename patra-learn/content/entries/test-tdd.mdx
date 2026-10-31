@@ -1,0 +1,149 @@
+---
+title: TDD：红、绿、重构
+summary: 先写一个会失败的测试，再写刚好让它通过的代码，最后在测试保护下整理；一圈一圈小步前进。
+type: concept
+difficulty: basic
+tags: [testing]
+prerequisites: [test-unit-tests]
+---
+
+<Diagnose
+  question="有人先写好了功能代码，再补了一个测试，测试一跑就是绿的。另一个人先写测试、看着它变红，再写代码让它变绿。后一种做法，多保证了什么？"
+  options={["代码写得更快", "这个测试确实有能力发现错误：它至少失败过一次", "测试覆盖的代码行数更多"]}
+  answer="B"
+  ifRight="对。一个从来没红过的测试，你无法知道它是真的在检查，还是什么都检查不到。往下读会讲这个习惯是怎么变成一整套工作方式的。"
+  ifWrong="答案是 B。事后补的测试一上来就是绿的，你分不清「代码对」还是「测试检查不出东西」；先看到它变红，就证明它能发现问题。这套做法叫 TDD（测试驱动开发），下面会讲。前面讲了测试怎么写，不熟可以先回头看。"
+  suggest="test-unit-tests"
+/>
+
+## 一圈三步：红、绿、重构
+
+TDD 是一种写代码的**顺序**，不是一种测试。一圈只有三步：
+
+1. **红**：先写一个测试，描述你想要的行为。此时代码还没写，测试必然失败。
+2. **绿**：写**最少**的代码，只求让这个测试通过。
+3. **重构**：测试是绿的，趁机整理代码——改名、去重复、拆函数——但不改变行为。每改一点，重跑测试，保持绿。
+
+然后下一圈，加下一个行为。
+
+Patra 的根 `CLAUDE.md` 把它列为开发 feature 和修 bug 时的强制做法：
+
+<CodeRef at="CLAUDE.md@cfec9c9f30270dcf03f5cd7b6e54a0cd3b59296b" lines="41-62" />
+
+下面这个状态机可以让你自己走一圈。试着在「红」的时候点「开始加新功能」，看会发生什么。
+
+<StateMachine
+  title="TDD 的一圈"
+  subject="一个行为"
+  states={[
+    { id: "ready", label: "准备", sub: "没有未完成的测试", col: 1, desc: "手上没有失败的测试，可以开始想下一个行为。" },
+    { id: "red", label: "红", sub: "有一个失败的测试", col: 2, desc: "测试描述了想要的行为，实现还没有，所以失败。Patra 的规则：测试失败时，不许去加别的新功能。" },
+    { id: "green", label: "绿", sub: "刚好通过", col: 3, desc: "用最少的代码让测试通过了。此时可以直接下一圈，也可以先整理一下。" },
+    { id: "refactor", label: "重构", sub: "整理，保持绿", col: 4, desc: "改名、去重复、拆函数。每一步之后都重跑测试，一旦变红，说明这一步改变了行为，要退回去。" }
+  ]}
+  start="ready"
+  events={[
+    { id: "write-test", label: "写一个会失败的测试" },
+    { id: "make-pass", label: "写最少的代码让它通过" },
+    { id: "tidy", label: "整理代码（不改行为）" },
+    { id: "next", label: "开始下一个行为" }
+  ]}
+  transitions={[
+    { from: "ready", event: "write-test", to: "red", label: "写测试" },
+    { from: "red", event: "make-pass", to: "green", label: "最小实现" },
+    { from: "green", event: "tidy", to: "refactor", label: "整理" },
+    { from: "green", event: "next", to: "ready", label: "下一圈" },
+    { from: "refactor", event: "next", to: "ready", label: "下一圈" }
+  ]}
+/>
+
+## 用一个真实的类走三圈
+
+下面用 Patra 里的 `ExportFileNames` 做例子。它负责给用户导出的文件起名字，规则是 `patra-<名字>-<日期>.<扩展名>`，名字里的非法字符要去掉，去完是空的就用 `export`。
+
+先说清楚：**下面是为了讲解重新推演的顺序，不是这个类当初的提交历史。** 但最后的三个测试和实现，是仓库里真实的文件：
+
+<CodeRef at="patra-api/patra-catalog/patra-catalog-adapter/src/test/java/dev/patra/catalog/adapter/portal/rest/ExportFileNamesTest.java@5073ab1358404ecd989e722373cd9f7edafe238b" lines="21-52" />
+
+<CodeRef at="patra-api/patra-catalog/patra-catalog-adapter/src/main/java/dev/patra/catalog/adapter/portal/rest/ExportFileNames.java@5073ab1358404ecd989e722373cd9f7edafe238b" lines="29-38" />
+
+三个测试正好对应三圈。点着看，每一圈都很小。
+
+<Stepper
+  title="从零推演 ExportFileNames"
+  nodes={[
+    { id: "test", label: "测试", sub: "期望的行为" },
+    { id: "code", label: "ExportFileNames.of", sub: "实现" },
+    { id: "result", label: "结果", sub: "红还是绿" }
+  ]}
+  links={[
+    { from: "test", to: "code", label: "调用" },
+    { from: "code", to: "result" }
+  ]}
+  steps={[
+    { caption: "第一圈，红。先写测试：名字叫「组会」、格式 RIS、日期 2026-10-24，应该得到 patra-组会-2026-10-24.ris。此时 ExportFileNames 这个类都还不存在。", focus: ["test"], tokens: [{ id: "t", label: "测试 1", at: "test" }] },
+    { caption: "测试跑起来，连编译都过不去：红。这一步证明了测试确实在检查东西。", focus: ["result"], links: ["code>result"], tokens: [{ id: "t", label: "测试 1", at: "result" }], notes: [{ at: "result", text: "红：类不存在", tone: "bad" }] },
+    { caption: "绿。写最少的代码：把名字、日期、扩展名用连字符拼起来，一行就够。此时不需要去处理非法字符，因为还没有任何测试要求它。", focus: ["code"], links: ["test>code"], tokens: [{ id: "t", label: "测试 1", at: "code" }], notes: [{ at: "code", text: "一行拼接", tone: "wait" }] },
+    { caption: "测试 1 通过：绿。这一圈到此结束，也没有什么可整理的。", focus: ["result"], links: ["code>result"], tokens: [{ id: "t", label: "测试 1", at: "result" }], notes: [{ at: "result", text: "绿", tone: "ok" }] },
+    { caption: "第二圈，红。新测试：名字是 a/b c?<d> 这样一串怪字符，期望去掉非法字符、空白折叠成连字符。现有实现原样拼接，输出里还带着斜杠和问号：测试 2 变红。", focus: ["test", "result"], tokens: [{ id: "t", label: "测试 2", at: "result" }], notes: [{ at: "result", text: "红：输出里还有非法字符", tone: "bad" }] },
+    { caption: "绿。现在才给实现加上「清洗名字」的两步：去掉非法字符、折叠空白。测试 2 和测试 1 都通过。", focus: ["code", "result"], links: ["code>result"], tokens: [{ id: "t", label: "测试 1、2", at: "result" }], notes: [{ at: "result", text: "绿（两个测试）", tone: "ok" }] },
+    { caption: "第三圈，红。新测试：名字是 /// 或者空，期望用 export 顶替。现有实现会得到 patra---... 这样的怪名字：红。随后加上「清洗后为空就用 export」，变绿。", focus: ["test", "code", "result"], tokens: [{ id: "t", label: "测试 3", at: "result" }], notes: [{ at: "result", text: "先红后绿", tone: "ok" }] }
+  ]}
+  guesses={[
+    { before: 3, question: "第一圈已经红了。现在要让它变绿，实现里需要先写好「去掉非法字符」和「空名字用 export」这两段吗？", options: ["需要，反正迟早要写，一次写完省事", "不需要，现在只有测试 1，先让它通过就行", "只写其中一段"], answer: "B", explain: "Patra 的规则：只写让当前测试通过的必要代码，禁止「预防性」代码。没有测试要求的逻辑，写出来也没人能证明它对。等测试 2、3 出现，再写。" }
+  ]}
+/>
+
+这样走有两个好处：
+
+- 每一段实现，都有一个曾经红过的测试在为它作证。
+- 每一圈都只有几分钟，出错时你知道刚改的是哪一小块。
+
+## 为什么一定要先看到红
+
+<Callout kind="insight">
+
+测试变绿有两种可能：代码对了，或者测试什么都没检查到。看过它红，就排除了第二种。
+
+</Callout>
+
+所以修 bug 的时候，TDD 的第一步是：**先写一个能重现这个 bug 的测试，看它红**，再去改代码。这个测试之后会一直留着，同一个 bug 以后再出现，测试会立刻报警。
+
+<Quiz
+  title="考考自己"
+  questions={[
+    {
+      question: "写完让测试 1 通过的代码后，你发现测试 2 的场景「很可能也要处理」，于是顺手把它也写进去了。这违反了 TDD 的哪条要求？",
+      options: ["红：测试必须先失败", "最小实现：只写让当前测试通过所必需的代码", "重构：不能改变行为"],
+      answer: "B",
+      explain: "没有测试要求的逻辑，没有任何东西证明它对。等测试 2 写出来、变红，再写它。"
+    },
+    {
+      question: "重构这一步，你改了一个变量名，重跑测试变红了。最可能说明什么？",
+      options: ["测试写得不好", "这一步改变了代码的行为，应该退回去", "重构本来就会让测试变红"],
+      answer: "B",
+      explain: "重构的定义就是「不改变行为」。重构时测试变红，说明你改了不该改的东西。"
+    }
+  ]}
+/>
+
+## 不是所有工作都要 TDD
+
+Patra 规定：开发 feature 和修 bug 时必须 TDD；纯文档、配置这类不改变代码运行行为的改动，不要求。TDD 是为了保护**行为**，没有行为变化的地方不需要它。
+
+<Callout kind="warn">
+
+TDD 不是「先写一大堆测试，再写一大堆代码」。Patra 明确禁止：一次性写多个测试再去实现。一圈只有一个失败的测试。
+
+</Callout>
+
+<Transfer
+  prompt="假设有人报告：导出文件名里，名字里的全角空格没有被折叠成连字符。请用 TDD 的顺序说出你会怎么修这个 bug：第一步做什么，怎么判断做对了，接着做什么，最后做什么？"
+  points={[
+    { label: "先写复现的测试", text: "写一个测试，名字里放全角空格，断言结果里是连字符。" },
+    { label: "确认它红", text: "运行，看它因为「全角空格没被折叠」而失败。失败原因要对：不是编译错误，也不是别的原因。" },
+    { label: "最小改动", text: "只改让它通过所必需的那一点，例如让折叠空白的规则覆盖全角空格。" },
+    { label: "全部重跑", text: "旧的三个测试也要仍然是绿的，确认没有顺手改坏别的行为；最后再整理代码。" }
+  ]}
+  placeholder="比如：我会先写一个测试……"
+/>

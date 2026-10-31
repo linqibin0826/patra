@@ -1,0 +1,147 @@
+---
+title: 为什么要写测试
+summary: 手工点一遍的成本会随功能增长；测试是一份会自动重跑的说明书，每次改动都替你检查一遍。
+type: concept
+difficulty: intro
+tags: [testing, ci-cd]
+prerequisites: []
+---
+
+<Diagnose
+  question="你改了登录页的一个按钮，自己点了点登录页，一切正常，就上线了。三天后有人说「个人主页打不开了」。最可能的原因是什么？"
+  options={["你点得不够仔细", "这次改动影响了你没点到的地方，而之后没有人再去检查那里", "个人主页本来就不稳定"]}
+  answer="B"
+  ifRight="对。改一处、坏另一处，是最常见的事故，而你只检查了你想到的地方。往下读会讲：怎么让这些「没想到的地方」每次都被自动检查。"
+  ifWrong="答案是 B。点得再仔细，也只能点你想到的地方；改动牵连到的别处没人去看。这篇要讲的，就是怎么让电脑替你把所有地方都查一遍。"
+/>
+
+## 手工检查：每改一次，全部重做一遍
+
+先想一个小场景：你做了一个记账小程序，有「记一笔」「看本月合计」「删除」三个功能。
+
+每次改完代码，要确认没弄坏东西，只能自己打开程序，把三个功能依次点一遍。三个功能，点一遍两分钟，还能忍。
+
+可是功能会变多。十个功能要点十分钟，一百个功能要点一个多小时。更糟的是：你改的是「记一笔」，却可能弄坏「看本月合计」，所以不能只点你改的那个，要全部重点。
+
+<Callout kind="analogy">
+
+手工检查像每次出门都把家里所有的门窗、煤气、电器挨个摸一遍。头几次你很认真，一个月后你就只看大门了。不是你偷懒，是这件事本来就不适合靠人记性来做。
+
+</Callout>
+
+这里有两个成本，都会随功能数量增长：时间越来越长，人越来越容易漏。
+
+## 测试：把「点一遍」写成会自动重跑的代码
+
+测试就是一小段代码，它自己去调用你的程序，再自己判断结果对不对。写好之后，电脑可以随时、不知疲倦地重跑，一百个测试几秒钟就跑完。
+
+看一个 Patra 里真实的测试。被测的是一个「可以手动拨动的时钟」（后面的文章会讲它为什么存在），这个测试检查「往前拨 30 天」这件事：
+
+<CodeRef at="patra-tool/patra-tool-test/src/test/java/dev/patra/tool/test/clock/MutableClockTest.java@af8cd13c3ec367ccba78615b72e6ff19535cef90" lines="28-38" />
+
+```java
+@Test
+void should_advance_and_set() {
+  MutableClock clock = MutableClock.startingAt(START);
+
+  clock.advance(Duration.ofDays(30));
+  assertThat(clock.instant()).isEqualTo(START.plus(Duration.ofDays(30)));
+
+  clock.set(START);
+  assertThat(clock.instant()).isEqualTo(START);
+}
+```
+
+不用懂每个词，看它的三个动作就够了：
+
+1. 造一个从 `START` 开始的时钟。
+2. 让它往前拨 30 天。
+3. 断言（`assertThat`）：现在的时刻应该等于 `START` 再加 30 天。
+
+如果有人以后改坏了「往前拨」，这一行断言就会失败，测试变红，改的人当场就知道。
+
+测试还有一个副作用：它是一份**不会过期的说明书**。文档会写旧，但只要测试还在跑、还是绿的，它描述的行为就一定还成立。
+
+## 测试在 Patra 里什么时候跑
+
+Patra 不靠人记得去跑测试。每个合并到 `main` 的 Pull Request（一次「请把我的改动合进去」的申请）都会触发 CI（持续集成：一台云上的机器自动把测试跑一遍）。
+
+<CodeRef at=".github/workflows/ci.yml@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="1-12" />
+
+读开头几行注释就能看出：CI 先判断这次改了哪部分（`detect-changes`），再只跑受影响的那部分测试，最后汇总成一个叫 `required-check` 的检查。它是分支保护唯一要求必须通过的检查：红了，就合并不了。
+
+另外每天 UTC 18 点会定时全量跑一次兜底。
+
+下面这个动画把一次改动走一遍。中间有一步，大多数人会猜错。
+
+<Stepper
+  title="一次改动，测试怎么替你把关"
+  nodes={[
+    { id: "you", label: "你", sub: "改代码" },
+    { id: "pr", label: "Pull Request", sub: "申请合并" },
+    { id: "ci", label: "CI", sub: "自动跑测试" },
+    { id: "main", label: "main", sub: "主干代码" }
+  ]}
+  links={[
+    { from: "you", to: "pr" },
+    { from: "pr", to: "ci" },
+    { from: "ci", to: "main", label: "全绿才能合并" }
+  ]}
+  steps={[
+    { caption: "你改了「记一笔」的代码，自己点了点，没问题。", focus: ["you"], tokens: [{ id: "change", label: "改动", at: "you" }] },
+    { caption: "你把改动推上去，开了一个 Pull Request，请求合进 main。", focus: ["pr"], links: ["you>pr"], tokens: [{ id: "change", label: "改动", at: "pr" }] },
+    { caption: "GitHub 看到 PR，自动叫 CI 开工。CI 把所有受影响的测试都跑一遍，包括你今天压根没想到要看的那些。", focus: ["ci"], links: ["pr>ci"], tokens: [{ id: "change", label: "改动", at: "ci" }], notes: [{ at: "ci", text: "测试 · 跑中", tone: "wait" }] },
+    { caption: "「看本月合计」的测试红了：你的改动无意中让合计多算了一笔。CI 整体变红。", focus: ["ci"], tokens: [{ id: "change", label: "改动", at: "ci" }], notes: [{ at: "ci", text: "1 个测试失败", tone: "bad" }] },
+    { caption: "红着的 PR 合并不了，坏代码没有进到 main。你修好再推一次，测试变绿，才允许合并。", focus: ["ci", "main"], links: ["ci>main"], tokens: [{ id: "change", label: "已修好", at: "main" }], notes: [{ at: "ci", text: "全部通过", tone: "ok" }] }
+  ]}
+  guesses={[
+    { before: 4, question: "你的改动无意中弄坏了「看本月合计」，而你今天一次都没打开过这个功能。会发生什么？", options: ["没人发现，等用户来反馈", "之前为「看本月合计」写好的测试会失败，当场发现", "CI 会自动帮你修好"], answer: "B", explain: "测试不管你今天点没点过那里，它只管重新检查。这正是测试比手工检查可靠的地方：检查范围不靠你的记性。" }
+  ]}
+/>
+
+<Callout kind="warn">
+
+测试变绿，只能说明「测到的那些情况没问题」，不能说明「一个 bug 都没有」。没写测试的地方，绿灯什么也没保证。
+
+</Callout>
+
+## 测试要花时间，值不值
+
+写测试要花时间，测试本身也要随代码一起维护，这是真实的代价。
+
+<Callout kind="cost">
+
+写一个测试通常比手工点一遍慢。它赚回来的方式是：同一个检查以后会被重跑成百上千次，每次都不花你的时间。
+
+</Callout>
+
+所以越是「会反复改动、出错代价大」的地方，越值得写测试；一次性的小脚本，可以不写。
+
+<Quiz
+  title="考考自己"
+  questions={[
+    {
+      question: "测试全部通过（绿灯），能说明什么？",
+      options: ["程序里没有任何 bug", "写过测试的那些情形目前是对的", "程序可以不用再改了"],
+      answer: "B",
+      explain: "测试只覆盖你写下的情形。绿灯是「已知的都对」，不是「没有未知的错」。"
+    },
+    {
+      question: "下面哪种情况，写测试最划算？",
+      options: ["只运行一次、用完就丢的小脚本", "每周都会被改动、而且出错会影响用户的核心功能", "还没想好要做什么的草稿"],
+      answer: "B",
+      explain: "测试的收益来自「被反复重跑」。改得越频繁、出错越贵，越值得。"
+    }
+  ]}
+/>
+
+<Transfer
+  prompt="想想你自己做过或用过的一个小程序（比如记账、待办清单）。每次改完代码，你会手工点哪几件事来确认没坏？挑其中一件，说说怎么把它变成一个自动检查：它要先做什么，再断言什么？"
+  points={[
+    { label: "挑一件具体的事", text: "比如「删除一笔账后，合计应该变少」，而不是「检查一下功能」。" },
+    { label: "先准备", text: "造出检查需要的起点，比如先记两笔账。" },
+    { label: "再动作", text: "做那个会改变结果的动作，比如删掉其中一笔。" },
+    { label: "最后断言", text: "写下一个明确的期望，比如合计只剩另一笔的金额。" }
+  ]}
+  placeholder="比如：我会先记两笔账……"
+/>

@@ -1,0 +1,192 @@
+---
+title: 让时间可控：注入 Clock
+summary: 代码里直接取当前时间就没法测「30 天后会怎样」；把时钟当成依赖传进来，测试里换成能手动拨动的假时钟。
+type: concept
+difficulty: basic
+tags: [testing, java, spring]
+prerequisites: [test-doubles-and-mocks]
+---
+
+<Diagnose
+  question="一个测试今天跑是绿的，明天跑变红了。代码和测试一行都没改，机器也没问题。最可能的原因是什么？"
+  options={["测试里或被测代码里用到了「当前时间」，结果随日期变了", "Java 每天都会随机出一点 bug", "测试跑得太多次，用坏了"]}
+  answer="A"
+  ifRight="对。只要结果依赖「现在是几点」，测试就会随时间变。这篇讲怎么把「现在」变成一个测试能控制的东西。"
+  ifWrong="答案是 A：测试一旦依赖当前时间，今天对、明天错就是常事。后面会讲怎么让「现在」变得可控。这和前面讲的测试替身思路一脉相承：把不可控的外部东西，换成测试能控制的替身。"
+  suggest="test-doubles-and-mocks"
+/>
+
+## 「现在」是最容易被忽视的外部依赖
+
+Patra 有一个规则：用户改名之后，30 天内不能再改。要测这个规则，你需要验证两件事：第 29 天不行，第 30 天可以。
+
+如果代码里是这样取时间的：
+
+```java
+Instant now = Instant.now();   // 直接问系统「现在几点」
+```
+
+测试就卡住了。`Instant.now()` 答的是真实的系统时间，测试无法让它说「现在是 30 天后」。你只能真等 30 天，或者去改电脑的系统时间——两样都荒唐，而且一旦改了系统时间，机器上别的程序也跟着乱。
+
+<Callout kind="analogy">
+
+出一张考卷，题目写「请回答今天是星期几」。它每天的标准答案都不一样，永远没法给它打一个固定的分数。要考卷可以打分，得改成「如果今天是 2026 年 10 月 20 日，请问……」——把「今天」变成题目给出的条件。
+
+</Callout>
+
+## 办法：把时钟当成依赖传进来
+
+Java 标准库里有一个 `java.time.Clock`：它代表「一个能回答现在几点的东西」。代码不再自己问系统，而是**从外面接收一个 `Clock`**，向它要时间：
+
+```java
+Instant now = Instant.now(clock);   // 问传进来的这个时钟
+```
+
+生产环境传进来的是系统时钟；测试里传一个假的，假的想说几点就几点。Patra 的测试约定里明确写了这一条：
+
+<CodeRef at=".claude/rules/testing/conventions.md@cfec9c9f30270dcf03f5cd7b6e54a0cd3b59296b" lines="1-30" />
+
+注入 `java.time.Clock`，不要直接调用 `LocalDateTime.now()` 或 `Instant.now()`。
+
+对比一下两种写法的测试：
+
+<Compare
+  title="直接取时间，还是注入时钟"
+  variants={[
+    {
+      label: "直接取时间",
+      steps: ["代码里写死 Instant.now()", "测试想验证「30 天后可以改名」", "只能真等 30 天，或改系统时间"],
+      results: [{ label: "测试能不能自动、稳定地跑", value: "不能", tone: "bad" }, { label: "测试结果受什么影响", value: "运行当天的真实日期", tone: "bad" }],
+      verdict: { tone: "bad", head: "没法测。", text: "要么放弃测这条规则，要么写一个今天绿、明天红的测试。" }
+    },
+    {
+      label: "注入 Clock",
+      steps: ["代码接收一个 Clock，向它要时间", "测试传入一个可拨动的假时钟", "一行代码把时钟拨快 30 天"],
+      results: [{ label: "测试能不能自动、稳定地跑", value: "能，毫秒级", tone: "ok" }, { label: "测试结果受什么影响", value: "只由你在测试里设的时间决定", tone: "ok" }],
+      verdict: { tone: "ok", head: "想让时间走多快都行。", text: "时间成了测试的一个输入，和其他输入没有区别。" }
+    }
+  ]}
+/>
+
+## 在 Patra 里，时钟从哪儿来
+
+不是每个业务类都要自己造一个 `Clock`。Patra 的启动模块统一提供了一个系统 UTC 时钟：
+
+<CodeRef at="patra-tool/patra-tool-launch/src/main/java/dev/patra/tool/launch/autoconfigure/LaunchAutoConfiguration.java@b6e01875bb5692356021c8a19562f557f319fc54" lines="56-60" />
+
+```java
+@Bean
+@ConditionalOnMissingBean
+Clock clock() {
+  return Clock.systemUTC();
+}
+```
+
+关键是 `@ConditionalOnMissingBean`：意思是「如果容器里已经有别人提供的 `Clock`，我就不提供了」。这是故意留的让位口：测试只要自己声明一个 `Clock`，启动器的系统时钟就会退场。
+
+业务代码就直接注入它。比如门户的引用导出接口，用它取当天日期给导出文件命名：
+
+<CodeRef at="patra-api/patra-catalog/patra-catalog-adapter/src/main/java/dev/patra/catalog/adapter/portal/rest/PortalCitationController.java@5073ab1358404ecd989e722373cd9f7edafe238b" lines="42-53" />
+
+## 测试里换上可以拨动的时钟
+
+Patra 的测试工具模块里有一个现成的假时钟：
+
+<CodeRef at="patra-tool/patra-tool-test/src/main/java/dev/patra/tool/test/clock/MutableClock.java@af8cd13c3ec367ccba78615b72e6ff19535cef90" lines="11-51" />
+
+它从一个固定时刻出发，提供两个动作：`advance(时长)` 往前拨，`set(时刻)` 直接设到某一刻。
+
+集成测试把它声明成一个 `@Primary` 的 `Clock` Bean，就能把系统时钟顶掉：
+
+<CodeRef at="patra-api/patra-identity/patra-identity-boot/src/integrationTest/java/dev/patra/identity/config/IdentityClockITSpringConfig.java@af8cd13c3ec367ccba78615b72e6ff19535cef90" lines="11-30" />
+
+点着走一遍，看「顶掉」是怎么发生的。其中有一步值得先猜一下。
+
+<Stepper
+  title="测试里的时钟是怎么被换掉的"
+  nodes={[
+    { id: "launch", label: "启动器", sub: "系统时钟" },
+    { id: "container", label: "Spring 容器", sub: "Bean 的集合" },
+    { id: "test", label: "测试配置", sub: "MutableClock" },
+    { id: "code", label: "业务代码", sub: "注入 Clock" }
+  ]}
+  links={[
+    { from: "launch", to: "container" },
+    { from: "test", to: "container" },
+    { from: "container", to: "code" }
+  ]}
+  steps={[
+    { caption: "正常运行时，容器里没有别的 Clock，启动器注册了系统时钟。业务代码拿到的就是它。", focus: ["launch", "container", "code"], links: ["launch>container", "container>code"], tokens: [{ id: "clock", label: "系统时钟", at: "code" }] },
+    { caption: "现在跑集成测试。测试配置里声明了一个 @Primary 的 MutableClock，它被登记进了容器。", focus: ["test", "container"], links: ["test>container"], tokens: [{ id: "fake", label: "MutableClock", at: "container" }] },
+    { caption: "启动器的 Clock 带着「容器里没有别的 Clock 时才提供」的条件。条件不成立，它没有被登记。", focus: ["launch", "container"], tokens: [{ id: "fake", label: "MutableClock", at: "container" }], notes: [{ at: "launch", text: "让位，不提供", tone: "wait" }] },
+    { caption: "业务代码要 Clock，拿到的是 MutableClock。测试里持有同一个对象，想拨就拨。", focus: ["container", "code"], links: ["container>code"], tokens: [{ id: "fake", label: "MutableClock", at: "code" }], notes: [{ at: "code", text: "与测试共用同一个时钟", tone: "ok" }] }
+  ]}
+  guesses={[
+    { before: 3, question: "测试配置里声明了一个 Clock。启动器自己的系统时钟会怎样？", options: ["两个都在，业务代码随机拿到一个", "启动器因为 @ConditionalOnMissingBean 而不提供自己的", "启动失败，报重复定义"], answer: "B", explain: "@ConditionalOnMissingBean 的意思就是「已有同类型的就退场」。这是 Spring Boot 自动配置的通用约定：给使用者留一个替换的口子。" }
+  ]}
+/>
+
+## 真实的例子：拨时钟验证改名规则
+
+回到开头的问题。Patra 的一个集成测试，把「改名冷却 30 天、旧名保留 90 天」这些规则从头到尾走了一遍，中间就是靠拨时钟：
+
+<CodeRef at="patra-api/patra-identity/patra-identity-boot/src/integrationTest/java/dev/patra/identity/UsernameChangeFlowIT.java@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="70-100" />
+
+```java
+clock.set(IdentityClockITSpringConfig.START);   // 回到起点
+// ……第一次改名成功，马上再改一次：409 ……
+clock.advance(Duration.ofDays(30));              // 拨快 30 天
+RawResponse back = changeUsername(alice, "alice");
+assertThat(back.status()).as(back.body()).isEqualTo(200);
+```
+
+自己试一下：从第一次改名起，拨多少天之后才能再改？
+
+<Params
+  title="拨动时钟：改名冷却"
+  guess={{ question: "第一次改名之后，第 29 天再改名，会怎样？", options: ["可以，已经快满一个月了", "不行，返回 409", "要看用户有没有登录"], answer: "B", explain: "冷却是 30 天。测试里在拨 30 天之后才能改成功，之前再改会得到 409。" }}
+  controls={[
+    { type: "slider", id: "days", label: "距离第一次改名过去了", min: 0, max: 60, step: 1, default: 10, unit: "天" }
+  ]}
+  cases={[
+    { when: { days: [0, 29] }, results: [{ label: "再次改名", value: "409 冷却中", tone: "bad" }, { label: "下次可改时间", value: "起点往后 30 天（测试里是 2026-11-19）", tone: "wait" }], verdict: { tone: "bad", head: "还在冷却期。", text: "距第一次改名才 {days}，不满 30 天，接口拒绝。" } },
+    { results: [{ label: "再次改名", value: "200 成功", tone: "ok" }], verdict: { tone: "ok", head: "冷却结束。", text: "已经过去 {days}，满 30 天，可以再次改名。" } }
+  ]}
+/>
+
+测试没有真的等 30 天，从第一次改名到验证成功，只用了一行 `advance`。
+
+<Callout kind="warn">
+
+时钟只能管住「应用自己算的时间」。Redis 的过期时间由 Redis 服务器按真实时间计，换了应用里的 `Clock` 管不到它。所以那个测试特意声明：它不依赖会话过期。
+
+</Callout>
+
+<Callout kind="warn" label="还有一个小细节">
+
+`MutableClock` 固定为 UTC，`withZone(…)` 只会返回它自己。如果业务代码靠 `clock.withZone(某个时区)` 取当地日期，换成它之后拿到的是 UTC 的日期。测试断言日期时要留意。
+
+</Callout>
+
+<Quiz
+  title="考考自己"
+  questions={[
+    {
+      question: "业务类里有一行 LocalDate.now()，直接取当天日期。按 Patra 的约定，应该怎么改？",
+      options: ["保持原样，测试时修改系统时间", "注入 Clock，改成 LocalDate.now(clock)", "改成静态变量保存启动时间"],
+      answer: "B",
+      explain: "注入 Clock 是约定的做法。这样测试可以传入固定或可拨动的时钟。"
+    }
+  ]}
+/>
+
+<Transfer
+  prompt="某功能规定：邮箱验证链接发出 24 小时后失效。请说明：代码里该怎么取「现在」？写一个测试验证「23 小时 59 分还能用、24 小时 1 分已失效」，需要哪几步？"
+  points={[
+    { label: "注入 Clock", text: "代码向注入的 Clock 要当前时间，不直接调用 Instant.now()。" },
+    { label: "固定起点", text: "测试里先把时钟设到一个固定时刻，再生成验证链接。" },
+    { label: "拨动并断言", text: "advance 23 小时 59 分，断言链接有效；再 advance 2 分钟（共 24 小时 1 分），断言已失效。" },
+    { label: "边界", text: "再补一个刚好 24 小时的测试，把「到点算不算失效」这条边界钉死。" }
+  ]}
+  placeholder="比如：代码里我会这样取时间……"
+/>

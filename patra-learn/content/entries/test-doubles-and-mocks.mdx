@@ -1,0 +1,188 @@
+---
+title: 测试替身：Stub、Mock 与 Fake
+summary: 把被测对象身边的依赖换成假的：桩给固定答案，Mock 记录并核对调用，Fake 是简化的真实现；以及什么时候不该用。
+type: concept
+difficulty: basic
+tags: [testing, java]
+prerequisites: [test-unit-tests]
+---
+
+<Diagnose
+  question="你要测「用户删除头像」这段代码，它删完数据库里的记录之后，还会去对象存储里删一个真实的文件。你不想让测试真的去动存储服务。最合适的做法是什么？"
+  options={["测试前先在存储服务里放一个文件，测完再手工清理", "把「对象存储」换成一个假的对象，测试只检查它有没有被叫去删文件", "不测这一步，只测数据库那一半"]}
+  answer="B"
+  ifRight="对。换成假的对象，测试就既快又不会碰外面的世界。下面讲这些「假对象」有哪几种、各自该怎么用。"
+  ifWrong="答案是 B。真去操作存储服务会让测试变慢、变不稳，还会留下垃圾；不测又等于放过了关键的一步。办法是把它换成假对象，这个办法叫「测试替身」，正是这篇要讲的。前面讲了单元测试为什么要「不碰外面的世界」，可以先回头看看。"
+  suggest="test-unit-tests"
+/>
+
+## 被测对象身边有一圈依赖
+
+Patra 的用户服务里有一个类，叫 `RemoveAvatarHandler`，负责「移除头像」。它自己不存数据，要靠身边几个帮手：问「当前是谁」、查用户、改资料、删存储里的文件、开事务。
+
+这些帮手在生产里都是「真东西」：连着数据库、连着对象存储。单元测试不想连它们，所以要在测试里把每一个帮手换成假的。
+
+点一点下面的方块，看每个帮手在测试里被换成了什么。
+
+<Structure
+  title="RemoveAvatarHandler 和它的帮手"
+  intro="点任意一块，看它在生产里是什么、在测试里换成了什么"
+  nodes={[
+    { id: "handler", label: "RemoveAvatarHandler", sub: "被测对象", code: true, col: 1, row: 2, desc: "测试里用的是真的：就是要检查它自己的逻辑。" },
+    { id: "current", label: "CurrentUserPort", sub: "当前是谁", code: true, col: 2, row: 1, desc: "生产里从登录会话里取出当前用户。测试里换成一个桩：直接回答「是 42 号用户」。" },
+    { id: "users", label: "UserRepository", sub: "查用户", code: true, col: 2, row: 2, desc: "生产里查数据库。测试里换成桩：被问到 42 号用户，就回一个造好的用户对象。" },
+    { id: "profiles", label: "UserProfileRepository", sub: "改资料", code: true, col: 2, row: 3, desc: "生产里写数据库。测试里换成 Mock：既给固定答案，也记录「有没有被叫去保存、保存了什么」。" },
+    { id: "storage", label: "AvatarStoragePort", sub: "删存储里的文件", code: true, col: 2, row: 4, desc: "生产里去对象存储删文件。测试里换成 Mock：不真删，只记录「有没有被叫去删、删的是哪个」。" },
+    { id: "tx", label: "TransactionOperations", sub: "开事务", code: true, col: 2, row: 5, desc: "生产里开真事务。测试里换成 Spring 自带的「不开事务、直接执行」版本：一个最简单的 Fake。" }
+  ]}
+  edges={[
+    { from: "handler", to: "current" },
+    { from: "handler", to: "users" },
+    { from: "handler", to: "profiles" },
+    { from: "handler", to: "storage" },
+    { from: "handler", to: "tx" }
+  ]}
+/>
+
+## 三种假对象：桩、Mock、Fake
+
+统称「测试替身」。最常用的三种，区别在**它在测试里扮演什么角色**：
+
+| 替身 | 它做什么 | 测试关心什么 |
+|---|---|---|
+| **Stub 桩** | 被问到什么就给固定的答案 | 让被测对象有东西可用，不检查它被问了几次 |
+| **Mock** | 记录自己被谁、怎样调用过，事后让测试核对 | 「被测对象有没有叫它做某件事」 |
+| **Fake** | 一个能真正工作的简化版实现 | 让被测对象按真实方式运行，但不连外面 |
+
+看真实的测试，找出这三种：
+
+<CodeRef at="patra-api/patra-identity/patra-identity-app/src/test/java/dev/patra/identity/app/account/usecase/avatar/RemoveAvatarHandlerTest.java@5073ab1358404ecd989e722373cd9f7edafe238b" lines="41-69" />
+
+```java
+private final AvatarStoragePort storage = mock(AvatarStoragePort.class);
+private final RemoveAvatarHandler handler =
+    new RemoveAvatarHandler(
+        currentUserPort, users, profiles, storage, TransactionOperations.withoutTransaction());
+
+@BeforeEach
+void stubHappyPath() {
+  when(currentUserPort.require())
+      .thenReturn(CurrentUser.of(USER_ID, 7001L, AccountType.USER, ClientType.WEB));
+  // ...
+}
+
+@Test
+void should_clear_key_then_delete_objects() {
+  handler.handle(RemoveAvatarCommand.of());
+
+  InOrder order = inOrder(profiles, storage);
+  order.verify(profiles).save(saved.capture());
+  order.verify(storage).delete(OLD);
+}
+```
+
+`mock(X.class)` 是 Mockito（Java 里最常用的造假对象的库）造出一个空壳。之后：
+
+- `when(…).thenReturn(…)` 是在**教它怎么回答**：这是 Stub 的用法。
+- `verify(…)`、`inOrder(…)` 是在**核对它被怎样调用过**：这是 Mock 的用法。
+- `TransactionOperations.withoutTransaction()` 不靠 Mockito，是一个真能执行回调、只是不开事务的小实现：这是 Fake。
+
+同一个 Mockito 造的对象，既可以当桩，也可以当 Mock，看测试用它的哪一面。
+
+<Quiz
+  title="分一分"
+  questions={[
+    {
+      question: "when(users.findByIdForUpdate(USER_ID)).thenAnswer(…返回一个造好的用户…) 这一行，在测试里扮演什么角色？",
+      options: ["Stub：给被测对象一个固定的答案", "Mock：核对被测对象有没有来查过用户", "Fake：一个简化的用户仓库"],
+      answer: "A",
+      explain: "它只管「被问到就回答」，没有核对谁来问过、问了几次。核对那一面才叫 Mock。"
+    },
+    {
+      question: "verifyNoInteractions(storage) 想检查什么？",
+      options: ["存储里没有任何文件了", "被测对象根本没有去叫存储做任何事", "存储对象已经被 mock 过了"],
+      answer: "B",
+      explain: "它核对的是「没有被调用过」，这是 Mock 最擅长的：用在「没有头像时，不应该去删文件」这类场景。"
+    }
+  ]}
+/>
+
+## 这个 Mock 到底在守什么
+
+为什么这个测试要核对「先保存资料、再删存储里的文件」这个**先后**？因为顺序错了，出事的后果完全不同。
+
+先猜一猜，再点开对比。
+
+<Compare
+  title="两种顺序，中途出错会怎样"
+  failureLabel="在第 1、2 步之间出错"
+  variants={[
+    {
+      label: "先删文件，再清资料",
+      steps: ["去对象存储删头像文件", "在事务里清掉资料里的头像引用"],
+      results: [{ label: "对象存储里的文件", value: "已删除", tone: "ok" }, { label: "资料里的头像引用", value: "已清掉", tone: "ok" }],
+      verdict: { tone: "ok", head: "顺利时没区别。", text: "两步都做完，文件没了，引用也没了。" },
+      failure: {
+        after: 1,
+        results: [{ label: "对象存储里的文件", value: "已删除", tone: "bad" }, { label: "资料里的头像引用", value: "还在", tone: "bad" }],
+        verdict: { tone: "bad", head: "引用指向了一个不存在的文件。", text: "资料还说「头像是它」，文件却没了：别人打开这个人的主页，头像图是破的。" }
+      }
+    },
+    {
+      label: "先清资料，再删文件",
+      steps: ["在事务里清掉资料里的头像引用", "去对象存储删头像文件"],
+      results: [{ label: "资料里的头像引用", value: "已清掉", tone: "ok" }, { label: "对象存储里的文件", value: "已删除", tone: "ok" }],
+      verdict: { tone: "ok", head: "顺利时没区别。", text: "两步都做完，引用没了，文件也没了。" },
+      failure: {
+        after: 1,
+        results: [{ label: "资料里的头像引用", value: "已清掉", tone: "ok" }, { label: "对象存储里的文件", value: "还在，没人引用", tone: "wait" }],
+        verdict: { tone: "ok", head: "只多了一个没人用的文件。", text: "用户这边已经是没有头像的状态，没有可见的错误；多出来的文件无害。" }
+      }
+    }
+  ]}
+/>
+
+Patra 选的是第二种，`RemoveAvatarHandler` 先在事务里清引用，事务提交后才去删文件，删失败只记一条日志。测试里的 `inOrder(profiles, storage)` 就是把这个顺序**写成了会自动重跑的规矩**：以后有人改了顺序，这个测试立刻变红。
+
+这也是 Mock 的价值：有些行为本来就是「叫了谁、按什么顺序叫」，只能靠记录调用来检查。
+
+## Fake 什么时候比 Mock 好
+
+Mockito 的 Mock 好用，但不是万能的。Patra 在测试工具模块里自己写了一个 Fake：
+
+<CodeRef at="patra-tool/patra-tool-test/src/main/java/dev/patra/tool/test/transaction/RecordingTransactions.java@bacd725884150f0403f66ba921f62151e11f8e7a" lines="14-52" />
+
+它是一个「假事务」：真的执行传进来的回调，同时把「事务开始」「事务结束」写进一个事件列表。其他协作者也往同一个列表里写事件，测试就能断言「远程调用发生在事务开始之前」。
+
+这件事用 Mockito 的 `verify` 很难表达：它要的是**事务边界和别的调用之间的相对先后**，一个自带记录功能的小实现比一堆 `inOrder` 更直白。
+
+<Callout kind="lead" label="怎么挑">
+
+只要答案：用 Stub。要核对「有没有叫它、叫了几次、什么顺序」：用 Mock。需要它「真的像那么回事地工作」，又不想连外面：写一个 Fake。
+
+</Callout>
+
+## 什么时候不该用 Mock
+
+Mock 用多了会出问题，有几种情形要小心：
+
+1. **领域对象一律用真的**。这个测试里的用户、资料，都是用 `User.restore()` 这样的方法造出来的真对象，不是 Mock。Patra 的约定是 Domain 层测试不用任何 Mock：对象本身就是纯 Java，造一个真的比 Mock 更简单，也更接近真实。
+2. **别把测试写成实现的复述**。如果测试里 `verify` 了每一次内部调用，生产代码改一下写法（行为没变）测试就红了，这样的测试在拖累重构，不是在保护它。只核对**对外有意义的**调用。
+3. **被 Mock 的东西本身行为复杂时，Mock 会骗你**。比如一条数据库查询：Mock 里你告诉它「返回这个结果」，但真实数据库会不会返回这个结果，Mock 完全不知道。这类东西要用真的数据库来测，后面的集成测试那几篇会讲。
+
+<Callout kind="warn">
+
+测试里 Mock 得越多、`verify` 得越细，越可能是在检查「代码是怎么写的」，而不是「代码做了什么」。每写一个 `verify`，先问一句：这个调用，对外有意义吗？
+
+</Callout>
+
+<Transfer
+  prompt="一个「下单」的处理类，依赖三样东西：订单仓库（写数据库）、库存服务（远程调用，扣减库存）、邮件发送（下单成功后发确认邮件）。请说出：哪个依赖你会用 Stub、哪个用 Mock、有没有哪里值得写 Fake？如果要求「确认邮件必须在订单提交之后才发」，你怎么在测试里表达这条规矩？"
+  points={[
+    { label: "订单仓库", text: "多数时候用 Stub 给固定的返回；如果要检查「保存的订单内容对不对」，用 Mock 把保存时传入的对象抓出来核对。" },
+    { label: "库存服务", text: "是远程调用，不能真调。用 Stub 回答「库存够 / 不够」两种情形，分别测。" },
+    { label: "邮件发送", text: "用 Mock：核对「成功时叫了它一次、失败时一次都没叫」。" },
+    { label: "先后顺序", text: "让邮件 Mock 和订单提交往同一个事件列表里记事件，再断言「提交」在「发邮件」之前；或者用 inOrder 核对两者的调用顺序。" }
+  ]}
+  placeholder="比如：订单仓库我会用……"
+/>

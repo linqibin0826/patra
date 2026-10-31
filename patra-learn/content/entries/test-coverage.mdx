@@ -1,0 +1,141 @@
+---
+title: 覆盖率说明了什么，没说明什么
+summary: 覆盖率只说明测试执行过哪些代码，不说明它们被检查对了没有；行覆盖和分支覆盖不同，数字再高也不等于测对。
+type: concept
+difficulty: advanced
+tags: [testing, java, ci-cd]
+prerequisites: [test-kinds-and-pyramid]
+---
+
+<Diagnose
+  question="某个模块的测试覆盖率报告显示 100%。下面哪个结论一定成立？"
+  options={["这个模块里没有 bug", "测试运行时，这个模块的每一行代码都被执行过", "这个模块的每个行为都被正确断言过"]}
+  answer="B"
+  ifRight="对。覆盖率回答的只是「执行到过没有」。至于执行之后有没有检查结果对不对，它一无所知。这篇把这个差别讲清楚。"
+  ifWrong="答案是 B。覆盖率只记录哪些代码在测试运行时被执行过。一个根本没写断言的测试，也能把代码「覆盖」到 100%。所以 100% 既不代表没有 bug，也不代表每个行为都检查过。下面用具体例子说明。"
+  suggest="test-kinds-and-pyramid"
+/>
+
+## 覆盖率是怎么算的
+
+覆盖率工具（Patra 后端用的是 JaCoCo）在测试运行时盯着代码，记下：哪些行执行过、哪些分支走过。测完给出一个比例。
+
+最常见的两种：
+
+- **行覆盖率**：被执行过的代码行，占全部可执行代码行的比例。
+- **分支覆盖率**：`if`、三元表达式这些「岔路口」里，两边的路都走过没有。
+
+两者会不一样。拿 Patra 导出文件名的这个方法来看：
+
+<CodeRef at="patra-api/patra-catalog/patra-catalog-adapter/src/main/java/dev/patra/catalog/adapter/portal/rest/ExportFileNames.java@5073ab1358404ecd989e722373cd9f7edafe238b" lines="29-38" />
+
+方法里有两个岔路口：`name == null ? "" : …` 和 `if (cleaned.isEmpty())`，一共 4 个分支。它有三个测试（TDD 那一篇里看过）：正常名字、含非法字符的名字、空名字。自己开关试试，看覆盖率怎么变（只统计 `of` 这个方法）：
+
+<Params
+  title="选哪些测试跑，覆盖率是多少"
+  guess={{ question: "只跑「正常名字」这一个测试，行覆盖率会比分支覆盖率高还是低？", options: ["行覆盖率更高", "分支覆盖率更高", "一样"], answer: "A", explain: "只用正常名字时，大部分行都执行了，但「名字为空就用 export」那一边的路从没走过。行是只差一行，分支是 4 条路只走了一半。" }}
+  controls={[
+    { type: "switch", id: "t1", label: "测试 1：正常名字「组会」", default: true },
+    { type: "switch", id: "t2", label: "测试 2：含非法字符的名字", default: false },
+    { type: "switch", id: "t3", label: "测试 3：空名字、null、全空白", default: false }
+  ]}
+  cases={[
+    { when: { t3: true }, results: [{ label: "行覆盖率", value: "100%", tone: "ok" }, { label: "分支覆盖率", value: "100%（4 条路都走过）", tone: "ok" }], verdict: { tone: "ok", head: "每一条路都走过。", text: "空名字的测试让「用 export 顶替」那一边、以及 null 那一边都被执行到了。" } },
+    { when: { t1: false, t2: false, t3: false }, results: [{ label: "行覆盖率", value: "0%", tone: "bad" }, { label: "分支覆盖率", value: "0%", tone: "bad" }], verdict: { tone: "bad", head: "什么都没测。", text: "没有任何测试跑到这个方法。" } },
+    { results: [{ label: "行覆盖率", value: "80%（5 行里执行了 4 行）", tone: "wait" }, { label: "分支覆盖率", value: "50%（4 条路里只走了 2 条）", tone: "bad" }], verdict: { tone: "bad", head: "行看着还行，分支暴露了缺口。", text: "「名字是 null」和「清洗后为空」这两条路从来没被走过，里面藏什么问题，测试一无所知。" } }
+  ]}
+/>
+
+所以光看行覆盖率容易被糊弄：一行里有三元表达式，哪怕只走了一边，这一行也算「覆盖」。分支覆盖率更严格，更能暴露没测到的路。
+
+## 覆盖率不会告诉你的事
+
+覆盖率只检查「执行过」。下面这样的测试，就能把一个方法的覆盖率拉满：
+
+```java
+@Test
+void just_runs() {
+  ExportFileNames.of("///", ExportFormat.CSV, DATE);   // 执行了，但一个断言都没有
+}
+```
+
+方法跑到了，覆盖率涨了，可如果 `of` 返回了一个错得离谱的字符串，这个测试照样是绿的。这是一个为了说明而写的反例，不是仓库里的测试。
+
+<Compare
+  title="同样的覆盖率，两个测试"
+  variants={[
+    {
+      label: "没有断言的测试",
+      steps: ["调用 ExportFileNames.of(…)", "不检查返回值"],
+      results: [{ label: "行覆盖率", value: "涨了", tone: "ok" }, { label: "方法返回错误结果时", value: "测试仍然是绿的", tone: "bad" }],
+      verdict: { tone: "bad", head: "数字好看，毫无保护。", text: "它只是证明代码「能跑完」，没有证明「跑对了」。" }
+    },
+    {
+      label: "有断言的测试",
+      steps: ["调用 ExportFileNames.of(…)", "断言结果等于 patra-export-2026-10-24.csv"],
+      results: [{ label: "行覆盖率", value: "同样涨了", tone: "ok" }, { label: "方法返回错误结果时", value: "测试变红", tone: "ok" }],
+      verdict: { tone: "ok", head: "数字一样，保护不一样。", text: "覆盖率相同，价值差了一个断言。" }
+    }
+  ]}
+/>
+
+<Callout kind="warn">
+
+覆盖率是**下限的提醒**，不是质量的证明。低覆盖率说明有一片代码没人测；高覆盖率不说明测得对。拿它当目标去追，会鼓励大家写出没有断言、只为涨数字的测试。
+
+</Callout>
+
+有一种叫「变异测试」的做法，专门检查断言够不够：它故意把代码改坏一点（比如把 `>` 改成 `>=`），再看测试会不会变红。这里只作了解，Patra 目前没有使用。
+
+## Patra 里的三件东西
+
+Patra 里和覆盖率有关的东西，有三处，彼此**并不一致**，看清楚它们各自管什么：
+
+**一、目标线**。后端的单元测试约定里写了期望：行覆盖率 80%，分支覆盖率 70%，关键业务逻辑 100%，DTO 的取值方法、配置类、启动类除外。
+
+<CodeRef at=".claude/rules/testing/unit-test.md@5073ab1358404ecd989e722373cd9f7edafe238b" lines="1-30" />
+
+**二、构建里的检查任务**。统一的构建配置里生成 JaCoCo 报告，也配了一个「覆盖率验证」任务，最低线是 0.70。但文件里明确写了：这个任务**没有挂到 `check` 上**，也就是说，即使低于它，构建也不会失败。
+
+<CodeRef at="build-logic/src/main/kotlin/patra.java-base.gradle.kts@b6e01875bb5692356021c8a19562f557f319fc54" lines="47-76" />
+
+**三、CI 里的汇总与上传**。后端各模块在 CI 里跑测试时，会上传 JaCoCo 的执行数据；只有「全量」运行才汇总（每晚的定时运行，或者改了构建配置、CI 流程这类牵动全仓的东西），把单元测试与集成测试的报告上传到 Codecov。这一步的上传失败会让 CI 失败；CI 里这一步只管上传成没成功，不比较数字。
+
+<CodeRef at=".github/workflows/ci.yml@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="265-293" />
+
+把三者放在一起看：80% 是目标，0.70 是一个没有接线的检查，Codecov 是一个展示数字的地方。**Patra 目前并不靠覆盖率数字拦合并。** 构建配置的注释写明这是一项决定：v0.3 不设阈值门禁。
+
+<Callout kind="insight">
+
+要设覆盖率门禁，常见做法是只卡「本次改动的代码」的覆盖率，而不是全仓的总数：全仓的数字变化太慢，卡不住具体的一次提交。
+
+</Callout>
+
+<Quiz
+  title="考考自己"
+  questions={[
+    {
+      question: "一个方法有一个 if，测试只覆盖了 if 条件为真的情况。哪个指标会更早暴露这个缺口？",
+      options: ["行覆盖率", "分支覆盖率", "两者都看不出来"],
+      answer: "B",
+      explain: "分支覆盖率会分别统计 if 的真、假两条路；条件为假那条没走过，分支覆盖率就不到 100%。行覆盖率可能因为那一行已经被执行而显示满分。"
+    },
+    {
+      question: "团队决定「覆盖率低于 80% 就不许合并」。最可能出现的副作用是什么？",
+      options: ["代码质量必然提高", "有人为了凑数字写没有断言的测试", "测试会自动变快"],
+      answer: "B",
+      explain: "把一个可以被糊弄的数字变成硬指标，人们会优化数字，而不是优化保护。"
+    }
+  ]}
+/>
+
+<Transfer
+  prompt="同事说：「我们这个模块覆盖率到 95% 了，可以放心上线了。」你会怎么回应？请说出：你想先看哪两样东西，才判断这个数字有多可信？以及你会建议他补什么。"
+  points={[
+    { label: "看分支覆盖率", text: "行覆盖率 95% 可能掩盖了没走过的分支，先看分支覆盖率，尤其是错误处理和边界那几条路。" },
+    { label: "看断言", text: "随机翻几个测试，看有没有断言、断言的是不是有意义的结果，而不是只调用一下。" },
+    { label: "看没覆盖的 5%", text: "未覆盖的部分是不是恰好是最重要的：异常路径、权限检查、金额计算之类。" },
+    { label: "建议", text: "给最关键的行为补带断言的测试；必要时用变异测试之类的方法检查断言够不够强。" }
+  ]}
+  placeholder="比如：我会先问他……"
+/>

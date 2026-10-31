@@ -1,0 +1,194 @@
+---
+title: 端到端测试：Playwright
+summary: 开一个真浏览器，像用户一样点页面、走完整条流程；它能测到单元测试看不见的布局与时序问题，代价是慢和脆，所以要少而精。
+type: concept
+difficulty: advanced
+tags: [testing, frontend]
+prerequisites: [test-kinds-and-pyramid, fe-nextjs-pages-and-routing]
+---
+
+<Diagnose
+  question="登录表单的组件测试已经覆盖了「邮箱格式不对就显示错误」。为什么还要再写一个开真浏览器的测试，去检查「离开邮箱框时冒出的错误行，会不会把下面的『注册』链接挤到别处，让点击落空」？"
+  options={["因为组件测试没有真实的页面布局，看不到元素被挤动", "因为真浏览器测试比组件测试便宜", "因为组件测试不能点击"]}
+  answer="A"
+  ifRight="对。组件测试跑在假的浏览器环境里，没有真实的排版，元素有多高、会不会把别的东西挤开，它一概不知道。这类问题只有真浏览器测得到，这篇就讲怎么写。"
+  ifWrong="答案是 A。组件测试跑在假浏览器（jsdom）里，没有真实的页面布局，所以「谁把谁挤歪了」它看不到。需要真实排版才暴露的问题，只能交给真浏览器去测。如果两层测试的分工还不清楚，可以先读前置的金字塔那篇。"
+  suggest="test-kinds-and-pyramid"
+/>
+
+## 真浏览器、真页面、整条路径
+
+端到端测试在金字塔的最顶上：不换任何替身，启动真实的应用，打开一个真实的浏览器，像用户一样点击、输入、看结果。Patra 门户用的工具是 **Playwright**。
+
+点一点下面，看一次测试里各个部件怎么配合；再点「跑一个用例」看请求一路走到哪。
+
+<Structure
+  title="一次 Playwright 测试里有谁"
+  intro="点任意一块，看它做什么"
+  nodes={[
+    { id: "spec", label: "测试脚本", sub: "tests/e2e/*.spec.ts", col: 1, desc: "你写的步骤：打开页面、点某个按钮、断言页面上出现了什么。" },
+    { id: "pw", label: "Playwright", sub: "测试运行器与驱动", col: 2, desc: "执行脚本，遥控浏览器，负责自动等待、失败重试、录制调试用的 trace。" },
+    { id: "browser", label: "Chromium", sub: "真浏览器", col: 3, desc: "一个真正的 Chromium：有真实的排版、事件和 Cookie。测试里点的每一下，都是它在做。" },
+    { id: "portal", label: "门户", sub: "pnpm dev，端口 4000", col: 4, desc: "被测的应用本身。配置里写了：测试开始前如果它没在跑，就用 pnpm dev 把它启动起来。" },
+    { id: "gateway", label: "网关与后端", sub: "账号类流程才需要", col: 5, desc: "注册、登录这类流程要真的走到后端，所以需要设置网关地址；没设置时这些用例会被跳过。" }
+  ]}
+  edges={[
+    { from: "spec", to: "pw" },
+    { from: "pw", to: "browser", label: "遥控" },
+    { from: "browser", to: "portal", label: "访问页面" },
+    { from: "portal", to: "gateway", dashed: true, label: "部分流程" }
+  ]}
+  traces={[
+    {
+      button: "跑一个用例",
+      packet: "用例",
+      hops: [
+        { at: "spec", caption: "脚本里写着：打开登录页，填邮箱，点登录，断言回到了首页。" },
+        { at: "pw", caption: "Playwright 逐步执行，每一步等页面就绪再继续。" },
+        { at: "browser", caption: "浏览器真的去加载页面、渲染、响应点击。" },
+        { at: "portal", caption: "门户的服务端渲染出页面、处理表单提交。" },
+        { at: "gateway", caption: "登录要真的验证账号，请求继续走到网关和后端。" }
+      ]
+    }
+  ]}
+/>
+
+## 配置：谁启动、跑几遍、出错留什么
+
+整份配置只有二十几行，却把端到端测试的几个关键决定都写明了：
+
+<CodeRef at="patra-portal/playwright.config.ts@2907a521b2c7934a98252faf45c0b5503b49e47c" lines="1-28" />
+
+挑几项读：
+
+- `testDir: "tests/e2e"`：端到端测试和组件测试分开放，Vitest 配置里 `exclude` 掉的就是这个目录。
+- `webServer`：测试前自动用 `pnpm dev` 启动门户。本地如果已经在跑，就直接复用（`reuseExistingServer`），CI 里则总是新启。
+- `retries`：CI 里失败后最多重试 2 次，本地不重试；`workers` 在 CI 里是 1，不并行。
+- `trace: "on-first-retry"`：第一次重试时录下完整的操作轨迹（截图、网络、每一步），失败后可以回放，是排查端到端失败的主要工具。
+- `forbidOnly`：CI 里不许留着 `test.only`，免得有人提交了只跑一个用例的版本。
+
+<Quiz
+  title="读配置"
+  questions={[
+    {
+      question: "配置里 trace 设成 on-first-retry，是什么意思？",
+      options: ["每个用例都录制完整轨迹，不管成败", "用例失败后第一次重试时，才录制完整轨迹（截图、网络、每一步）", "只在最后一次重试失败时录制"],
+      answer: "B",
+      explain: "全程录制很占时间和空间；只在第一次重试时录，既省资源，又能在失败后回放那一次的全过程。本地 retries 为 0，所以本地不会自动录。"
+    }
+  ]}
+/>
+
+## 像用户一样找元素
+
+Playwright 找元素的方式，和上一层测试讲过的 Testing Library 是同一个思路：按用户看到的东西去找，不按 CSS 类名。
+
+<CodeRef at="patra-portal/tests/e2e/auth.spec.ts@fe4c6bb68c591a9c9b5fe80f76bbfbbbc6aeae75" lines="97-118" />
+
+```ts
+await nav.getByRole("link", { name: "登录" }).click();
+await page.getByLabel("邮箱").fill(account.email);
+await page.getByRole("button", { name: "注册" }).click();
+await expect(page).toHaveURL(SOURCE, ROUND_TRIP);
+```
+
+`getByRole`（按角色和名字）、`getByLabel`（按表单标签）、`getByText`（按文字）是三个主力。页面改了样式、换了标签，只要用户眼里这个按钮还叫「登录」，脚本就不用改。
+
+## 不要 sleep：自动等待
+
+浏览器和服务端都有延迟。新手最常见的错误，是在中间插一句「等 3 秒」。
+
+<Compare
+  title="固定等待，还是自动等待"
+  variants={[
+    {
+      label: "固定等 3 秒再断言",
+      steps: ["点击登录", "固定睡 3 秒", "断言已回到首页"],
+      results: [{ label: "页面 0.5 秒就好了", value: "白白多等 2.5 秒", tone: "bad" }, { label: "页面 4 秒才好（机器忙）", value: "断言太早，测试失败", tone: "bad" }],
+      verdict: { tone: "bad", head: "又慢又不稳。", text: "等多久都是猜的：猜短了偶发失败，猜长了全套测试慢得没法跑。" }
+    },
+    {
+      label: "断言自带等待与重试",
+      steps: ["点击登录", "expect(page).toHaveURL(…)：不满足就反复检查", "条件一满足立即继续，到时限仍不满足才失败"],
+      results: [{ label: "页面 0.5 秒就好了", value: "0.5 秒就继续", tone: "ok" }, { label: "页面 4 秒才好（机器忙）", value: "等到 4 秒，照样通过", tone: "ok" }],
+      verdict: { tone: "ok", head: "该快则快，该等则等。", text: "时限只是上界，不是固定耗时。真正慢的操作，给一个更长的时限。" }
+    }
+  ]}
+/>
+
+Playwright 的 `expect(…).toBeVisible()`、`toHaveURL(…)` 这类断言默认就会自动重试。账号流程要经过网关和后端，比默认的 5 秒慢，所以测试支持文件里专门定义了一个更宽的时限：
+
+<CodeRef at="patra-portal/tests/e2e/support/account.ts@598dc3eeb2f5209dcc858393eff510a2a3c8a332" lines="1-12" />
+
+## 只有真浏览器才测得到的东西
+
+回到开头那道题。看真实的测试怎么抓这类问题，先看注释写的是什么现象：
+
+<CodeRef at="patra-portal/tests/e2e/auth.spec.ts@fe4c6bb68c591a9c9b5fe80f76bbfbbbc6aeae75" lines="1-35" />
+
+用户的鼠标按下和松开之间是有时间的。按下「注册」链接的瞬间，邮箱框失去焦点，冒出一行错误提示，把下面的链接往下推了一截。松开时，鼠标下面已经不是那个链接了。点击就这样没了。
+
+点着走一遍，其中有一步容易想错。
+
+<Stepper
+  title="一次落空的点击"
+  nodes={[
+    { id: "email", label: "邮箱框", sub: "焦点在这里，还是空的" },
+    { id: "error", label: "错误行", sub: "离开字段才出现" },
+    { id: "link", label: "「注册」链接", sub: "在错误行下面" }
+  ]}
+  links={[
+    { from: "email", to: "error", label: "失去焦点" },
+    { from: "error", to: "link", label: "把它往下挤" }
+  ]}
+  steps={[
+    { caption: "用户光标在空的邮箱框里，没有填任何东西。「注册」链接就在邮箱框下面不远处。", focus: ["email", "link"], tokens: [{ id: "mouse", label: "鼠标", at: "link" }] },
+    { caption: "用户在「注册」链接上按下鼠标。邮箱框在这一刻失去焦点，开始校验：空邮箱是错的。", focus: ["email"], links: ["email>error"], tokens: [{ id: "mouse", label: "按下", at: "link" }], notes: [{ at: "email", text: "失去焦点", tone: "wait" }] },
+    { caption: "错误行出现了，它占了一行高度，把下面的「注册」链接往下推。", focus: ["error", "link"], links: ["error>link"], tokens: [{ id: "mouse", label: "按住中", at: "error" }], notes: [{ at: "error", text: "新出现的一行", tone: "bad" }] },
+    { caption: "用户松开鼠标。此刻鼠标下面已经不是链接了，浏览器不认为这是一次对链接的点击，页面没有跳转。", focus: ["link"], tokens: [{ id: "mouse", label: "松开", at: "error", state: "dropped" }], notes: [{ at: "link", text: "没被点中", tone: "bad" }] }
+  ]}
+  guesses={[
+    { before: 4, question: "按下和松开之间，页面把链接往下挤了一行。松开鼠标时，会发生什么？", options: ["照样跳转，因为按下时点中的是链接", "点击落空，页面没有跳转", "跳转到别的链接"], answer: "B", explain: "浏览器要求按下和松开落在同一个元素上才算一次点击。中间元素被挤走了，点击就没了。" }
+  ]}
+/>
+
+这类问题的特征是：逻辑上每一步都对，只有真实的排版和时序才让它露馅。测试里为了稳定复现，特意让点击「按住 100 毫秒」，用手机视口模拟轻触，还用禁用脚本模拟「页面还没接管表单就提交」的情形。这三种都是组件测试没法表达的。
+
+<Callout kind="insight">
+
+一条经验：能在组件测试里说清楚的，不要放到端到端里。端到端测试专门留给「必须有真实浏览器和真实环境才测得出来」的东西。
+
+</Callout>
+
+## 测试数据：每次造一个新账号
+
+注册、登录的流程要用账号。测试支持文件里的做法是：每跑一次，**现场生成**一个新的：
+
+<CodeRef at="patra-portal/tests/e2e/support/account.ts@598dc3eeb2f5209dcc858393eff510a2a3c8a332" lines="9-24" />
+
+邮箱和用户名后缀是随机的，密码在运行时临时生成，都不写进仓库、不打印出来；邮箱用的是邮件服务商提供的专门测试地址，发过去只记为已送达，不会真的投递。这样每次跑都不需要预先准备账号，也不会撞上上一次留下的数据。
+
+## 什么时候跑
+
+端到端在 CI 里的位置：
+
+<CodeRef at=".github/workflows/ci.yml@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="214-218" />
+
+从那几行能读出：门户有改动的 PR 上它会跑，但**失败不拦合并**（`continue-on-error`）；而每晚的定时全量运行里，失败是**阻塞**的。这是对速度和稳定性的折中：不让偶发的浏览器抖动卡住每一个 PR，同时每天有一次严格的检查兜底。
+
+<Callout kind="warn">
+
+测试页面前要等页面「接管」：服务端先把 HTML 发过来，React 随后才给元素挂上事件。接管之前点击，点到的是浏览器自带的默认行为，用例没修好也会通过。门户的支持文件里有专门的等待函数处理这一点，后面的实战文章会细讲。
+
+</Callout>
+
+<Transfer
+  prompt="要给「收藏文献」写一个端到端测试：用户登录后打开一篇文献，点「收藏」，到「我的收藏」里能看到它。请说出：这个测试里要准备哪些数据？用什么方式找元素？怎么处理等待？这个测试和组件测试各自负责检查什么？"
+  points={[
+    { label: "数据", text: "现场注册一个新账号（或用专门的测试账号），文献用稳定存在的一篇，不依赖上一次测试留下的数据。" },
+    { label: "找元素", text: "getByRole 加名字，找「收藏」按钮和「我的收藏」链接，不用 CSS 类名。" },
+    { label: "等待", text: "不 sleep；用带自动重试的断言，比如 expect 某条收藏出现；涉及后端的步骤给更宽的时限。" },
+    { label: "分工", text: "端到端只验证「点了之后确实走通了整条路径」；按钮状态变化、各种边界（未登录、重复收藏）放在组件测试和后端测试里。" }
+  ]}
+  placeholder="比如：我会先准备……"
+/>

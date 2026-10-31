@@ -1,0 +1,136 @@
+---
+title: 测试分几层：单元、集成、端到端
+summary: 越往上越接近真实、也越慢越脆，所以数量呈金字塔：大量单元测试，少量集成测试，极少端到端测试。
+type: concept
+difficulty: basic
+tags: [testing, backend]
+prerequisites: [test-unit-tests]
+---
+
+<Diagnose
+  question="测试 A 要启动数据库容器和整个后端应用，再发一个真实的 HTTP 请求。测试 B 只调用一个纯 Java 方法。同样出错时，哪个更容易让你直接看出「问题在哪一行」？"
+  options={["测试 A，因为它更接近真实使用", "测试 B，因为它涉及的东西少，范围小", "没有区别"]}
+  answer="B"
+  ifRight="对。涉及的零件越少，出错时嫌疑人越少。但 A 也有 B 做不到的事：它能发现零件拼在一起才出现的问题。这篇讲怎么在两者之间分工。"
+  ifWrong="答案是 B。测试 A 失败，可能是数据库、网络、配置、代码，哪个都有可能；测试 B 失败，嫌疑只在那个方法里。不过 A 能发现零件拼起来才出的问题，这是 B 做不到的，所以两种测试都要有。下面讲怎么分工。"
+  suggest="test-unit-tests"
+/>
+
+## 三层：测的范围一层比一层大
+
+按「一次测多少个零件」，测试大致分三层：
+
+| 层 | 测什么 | 靠什么跑 |
+|---|---|---|
+| 单元测试 | 一个类、一个方法，不碰外面 | 纯内存 |
+| 集成测试 | 几个零件接在一起，其中一两个是真的（真数据库、真 HTTP 层） | 真实的中间件容器，或 Spring 的一小块 |
+| 端到端测试 | 整个服务（或整个系统）从入口走到出口 | 真实数据库、对象存储等全套 |
+
+Patra 后端把这三层放在三个不同的目录里，名字、位置、超时都不一样。点一点下面的方块：
+
+<Structure
+  title="Patra 后端的三层测试"
+  intro="点任意一层，看它在 Patra 里叫什么、放在哪、占多大比例"
+  nodes={[
+    { id: "e2e", label: "端到端测试", sub: "e2eTest · *E2E.java", col: 1, row: 1, desc: "放在 boot 模块的 src/e2eTest。用真实中间件（TestContainers）走完整个服务的核心流程。比例目标：小于 5%。默认超时 180 秒。" },
+    { id: "it", label: "集成测试", sub: "integrationTest · *IT.java", col: 1, row: 2, desc: "放在 infra、adapter 等模块的 src/integrationTest。Spring 只起需要的一小块（切片），数据库用真 PostgreSQL 容器。比例约 20%。默认超时 30 秒。" },
+    { id: "unit", label: "单元测试", sub: "test · *Test.java", col: 1, row: 3, desc: "放在 domain、app 等模块的 src/test。纯内存，不碰外部。比例不低于 75%。默认超时 15 秒，实际通常是毫秒级。" }
+  ]}
+  edges={[
+    { from: "unit", to: "it", label: "更真实，更慢，更少" },
+    { from: "it", to: "e2e", label: "更真实，更慢，更少" }
+  ]}
+/>
+
+这三个目录是 Gradle 的三个「测试套件」，在统一的构建配置里一次声明好，每个服务模块自动继承：
+
+<CodeRef at="build-logic/src/main/kotlin/patra.java-base.gradle.kts@b6e01875bb5692356021c8a19562f557f319fc54" lines="80-135" />
+
+三个套件的默认单测超时依次是 15 秒、30 秒、180 秒：越往上，允许越慢。
+
+## 为什么是金字塔，不是倒过来
+
+既然端到端最接近真实，为什么不全写端到端？
+
+<Compare
+  title="金字塔，还是倒过来"
+  variants={[
+    {
+      label: "金字塔：单元多、E2E 少",
+      steps: ["几百个单元测试，每个毫秒级", "几十个集成测试，每个秒级", "少数几个端到端，覆盖最重要的流程"],
+      results: [{ label: "改完代码多久得到反馈", value: "几秒到几分钟", tone: "ok" }, { label: "失败时定位", value: "多数一眼看出哪一行", tone: "ok" }, { label: "无缘无故失败的几率", value: "低", tone: "ok" }],
+      verdict: { tone: "ok", head: "快、准、稳。", text: "大部分问题在最便宜的一层就被拦下；上面几层只负责「拼起来还行不行」。" }
+    },
+    {
+      label: "倒金字塔：几乎全是 E2E",
+      steps: ["每个小规则都靠启动整个服务来测", "每个测试要等容器启动、数据准备", "一个测试失败，嫌疑涉及整条链路"],
+      results: [{ label: "改完代码多久得到反馈", value: "几十分钟起步", tone: "bad" }, { label: "失败时定位", value: "要一层层往下查", tone: "bad" }, { label: "无缘无故失败的几率", value: "高：网络、时间、容器都可能抖", tone: "bad" }],
+      verdict: { tone: "bad", head: "慢、模糊、脆。", text: "测试套件变得没人愿意跑，红了也没人相信是真问题。" }
+    }
+  ]}
+/>
+
+金字塔的底座是便宜的，所以什么事能在底层说清楚，就别往上放。上层测试只负责底层测不到的那一类问题：零件之间的接口对不对、真实数据库和我们的 SQL 合不合、配置有没有装配对。
+
+## 一个功能，在三层里各被测什么
+
+用「用户改名」来感受分工：
+
+- **单元层**：名字格式合法不合法、冷却期怎么算。纯逻辑，几毫秒。
+- **集成层**：改名的 HTTP 接口收到请求，转成命令，返回正确的状态码；或者仓储在真实数据库里能存取。
+- **端到端层**：注册、验证邮箱、改名、再改被拒、30 天后能改回、旧名被占用……整条流程串起来。
+
+后两层各用一篇单独讲。
+
+分层不是死规矩。Patra 里「改名」这条完整流程，实际由 `UsernameChangeFlowIT` 覆盖：它起了真实的 PostgreSQL、Redis、RabbitMQ 容器，走完整条流程，却放在 identity 服务 boot 模块的 `integrationTest` 套件里。划分的依据是「用什么跑、跑多重」，名字和目录只是照这个归类。
+
+## CI 里怎么分别点名
+
+Patra 的 CI 不是对每个模块都跑三样。每个 Gradle 模块在构建时被登记它「需要跑哪些任务」，结果存成 `module-graph.json`：
+
+<CodeRef at="patra-infra/cd/module-graph.json@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="12-62" />
+
+看这份文件里 catalog 服务的几个模块：`catalog-domain` 只有 `check`（也就是单元测试加各类检查）；`catalog-adapter` 在 `check` 之外还要跑 `integrationTest`；`catalog-boot` 在 `check` 之外跑 `e2eTest`。
+
+整个文件 44 个模块里，22 个带 `integrationTest`，21 个只有 `check`，只有 1 个带 `e2eTest`：端到端测试在 Patra 里确实是「极少」。
+
+CI 把这些任务点名交给 Gradle，示意如下：
+
+```text
+./gradlew <该模块的 check>  <该模块的 integrationTest>  <该模块的 e2eTest>
+```
+
+<Callout kind="insight">
+
+`check`、`integrationTest`、`e2eTest` 是三个独立的任务，所以 CI 里要逐个点名。本地想只跑某一层：`./gradlew :模块名:test`、`:模块名:integrationTest`、`:模块名:e2eTest`。
+
+</Callout>
+
+<Quiz
+  title="考考自己"
+  questions={[
+    {
+      question: "一个测试类叫 CatalogIngestionE2E，它最可能放在哪儿？",
+      options: ["domain 模块的 src/test", "boot 模块的 src/e2eTest", "adapter 模块的 src/integrationTest"],
+      answer: "B",
+      explain: "按命名约定，E2E 结尾的是端到端测试，放在 boot 模块的 src/e2eTest。"
+    },
+    {
+      question: "发现某条 SQL 在真实 PostgreSQL 上的排序不对。这类问题最适合在哪一层发现？",
+      options: ["单元测试：Mock 掉数据库", "集成测试：用真实的 PostgreSQL 容器", "不需要测试，上线后看"],
+      answer: "B",
+      explain: "SQL 的行为取决于真实数据库，Mock 会替你「答对」。下一层测试才有真数据库。"
+    }
+  ]}
+/>
+
+<Transfer
+  prompt="你要给一个「评论发布」功能写测试：评论内容不能为空、不能超过 2000 字；发布后要写进数据库；HTTP 接口要返回 201。请把这几件事分配到三层测试里，并说说为什么这样分。"
+  points={[
+    { label: "单元层", text: "内容为空、超长这类规则，纯逻辑，写成多个小测试，快而且定位准。" },
+    { label: "集成层", text: "写进数据库用真实数据库验证；接口返回 201、请求怎么转成命令，用 Web 切片测试验证。" },
+    { label: "端到端层", text: "只留一个：从发请求到数据库里能查到这条评论，覆盖最核心的流程，不重复验证规则。" },
+    { label: "理由", text: "能在下层说清楚的规则，不往上放：下层又快又准。上层只补下层测不到的拼装问题。" }
+  ]}
+  placeholder="比如：内容不能为空，这条我会放在……"
+/>

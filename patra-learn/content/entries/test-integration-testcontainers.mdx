@@ -1,0 +1,159 @@
+---
+title: 集成测试与 Testcontainers
+summary: 要测「和真实数据库打交道」的代码，就让测试在 Docker 里起一个真实的 PostgreSQL；为什么不用内存库，以及 Patra 怎么把容器管得又快又准。
+type: concept
+difficulty: advanced
+tags: [testing, database, docker]
+prerequisites: [test-kinds-and-pyramid, db-transactions]
+---
+
+<Diagnose
+  question="要测一条用了 PostgreSQL 专有功能的 SQL，有人建议：测试里换成内存数据库 H2，启动快、不用装东西。最大的风险是什么？"
+  options={["内存数据库太慢，会拖垮整个测试", "内存数据库和真实 PostgreSQL 的功能、行为不完全一样，测试绿了不代表线上也对", "内存数据库不能被 Java 访问"]}
+  answer="B"
+  ifRight="对。测试能证明的，只是「在被测的那个数据库上是对的」。如果测试用的库和线上不是同一种，这个证明就打了折扣。往下读会看到 Patra 里一个很具体的例子。"
+  ifWrong="答案是 B。内存库是另一种数据库：它不支持的功能，测试连跑都跑不起来；它行为略有不同的地方，测试会绿，线上却可能是错的。下面用 Patra 里一条真实的 SQL 来说明。"
+  suggest="test-kinds-and-pyramid"
+/>
+
+## 一个具体的例子：内存库根本跑不起来这条查询
+
+Patra 的机构建议接口，支持用户输入「协和」，找出名字里任意位置含这个子串的机构。这条查询是这样的形状：
+
+<CodeRef at="patra-api/patra-catalog/patra-catalog-infra/src/main/java/dev/patra/catalog/infra/organization/persistence/dao/OrganizationSuggestSql.java@5073ab1358404ecd989e722373cd9f7edafe238b" lines="14-50" />
+
+里面用到的是 `ILIKE`（不区分大小写的模糊匹配）。为了让「任意位置的子串」也能快，建表的迁移脚本给名字列建了一个 trigram 索引：
+
+<CodeRef at="patra-api/patra-catalog/patra-catalog-infra/src/main/resources/db/migration/V9__add_suggest_trigram_indexes.sql@af8cd13c3ec367ccba78615b72e6ff19535cef90" lines="1-15" />
+
+`pg_trgm` 是 PostgreSQL 的一个扩展，`gin_trgm_ops` 是只有它才有的索引类型。内存数据库既没有这个扩展，也认不得这种索引：迁移脚本在上面就会直接报错。这条查询在内存库里没法测。
+
+<Compare
+  title="内存数据库，还是真实 PostgreSQL 容器"
+  variants={[
+    {
+      label: "内存数据库（如 H2）",
+      steps: ["测试启动，在内存里建一个模拟数据库", "执行建表脚本", "执行查询"],
+      results: [{ label: "能否执行 PostgreSQL 专有的扩展与索引", value: "不能，脚本直接报错", tone: "bad" }, { label: "同样的 SQL，行为与线上一致", value: "没有保证", tone: "bad" }, { label: "启动速度", value: "很快", tone: "ok" }],
+      verdict: { tone: "bad", head: "快，但是另一个数据库。", text: "能跑通的 SQL，不一定在线上对；线上用的功能，它又不一定有。" }
+    },
+    {
+      label: "真实 PostgreSQL 容器",
+      steps: ["测试启动，用 Docker 拉起一个真实的 PostgreSQL", "用和线上同一套迁移脚本建表", "执行查询"],
+      results: [{ label: "能否执行 PostgreSQL 专有的扩展与索引", value: "能", tone: "ok" }, { label: "同样的 SQL，行为与线上一致", value: "一致：同一个数据库、同一个大版本", tone: "ok" }, { label: "启动速度", value: "慢一些，需要 Docker", tone: "wait" }],
+      verdict: { tone: "ok", head: "慢一点，但测的是真的。", text: "迁移脚本、SQL、数据库行为，一次都被检查到。" }
+    }
+  ]}
+/>
+
+Patra 的集成测试约定里写明：用 TestContainers 模拟真实中间件，避免使用内存数据库。
+
+## Testcontainers 是什么
+
+**Testcontainers** 是一个库：在测试代码里写一句「我要一个 PostgreSQL 17」，它就通过 Docker 拉起一个真容器，测试结束后把容器清掉。容器里是真正的 PostgreSQL，和线上用的是同一个镜像。
+
+一次集成测试的生命周期，可以点着走一遍。其中有一步很容易想错。
+
+<Stepper
+  title="一次集成测试里，容器怎么接上应用"
+  nodes={[
+    { id: "test", label: "测试进程", sub: "JVM" },
+    { id: "docker", label: "Docker", sub: "本机引擎" },
+    { id: "pg", label: "PostgreSQL 容器", sub: "postgres:17" },
+    { id: "app", label: "Spring 测试上下文", sub: "要连数据库" }
+  ]}
+  links={[
+    { from: "test", to: "docker", label: "要一个 PG" },
+    { from: "docker", to: "pg" },
+    { from: "test", to: "app", label: "注入连接地址" },
+    { from: "app", to: "pg", label: "JDBC" }
+  ]}
+  steps={[
+    { caption: "测试进程启动，先于应用上下文做一件事：向 Docker 要一个 PostgreSQL 容器。", focus: ["test", "docker"], links: ["test>docker"], tokens: [{ id: "req", label: "要 postgres:17", at: "docker" }] },
+    { caption: "Docker 拉起容器。容器里的 5432 端口被映射到宿主机上一个随机的空闲端口。", focus: ["docker", "pg"], links: ["docker>pg"], tokens: [{ id: "req", label: "容器已就绪", at: "pg" }], notes: [{ at: "pg", text: "随机端口", tone: "wait" }] },
+    { caption: "测试进程把真实的连接地址（含这个随机端口）写进 Spring 的配置，再启动应用上下文。", focus: ["test", "app"], links: ["test>app"], tokens: [{ id: "url", label: "jdbc 地址", at: "app" }] },
+    { caption: "应用上下文连上容器，用和线上同一套迁移脚本建好表。之后测试才开始跑。", focus: ["app", "pg"], links: ["app>pg"], tokens: [{ id: "url", label: "迁移 + 测试", at: "pg" }], notes: [{ at: "pg", text: "表已建好", tone: "ok" }] },
+    { caption: "测试进程结束，容器被清理。下一次从全新的数据库开始。", focus: ["test", "pg"], tokens: [{ id: "url", label: "已清理", at: "pg", state: "faded" }] }
+  ]}
+  guesses={[
+    { before: 3, question: "为什么不能把数据库地址写死成 localhost:5432，而要等容器起来之后「注入」？", options: ["因为 Docker 不允许使用 5432", "因为容器的端口是随机映射的，只有起来之后才知道", "因为 Spring 不支持写死地址"], answer: "B", explain: "随机端口让多个测试进程、多个项目同时跑也不会撞端口。代价是地址要在容器起来之后才知道，所以要动态注入。" }
+  ]}
+/>
+
+## Patra 怎么管这个容器
+
+每个测试类各启一个容器太慢，Patra 在测试工具模块里写了一个统一的初始化器：
+
+<CodeRef at="patra-tool/patra-tool-test/src/main/java/dev/patra/tool/test/container/initializer/PostgreSQLContainerInitializer.java@b6e01875bb5692356021c8a19562f557f319fc54" lines="62-125" />
+
+读这段代码，抓住四点：
+
+1. **镜像钉死**：`postgres:17`，和线上的大版本一致。
+2. **一个 JVM 只起一次**：用「单例 + 双重检查锁」保证，同一个测试进程里所有测试共用一个容器。注释写着首次启动约 10 到 20 秒，后面复用就没有成本了。
+3. **不跨进程复用**：`withReuse(false)`，下一次跑测试一定是干净的新容器，避免旧状态污染。
+4. **动态注入连接配置**：容器起来后，用 `TestPropertyValues` 把 `spring.datasource.url` 等写进 Spring 的环境。
+
+每个服务只需要写几行，指定自己的库名：
+
+<CodeRef at="patra-api/patra-catalog/patra-catalog-boot/src/e2eTest/java/dev/patra/catalog/integration/config/CatalogE2EPostgreSQLContainerInitializer.java@b6e01875bb5692356021c8a19562f557f319fc54" lines="12-18" />
+
+然后在测试类上声明用它。下面是真实的机构建议测试头部：
+
+<CodeRef at="patra-api/patra-catalog/patra-catalog-infra/src/integrationTest/java/dev/patra/catalog/infra/organization/persistence/OrganizationReadAdapterIT.java@5073ab1358404ecd989e722373cd9f7edafe238b" lines="36-42" />
+
+```java
+@DataJpaTest
+@ContextConfiguration(initializers = CatalogITPostgreSQLContainerInitializer.class)
+@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
+```
+
+注意第三行。`@DataJpaTest` 默认会**尝试把你的数据库换成内存库**；`replace = NONE` 就是在说「不许换，用我给的这个真的」。漏写它，上面整套努力都白费。
+
+<Callout kind="warn">
+
+容器是整个测试进程共享的，所以测试之间要自己清场。比如那个全文抓取的端到端测试，每次开始前先把相关表清空。`@DataJpaTest` 默认每个测试结束后回滚事务，是另一种清场办法。
+
+</Callout>
+
+## 版本别漂移：CI 里的核对
+
+测试用的镜像版本和线上不一致，就失去了「用真的」的意义。CI 有一步专门核对，常量和 workflow 里声明的版本必须相同，对不上就让 CI 失败：
+
+<CodeRef at=".github/workflows/ci.yml@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="66-110" />
+
+CI 还会提前把 PostgreSQL、Redis、RabbitMQ 的镜像并行拉好，免得测试一个个等下载。
+
+<Callout kind="cost">
+
+真实容器的代价：需要 Docker、启动要时间、比内存测试慢。所以集成测试只占约 20%，只测「单元测试没法说清」的那一类：SQL、事务、迁移脚本、与中间件的交互。
+
+</Callout>
+
+<Quiz
+  title="考考自己"
+  questions={[
+    {
+      question: "一个 @DataJpaTest 测试已经指定了 PostgreSQL 容器的初始化器，但忘了写 @AutoConfigureTestDatabase(replace = NONE)。会发生什么？",
+      options: ["没有影响", "Spring 可能把数据源换成内存数据库，测试没有真的连到容器", "测试会报语法错误无法编译"],
+      answer: "B",
+      explain: "@DataJpaTest 默认替换数据源为内存库。replace = NONE 才是告诉它别替换。"
+    },
+    {
+      question: "为什么 Patra 的 PostgreSQL 初始化器要保证「一个 JVM 里只启动一次」？",
+      options: ["因为 Docker 一次只能启动一个容器", "因为容器首次启动要十来秒，所有测试共用一个就不必反复付这个代价", "因为 PostgreSQL 不能有两个库"],
+      answer: "B",
+      explain: "启动是主要成本。共用一个容器，用清场来保证测试之间互不影响。"
+    }
+  ]}
+/>
+
+<Transfer
+  prompt="你要给一个会往 Redis 里写「限流计数」的类写集成测试，该怎么做？请说出：用什么当 Redis？镜像版本怎么选？测试之间的数据怎么避免互相影响？这个测试应该放在金字塔的哪一层？"
+  points={[
+    { label: "真实 Redis 容器", text: "和 PostgreSQL 同理，用 Testcontainers 起真实的 Redis，不用某个「模拟 Redis」的内存替代品。" },
+    { label: "版本对齐线上", text: "镜像版本钉死，并且与线上、CI 声明的保持一致。" },
+    { label: "清场", text: "共用一个容器时，每个测试前清掉相关的键，或者每个测试使用互不相同的键前缀。" },
+    { label: "放哪一层", text: "集成测试层：它要真实的中间件才说得清，不适合单元层；也不必上升到端到端。" }
+  ]}
+  placeholder="比如：我会用 Testcontainers 起一个……"
+/>

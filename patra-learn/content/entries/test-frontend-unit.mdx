@@ -1,0 +1,157 @@
+---
+title: 前端测试：Vitest 与 Testing Library
+summary: 前端组件的测试看「用户看到什么、能做什么」，不看组件内部怎么写；Vitest 负责跑，Testing Library 负责像用户一样查找和操作。
+type: concept
+difficulty: basic
+tags: [testing, frontend]
+prerequisites: [test-unit-tests, fe-react-components-and-state]
+---
+
+<Diagnose
+  question="要测一个「有帮助」按钮：点一下之后，它应该变成「已点」状态。下面哪种断言，在你以后重构组件内部（改变量名、换状态管理方式）时，最不容易无故变红？"
+  options={["断言按钮的 CSS 类名是 btn-active", "断言屏幕上有一个叫「有帮助」的按钮，并且它的 aria-pressed 是 true", "断言组件内部的变量 isHelpful 等于 true"]}
+  answer="B"
+  ifRight="对。B 检查的是用户（以及读屏软件）真正能感知到的东西，内部怎么实现它不管。这篇的主线就是：前端测试看的是「用户看到什么」。"
+  ifWrong="答案是 B。A 和 C 检查的是实现细节：换个类名、换个变量名，行为没变，测试却红了。B 检查用户能感知到的结果，所以最稳。这正是这篇要讲的原则。如果还不熟悉组件和状态是什么，可以先读前置的 React 那一篇。"
+  suggest="fe-react-components-and-state"
+/>
+
+## 没有真浏览器，怎么测页面
+
+前端组件是给浏览器渲染的，可单元测试要快，不能每次都开一个真浏览器。Patra 的门户用三样东西配合：
+
+<Structure
+  title="门户的组件测试，靠谁做什么"
+  intro="点任意一块，看它负责什么"
+  nodes={[
+    { id: "vitest", label: "Vitest", sub: "测试运行器", col: 1, desc: "找到并运行 tests 目录下的测试文件，判断通过或失败，打印报告。命令是 pnpm test，对应 vitest run。" },
+    { id: "jsdom", label: "jsdom", sub: "假浏览器环境", col: 2, desc: "在 Node 里用代码模拟出浏览器的 DOM（页面结构）。组件渲染进去，不用真的打开浏览器，所以快。" },
+    { id: "rtl", label: "Testing Library", sub: "渲染、查找、操作", col: 3, desc: "负责把组件渲染出来，并且提供像用户一样找东西（按角色、按文字）和操作（点击、输入）的方法。" },
+    { id: "component", label: "被测组件", sub: "HelpfulButton 等", col: 4, desc: "真正的组件代码，在 jsdom 里被渲染。测试只通过它渲染出的界面去检查它。" }
+  ]}
+  edges={[
+    { from: "vitest", to: "jsdom", label: "提供环境" },
+    { from: "rtl", to: "jsdom", label: "渲染进去" },
+    { from: "rtl", to: "component", label: "渲染并操作" }
+  ]}
+/>
+
+配置只有二十来行：
+
+<CodeRef at="patra-portal/vitest.config.ts@fe4c6bb68c591a9c9b5fe80f76bbfbbbc6aeae75" lines="1-21" />
+
+最关键的几项是 `environment: "jsdom"`（用假浏览器环境）、`include: ["tests/**/*.{test,spec}.{ts,tsx}"]`（测试文件放哪）、`exclude: ["tests/e2e/**"]`（端到端测试另有一套，由 Playwright 跑，后面有一篇讲）。
+
+## 像用户一样查找，不看内部实现
+
+Testing Library 的核心主张是：**测试应该和用户使用软件的方式越像越好。** 用户不会去找某个 CSS 类名，也看不到组件里的变量。他们看到的是「一个叫有帮助的按钮」，读屏软件读出的是它的角色和名字。
+
+所以 Patra 前端的约定是：查询优先用 `getByRole`（按角色和名字找）。看真实的测试：
+
+<CodeRef at="patra-portal/tests/components/helpful/HelpfulButton.test.tsx@a81a667d8b65f517028d6e7305893a8d562eee26" lines="52-70" />
+
+```tsx
+it("已点时 aria-pressed", () => {
+  renderButton({ helpful: true });
+  expect(screen.getByRole("button", { name: /^有帮助/ })).toHaveAttribute("aria-pressed", "true");
+});
+```
+
+它做了三件事：渲染组件、按「角色是按钮、名字以『有帮助』开头」找到那个按钮、断言它的 `aria-pressed` 属性是 true。
+
+这样写的好处，用一个对比看得最清楚：
+
+<Compare
+  title="测「看得见的」，还是测「内部的」"
+  variants={[
+    {
+      label: "按角色查找，断言可见结果",
+      steps: ["渲染组件", "按角色与名字找到按钮", "断言 aria-pressed 为 true"],
+      results: [{ label: "你把内部状态管理换了一种写法", value: "测试仍然是绿的", tone: "ok" }, { label: "你把按钮改成了别的标签，但仍是可点的按钮", value: "测试仍然是绿的", tone: "ok" }, { label: "你真的把「已点」状态弄坏了", value: "测试变红", tone: "ok" }],
+      verdict: { tone: "ok", head: "该红才红。", text: "测试只对行为负责：行为没变就不动，行为坏了才报警。" }
+    },
+    {
+      label: "按类名或内部变量查找",
+      steps: ["渲染组件", "按 CSS 类名或内部变量找", "断言类名或变量的值"],
+      results: [{ label: "你把内部状态管理换了一种写法", value: "测试变红（误报）", tone: "bad" }, { label: "你把类名改了个名字", value: "测试变红（误报）", tone: "bad" }, { label: "用户看到的界面其实是坏的，但类名还在", value: "测试仍是绿的（漏报）", tone: "bad" }],
+      verdict: { tone: "bad", head: "该红不红、不该红却红。", text: "它在检查「代码是怎么写的」，而不是「用户看到了什么」，既拖累重构，又可能放过真问题。" }
+    }
+  ]}
+/>
+
+另外，`getByRole` 用起来还有个副作用：如果某个元素用 `getByRole` 找不到，常常说明它对读屏软件也不友好。测试顺便推着你把界面写得更可访问。
+
+## 造出组件需要的环境
+
+组件不是孤立的：它可能要读路由，要用数据请求的缓存。测试里要替它把这些环境搭好。门户把常用的搭法收进了一个小工具：
+
+<CodeRef at="patra-portal/tests/support/render-with-query.tsx@6ead12db647bcd3e56f651af791d56e418cb79ff" lines="1-35" />
+
+它给组件套上一个「不重试的数据缓存」和一个「不真的跳转的路由桩」。注释里说得很直白：路由桩是因为组件里的 `useRouter()` 需要 App Router 的上下文。
+
+这就是前面讲的**测试替身**，只是换到了前端：真正会发请求或跳转的东西，都换成假的。`HelpfulButton` 的测试开头还有这样一行：
+
+```tsx
+vi.mock("@/lib/interaction/helpful-actions", () => ({ setHelpful: vi.fn() }));
+```
+
+意思是：把「真的去调后端」的 `setHelpful` 整个换成一个假函数。之后测试可以让它返回成功、失败或者一直不返回，观察按钮的反应。
+
+## 点击、输入与时间
+
+用户的操作用 `userEvent`：`await user.click(按钮)`，它会模拟一整套真实的鼠标事件，比直接触发「点击事件」更接近真人。
+
+前端测试同样会碰到时间：比如「验证邮箱的提示 4 秒后消失」。这个测试没有等 4 秒，而是用假的定时器：
+
+<CodeRef at="patra-portal/tests/components/helpful/HelpfulButton.test.tsx@a81a667d8b65f517028d6e7305893a8d562eee26" lines="120-132" />
+
+开头 `vi.useFakeTimers(…)` 把定时器换成假的，测试里 `vi.advanceTimersByTime(4000)` 一下子拨快 4 秒。道理和后端的「注入 Clock」是一回事：让时间成为测试能控制的输入。
+
+## 不是所有前端代码都有界面
+
+门户里还有很多代码根本不渲染界面，比如处理请求的路由处理器（Route Handler）。它们的测试就没有 jsdom、没有 Testing Library：
+
+<CodeRef at="patra-portal/tests/app/api/auth-me.test.ts@fe4c6bb68c591a9c9b5fe80f76bbfbbbc6aeae75" lines="1-40" />
+
+文件第一行 `// @vitest-environment node` 告诉 Vitest：这个文件不用假浏览器，用纯 Node 环境。测试里把全局的 `fetch` 换成假函数，模拟网关返回 200、401、503，然后断言这个处理器给浏览器的响应：状态码、响应体、Cookie 有没有被顺延或清除。
+
+<Callout kind="lead">
+
+一句话：组件测试看「用户看到什么」，处理器测试看「对外的响应是什么」。两者都是通过**公开的出入口**检查，不探到里面去。
+
+</Callout>
+
+<Callout kind="warn">
+
+jsdom 没有真实的页面布局：它不知道一个元素有多宽、会不会把下面的按钮挤歪。靠布局才暴露的问题，单元测试看不见，要交给 Playwright 那样的真浏览器测试。
+
+</Callout>
+
+<Quiz
+  title="考考自己"
+  questions={[
+    {
+      question: "要在测试里找「提交」按钮，哪种写法最符合 Testing Library 的主张？",
+      options: ["按角色和名字找：getByRole 找名字叫提交的按钮", "按 CSS 类名找：querySelector 找 btn-primary", "按层级找：它在第三个 div 里，一路往下数"],
+      answer: "A",
+      explain: "按角色加名字找，和用户（含读屏软件）找按钮的方式一致；类名、层级一变就找不到了。"
+    },
+    {
+      question: "某个路由处理器只读请求、调后端、返回 JSON，不渲染任何界面。它的测试应该用什么环境？",
+      options: ["jsdom：所有前端测试都要", "node：不需要浏览器环境", "必须开真浏览器"],
+      answer: "B",
+      explain: "没有界面就不需要 DOM。文件头写 @vitest-environment node 即可，更快也更贴近真实运行环境。"
+    }
+  ]}
+/>
+
+<Transfer
+  prompt="登录表单：邮箱格式不对时，点「登录」按钮，应该在邮箱框下面出现一条错误提示，并且不能向后端发请求。请说说：你会怎么写这个组件测试？渲染什么、操作什么、断言什么？后端调用怎么处理？"
+  points={[
+    { label: "渲染", text: "渲染登录表单组件，必要时套上它需要的路由、缓存等环境。" },
+    { label: "操作", text: "用 userEvent 在邮箱框里输入一个不合格的邮箱，再点「登录」按钮。" },
+    { label: "断言可见结果", text: "按角色或文字查找，断言屏幕上出现了错误提示；而不是去检查组件内部的 error 变量。" },
+    { label: "后端调用", text: "把提交函数 mock 成假函数，断言它没有被调用过。" }
+  ]}
+  placeholder="比如：我会先渲染……"
+/>
