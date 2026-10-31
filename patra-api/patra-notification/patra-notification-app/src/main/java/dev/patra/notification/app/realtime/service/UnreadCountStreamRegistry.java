@@ -42,7 +42,7 @@ public class UnreadCountStreamRegistry {
   /// 登记一条连接：放进表、推一次当前值、记一次在站。
   ///
   /// 先放进表再读数：读之后提交的变化一定会再推一次，不会漏。读数或推送失败时撤下这条连接、原样抛出，
-  /// 不返回事件流。
+  /// 不返回事件流。记在站失败不往外抛（见 [#markSeen]）：抛出去的话控制器拿不到 emitter，表里却留着这条连接。
   ///
   /// @param userId 用户
   /// @param stream 连接
@@ -64,7 +64,7 @@ public class UnreadCountStreamRegistry {
         throw e;
       }
     }
-    presenceGateway.markSeen(userId);
+    markSeen(userId);
   }
 
   /// 注销一条连接（浏览器走了、到了寿命、出错）。重复注销不报错。
@@ -115,24 +115,25 @@ public class UnreadCountStreamRegistry {
   /// 心跳一轮：给每条连接写一次心跳，写不进去的剔除；仍有连接的用户各记一次在站（决策 H）。
   ///
   /// 所有连接一起发，一条连接的最长静默就是一轮的间隔（25 秒）。
+  ///
+  /// 不拿用户锁：推送在锁里读库，数据库一慢（连接池等满可达 30 秒），心跳排在锁后面，一轮就会拖过网关 60 秒的读
+  /// 超时，所有推送流一起断开。心跳与推送的先后无所谓，同一条连接上的写由 `SseEmitter` 自己串行化。
   public void heartbeat() {
     List<Long> online = new ArrayList<>();
     streams.forEach(
         (userId, userStreams) -> {
-          synchronized (userStreams) {
-            for (UnreadCountStream stream : List.copyOf(userStreams)) {
-              try {
-                stream.sendHeartbeat();
-              } catch (RuntimeException e) {
-                drop(userId, stream, e);
-              }
-            }
-            if (!userStreams.isEmpty()) {
-              online.add(userId);
+          for (UnreadCountStream stream : List.copyOf(userStreams)) {
+            try {
+              stream.sendHeartbeat();
+            } catch (RuntimeException e) {
+              drop(userId, stream, e);
             }
           }
+          if (!userStreams.isEmpty()) {
+            online.add(userId);
+          }
         });
-    online.forEach(presenceGateway::markSeen);
+    online.forEach(this::markSeen);
   }
 
   /// 停机开始时结束所有连接、清空表。
@@ -152,6 +153,21 @@ public class UnreadCountStreamRegistry {
           }
         });
     streams.clear();
+  }
+
+  /// 记一次在站（决策 H）。这只是附带信号：写不进去（数据库挂了、连接池等满）只记日志，不影响推送，
+  /// 也不影响同一轮里后面的人；下一轮心跳再记。
+  ///
+  /// 建连时更不能往外抛：控制器拿不到 emitter 交给 MVC，这条连接却已在表里，之后的发送只会攒在没初始化的
+  /// emitter 里、永不报错、永不剔除，每轮心跳都把他记成在站，离站邮件对他永远不发。
+  ///
+  /// @param userId 用户
+  private void markSeen(long userId) {
+    try {
+      presenceGateway.markSeen(userId);
+    } catch (RuntimeException e) {
+      log.warn("记在站失败，下一轮心跳再记：userId={}", userId, e);
+    }
   }
 
   /// 剔除一条写不进去的连接：从表里注销，再结束它。

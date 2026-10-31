@@ -243,6 +243,56 @@ class GatewayPushRouteIT {
     }
   }
 
+  /// 浏览器中途断开（关标签页、断网）：网关在下一次往浏览器写时发现，关掉下游响应体，推送池的那条连接随之释放，
+  /// 新的推送能连上；不会一条条泄漏到池子永远是满的（评审补的守护用例）。
+  ///
+  /// 下游每 500 毫秒滴一块、共 3 秒：占满 2 条后断开一条，1 秒左右第三条就能拿到 200。
+  @Test
+  void should_free_push_connection_when_browser_disconnects_mid_stream() throws Exception {
+    notification.stubFor(
+        get(urlPathEqualTo(DOWNSTREAM_STREAM))
+            .willReturn(
+                aResponse()
+                    .withStatus(200)
+                    .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.TEXT_EVENT_STREAM_VALUE)
+                    .withBody(":ping\n\n".repeat(6))
+                    .withChunkedDribbleDelay(6, 3_000)));
+    String token = GatewayITSessions.issue(identity, USER_ID, 1L);
+
+    try (HttpClient client = HttpClient.newBuilder().version(HttpClient.Version.HTTP_1_1).build()) {
+      HttpResponse<InputStream> leaving = openStream(client, token).join();
+      HttpResponse<InputStream> staying = openStream(client, token).join();
+      HttpResponse<InputStream> replacement = null;
+      try {
+        assertThat(leaving.statusCode()).isEqualTo(200);
+        assertThat(staying.statusCode()).isEqualTo(200);
+
+        leaving.body().close();
+        long deadline = System.nanoTime() + Duration.ofSeconds(3).toNanos();
+        while (replacement == null && System.nanoTime() < deadline) {
+          HttpResponse<InputStream> attempt =
+              client.send(streamRequest(token), HttpResponse.BodyHandlers.ofInputStream());
+          if (attempt.statusCode() == 200) {
+            replacement = attempt;
+          } else {
+            attempt.body().close();
+            Thread.sleep(100);
+          }
+        }
+
+        assertThat(replacement).as("断开一条后，3 秒内应能重新连上").isNotNull();
+        // 读完剩下的两条流：连接还回池子，后面的用例不会撞上满池
+        staying.body().readAllBytes();
+        replacement.body().readAllBytes();
+      } finally {
+        staying.body().close();
+        if (replacement != null) {
+          replacement.body().close();
+        }
+      }
+    }
+  }
+
   /// 每条事件一到就转给浏览器，不等攒够缓冲区、也不等下游结束。
   ///
   /// 下游每 600 毫秒滴一条 7 字节的心跳、共 6 秒；第一条要在 3 秒内（一半）到达客户端，留出首个请求的

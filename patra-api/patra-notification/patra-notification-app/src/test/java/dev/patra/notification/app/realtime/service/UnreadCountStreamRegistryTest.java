@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.clearInvocations;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -19,6 +20,7 @@ import dev.patra.tool.core.security.AccountType;
 import dev.patra.tool.core.security.ClientType;
 import dev.patra.tool.core.security.CurrentUser;
 import dev.patra.tool.core.security.CurrentUserPort;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -227,6 +229,69 @@ class UnreadCountStreamRegistryTest {
     assertThat(first.closed).isTrue();
     assertThat(others.closed).isTrue();
     verifyNoInteractions(inboxReadPort);
+  }
+
+  /// 评审发现（中）：建连时记在站失败（数据库挂了、连接池等满）如果往外抛，控制器拿不到 emitter 交给 MVC，
+  /// 这条连接却已在表里：之后的发送只会攒在没初始化的 emitter 里、永不报错、永不剔除，每轮心跳都把他记成在站，
+  /// 离站邮件对他永远不发。在站只是附带信号：记不上就记日志，连接照常可用。
+  @Test
+  void should_keep_stream_working_when_presence_cannot_be_recorded_on_open() {
+    when(inboxReadPort.unreadCounts(USER))
+        .thenReturn(UnreadCounts.of(0, 0, 0), UnreadCounts.of(1, 0, 0));
+    doThrow(new IllegalStateException("数据库挂了")).when(presenceGateway).markSeen(USER);
+    RecordingStream stream = new RecordingStream();
+
+    assertThatCode(() -> registry.open(USER, stream)).doesNotThrowAnyException();
+    registry.push(Set.of(USER));
+
+    assertThat(stream.sent).last().isEqualTo(UnreadCounts.of(1, 0, 0));
+  }
+
+  /// 评审发现（低）：推送在用户锁里读库，数据库一慢（连接池等满可达 30 秒），心跳如果也拿这把锁，就会排在后面，
+  /// 一轮拖过网关 60 秒的读超时，所有推送流一起断开。心跳不拿用户锁（`SseEmitter` 自己串行化写）。
+  @Test
+  @Timeout(2)
+  void should_send_heartbeats_while_a_push_waits_on_the_database() throws Exception {
+    CountDownLatch pushReading = new CountDownLatch(1);
+    CountDownLatch releasePush = new CountDownLatch(1);
+    AtomicInteger reads = new AtomicInteger();
+    when(inboxReadPort.unreadCounts(USER))
+        .thenAnswer(
+            invocation -> {
+              if (reads.getAndIncrement() > 0) {
+                pushReading.countDown();
+                releasePush.await();
+              }
+              return UnreadCounts.of(0, 0, 0);
+            });
+    RecordingStream stream = new RecordingStream();
+    registry.open(USER, stream);
+    Thread pusher = Thread.ofPlatform().start(() -> registry.push(Set.of(USER)));
+    pushReading.await();
+
+    // 心跳放在另一个线程：卡在 synchronized 上的线程不响应中断，放在测试线程里会把整个测试挂住
+    Thread beat = Thread.ofPlatform().start(registry::heartbeat);
+    boolean finishedWhilePushWaits = beat.join(Duration.ofMillis(500));
+    releasePush.countDown();
+    pusher.join();
+    beat.join();
+
+    assertThat(finishedWhilePushWaits).isTrue();
+    assertThat(stream.heartbeats).isEqualTo(1);
+  }
+
+  /// 一轮心跳里一个人的在站写不进去，不影响给后面的人记。
+  @Test
+  void should_mark_other_users_seen_when_one_presence_write_fails() {
+    when(inboxReadPort.unreadCounts(anyLong())).thenReturn(UnreadCounts.of(0, 0, 0));
+    registry.open(USER, new RecordingStream());
+    registry.open(OTHER, new RecordingStream());
+    clearInvocations(presenceGateway);
+    doThrow(new IllegalStateException("数据库挂了")).when(presenceGateway).markSeen(USER);
+
+    assertThatCode(registry::heartbeat).doesNotThrowAnyException();
+
+    verify(presenceGateway).markSeen(OTHER);
   }
 
   /// 记下收到了什么的假连接；可以让下一次发送失败。

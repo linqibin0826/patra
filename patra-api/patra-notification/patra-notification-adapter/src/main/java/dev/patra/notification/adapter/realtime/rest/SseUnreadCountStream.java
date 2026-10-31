@@ -33,7 +33,8 @@ public class SseUnreadCountStream implements UnreadCountStream {
     this.emitter = emitter;
   }
 
-  /// 推一条 `unread-count` 事件。连接表在每个用户的锁里调用，不会并发。
+  /// 推一条 `unread-count` 事件。连接表在每个用户的锁里调用，推送之间不会并发；心跳可能同时在写，同一条连接上的写
+  /// 由 `SseEmitter` 自己串行化。
   ///
   /// @param counts 未读数
   /// @throws UncheckedIOException 写不进去（浏览器已走）
