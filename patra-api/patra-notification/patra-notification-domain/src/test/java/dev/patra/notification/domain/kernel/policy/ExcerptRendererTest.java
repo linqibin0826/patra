@@ -3,7 +3,9 @@ package dev.patra.notification.domain.kernel.policy;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.patra.notification.domain.kernel.model.read.RenderedExcerpt;
+import dev.patra.notification.domain.kernel.model.read.SegmentedExcerpt;
 import java.util.Map;
+import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
 
 /// 正文纯文本渲染成摘录（PAP-128 交接的截断规则）。
@@ -76,5 +78,40 @@ class ExcerptRendererTest {
   void should_list_mentioned_ids() {
     assertThat(ExcerptRenderer.mentionedIds("<@4> 和 <@2> 还有 <@4> <@9999999999999999999>"))
         .containsExactly(4L, 2L);
+  }
+
+  /// 分段：提及段标出来，拼起来就是 `render` 的结果。
+  @Test
+  void segments_mark_mentions_and_join_to_render() {
+    String plain = "谢谢 <@1> 和 <@2>\n好";
+
+    SegmentedExcerpt segments = ExcerptRenderer.renderSegments(plain, NAMES, 120, false);
+
+    assertThat(segments.segments())
+        .containsExactly(
+            SegmentedExcerpt.Segment.of("谢谢 ", false),
+            SegmentedExcerpt.Segment.of("@zhou", true),
+            SegmentedExcerpt.Segment.of(" 和 ", false),
+            SegmentedExcerpt.Segment.of("@已注销用户", true),
+            SegmentedExcerpt.Segment.of("\n好", false));
+    assertThat(
+            segments.segments().stream()
+                .map(SegmentedExcerpt.Segment::text)
+                .collect(Collectors.joining()))
+        .isEqualTo(ExcerptRenderer.render(plain, NAMES, 120, false).text());
+    assertThat(segments.truncated()).isFalse();
+  }
+
+  /// 截断时不出半个提及，截断标记与 `render` 一致。
+  @Test
+  void segments_never_split_a_mention() {
+    String plain = "字".repeat(118) + "<@1>后面";
+
+    SegmentedExcerpt segments = ExcerptRenderer.renderSegments(plain, NAMES, 120, true);
+
+    assertThat(segments.segments())
+        .containsExactly(SegmentedExcerpt.Segment.of("字".repeat(118), false));
+    assertThat(segments.truncated()).isTrue();
+    assertThat(ExcerptRenderer.render(plain, NAMES, 120, true).truncated()).isTrue();
   }
 }

@@ -1,6 +1,8 @@
 package dev.patra.notification.domain.preference.port.read;
 
+import dev.patra.notification.domain.preference.model.read.EmailModes;
 import dev.patra.notification.domain.preference.model.read.EmailSubscription;
+import java.util.List;
 
 /// mail 发提醒邮件前取收件人的邮件订阅：两类的档位与退订令牌（spec 第 9 节）。
 ///
@@ -13,4 +15,17 @@ public interface EmailSubscriptionReadPort {
   /// @param userId 用户 ID
   /// @return 订阅
   EmailSubscription subscriptionOf(long userId);
+
+  /// 只读某人两类的档位，不建行；没有行就是默认值（两类都是离站时逐条）。
+  ///
+  /// @param userId 用户 ID
+  /// @return 档位
+  EmailModes findSubscription(long userId);
+
+  /// 至少一类设为每日汇总的人（汇总名单），按用户 ID 升序分页，不建行。
+  ///
+  /// @param afterUserId 游标：只取比它大的
+  /// @param limit 最多几个
+  /// @return 订阅
+  List<EmailSubscription> digestSubscribers(long afterUserId, int limit);
 }

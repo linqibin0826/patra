@@ -306,6 +306,7 @@ class InboxQueryServiceTest {
         .commentId(500L)
         .plainText(plainText)
         .occurredAt(AT)
+        .createdAt(AT)
         .build();
   }
 

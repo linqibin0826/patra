@@ -16,6 +16,7 @@ import lombok.Builder;
 /// @param plainText 正文全文（PAP-128，含 `<@ID>`）：评论取最新版本的快照，有帮助点经验时取条目上的经验正文；评论已删除、
 ///     没有快照或经验没有文字时为空
 /// @param occurredAt 排序时间
+/// @param createdAt 写入信箱的时刻（提醒邮件复查在站按它比）
 /// @param readAt 已读时刻；未读为空
 @Builder
 public record InboxEntry(
@@ -28,12 +29,14 @@ public record InboxEntry(
     Long commentId,
     String plainText,
     Instant occurredAt,
+    Instant createdAt,
     Instant readAt) {
 
   /// 校验非空。
   public InboxEntry {
     Objects.requireNonNull(type, "type 不能为 null");
     Objects.requireNonNull(occurredAt, "occurredAt 不能为 null");
+    Objects.requireNonNull(createdAt, "createdAt 不能为 null");
   }
 
   /// 是否已读。

@@ -12,11 +12,15 @@ import dev.patra.notification.domain.inbox.model.aggregate.HelpfulNotification;
 import dev.patra.notification.domain.inbox.model.enums.HelpfulTargetType;
 import dev.patra.notification.domain.inbox.model.read.InboxCursor;
 import dev.patra.notification.domain.inbox.model.read.InboxEntry;
+import dev.patra.notification.domain.inbox.model.read.NotificationType;
 import dev.patra.notification.domain.inbox.model.read.UnreadCounts;
 import dev.patra.notification.domain.inbox.model.vo.HelpfulMark;
 import dev.patra.notification.domain.inbox.model.vo.HelpfulTarget;
 import dev.patra.notification.domain.inbox.model.vo.SubjectOwner;
+import dev.patra.notification.domain.inbox.model.read.UnreadWindow;
+import dev.patra.notification.domain.inbox.model.vo.NotificationDraft;
 import dev.patra.notification.domain.kernel.model.enums.NotificationCategory;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -157,5 +161,103 @@ class InboxReadAdapterIT extends InboxPersistenceITSupport {
     assertThat(reads.page(2L, NotificationCategory.REPLY, null, 20))
         .extracting(InboxEntry::actorCount)
         .containsExactly(1);
+  }
+
+  /// 按 ID 复查：已读的、不存在的、别人的都不返回；按排序时间先后。
+  @Test
+  void find_unread_excludes_read_missing_and_others() {
+    Instant t1 = Instant.parse("2026-10-31T01:00:00Z");
+    Instant t2 = Instant.parse("2026-10-31T02:00:00Z");
+    List<Long> ids =
+        notifications
+            .insertAll(
+                List.of(
+                    draft(2L, COMMENT_REPLY, 500L, t2),
+                    draft(2L, MENTION, 501L, t1),
+                    draft(2L, COMMENT_REPLY, 502L, t1),
+                    draft(3L, COMMENT_REPLY, 503L, t1)))
+            .stream()
+            .map(created -> created.notificationId())
+            .toList();
+    notifications.markRead(2L, ids.get(2), NOW);
+
+    List<InboxEntry> unread =
+        reads.findUnread(2L, List.of(ids.get(0), ids.get(1), ids.get(2), ids.get(3), 999L));
+
+    assertThat(unread).extracting(InboxEntry::commentId).containsExactly(501L, 500L);
+    assertThat(reads.findUnread(2L, List.of())).isEmpty();
+  }
+
+  /// 条目带写入信箱的时刻。
+  @Test
+  void entries_carry_created_at() {
+    Instant created = Instant.parse("2026-10-31T03:04:05.123456Z");
+    notifications.insertAll(
+        List.of(drafted(2L, COMMENT_REPLY, 500L, NOW.minusSeconds(60), created)));
+
+    assertThat(reads.page(2L, NotificationCategory.REPLY, null, 20))
+        .extracting(InboxEntry::createdAt)
+        .containsExactly(created);
+  }
+
+  /// 窗口内这一类的未读总数与最新几条：窗口外、已读、别的类别都不算。
+  @Test
+  void unread_between_counts_and_lists_newest_first() {
+    Instant from = Instant.parse("2026-10-30T00:00:00Z");
+    Instant to = Instant.parse("2026-10-31T00:00:00Z");
+    List<Long> ids =
+        notifications
+            .insertAll(
+                List.of(
+                    drafted(2L, COMMENT_REPLY, 500L, from.plusSeconds(10), from.plusSeconds(10)),
+                    drafted(2L, POST_COMMENT, 501L, from.plusSeconds(30), from.plusSeconds(30)),
+                    drafted(2L, COMMENT_REPLY, 502L, from.plusSeconds(20), from.plusSeconds(20)),
+                    drafted(2L, COMMENT_REPLY, 503L, from.plusSeconds(40), from.plusSeconds(40)),
+                    drafted(2L, COMMENT_REPLY, 504L, to, to),
+                    drafted(2L, MENTION, 505L, from.plusSeconds(50), from.plusSeconds(50)),
+                    drafted(3L, COMMENT_REPLY, 506L, from.plusSeconds(50), from.plusSeconds(50))))
+            .stream()
+            .map(created -> created.notificationId())
+            .toList();
+    notifications.markRead(2L, ids.get(3), NOW);
+
+    UnreadWindow window = reads.unreadBetween(2L, NotificationCategory.REPLY, from, to, 2);
+
+    assertThat(window.total()).isEqualTo(3);
+    assertThat(window.newest()).extracting(InboxEntry::commentId).containsExactly(501L, 502L);
+  }
+
+  /// 窗口按写入信箱的时刻算，不按排序时间。
+  @Test
+  void unread_between_filters_on_created_at_not_occurred_at() {
+    Instant from = Instant.parse("2026-10-30T00:00:00Z");
+    Instant to = Instant.parse("2026-10-31T00:00:00Z");
+    notifications.insertAll(
+        List.of(
+            drafted(2L, MENTION, 500L, from.minus(Duration.ofMinutes(30)), from.plusSeconds(60)),
+            drafted(2L, MENTION, 501L, from.plusSeconds(60), to.plusSeconds(60))));
+
+    UnreadWindow window = reads.unreadBetween(2L, NotificationCategory.MENTION, from, to, 10);
+
+    assertThat(window.total()).isEqualTo(1);
+    assertThat(window.newest()).extracting(InboxEntry::commentId).containsExactly(500L);
+  }
+
+  private static NotificationDraft drafted(
+      long recipientId,
+      NotificationType type,
+      long commentId,
+      Instant occurredAt,
+      Instant createdAt) {
+    return NotificationDraft.builder()
+        .recipientId(recipientId)
+        .type(type)
+        .actorId(9L)
+        .actorAnonymous(false)
+        .subjectId(40L)
+        .commentId(commentId)
+        .occurredAt(occurredAt)
+        .createdAt(createdAt)
+        .build();
   }
 }

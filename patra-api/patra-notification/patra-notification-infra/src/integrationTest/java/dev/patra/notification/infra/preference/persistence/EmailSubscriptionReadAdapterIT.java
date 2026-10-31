@@ -3,6 +3,7 @@ package dev.patra.notification.infra.preference.persistence;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.patra.notification.domain.preference.model.read.EmailMode;
+import dev.patra.notification.domain.preference.model.read.EmailModes;
 import dev.patra.notification.domain.preference.model.read.EmailSubscription;
 import dev.patra.notification.domain.preference.port.read.EmailSubscriptionReadPort;
 import java.time.OffsetDateTime;
@@ -107,5 +108,39 @@ class EmailSubscriptionReadAdapterIT extends PreferencePersistenceITSupport {
       Thread.currentThread().interrupt();
       throw new IllegalStateException(e);
     }
+  }
+
+  /// 至少一类是每日汇总的人，按用户 ID 升序分页；不建行。
+  @Test
+  void digest_subscribers_lists_only_digest_and_pages() {
+    insertRow(5L, "DIGEST", "OFF", "A".repeat(43));
+    insertRow(6L, "INSTANT", "INSTANT", "B".repeat(43));
+    insertRow(7L, "OFF", "DIGEST", "C".repeat(43));
+    insertRow(8L, "DIGEST", "DIGEST", "D".repeat(43));
+
+    assertThat(subscriptions.digestSubscribers(0L, 10))
+        .extracting(EmailSubscription::userId)
+        .containsExactly(5L, 7L, 8L);
+    assertThat(subscriptions.digestSubscribers(5L, 1))
+        .singleElement()
+        .satisfies(
+            s -> {
+              assertThat(s.userId()).isEqualTo(7L);
+              assertThat(s.mention()).isEqualTo(EmailMode.DIGEST);
+              assertThat(s.unsubscribeToken()).isEqualTo("C".repeat(43));
+            });
+    assertThat(rows()).isEqualTo(4L);
+  }
+
+  /// 只读档位：没有行时给默认值，也不建行。
+  @Test
+  void find_subscription_defaults_without_inserting() {
+    assertThat(subscriptions.findSubscription(7L))
+        .isEqualTo(EmailModes.of(EmailMode.INSTANT, EmailMode.INSTANT));
+    assertThat(rows()).isZero();
+
+    insertRow(7L, "DIGEST", "OFF", "A".repeat(43));
+    assertThat(subscriptions.findSubscription(7L))
+        .isEqualTo(EmailModes.of(EmailMode.DIGEST, EmailMode.OFF));
   }
 }

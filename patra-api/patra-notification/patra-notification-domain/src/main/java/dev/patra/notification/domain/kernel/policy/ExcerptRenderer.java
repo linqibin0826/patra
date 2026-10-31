@@ -1,7 +1,10 @@
 package dev.patra.notification.domain.kernel.policy;
 
 import dev.patra.notification.domain.kernel.model.read.RenderedExcerpt;
+import dev.patra.notification.domain.kernel.model.read.SegmentedExcerpt;
+import dev.patra.notification.domain.kernel.model.read.SegmentedExcerpt.Segment;
 import java.text.BreakIterator;
+import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -34,8 +37,21 @@ public final class ExcerptRenderer {
   /// @return 摘录
   public static RenderedExcerpt render(
       String plainText, Map<Long, String> names, int maxGraphemes, boolean singleLine) {
+    SegmentedExcerpt segments = renderSegments(plainText, names, maxGraphemes, singleLine);
+    return RenderedExcerpt.of(segments.text(), segments.truncated());
+  }
+
+  /// 渲染成文字段与提及段（邮件给 `@名字` 加强调用），规则同 {@link #render}。
+  ///
+  /// @param plainText 评论的纯文本全文
+  /// @param names 用户 ID → 显示名字（不含 `@`）；缺了的按 {@link MentionNames#DELETED_USER}
+  /// @param maxGraphemes 字素上限
+  /// @param singleLine 是否压成一行
+  /// @return 分段的摘录
+  public static SegmentedExcerpt renderSegments(
+      String plainText, Map<Long, String> names, int maxGraphemes, boolean singleLine) {
     String text = singleLine ? plainText.replace('\n', ' ') : plainText;
-    StringBuilder out = new StringBuilder();
+    List<Segment> out = new ArrayList<>();
     int[] used = {0};
     Matcher matcher = MENTION.matcher(text);
     int last = 0;
@@ -52,14 +68,14 @@ public final class ExcerptRenderer {
       if (used[0] + length > maxGraphemes) {
         return truncated(out);
       }
-      out.append(mention);
+      out.add(Segment.of(mention, true));
       used[0] += length;
       last = matcher.end();
     }
     if (!appendLiteral(out, text.substring(last), used, maxGraphemes)) {
       return truncated(out);
     }
-    return RenderedExcerpt.of(out.toString(), false);
+    return SegmentedExcerpt.of(out, false);
   }
 
   /// 正文里 @ 到的人（显示前要按 ID 取名字）。
@@ -78,15 +94,15 @@ public final class ExcerptRenderer {
     return List.copyOf(ids);
   }
 
-  /// 追加一段字面文字，直到用完字素额度。
+  /// 追加一段字面文字，直到用完字素额度；空段不加。
   ///
-  /// @param out 输出
+  /// @param out 输出的段
   /// @param literal 文字
   /// @param used 已用字素数（单元素数组，原地累加）
   /// @param maxGraphemes 字素上限
   /// @return 整段都放下了为 `true`
   private static boolean appendLiteral(
-      StringBuilder out, String literal, int[] used, int maxGraphemes) {
+      List<Segment> out, String literal, int[] used, int maxGraphemes) {
     BreakIterator graphemes = BreakIterator.getCharacterInstance();
     graphemes.setText(literal);
     int end = 0;
@@ -94,16 +110,24 @@ public final class ExcerptRenderer {
       end = graphemes.current();
       used[0]++;
     }
-    out.append(literal, 0, end);
+    if (end > 0) {
+      out.add(Segment.of(literal.substring(0, end), false));
+    }
     return end == literal.length();
   }
 
-  /// 截断后的结果：去掉末尾空白。
+  /// 截断后的结果：去掉末尾空白（只可能在最后一段文字里），去掉后为空的段不留。
   ///
-  /// @param out 已输出的文字
+  /// @param out 已输出的段
   /// @return 标了截断的摘录
-  private static RenderedExcerpt truncated(StringBuilder out) {
-    return RenderedExcerpt.of(out.toString().stripTrailing(), true);
+  private static SegmentedExcerpt truncated(List<Segment> out) {
+    if (!out.isEmpty() && !out.getLast().mention()) {
+      String stripped = out.removeLast().text().stripTrailing();
+      if (!stripped.isEmpty()) {
+        out.add(Segment.of(stripped, false));
+      }
+    }
+    return SegmentedExcerpt.of(out, true);
   }
 
   /// 提及里的数字转成用户 ID；超出 long 的不是合法 ID。
