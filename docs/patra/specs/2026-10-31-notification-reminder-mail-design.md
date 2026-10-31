@@ -612,3 +612,35 @@ AC 写的是「Mailpit 集成测试」。仓库惯例（PAP-105 同）是用 Gre
 
 - 版式与画布一致：引用块、`@名字` 强调、分节、超过 10 条的说明、版权页、卡片外的两个链接；
 - 窄屏下按钮占满一行。
+
+### 16.3 独立评审（opus 子代理，只看代码与本 spec）
+
+**结论**：无 Critical，1 条 Important，8 条 Minor。按效果重新定级后，修了 3 条，其余记为留下的小问题。
+
+**修了的**
+
+1. **（Important）发送窗口关闭后仍会调发信端口**
+   - 原来 24 小时过期只在推迟时判断。第一次发送超时，但其实已被接受；之后依赖一直不可用，等到恢复时已过了第一次发送后 24 小时，装配成功后仍会再调一次端口。这时幂等键已失效，同一封会再送达。
+   - 修法：每次尝试前先判断发送窗口，已关闭就直接记 `EXPIRED`，不再装配、不调端口。
+   - 测试（先红后绿）：`ReminderDeliveryTest.send_window_closes_24_hours_after_first_send`、`SendPendingDeliveriesHandlerTest.send_window_closed_expires_without_delivering`。
+2. **（Minor 升为 Important）部署切换时两轮到点处理重叠，会各建一条投递**
+   - 两轮读到同一批排队行，投递 ID 不同，幂等键挡不住，结果是两封信，违反反目标「档位不变时一条提醒出现在两封邮件里」。
+   - 修法：排队行改为先用 `DELETE … RETURNING` 认领，只给认领到的行建投递。
+   - 测试：`FlushDueRemindersHandlerTest.only_claimed_rows_become_deliveries`、`…nothing_claimed_creates_no_delivery`、`ReminderQueueRepositoryAdapterIT.claim_returns_only_rows_it_deleted`。
+3. **（规范）** 新测试的辅助方法补上 `///` 注释，去掉一处全类名。
+
+**留下的小问题**（没修，原因各列在后面）
+
+1. 装配阶段遇到程序错误（不是依赖不可用）时，按退避一直重试、不过期，每 30 分钟打一条 ERROR。错误本身会暴露出来，修好后自动发出。
+2. 处理发信失败用的是 `switch` 语句，不是表达式。`MailDeliveryFailure` 以后加新值时编译器不会提醒，新值会落到「记已发」。这个枚举现在只有三个值。
+3. 记下第一次发送时刻之后，如果写回失败，内存里的这个时刻会在推迟时写进库，过期提前开始算（端口其实没调过）。只在数据库写失败时出现，影响是几分钟。
+4. 模板渲染失败会被发信端口当成 `REJECTED`，只记 WARN 并跳过，任务仍显示成功。模板有单测和流程测试兜着。
+5. 某一类未读总数大于 0、但没有一条有落点（对象都下线了）时，汇总里会有一节只有标题、没有条目；数量在「还有 N 条没有列出」里有说明。
+6. 毫秒级的在站竞态：提醒写入时刻在信箱事务提交前就取了。如果用户恰好在这几毫秒里拉过未读数，这条会被当成「看过」。
+7. 多实例与限流见本 spec 的非目标。
+
+### 16.4 门禁（基线 `82ea8714b`，含 PAP-142～145）
+
+- notification 六个模块的 `check` 全部通过。
+- 单测：domain 181、app 173、infra 55、adapter 30、boot 43。
+- 集成测试：infra 69/69、boot 88/88。其中离站逐条 12 例、每日汇总 6 例（含「有帮助不进邮件」）、同事务入队 2 例。
