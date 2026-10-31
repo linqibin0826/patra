@@ -9,7 +9,7 @@
 #   1. 镜像就位：本地缺失才从 GHCR 拉（指数退避 30/60/120s）。正常部署时镜像
 #      已由本机原生构建、天然命中；仅回滚且本地缓存被清时回源 GHCR。
 #   2. 架构断言：必须 arm64（防止历史 amd64 归档被回滚拉回；2026-08 事故复盘）
-#   3. 按 services.json 的条目顺序 compose up（identity 先于 gateway，interaction 在 catalog 之后，notification 在 interaction 之后）
+#   3. 按 services.json 的条目顺序 compose up（notification 先于发事件的 identity、interaction，identity 先于 gateway，interaction 在 catalog 之后）
 #   4. 健康检查：轮询 127.0.0.1:<port><healthPath>（127.0.0.1 而非 localhost——
 #      后者可解析到 ::1 导致误报，portal healthcheck 实际踩坑）
 #   5. 部署后验证：运行容器镜像 == 期望 tag（防 up 静默落到旧镜像）
