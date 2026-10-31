@@ -331,4 +331,4 @@ patra-identity-boot
 - 每封安全邮件多一次写库、外送时多等一次 broker 确认（异步，不拖慢请求）。外送等确认时不占数据库连接：Modulith 的外送器方法是 `@ApplicationModuleListener(propagation = SUPPORTS)`，不开物理事务，进入与完成的登记是各自的短事务；前提是外送路径（这里是 `SecurityMailEventMapper`）不查库，事件模块的发送模板在等确认前检查线程上没有挂着连接（事件模块 spec 4.13，由 `ExternalizationConnectionIT` 守住）。所以 identity 不需要压异步并发；broker 卡住时只是异步线程各等确认超时（至少 5 秒），登录、注册不受影响。
 - 新设备提醒在登录提交与登记之间崩溃会丢一封（4.5）。
 - 24 小时以上的停机后补投可能重复送达一封（2.3）。
-- `processed_event` 清理、死信告警等属于消费方（PAP-105 / 事件模块第 9 节）。
+- 死信告警属于消费方（PAP-105）；`processed_event` 清理 10/31 已由事件模块补上（默认 30 天，事件模块 spec 4.14）。

@@ -98,7 +98,7 @@
 - 有帮助提醒（PAP-144）：本 Issue 只把信箱的形状留好（第 10.1 节），不写合并逻辑。
 - 推送（PAP-145）、提醒邮件（PAP-146）：本 Issue 只提供它们要的端口与事件。
 - 迁移旧提醒（第 3 节 L）。
-- `processed_event` 的定期清理（第 15 节遗留）。
+- `processed_event` 的定期清理：10/31 已由事件模块补上（默认保留 30 天，事件模块 spec 4.14），本 Issue 不用做。
 
 **反目标**（技术上能跑，但算失败）
 
@@ -499,7 +499,7 @@ UnreadCounts unreadCounts(long recipientId);   // replies、mentions、helpful�
 
 **遗留（不在本 Issue 做）**：
 
-- `processed_event` 没有清理，按事件数增长（信箱与 PAP-105 的邮件消费者共用）。清理属于事件模块的能力（`ProcessedEventPort` 加按时间删的方法 + 任务），建议在 `patra-tool-events` 里补。
+- `processed_event` 的清理：10/31 已在事件模块补上（`processedEventPurgeJob`，默认保留 30 天，见事件模块 spec 4.14）。信箱超过保留期后靠提醒的唯一约束与墓碑做第二道去重。
 
 ## 16. 考虑过、没选的做法
 
@@ -535,7 +535,7 @@ UnreadCounts unreadCounts(long recipientId);   // replies、mentions、helpful�
 7. 响应字段 `createdAt` 改名 `occurredAt`；`commentId` 可空；未读数加 `helpful`、`total` 不含它；游标不透明（8）。
 8. 名片、对象视图、摘录渲染、在站信号进底座（5）。
 9. Flyway 用前向迁移删 schema，旧脚本保留（11.2）。
-10. `processed_event` 清理留给事件模块（15）。
+10. `processed_event` 清理由事件模块统一做（15；10/31 已补上）。
 
 ## 18. 实施记录（2026-10-31）
 
