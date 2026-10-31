@@ -23,7 +23,7 @@ import org.springframework.transaction.support.TransactionOperations;
 
 /// 删除投稿经验（spec 6.3）：不存在 404、不是作者 403、已删除直接返回（幂等）；不查发表资格（2026-10-27 用户定）。
 /// 事务里拿作者锁、再判一次，在锁内读当前登记快照，软删并把登记行置为 UNAVAILABLE（原样传回快照）：期刊列表与汇总不再计入，讨论区不能再回复。
-/// 同一事务里发布 {@link PostDeletedEvent}，提醒子域据此删掉这条经验下的全部提醒（PAP-127）。
+/// 同一事务里发布 {@link PostDeletedEvent}，外送后通知服务据此删掉这条经验下的全部提醒（PAP-143）。
 @Component
 @RequiredArgsConstructor
 public class DeleteExperienceHandler implements CommandHandler<DeleteExperienceCommand, Void> {

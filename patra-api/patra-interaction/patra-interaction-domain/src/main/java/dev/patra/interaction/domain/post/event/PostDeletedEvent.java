@@ -6,9 +6,8 @@ import java.util.Objects;
 import java.util.UUID;
 import lombok.Builder;
 
-/// 投稿经验已删除。投稿经验子域在软删、登记行置为失效的同一事务里发布；提醒子域用同步 `@EventListener` 订阅，
-/// 删掉这条经验下的全部提醒（PAP-127），失败时删除一起回滚。已删除再删不发。同时外送成集成事件 `post.deleted`
-/// （PAP-141）。
+/// 投稿经验已删除。投稿经验子域在软删、登记行置为失效的同一事务里发布；已删除再删不发。外送成集成事件
+/// `post.deleted`（PAP-141），通知服务据此删掉这条经验下的全部提醒（PAP-143）。
 ///
 /// @param eventId 事件 ID：发布时生成，外送与补投原样带上，消费方据此去重
 /// @param postId 帖子 ID

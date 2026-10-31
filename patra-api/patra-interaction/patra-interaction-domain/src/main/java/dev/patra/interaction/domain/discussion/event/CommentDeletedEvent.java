@@ -7,8 +7,8 @@ import java.util.UUID;
 import lombok.Builder;
 
 /// 评论已删除：变占位或整条去掉（已是占位再删不发；级联去掉的占位当初变占位时已发过）。讨论子域在写入的同一事务里
-/// 发布，订阅方式同 {@link CommentPublishedEvent}。提醒子域据此删除这条评论的全部提醒；同时外送成集成事件
-/// `comment.deleted`（PAP-141）。
+/// 发布，订阅方式同 {@link CommentPublishedEvent}；外送成集成事件 `comment.deleted`（PAP-141），通知服务据此删除这条
+/// 评论的全部提醒（PAP-143）。
 ///
 /// @param eventId 事件 ID：发布时生成，外送与补投原样带上，消费方据此去重
 /// @param commentId 被删的评论

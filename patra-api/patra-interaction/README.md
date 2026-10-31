@@ -1,6 +1,6 @@
 # patra-interaction
 
-社区互动服务：v0.13 是文献库与收藏夹，v0.14 加文献讨论、投稿经验与站内提醒，v0.15 加「有帮助」；以后的关注动态、行为数据也都放进这个服务，各占一个子域。
+社区互动服务：v0.13 是文献库与收藏夹，v0.14 加文献讨论、投稿经验与站内提醒，v0.15 加「有帮助」；v0.16 起站内提醒搬到 patra-notification（PAP-143），这里只外送「发生了什么」的集成事件；以后的关注动态、行为数据也都放进这个服务，各占一个子域。
 
 工程设计：`docs/patra/specs/2026-10-24-interaction-skeleton-design.md`（服务骨架、子域边界、存储与部署接入）、`docs/patra/specs/2026-10-27-interaction-foundation-extension-design.md`（v0.14 底座扩展）。依据 release spec `docs/patra/release-specs/v0.13-library.md` 决策 A、B、G 与 `docs/patra/release-specs/v0.14-discussion.md` 决策 A、B、E、H。
 
@@ -12,22 +12,21 @@
 | `collection` | 文献库与收藏夹：文献库条目（用户 × 文献唯一，可带备注），扁平的收藏夹（私有 / 公开、一个条目可进多个夹），复制别人的公开收藏夹、批量「我的状态」、导出 key；向底座登记注销清理动作。工程设计 `docs/patra/specs/2026-10-24-interaction-collection-design.md` | PAP-113 |
 | `discussion` | 文献与投稿经验下的讨论：评论与回复（树存、两层展示、「回复 @X」）、单楼视图与对话链、Markdown 正文与 @（存 `<@用户ID>`）、修改历史（发布 5 分钟内的修改不记版本）、有回复的删除留占位、@ 联想；匿名所有者的评论对别人显示「匿名作者」。评论写入、编辑、删除时在同一事务里发布进程内事件（事件契约 `domain.discussion.event`）。工程设计 `docs/patra/specs/2026-10-27-interaction-discussion-design.md` | PAP-121 |
 | `post` | 投稿经验（按帖子结构存）：帖子基表 + 经验扩展表 + 修改历史（发布后 5 分钟内的修改不记版本）；字段与首轮 / 最终结果的一致性规则；同一作者同刊同投稿日期只能有一条；匿名由服务端遮蔽（他人拿不到作者 ID）；期刊页汇总读取时由 PG `percentile_cont` 算、Java 半进位；写入经发表守卫（每天 10 条），经验作为本地对象 `POST` 在同一事务里登记、删除时置为失效，并在同一事务里发布进程内事件 `PostDeletedEvent`（事件契约 `domain.post.event`）。工程设计 `docs/patra/specs/2026-10-27-interaction-post-design.md` | PAP-122、PAP-127 |
-| `notification` | 站内提醒：订阅讨论的事件，按规则在同一事务里写入；评论或投稿经验删除时删掉对应提醒；未读数、列表、已读、5 个月清理。工程设计 `docs/patra/specs/2026-10-27-interaction-notification-design.md`、`docs/patra/specs/2026-10-28-notification-inbox-redesign-design.md` | PAP-123、PAP-127 |
 | `reaction` | 「有帮助」：给别人的评论（根评论、楼内回复）与投稿经验点、取消；明细、每个目标的有帮助数、每个用户的获赞同事务维护（明细真插入 / 删除才 ±1）。资格与每天 300 次复用发表守卫（种类 `HELPFUL`），不能给自己点（含匿名经验作者）；匿名经验与作者在自己匿名经验下的评论不计获赞。订阅评论与投稿经验的删除事件，在删除的同一事务里清掉被删目标的有帮助。不接入注销清理。点、取消真写入时发布进程内事件（事件契约 `domain.reaction.event`），「已点」外送给通知服务（4.7）。工程设计 `docs/patra/specs/2026-10-29-reaction-helpful-design.md` | PAP-131、PAP-141 |
 
-`InteractionArchitectureTest` 的子域清单已经写满上面六个；以后再新增子域才改清单。子域的各层包随第一批代码建（规则 22b：一个子域只要有一层出现，四层就都要有），不建没有代码的空包和空 schema。
+`InteractionArchitectureTest` 的子域清单已经写满上面五个（v0.16 删掉了提醒子域 `notification`）；以后再新增子域才改清单。子域的各层包随第一批代码建（规则 22b：一个子域只要有一层出现，四层就都要有），不建没有代码的空包和空 schema。
 
 ## 2. 模块与包
 
 六层模块照常（domain / app / infra / adapter / api / boot），每层下再按子域分包：
 
 ```
-dev.patra.interaction.{domain|app|infra|adapter|api}.{subject|collection|discussion|post|notification|reaction}..
+dev.patra.interaction.{domain|app|infra|adapter|api}.{subject|collection|discussion|post|reaction}..
 dev.patra.interaction                  启动类
 dev.patra.interaction.config           装配（XXL-Job 执行器等），不属于任何子域
 ```
 
-层下面只能是已声明的子域，不放 `common` 之类的共享包。子域内部的分包按全项目统一的分包规范（`.claude/rules/tech/package-layout.md`），由 `SubdomainArchitectureRules` 的白名单规则守住。api 模块是服务间契约，目前没有别的服务调用 interaction，模块里还没有类。
+层下面只能是已声明的子域，不放 `common` 之类的共享包。子域内部的分包按全项目统一的分包规范（`.claude/rules/tech/package-layout.md`），由 `SubdomainArchitectureRules` 的白名单规则守住。api 模块是服务间契约：集成事件 record（`api.{子域}.event`，PAP-141）与给通知服务的两个内部接口 `/_internal/subjects/views`（对象视图）、`/_internal/posts/outlines`（经验结果，PAP-143）。
 
 ## 3. 子域边界
 
@@ -78,16 +77,11 @@ dev.patra.interaction.config           装配（XXL-Job 执行器等），不属
 - 树的完整性：`root_id`、`parent_id` 两个自引用外键，还有回复的评论删不掉（只能变占位）；修改历史随评论级联删除。删除时有直接回复的变占位（清正文与修改历史），没有的整行删除，再沿父评论往上删掉已经没有回复的占位。
 - 并发：发表回复、删除先拿事务级 advisory lock `discussion.thread:{rootId}`（同一楼的结构变化排队），编辑用 `SELECT … FOR NO KEY UPDATE` 锁行；加锁顺序是作者锁（发表守卫）→ 楼锁 → 行锁。
 - 读：对象未登记（还没人讨论过）回空列表，对象已失效回 404 `SUBJECT_UNAVAILABLE`；作者、被回复者、被 @ 的人一次批量向 identity 取名片，主页对访客不可见的去掉用户名与头像地址。
-- 进程内事件：`CommentPublishedEvent`、`CommentEditedEvent`、`CommentDeletedEvent`，在写入事务里用 `ApplicationEventPublisher` 发布；提醒子域用同步 `@EventListener` 订阅，订阅方失败时评论一起回滚。
+- 进程内事件：`CommentPublishedEvent`、`CommentEditedEvent`、`CommentDeletedEvent`，在写入事务里用 `ApplicationEventPublisher` 发布并外送给通知服务（PAP-141），站内提醒由通知服务生成（PAP-143）。
 
-## 4.4 notification 的存储与并发
+## 4.4 站内提醒已搬走
 
-- 一张表：`notification.notification`，按收件人 `recipient_id` 哈希分 16 区（同 collection），主键 `(recipient_id, notification_id)`。列按以后通知中心的信箱设计：收件人、类型（`COMMENT_REPLY` / `POST_COMMENT` / `MENTION`）、触发人与「是否匿名所有者」、对象、评论、摘录、生成时刻、已读时刻。
-- 写入：同步订阅讨论的三个事件与投稿经验的 `PostDeletedEvent`，与评论 / 经验同一事务；规则（谁收、什么类型、不提醒自己、同一条里既回复又 @ 只发一条）在 `domain.notification.policy.NotificationRules`。唯一索引 `(recipient_id, comment_id)` 保证一个人对一条评论最多一条提醒，编辑新增 @ 时用 `ON CONFLICT DO NOTHING` 跳过已被回复或已是经验作者的人。写入失败包成 500（`NotificationWriteFailedException`），评论一起回滚。
-- 删除即删提醒（PAP-127）：评论删除（变占位或整条去掉）时删掉这条评论的全部提醒（走 `comment_id` 索引）；投稿经验删除时删掉这个对象下的全部提醒（走 `idx_notification_subject`）。不留「已删除」占位，未读数自然一致；评论与经验都不能恢复，提醒也不重建。
-- 摘录：写入时经底座的 `PlainTextPort` 把评论转成纯文本（PAP-128 的规则），压成一行存前 300 个单位，字面的 `\` 与 `<` 转义、提及存 `<@ID>`（`ExcerptText`）；读取时换成 `@用户名` / `@昵称` / `@已注销用户`，再截到 120 个字素，`@名字` 放不下就停在它前面，不切成半个。评论编辑后刷新它全部提醒的摘录。
-- 读：未读数走部分索引 `(recipient_id, type) WHERE read_at IS NULL`，接口按两个计数出 ETag，没变化 304；列表按 `notification_id` 倒序、每页 20；对象与触发人读时经登记表与 identity 取，匿名所有者触发的不取他的名片；对象已不可用时不给摘录。
-- 清理：每日任务删 5 个月前的；注销清理经底座的 `UserDataCleanupGateway` 删收件人的全部提醒。
+v0.16 起站内提醒归 patra-notification（PAP-143）：这里的 `notification` 子域连同表删掉，`db/migration/notification/` 的三个旧脚本只为 Flyway 历史保留，由前向迁移 `DROP SCHEMA notification CASCADE` 删掉 schema，旧提醒不迁移。通知服务读提醒列表时调这里的两个内部接口现查对象视图与经验结果。
 
 ## 4.5 reaction 的存储与并发
 
@@ -118,7 +112,7 @@ interaction 把提醒要用的事实外送给通知服务：领域事件在业�
 | 网关前缀 | `/patra-interaction/**` |
 | 错误码前缀 | `INTERACTION`（如 `INTERACTION-0404`） |
 | 配置 | jar 里的 `application.yml` 放随代码变的默认值；库地址在 Nacos `patra-interaction.yaml`，账号与 xxl-job 管理端地址在 `patra-common.yaml` |
-| 定时任务 | 执行器 `patra-interaction`；对象对账 `subjectReconciliationJob`（`0 30 6 * * ?`，超时 600 秒、不重试，PAP-112；只对外部对象，文献按 PMID、期刊按 NLM ID；catalog 换库重建或重跑导入后立即手动触发一次）、注销清理 `deletedUserCleanupJob`（`0 0 6 * * ?`，超时 600 秒、不重试；PAP-120 起是底座的公共流程：合并各子域有数据的用户，分批回查 identity，只删 `DELETED` 用户在各子域登记的个人数据：收藏、发表计数与提醒）、提醒清理 `notificationRetentionJob`（`0 45 6 * * ?`，超时 300 秒、不重试，PAP-123；删除北京时间 5 个自然月前的提醒）、统计重算 `statsRecountJob`（只手动触发，调度类型「无」，超时 600 秒、不重试，PAP-133；按明细修正各项公开计数，回写「差异 N 行：{…}」）、事件补投 `eventPublicationResubmitJob`（`0 * * * * ?`，路由「第一个」、阻塞处理「丢弃后续调度」、超时 60 秒、不重试，PAP-141；由 `patra-tool-events` 注册） |
+| 定时任务 | 执行器 `patra-interaction`；对象对账 `subjectReconciliationJob`（`0 30 6 * * ?`，超时 600 秒、不重试，PAP-112；只对外部对象，文献按 PMID、期刊按 NLM ID；catalog 换库重建或重跑导入后立即手动触发一次）、注销清理 `deletedUserCleanupJob`（`0 0 6 * * ?`，超时 600 秒、不重试；PAP-120 起是底座的公共流程：合并各子域有数据的用户，分批回查 identity，只删 `DELETED` 用户在各子域登记的个人数据：收藏与发表计数；提醒的清理在通知服务）、统计重算 `statsRecountJob`（只手动触发，调度类型「无」，超时 600 秒、不重试，PAP-133；按明细修正各项公开计数，回写「差异 N 行：{…}」）、事件补投 `eventPublicationResubmitJob`（`0 * * * * ?`，路由「第一个」、阻塞处理「丢弃后续调度」、超时 60 秒、不重试，PAP-141；由 `patra-tool-events` 注册） |
 | 上线 | `docs/patra/runbooks/v0.13-library-go-live-runbook.md`、`docs/patra/runbooks/v0.14-discussion-go-live-runbook.md`、`docs/patra/runbooks/v0.15-helpful-go-live-runbook.md`、`docs/patra/runbooks/v0.16-notification-go-live-runbook.md` |
 
 ## 6. 什么时候拆分

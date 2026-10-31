@@ -161,47 +161,6 @@ class ExperienceFlowIT extends InteractionFlowITSupport {
     assertThat(status(send(HttpMethod.DELETE, A, "/posts/" + id, null))).isEqualTo(204);
   }
 
-  /// PAP-127：删除经验时，它下面的提醒（作者收到的评论提醒、楼里的回复提醒）同一事务里全部删掉，未读数随之归零。
-  @Test
-  void should_remove_notifications_when_post_deleted() {
-    String id = postId(publish(A, revised(today.minusDays(30), 10, "ACCEPTED"), false));
-    String root = commentOn(B, id, "有个问题", null);
-    commentOn(A, id, "回复你", root);
-    assertThat(count("SELECT count(*) FROM notification.notification WHERE recipient_id = ?", A))
-        .isEqualTo(1L);
-    assertThat(count("SELECT count(*) FROM notification.notification WHERE recipient_id = ?", B))
-        .isEqualTo(1L);
-
-    assertThat(status(send(HttpMethod.DELETE, A, "/posts/" + id, null))).isEqualTo(204);
-
-    assertThat(count("SELECT count(*) FROM notification.notification")).isZero();
-    assertThat(json(get(A, "/me/notifications/unread-count")).get("total").asInt()).isZero();
-  }
-
-  /// PAP-127：删提醒失败时经验也不删（同一事务回滚），500。
-  @Test
-  void should_keep_post_when_notification_delete_fails() {
-    String id = postId(publish(A, revised(today.minusDays(30), 10, "ACCEPTED"), false));
-    commentOn(B, id, "有个问题", null);
-    jdbcTemplate.execute(
-        "CREATE OR REPLACE FUNCTION public.test_fail() RETURNS trigger LANGUAGE plpgsql AS"
-            + " $$ BEGIN RAISE EXCEPTION 'test failure'; END $$");
-    jdbcTemplate.execute(
-        "CREATE TRIGGER test_fail_notification BEFORE DELETE ON notification.notification"
-            + " FOR EACH ROW EXECUTE FUNCTION public.test_fail()");
-    try {
-      assertThat(status(send(HttpMethod.DELETE, A, "/posts/" + id, null))).isEqualTo(500);
-    } finally {
-      jdbcTemplate.execute(
-          "DROP TRIGGER IF EXISTS test_fail_notification ON notification.notification");
-      jdbcTemplate.execute("DROP FUNCTION IF EXISTS public.test_fail()");
-    }
-
-    assertThat(json(get(null, "/posts/" + id)).get("deleted").asBoolean()).isFalse();
-    assertThat(registryState(id)).isEqualTo("ACTIVE");
-    assertThat(count("SELECT count(*) FROM notification.notification")).isEqualTo(1L);
-  }
-
   /// AC：同一人对同一刊用相同投稿日期重复创建被拒，响应带已有经验的 ID；删掉之后可以再写。
   @Test
   void should_reject_duplicate_submission_date() {

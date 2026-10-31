@@ -451,7 +451,7 @@ UnreadCounts unreadCounts(long recipientId);   // replies、mentions、helpful�
 
 - 删四层的 `notification` 包（领域、应用、基础设施、适配器）与它们的测试；`boot/src/integrationTest/…/notification/` 下的流程测试；`ExperienceFlowIT` 里两条提醒相关的用例；`NotificationDeletedCleanupMigrationIT`。
 - `InteractionArchitectureTest`：子域清单去掉 `notification`，两条 `allowingSubscription("notification", …)` 删掉。
-- 领域事件里只为旧监听器留的 `body` 字段删掉，以及注释里「订阅方是提醒」的说法（PAP-141 第 8 节：删前确认 `event_publication` 为空——它和本 Issue 同一次上线，第一次部署时表是空的）。
+- 领域事件与各层注释里「订阅方是提醒子域」的说法改成「外送后由通知服务生成」。`CommentPublishedEvent` / `CommentEditedEvent` 里原先只为旧监听器留的 `body` 字段**保留**：PAP-141 的测试设施（`DiscussionEventRecorder` 的失败标记、几个处理器测试的断言）在用它，删掉要改 PAP-141 的一批文件，收益只是少一个字段。
 - README 第 4.4 节、子域表与分包清单；infra `build.gradle.kts` 头注释；`HelpfulWriteFailedException` 的 Javadoc。
 - **Flyway 不删旧脚本**：mini 的 `flyway_schema_history` 已有那三个版本，脚本删了校验会失败、服务起不来（remove-ingest 时 registry 踩过）。新增一条前向迁移 `db/migration/notification/V20261031…__drop_notification_schema.sql`：`DROP SCHEMA notification CASCADE`，脚本头注释说明「子域已搬到 patra-notification，保留旧脚本只为迁移历史」。`InteractionMigrationIT` 的 schema 白名单去掉 `notification`。
 - XXL：mini 上 interaction 执行器的 `notificationRetentionJob` 要删（runbook）。
