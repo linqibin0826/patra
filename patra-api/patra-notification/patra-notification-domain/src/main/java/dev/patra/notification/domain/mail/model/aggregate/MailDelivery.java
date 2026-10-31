@@ -44,4 +44,14 @@ public record MailDelivery(
   public static MailDelivery linkExpired(UUID deliveryId, String template, Instant decidedAt) {
     return new MailDelivery(deliveryId, template, MailDeliveryOutcome.LINK_EXPIRED, decidedAt);
   }
+
+  /// 服务商永久拒收（或信组不出来），不再重试。
+  ///
+  /// @param deliveryId 投递 ID
+  /// @param template 模板名
+  /// @param rejectedAt 被拒的时刻
+  /// @return 记录
+  public static MailDelivery rejected(UUID deliveryId, String template, Instant rejectedAt) {
+    return new MailDelivery(deliveryId, template, MailDeliveryOutcome.REJECTED, rejectedAt);
+  }
 }

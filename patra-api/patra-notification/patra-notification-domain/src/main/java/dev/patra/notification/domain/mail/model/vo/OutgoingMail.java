@@ -15,17 +15,31 @@ import lombok.Builder;
 /// @param template 模板名
 /// @param subject 主题
 /// @param model 模板变量，值不为 `null`
+/// @param headers 附加的邮件头（如提醒邮件的 `List-Unsubscribe`），可不传；固定头由发信端口写，不会被它覆盖
 @Builder
 public record OutgoingMail(
-    UUID deliveryId, String to, String template, String subject, Map<String, Object> model) {
+    UUID deliveryId,
+    String to,
+    String template,
+    String subject,
+    Map<String, Object> model,
+    Map<String, String> headers) {
 
-  /// 字段都不能为 `null`；变量防御性拷贝，值为 `null` 时抛 {@link NullPointerException}。
+  /// 前五项不能为 `null`；变量与附加头防御性拷贝，变量值为 `null` 时抛 {@link NullPointerException}；
+  /// 附加头为 `null` 时当作没有，值里有换行时抛 {@link IllegalArgumentException}（换行能注入别的头）。
   public OutgoingMail {
     Objects.requireNonNull(deliveryId, "deliveryId 不能为 null");
     Objects.requireNonNull(to, "to 不能为 null");
     Objects.requireNonNull(template, "template 不能为 null");
     Objects.requireNonNull(subject, "subject 不能为 null");
     model = Map.copyOf(Objects.requireNonNull(model, "model 不能为 null"));
+    headers = headers == null ? Map.of() : Map.copyOf(headers);
+    headers.forEach(
+        (name, value) -> {
+          if (value.indexOf('\r') >= 0 || value.indexOf('\n') >= 0) {
+            throw new IllegalArgumentException("邮件头 " + name + " 的值不能换行");
+          }
+        });
   }
 
   /// 只输出投递 ID 与模板名：收件地址、变量里的链接不进日志。

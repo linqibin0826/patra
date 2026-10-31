@@ -12,6 +12,7 @@ import static org.mockito.Mockito.when;
 
 import dev.patra.notification.domain.mail.exception.MailDeliveryFailedException;
 import dev.patra.notification.domain.mail.model.aggregate.MailDelivery;
+import dev.patra.notification.domain.mail.model.enums.MailDeliveryFailure;
 import dev.patra.notification.domain.mail.model.enums.MailDeliveryOutcome;
 import dev.patra.notification.domain.mail.model.enums.SecurityMailKind;
 import dev.patra.notification.domain.mail.model.vo.OperationContext;
@@ -168,7 +169,9 @@ class SendSecurityMailHandlerTest {
   void should_not_record_when_delivery_fails() {
     MailDeliveryFailedException failure =
         new MailDeliveryFailedException(
-            reset(NOW.plusSeconds(1_800)).compose(), "connection refused");
+            reset(NOW.plusSeconds(1_800)).compose(),
+            MailDeliveryFailure.TRANSIENT,
+            "connection refused");
     doThrow(failure).when(mailDelivery).deliver(any());
 
     assertThatThrownBy(
@@ -193,7 +196,11 @@ class SendSecurityMailHandlerTest {
   @Test
   void should_log_without_recipient_or_link(CapturedOutput output) {
     handler.handle(SendSecurityMailCommand.of(QUEUE, reset(NOW.plusSeconds(1_800))));
-    doThrow(new MailDeliveryFailedException(reset(NOW.plusSeconds(1_800)).compose(), "SMTP 连接被拒绝"))
+    doThrow(
+            new MailDeliveryFailedException(
+                reset(NOW.plusSeconds(1_800)).compose(),
+                MailDeliveryFailure.TRANSIENT,
+                "SMTP 连接被拒绝"))
         .when(mailDelivery)
         .deliver(any());
     when(deliveries.exists(any())).thenReturn(false);
@@ -209,6 +216,44 @@ class SendSecurityMailHandlerTest {
         .contains("PASSWORD_RESET")
         .doesNotContain(TO)
         .doesNotContain("token=");
+  }
+
+  /// 服务商说这个幂等键已经接受过：当作已发，照常记「处理过了」与 `SENT`。
+  @Test
+  void should_record_sent_when_provider_already_accepted() {
+    doThrow(
+            new MailDeliveryFailedException(
+                reset(NOW.plusSeconds(1_800)).compose(),
+                MailDeliveryFailure.ALREADY_ACCEPTED,
+                "554 invalid_idempotent_request"))
+        .when(mailDelivery)
+        .deliver(any());
+
+    SendSecurityMailResult result =
+        handler.handle(SendSecurityMailCommand.of(QUEUE, reset(NOW.plusSeconds(1_800))));
+
+    assertThat(result).isEqualTo(SendSecurityMailResult.SENT);
+    assertThat(added).containsExactly(MailDelivery.sent(EVENT_ID, "password-reset", NOW));
+  }
+
+  /// 服务商永久拒收：不重试（不抛出），短事务里记「处理过了」与 `REJECTED`。
+  @Test
+  void should_record_rejected_without_retry() {
+    doThrow(
+            new MailDeliveryFailedException(
+                reset(NOW.plusSeconds(1_800)).compose(),
+                MailDeliveryFailure.REJECTED,
+                "550 5.1.1 *** Recipient address rejected"))
+        .when(mailDelivery)
+        .deliver(any());
+
+    SendSecurityMailResult result =
+        handler.handle(SendSecurityMailCommand.of(QUEUE, reset(NOW.plusSeconds(1_800))));
+
+    assertThat(result).isEqualTo(SendSecurityMailResult.REJECTED);
+    assertThat(added).containsExactly(MailDelivery.rejected(EVENT_ID, "password-reset", NOW));
+    assertThat(added.getFirst().outcome()).isEqualTo(MailDeliveryOutcome.REJECTED);
+    verify(processedEvents).markProcessed(QUEUE, EVENT_ID);
   }
 
   /// 链接 `expiresAt` 过期的找回密码信。

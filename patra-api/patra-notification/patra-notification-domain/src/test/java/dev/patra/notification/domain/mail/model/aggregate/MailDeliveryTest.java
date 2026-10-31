@@ -16,14 +16,16 @@ class MailDeliveryTest {
   private static final UUID ID = UUID.fromString("9d8c7b6a-5f4e-4d3c-8b2a-1f0e9d8c7b6a");
   private static final Instant AT = Instant.parse("2026-10-31T02:00:00Z");
 
-  /// `sent` 记「发出去了」，`linkExpired` 记「链接过期没发」，其余三项原样。
+  /// `sent` 记「发出去了」，`linkExpired` 记「链接过期没发」，`rejected` 记「永久拒收」，其余三项原样。
   @Test
   void should_build_sent_and_link_expired_records() {
     MailDelivery sent = MailDelivery.sent(ID, "password-reset", AT);
     MailDelivery expired = MailDelivery.linkExpired(ID, "password-reset", AT);
+    MailDelivery rejected = MailDelivery.rejected(ID, "password-reset", AT);
 
     assertThat(sent.outcome()).isEqualTo(MailDeliveryOutcome.SENT);
     assertThat(expired.outcome()).isEqualTo(MailDeliveryOutcome.LINK_EXPIRED);
+    assertThat(rejected.outcome()).isEqualTo(MailDeliveryOutcome.REJECTED);
     assertThat(sent.deliveryId()).isEqualTo(ID);
     assertThat(sent.template()).isEqualTo("password-reset");
     assertThat(sent.recordedAt()).isEqualTo(AT);

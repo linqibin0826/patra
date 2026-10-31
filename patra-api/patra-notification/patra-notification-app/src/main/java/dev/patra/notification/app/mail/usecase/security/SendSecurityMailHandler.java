@@ -18,8 +18,9 @@ import org.springframework.transaction.support.TransactionOperations;
 ///
 /// 1. 按投递 ID（就是事件 ID）查发送记录，有就是重复投递，直接结束；
 /// 2. 只为链接而发的信、链接已过期：不发，短事务里记 `LINK_EXPIRED`；
-/// 3. 在事务外发信：发信是远程调用，不进事务（`transaction.md` 第 2 节）；失败打 WARN 后原样抛出，
-///    由监听容器重试、耗尽后进死信；
+/// 3. 在事务外发信：发信是远程调用，不进事务（`transaction.md` 第 2 节）。失败按类别处理（spec 6.6）：
+///    服务商已接受过这个幂等键，当作已发；永久拒收，短事务里记 `REJECTED`、不再重试；临时失败打 WARN 后
+///    原样抛出，由监听容器重试、耗尽后进死信；
 /// 4. 一个短事务里先 `markProcessed(队列, 事件 ID)`，第一次记下才追加发送记录。
 ///
 /// 发出之后、第 3 步提交之前进程死了，重投时第 1 步查不到记录，会用同一个幂等键再发一次，由 Resend 挡掉。
@@ -56,9 +57,29 @@ public class SendSecurityMailHandler
     try {
       mailDelivery.deliver(mail.compose());
     } catch (MailDeliveryFailedException e) {
-      log.warn(
-          "安全邮件发送失败，交给重试或死信: kind={}, eventId={}, {}", mail.kind(), mail.eventId(), e.getMessage());
-      throw e;
+      switch (e.failure()) {
+        case ALREADY_ACCEPTED ->
+            log.info("服务商已接受过这个幂等键，按已发处理: kind={}, eventId={}", mail.kind(), mail.eventId());
+        case REJECTED -> {
+          record(
+              command,
+              MailDelivery.rejected(mail.eventId(), mail.kind().template(), clock.instant()));
+          log.warn(
+              "安全邮件被永久拒收，不再重试: kind={}, eventId={}, {}",
+              mail.kind(),
+              mail.eventId(),
+              e.getMessage());
+          return SendSecurityMailResult.REJECTED;
+        }
+        case TRANSIENT -> {
+          log.warn(
+              "安全邮件发送失败，交给重试或死信: kind={}, eventId={}, {}",
+              mail.kind(),
+              mail.eventId(),
+              e.getMessage());
+          throw e;
+        }
+      }
     }
     record(command, MailDelivery.sent(mail.eventId(), mail.kind().template(), clock.instant()));
     log.info("安全邮件已发送: kind={}, eventId={}", mail.kind(), mail.eventId());

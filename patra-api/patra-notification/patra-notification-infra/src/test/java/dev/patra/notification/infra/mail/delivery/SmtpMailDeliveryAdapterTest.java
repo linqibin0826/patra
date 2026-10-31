@@ -6,20 +6,26 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import dev.patra.notification.domain.mail.exception.MailDeliveryFailedException;
+import dev.patra.notification.domain.mail.model.enums.MailDeliveryFailure;
 import dev.patra.notification.domain.mail.model.enums.SecurityMailKind;
 import dev.patra.notification.domain.mail.model.vo.OutgoingMail;
 import dev.patra.notification.domain.mail.model.vo.SecurityMail;
 import jakarta.mail.BodyPart;
+import jakarta.mail.MessagingException;
+import jakarta.mail.SendFailedException;
 import jakarta.mail.Session;
 import jakarta.mail.internet.MimeMessage;
 import jakarta.mail.internet.MimeMultipart;
+import java.net.ConnectException;
 import java.time.Instant;
 import java.time.ZoneId;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -27,6 +33,7 @@ import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.springframework.mail.MailAuthenticationException;
 import org.springframework.mail.MailSendException;
 import org.springframework.mail.javamail.JavaMailSender;
 
@@ -131,8 +138,133 @@ class SmtpMailDeliveryAdapterTest {
     SmtpMailDeliveryAdapter adapter = new SmtpMailDeliveryAdapter(mailSender, renderer, FROM);
 
     assertThatThrownBy(() -> adapter.deliver(broken))
-        .isInstanceOf(MailDeliveryFailedException.class)
+        .isInstanceOfSatisfying(
+            MailDeliveryFailedException.class,
+            e -> assertThat(e.failure()).isEqualTo(MailDeliveryFailure.REJECTED))
         .hasNoCause();
+    verify(mailSender, never()).send(any(MimeMessage.class));
+  }
+
+  @Test
+  @DisplayName("Message-ID 固定为 <投递 ID@发件人域名>：同一封信每次重试都一样")
+  void should_fix_message_id_per_delivery() throws Exception {
+    when(mailSender.createMimeMessage())
+        .thenReturn(new MimeMessage(Session.getInstance(new Properties())));
+    new SmtpMailDeliveryAdapter(mailSender, renderer, FROM).deliver(mail);
+
+    // 交给发信器时的头：JavaMailSenderImpl 发送前 saveChanges 会重算 Message-ID，再把显式设过的值写回
+    // （端到端由 SecurityMailFlowIT 验证）；这里不调 saveChanges
+    ArgumentCaptor<MimeMessage> sent = ArgumentCaptor.forClass(MimeMessage.class);
+    verify(mailSender).send(sent.capture());
+    assertThat(sent.getValue().getHeader("Message-ID"))
+        .containsExactly("<" + EVENT_ID + "@patra.local>");
+  }
+
+  @Test
+  @DisplayName("调用方的附加头照写；固定头最后写，调用方覆盖不了")
+  void should_write_extra_headers_without_overriding_fixed_ones() throws Exception {
+    when(mailSender.createMimeMessage())
+        .thenReturn(new MimeMessage(Session.getInstance(new Properties())));
+    OutgoingMail withHeaders =
+        OutgoingMail.builder()
+            .deliveryId(EVENT_ID)
+            .to(TO)
+            .template("password-reset")
+            .subject("重设你的 Patra 密码")
+            .model(mail.model())
+            .headers(
+                Map.of(
+                    "List-Unsubscribe", "<https://patra.example/unsubscribe/one-click?token=t>",
+                    "List-Unsubscribe-Post", "List-Unsubscribe=One-Click",
+                    "Resend-Idempotency-Key", "forged"))
+            .build();
+
+    new SmtpMailDeliveryAdapter(mailSender, renderer, FROM).deliver(withHeaders);
+
+    ArgumentCaptor<MimeMessage> sent = ArgumentCaptor.forClass(MimeMessage.class);
+    verify(mailSender).send(sent.capture());
+    MimeMessage message = sent.getValue();
+    assertThat(message.getHeader("List-Unsubscribe"))
+        .containsExactly("<https://patra.example/unsubscribe/one-click?token=t>");
+    assertThat(message.getHeader("List-Unsubscribe-Post"))
+        .containsExactly("List-Unsubscribe=One-Click");
+    assertThat(message.getHeader("Resend-Idempotency-Key")).containsExactly(EVENT_ID.toString());
+  }
+
+  @Test
+  @DisplayName("收件人被拒（5xx，JavaMail 把它放在 Spring 收集的各封失败里）：永久失败")
+  void should_classify_rejected_recipient_as_rejected() {
+    assertFailure(
+        failedMessages(
+            new SendFailedException(
+                "Invalid Addresses",
+                new MessagingException(
+                    "550 5.1.1 <chen.yu@example.com>: Recipient address rejected"))),
+        MailDeliveryFailure.REJECTED);
+  }
+
+  @Test
+  @DisplayName("4xx（限流、服务暂不可用）：临时失败")
+  void should_classify_4xx_as_transient() {
+    assertFailure(
+        failedMessages(new MessagingException("451 4.3.0 Too many requests, try again later")),
+        MailDeliveryFailure.TRANSIENT);
+    assertFailure(
+        new MailSendException("421 Service not available"), MailDeliveryFailure.TRANSIENT);
+  }
+
+  @Test
+  @DisplayName("鉴权失败（异常或 535）：临时失败——是配置问题，每封都会失败，不能当永久跳过")
+  void should_classify_authentication_failure_as_transient() {
+    assertFailure(new MailAuthenticationException("auth failed"), MailDeliveryFailure.TRANSIENT);
+    assertFailure(
+        failedMessages(new MessagingException("535 5.7.8 Authentication credentials invalid")),
+        MailDeliveryFailure.TRANSIENT);
+  }
+
+  @Test
+  @DisplayName("Resend 说同一个幂等键配了不同内容：之前已被接受过；还在处理中的同键请求：临时失败")
+  void should_classify_idempotency_replies() {
+    assertFailure(
+        failedMessages(
+            new MessagingException("554 invalid_idempotent_request: same key, different payload")),
+        MailDeliveryFailure.ALREADY_ACCEPTED);
+    assertFailure(
+        failedMessages(
+            new MessagingException("554 concurrent_idempotent_requests: still in progress")),
+        MailDeliveryFailure.TRANSIENT);
+  }
+
+  @Test
+  @DisplayName("连不上服务商（链上有 IO 异常）、认不出的失败：临时失败")
+  void should_classify_connection_and_unknown_failures_as_transient() {
+    assertFailure(
+        new MailSendException(
+            "Mail server connection failed",
+            new MessagingException("Couldn't connect to host", new ConnectException("refused"))),
+        MailDeliveryFailure.TRANSIENT);
+    assertFailure(new IllegalStateException("boom"), MailDeliveryFailure.TRANSIENT);
+  }
+
+  @Test
+  @DisplayName("信本身组不出来（收件地址不合法、模板不存在）：永久失败，重试也一样")
+  void should_classify_local_composition_failures_as_rejected() {
+    when(mailSender.createMimeMessage())
+        .thenAnswer(invocation -> new MimeMessage(Session.getInstance(new Properties())));
+    SmtpMailDeliveryAdapter adapter = new SmtpMailDeliveryAdapter(mailSender, renderer, FROM);
+    OutgoingMail missingTemplate =
+        OutgoingMail.builder()
+            .deliveryId(EVENT_ID)
+            .to(TO)
+            .template("no-such-template")
+            .subject("x")
+            .model(Map.of())
+            .build();
+
+    assertThatThrownBy(() -> adapter.deliver(missingTemplate))
+        .isInstanceOfSatisfying(
+            MailDeliveryFailedException.class,
+            e -> assertThat(e.failure()).isEqualTo(MailDeliveryFailure.REJECTED));
     verify(mailSender, never()).send(any(MimeMessage.class));
   }
 
@@ -182,6 +314,36 @@ class SmtpMailDeliveryAdapterTest {
     MimeMessage message = sent.getValue();
     message.saveChanges();
     return List.of(message);
+  }
+
+  /// 让发信器抛 `thrown`，断言适配器把它判成 `expected`，且异常消息里没有收件地址。
+  ///
+  /// @param thrown 发信器抛的异常
+  /// @param expected 期望的类别
+  private void assertFailure(RuntimeException thrown, MailDeliveryFailure expected) {
+    reset(mailSender);
+    when(mailSender.createMimeMessage())
+        .thenAnswer(invocation -> new MimeMessage(Session.getInstance(new Properties())));
+    doThrow(thrown).when(mailSender).send(any(MimeMessage.class));
+    SmtpMailDeliveryAdapter adapter = new SmtpMailDeliveryAdapter(mailSender, renderer, FROM);
+
+    assertThatThrownBy(() -> adapter.deliver(mail))
+        .isInstanceOfSatisfying(
+            MailDeliveryFailedException.class,
+            e -> {
+              assertThat(e.failure()).as(thrown.getMessage()).isEqualTo(expected);
+              assertThat(e.getMessage()).doesNotContain(TO);
+            });
+  }
+
+  /// 像 `JavaMailSenderImpl` 那样把一封信的失败收进 `MailSendException` 的失败清单。
+  ///
+  /// @param failure 这封信的失败
+  /// @return Spring 的发送异常
+  private static MailSendException failedMessages(Exception failure) {
+    Map<Object, Exception> failed = new LinkedHashMap<>();
+    failed.put(new Object(), failure);
+    return new MailSendException(failed);
   }
 
   /// 递归找出 `multipart/alternative` 部分：`MimeMessageHelper` 的多部分模式会在外面包 mixed / related。
