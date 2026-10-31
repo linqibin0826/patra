@@ -88,7 +88,8 @@ eventPublisher.publishEvent(
 3. boot 层 `EventExternalizationConfiguration`：`externalizing().selectByType(...).route(类型, e -> RoutingTarget.forTarget("<服务>.events").andKey("<事件类型>")).mapping(类型, e -> new 集成事件(e.eventId(), ...))`；领域层不贴 `@Externalized`。
 4. 事务里照常 `events.publishEvent(领域事件)`；broker 没收下时登记行留着，由 XXL-Job `eventPublicationResubmitJob` 补投。
 5. 服务代码里不写 `@ApplicationModuleListener`：登记表只认带它的监听器（`registry-trigger-annotation`），外送器自己就带着它；普通 `@TransactionalEventListener` 不进登记表。
-6. 只外送有队列订阅的事件：没有队列可投时 broker 退回消息，登记行会一直留着、每分钟补投一次。
+6. 外送路径（选择、路由、映射，SpEL 引用的 bean）不能查库：外送器在 `SUPPORTS` 作用域里同步等 broker 确认，一查库连接就绑到线程上、拿到等确认结束；发送模板会直接报错拒绝。
+7. 只外送有队列订阅的事件：没有队列可投时 broker 退回消息，登记行会一直留着、每分钟补投一次。
 
 **消费端**
 

@@ -5,7 +5,7 @@
 服务之间的事件：发布方可靠地把领域事件外送到 RabbitMQ，消费方不重复处理、处理失败有去处。设计与取舍见 `docs/patra/specs/2026-10-30-event-module-design.md`。
 
 - **发布登记（Outbox）**：Spring Modulith 的 JDBC 事件发布登记。事务里 `publishEvent` 时写一行 `event_publication`，和业务数据同成同败；提交后由 Modulith 的 AMQP 外送器发出，成功了这一行才算完成。
-- **等确认**：`ConfirmingRabbitMessagingTemplate` 替换 Boot 的 `RabbitMessagingTemplate`，每次发送同步等 RabbitMQ 的 publisher confirm。nack、没有队列可投（消息被退回）、超时都算失败，登记行留着。Modulith 默认的外送（`module-listener` 模式）不等确认，这是本模块补的一步；2.1 的 `outbox` 模式要 Namastack 或 JobRunr 驱动，且不查超时与退回，不用。
+- **等确认**：`ConfirmingRabbitMessagingTemplate` 替换 Boot 的 `RabbitMessagingTemplate`，每次发送同步等 RabbitMQ 的 publisher confirm。nack、没有队列可投（消息被退回）、超时都算失败，登记行留着。Modulith 默认的外送（`module-listener` 模式）不等确认，这是本模块补的一步；2.1 的 `outbox` 模式要 Namastack 或 JobRunr 驱动，且不查超时与退回，不用。等确认时不占数据库连接（外送器是 `SUPPORTS`，不开物理事务），服务不用为它压异步并发；前提是**外送路径（外送配置的选择、路由、映射，消息转换）不能查库**，否则连接会一直拿到等确认结束。模板发送前检查线程上有没有挂着事务资源，有就直接报错（spec 4.13）。
 - **补投**：XXL-Job 任务 `eventPublicationResubmitJob` 每分钟把早于 1 分钟的未完成登记行重新外送（正在发送、10 分钟内有动静的不重复派发），顺带把补投途中崩溃、在 `RESUBMITTED` 卡了 10 分钟以上的行改回 `FAILED` 再补；尝试 10 次以上的行打 WARN。Modulith 每轮会打一条 INFO「No stale publications of status RESUBMITTED found」，属正常。
 - **消费端**：`ProcessedEventPort`（接口在 `patra-tool-core`）在业务事务里按（队列, 事件 ID）去重；`EventQueue` 声明队列与它的死信交换机、死信队列；ack、重试、prefetch 有默认值。
 

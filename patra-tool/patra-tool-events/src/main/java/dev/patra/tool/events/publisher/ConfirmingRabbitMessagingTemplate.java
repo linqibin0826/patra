@@ -18,6 +18,7 @@ import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.amqp.support.AmqpHeaders;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.support.MessageBuilder;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 /// 每次发送都同步等 RabbitMQ 的 publisher confirm 的 `RabbitMessagingTemplate`。
 ///
@@ -61,6 +62,7 @@ public class ConfirmingRabbitMessagingTemplate extends RabbitMessagingTemplate {
   /// @param message 待发送的消息
   @Override
   protected void doSend(String exchange, String routingKey, Message<?> message) {
+    assertNoTransactionalResources();
     CorrelationData correlation = new CorrelationData(UUID.randomUUID().toString());
     super.doSend(exchange, routingKey, withCorrelation(message, correlation));
     awaitConfirm(correlation);
@@ -72,9 +74,21 @@ public class ConfirmingRabbitMessagingTemplate extends RabbitMessagingTemplate {
   /// @param message 待发送的消息
   @Override
   protected void doSend(String destination, Message<?> message) {
+    assertNoTransactionalResources();
     CorrelationData correlation = new CorrelationData(UUID.randomUUID().toString());
     super.doSend(destination, withCorrelation(message, correlation));
     awaitConfirm(correlation);
+  }
+
+  /// 等确认会阻塞几秒到更久，期间线程上挂着的事务资源（数据库连接、EntityManager 等）一直不还，broker 一卡住
+  /// 就能把连接池占光。Modulith 的外送器跑在 `SUPPORTS` 作用域里，本身不绑资源；外送路径上的选择、路由、映射、
+  /// 消息转换只要查一次库，连接就会绑到线程上，这里直接拒绝，让问题在测试里暴露，而不是线上饿死连接池。
+  private static void assertNoTransactionalResources() {
+    if (!TransactionSynchronizationManager.getResourceMap().isEmpty()) {
+      throw new IllegalStateException(
+          "线程上挂着事务资源（数据库连接或 EntityManager）时不能等 broker 确认：外送路径（选择、路由、映射、"
+              + "消息转换）不能查库，也不要在事务里经 RabbitMessageOperations 发送");
+    }
   }
 
   /// 把关联数据放进消息头，父类据此带关联发送；集成事件还把 `eventId` 写成 AMQP `messageId`。

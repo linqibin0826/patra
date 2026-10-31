@@ -29,6 +29,7 @@ import org.springframework.amqp.rabbit.connection.CorrelationData;
 import org.springframework.amqp.rabbit.connection.CorrelationData.Confirm;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.amqp.support.converter.JacksonJsonMessageConverter;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 @DisplayName("等 publisher confirm 的发送模板")
 class ConfirmingRabbitMessagingTemplateTest {
@@ -137,6 +138,22 @@ class ConfirmingRabbitMessagingTemplateTest {
     assertThatThrownBy(() -> template.convertAndSend("ex", "rk", "hello"))
         .isInstanceOf(AmqpException.class);
     assertThat(Thread.interrupted()).isTrue();
+  }
+
+  @Test
+  @DisplayName("线程上挂着事务资源（如数据库连接）时拒绝等确认：否则会拿着它等满确认超时")
+  void should_refuse_to_wait_while_thread_holds_transactional_resources() {
+    ConfirmingRabbitMessagingTemplate template =
+        template(correlation -> correlation.getFuture().complete(new Confirm(true, null)));
+    Object key = new Object();
+    TransactionSynchronizationManager.bindResource(key, "connection");
+    try {
+      assertThatThrownBy(() -> template.convertAndSend("ex", "rk", "hello"))
+          .isInstanceOf(IllegalStateException.class)
+          .hasMessageContaining("事务资源");
+    } finally {
+      TransactionSynchronizationManager.unbindResource(key);
+    }
   }
 
   @Test

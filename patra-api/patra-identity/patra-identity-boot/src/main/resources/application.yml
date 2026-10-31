@@ -34,13 +34,6 @@ spring:
       # 所有环境都设超时：Redis 卡住时登录几秒内返回 503，不用等 Lettuce 默认的 60 秒
       connect-timeout: 10s
       timeout: 5s
-  task:
-    execution:
-      pool:
-        # identity 的异步任务只有安全邮件外送（PAP-104）：外送在 REQUIRES_NEW 事务里等 broker 确认（最长约 10 秒），
-        # 期间占着一个数据库连接。并发压到 2，broker 卡住时最多占连接池 10 个里的 2 个，登录、注册不被饿死；
-        # 安全邮件量很小，2 个并发足够（Boot 默认 8 个、队列无界，超出的排队）
-        core-size: 2
   modulith:
     events:
       # 安全邮件事件带一次性令牌链接（PAP-104）：broker 确认收下即删登记行，不留历史。事件模块默认也是 delete，

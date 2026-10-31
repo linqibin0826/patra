@@ -61,14 +61,6 @@ class ApplicationConfigTest {
   }
 
   @Test
-  @DisplayName("异步执行器只开 2 个并发：外送等 broker 确认时占着数据库连接，broker 卡住也只占 10 个里的 2 个")
-  void should_bound_async_executor_well_below_connection_pool() throws IOException {
-    assertThat(property("application.yml", "spring.task.execution.pool.core-size")).isEqualTo("2");
-    assertThat(property("application.yml", "spring.datasource.hikari.maximum-pool-size"))
-        .isEqualTo("10");
-  }
-
-  @Test
   @DisplayName("账号安全的参数在 jar 里：再认证窗口、找回密码与改邮箱的限流、三个落地页路径")
   void should_keep_account_security_settings_in_jar() throws IOException {
     assertThat(property("application.yml", "patra.identity.reauth.window")).isEqualTo("10m");

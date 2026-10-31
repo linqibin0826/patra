@@ -308,6 +308,35 @@ PAP-152 合入（#342）、版本分支变基后，已在本分支上做完：
 5. README「发布方怎么接」加回「服务代码里不写 `@ApplicationModuleListener`，普通 `@TransactionalEventListener` 不进登记表」，默认值表加 trigger-annotation；`patra-events` 技能发布端要点同步。
 6. 跑 `./gradlew check integrationTest`。
 
+### 4.13 等 broker 确认时占不占数据库连接（10/31 补）
+
+**先讲概念**：数据库连接池像一叠号码牌（identity、interaction 各 10 张）。请求要查库就领一张，用完还回去；牌发完了，后来的请求只能排队，排到超时就报错。所以有一条铁律：**拿着号码牌的时候不要去等网络**——等的那几秒里牌被白白占着，几个这样的等待就能把牌领光，登录、注册这些和事件毫不相干的请求跟着失败。
+
+**疑虑从哪来**：PAP-104 的独立评审认为，外送在 Modulith 的 `REQUIRES_NEW` 事务里同步等 broker 确认；broker 卡住（端口通、就是不回确认）时，每个外送都拿着一个连接等满超时，Boot 默认 8 个异步线程能占掉 10 个连接里的 8 个。identity 为此在本地把异步并发压到 2。
+
+**实际路径**（对照 Modulith 2.1.2 源码）：
+- 外送器方法是 `@ApplicationModuleListener(propagation = SUPPORTS)`。`@ApplicationModuleListener` 默认是 `REQUIRES_NEW`，外送器特意改成了 `SUPPORTS`：当前没有事务就不开**物理事务**。但它仍会开一个「空的事务作用域」，事务同步是打开的：作用域里只要有代码取连接（查一次库），这条连接就绑在线程上，一直拿到外送方法返回，也就是跨过整个等确认。所以前提是**外送路径上没有任何代码查库**：外送配置的选择、路由（包括 SpEL 引用的 bean）、映射、消息转换都在这个作用域里。现在 identity、interaction 的映射都是纯构造，满足这一条。
+- 进入时把登记行标成 `PROCESSING`、结束时标完成或失败，由完成登记拦截器做（顺序 `HIGHEST_PRECEDENCE + 10`，在事务拦截器外层）。这两步各是一个 `REQUIRES_NEW` 短事务，用完就还，不跨等待。
+- 补投走同一个外送器方法，路径相同。
+
+**证据**：`ExternalizationConnectionIT` 把连接池压到 2 张、取连接最多等 3 秒，让确认永远不回（`EventsITUnreachableConfirmConfig`）：首次外送 4 个、补投 5 个同时等确认期间，活动连接数一直是 0，业务写库照常成功；上下文里的事务管理器是 `JpaTransactionManager`，与服务一致。反证：临时加一个在 `REQUIRES_NEW` 事务里拿着连接睡眠的异步提交后监听器，同一个测试立即报 `Connection is not available … active=2`，说明测试确实能抓到占连接。再一个反证：在测试的映射函数里查一次库，等确认的外送把连接池占住，测试同样变红（这就是上面「外送路径不能查库」那条前提）。
+
+**决定**：不加执行器上限，加两道护栏。
+- 运行时：`ConfirmingRabbitMessagingTemplate` 发送前检查线程上有没有挂着事务资源（数据库连接、EntityManager 等），有就直接报错、不发也不等。外送路径里有人查了库、或有人在事务里经 `RabbitMessageOperations` 发送，测试里立刻暴露（报「线程上挂着事务资源…不能等 broker 确认」），而不是线上把连接池耗尽；事件留在登记表，等修好后补投。
+- 测试：`ExternalizationConnectionIT` 守住「正常外送不占连接」，以后 Modulith 升级把外送器改回在事务里跑，它会变红。
+
+identity 本地的 `spring.task.execution.pool.core-size: 2` 和它的配置测试删掉，interaction 也不用配。服务代码里没有别的异步提交后监听器（identity、interaction 都核过），而服务不写 `@ApplicationModuleListener`（4.4），自己写也会是默认的 `REQUIRES_NEW`，这类监听器才会在等待时占连接。
+
+**三个备选为什么不需要**：
+- 给外送单独一个有界执行器：限制的是同时等确认的线程数，可这些线程本来就不占连接，限了也护不住什么；
+- 模块出默认的异步并发上限并校验它小于连接池：校验的这层关系并不存在；
+- 等确认期间不持有连接：本来就没有持有。
+
+**没管的残余风险**：
+- broker 卡住期间，每个外送占一个异步线程，至少等满确认超时（5 秒）。真卡住时可能更久：等不到确认的信道不回缓存，后续发送要新开信道，开信道的 RPC 只受 `channel-rpc-timeout` 限制（Boot 默认 10 分钟），所以线程可能卡到分钟级。这只占线程、不占连接；补投会把排队太久的行再派一次，恢复后重复投递由消费端去重兜住。
+- Boot 默认的执行器队列不设上限，长时间卡住时排队的外送任务堆在内存里（每个只带一个事件对象，按现在的量可忽略）。哪天要给执行器配队列容量，理由写内存，并且拒绝策略**不能用 `CallerRunsPolicy`**：提交后监听在业务事务的 `afterCompletion` 里执行，那时请求线程还拿着业务连接，队列满了让请求线程自己跑外送，等于原问题复活；默认的 `AbortPolicy` 只打 ERROR、事件留给补投。
+- 去掉 identity 的并发上限后，8 个异步线程同时超时时会集中做几次毫秒级的短事务（标失败、标进行中），算不上饿死。
+
 ## 5. 包结构
 
 ```text
@@ -359,6 +388,8 @@ patra-tool-test
 - 正在发送的行不重复派发：单测覆盖 `PROCESSING` 10 分钟内跳过、超过 10 分钟重投、`FAILED` 照常补投。
 - 确认关联 ID：同一事件发两次，两次关联 ID 不同且都不等于 `eventId`，`messageId` 都是 `eventId`。
 - 默认值：`management.health.rabbit.enabled=false`。
+- 等确认时不占数据库连接：`ExternalizationConnectionIT`（4.13）。
+- 线程上挂着事务资源时拒绝等确认：`ConfirmingRabbitMessagingTemplateTest` 绑一个资源后发送，断言报错（4.13）。
 - 只登记外送器（4.12 落地时加）：IT 里放一个普通的 `@TransactionalEventListener(AFTER_COMMIT)`，发布后登记表里只有外送器的行。
 - 外送监听器的 ID：IT 断言登记行的 `listener_id`，防止以后误加第二个外送器。2.0.8 是 `DelegatingEventExternalizer.externalize(java.lang.Object)`，2.1 改为 `EventExternalizerModuleListener.externalize(java.lang.Object)`。
 
