@@ -1,0 +1,128 @@
+---
+title: 真实客户端 IP：只信自己人加的转发头
+summary: X-Forwarded-For 谁都能伪造。Patra 让网关只采信门户这一个受信代理发来的值，其余来源一律剥掉；门户自己也必须丢掉浏览器带来的那一份。
+type: decision
+difficulty: advanced
+tags: [backend, network, security]
+prerequisites: [web-reverse-proxy-and-gateway]
+topics: [login-session]
+sources:
+  - version: v0.8
+    issue: PAP-65
+  - version: v0.12
+    issue: PAP-99
+    pr: 273
+personalEnv: false
+---
+
+<Diagnose
+  question="网关收到一个请求，头里写着 X-Forwarded-For: 203.0.113.9。能把 203.0.113.9 记成用户的真实 IP 吗？"
+  options={["能，这个头就是用来传真实 IP 的", "要看这条连接是谁发起的：只有自己信任的代理加的才算", "不能，X-Forwarded-For 永远不可信"]}
+  answer="B"
+  ifRight="对。头本身谁都能写，可信的是「谁连过来的」。这篇讲 Patra 怎么把这条规则落到配置上。"
+  ifWrong="答案是 B。任何客户端都能自己带这个头；只有连接来自你认识的代理时，它写的值才有意义。这题考的是反向代理在请求链路上加了什么，先读反向代理那篇。"
+  suggest="web-reverse-proxy-and-gateway"
+/>
+
+## 背景：网关看到的「客户端」其实是门户
+
+v0.12 用户中心那一版要做登录记录、登录设备列表和「新设备登录」提醒邮件，这些都要知道用户的真实 IP 和浏览器信息（User-Agent）。
+
+可浏览器并不直接连网关。门户（Next.js 写的 BFF）替浏览器调网关，网关在 TCP 连接上看到的对端地址是门户自己。真实 IP 只能由门户写进转发头 `X-Forwarded-For` 带过来。
+
+在这之前，网关的做法是**剥掉一切入站转发头**（v0.8 账号那一版定的）。这本身是对的，问题是它也剥掉了门户带来的真实 IP。
+
+## 三种做法
+
+<DecisionOptions
+  options={[
+    { name: "全信", summary: "谁带 X-Forwarded-For 都照单全收。", pros: "最简单。", cons: "任何人都能伪造 IP：登录记录写假地址，按 IP 的限流换个值就绕过去。" },
+    { name: "全剥", summary: "一律不采信，记录连接地址。", pros: "不会被伪造。", cons: "记下的永远是门户的地址，登录设备和新设备邮件都没意义。" },
+    { name: "只信受信代理", summary: "只有连接来自配置里的代理地址（门户）时，才取它写的值；其余来源的转发头照旧剥掉。", pros: "nginx 的 set_real_ip_from、Tomcat 的 RemoteIpValve、Express 的 trust proxy 都是这个模型，有现成实现。", cons: "代理地址要写进配置并保持准确；受信代理自己必须守规矩。", chosen: true }
+  ]}
+/>
+
+选第三种，而且不写自研过滤器，用 Spring Boot 接 Tomcat `RemoteIpValve` 的标准方式。
+
+## 一个请求怎么过这道关
+
+<Stepper
+  title="门户带来的 X-Forwarded-For 怎么变成下游看到的 IP"
+  nodes={[
+    { id: "browser", label: "浏览器" },
+    { id: "portal", label: "门户", sub: "唯一受信代理" },
+    { id: "valve", label: "Tomcat 阀门", sub: "RemoteIpValve" },
+    { id: "filter", label: "剥头过滤器", sub: "removeOnly" },
+    { id: "identity", label: "identity" }
+  ]}
+  links={[
+    { from: "browser", to: "portal" },
+    { from: "portal", to: "valve" },
+    { from: "valve", to: "filter" },
+    { from: "filter", to: "identity" }
+  ]}
+  steps={[
+    { caption: "浏览器发请求。它也可以自己带一个 X-Forwarded-For，想写什么写什么。", focus: ["browser"], tokens: [{ id: "req", label: "XFF: 任意值", at: "browser" }] },
+    { caption: "门户丢掉浏览器带来的那一份，只写自己从连接上看到、校验过的那一个 IP，另外原样带上 User-Agent。", focus: ["portal"], links: ["browser>portal"], tokens: [{ id: "req", label: "XFF: 203.0.113.9", at: "portal" }] },
+    { caption: "网关的 Tomcat 阀门先看连接地址：在受信列表里（是门户），就取 X-Forwarded-For 里最右边那个不是代理的值，改写成请求的来源地址，并消费掉这个头。", focus: ["valve"], links: ["portal>valve"], tokens: [{ id: "req", label: "来源 = 203.0.113.9", at: "valve" }], notes: [{ at: "valve", text: "连接来自门户", tone: "ok" }] },
+    { caption: "最高优先级的 ForwardedHeaderFilter 只剥不解释：剩下的 Forwarded、X-Forwarded-Prefix 等一律删掉。它不动阀门改好的来源地址。", focus: ["filter"], links: ["valve>filter"], tokens: [{ id: "req", label: "来源 = 203.0.113.9", at: "filter" }] },
+    { caption: "出站时网关按来源地址重新写一份 X-Forwarded-For 给下游。identity 用 getRemoteAddr() 读到的就是浏览器 IP。", focus: ["identity"], links: ["filter>identity"], tokens: [{ id: "req", label: "XFF: 203.0.113.9", at: "identity" }], notes: [{ at: "identity", text: "记下真实 IP", tone: "ok" }] }
+  ]}
+  guesses={[
+    { before: 3, question: "Spring Boot 打开 RemoteIpValve 时，默认的受信代理列表是一串私网段（含 10.0.0.0/8、192.168.0.0/16、100.64.0.0/10）。在 Patra 的部署环境里直接用默认值，会怎样？", options: ["没问题，私网里都是自己人", "内网里任何机器、任何经端口转发进来的连接都会被当成代理，等于谁都信", "阀门不会生效"], answer: "B", explain: "部署机上的连接大多来自私网地址：VPN 网段、容器网桥、端口转发。默认值会让它们全都成了「受信代理」。Patra 把默认值改成空串（谁都不信），只填门户的固定地址。" }
+  ]}
+/>
+
+<CodeRef at="patra-api/patra-gateway-boot/src/main/resources/application.yml@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="14-22" />
+
+<CodeRef at="patra-api/patra-gateway-boot/src/main/java/dev/patra/gateway/security/GatewaySecurityConfiguration.java@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="145-164" />
+
+剥头过滤器还有一层来历：springdoc 的 Scalar 组件会无条件注册一个「应用」入站转发头的 `ForwardedHeaderFilter`，客户端带 `X-Forwarded-Prefix` 就能改写网关看到的路径，让 `StripPrefix` 剥错一段。网关自己声明同类型的 Bean 把它顶掉，并开 `removeOnly`。
+
+## 动手：哪些组合会记下假 IP
+
+<Params
+  title="网关最后记下的是谁的 IP"
+  guess={{ question: "连接来自门户，可门户偷懒，把浏览器带来的 X-Forwarded-For 原样转了过来。网关会记下什么？", options: ["门户的地址", "浏览器自己写的那个值", "请求被拒绝"], answer: "B", explain: "门户是受信代理，阀门就采信它转来的值。所以「门户必须丢掉浏览器带来的这个头」是硬性条款，不是可选项。" }}
+  controls={[
+    { type: "switch", id: "from-portal", label: "连接来自门户（在受信列表里）", default: true },
+    { type: "switch", id: "portal-drops", label: "门户丢掉浏览器带来的 X-Forwarded-For", default: true },
+    { type: "switch", id: "boot-default", label: "受信列表沿用 Boot 默认的私网段", default: false }
+  ]}
+  cases={[
+    { when: { "from-portal": false, "boot-default": false }, results: [{ label: "网关记下", value: "连接地址", tone: "ok" }, { label: "伪造的头", value: "被剥掉", tone: "ok" }], verdict: { tone: "ok", head: "不受信，就不采信。", text: "不是门户发来的连接，带什么转发头都没用，记的是连接地址。" } },
+    { when: { "from-portal": false, "boot-default": true }, results: [{ label: "网关记下", value: "对方自己写的值", tone: "bad" }], verdict: { tone: "bad", head: "谁都成了代理。", text: "内网里随便一台机器连过来，都落在默认的私网段里，它写的 IP 被当真。" } },
+    { when: { "portal-drops": false }, results: [{ label: "网关记下", value: "浏览器自己写的值", tone: "bad" }, { label: "按 IP 限流", value: "换个值就绕过", tone: "bad" }], verdict: { tone: "bad", head: "受信代理没守规矩。", text: "阀门信门户，门户却把浏览器的值转了进来。还有一层风险：值不是 IP 时，网关的 CIDR 判定会对它做阻塞的 DNS 解析。" } },
+    { results: [{ label: "网关记下", value: "浏览器的真实 IP", tone: "ok" }], verdict: { tone: "ok", head: "这就是 Patra 的配法。", text: "门户只写自己从连接上取到、校验过的那一个 IP，网关只信门户。" } }
+  ]}
+/>
+
+门户这边的实现：取 Next.js 填进来的 `x-forwarded-for`，含逗号（多个值）就宁可不发，不是 IP 字面量也不发。
+
+<CodeRef at="patra-portal/src/lib/client-origin.ts@fe4c6bb68c591a9c9b5fe80f76bbfbbbc6aeae75" lines="16-36" />
+
+为什么门户要自己丢：Next.js 16 对入站请求做的是「浏览器没带 `x-forwarded-for` 才用连接地址填上」，浏览器带了就原样保留。
+
+## 代价
+
+<Callout kind="cost">
+
+- **阀门对受信连接还会改写协议、主机和端口**（按 `X-Forwarded-Proto` / `-Host` / `-Port`），后面的剥头过滤器只藏头、不还原。Patra 接受这一点：受信的只有门户，门户是自己的代码，只构造 `X-Forwarded-For` 和 `User-Agent` 两个头，这一条写成了门户与网关之间的契约。
+- **受信地址是启动时读的**，改了要重启网关。门户在容器网络里配了固定地址，受信列表只写这一个地址，不写整个网段：信任网段等于信任经端口转发、VPN 进来的所有人。
+- **部署在家里那台 Mac mini 上时，记下的多半是内网地址**：浏览器经端口转发进来，门户看到的就是网桥地址。真实公网 IP 要等门户前面有一层会覆盖该头的反向代理时才看得到。
+
+</Callout>
+
+两条集成测试把规则钉住：受信来源的值被采用、取最右边的非代理值、受信来源带的其他转发头照样被剥；非受信来源的值被忽略。
+
+<CodeRef at="patra-api/patra-gateway-boot/src/integrationTest/java/dev/patra/gateway/GatewayTrustedProxyIT.java@8a1deacc881d2260bb5802caf0ad974aff0d6072" lines="60-95" />
+
+<Transfer
+  prompt="以后门户前面要加一层 nginx（或者 Cloudflare）做公网入口。真实 IP 的信任链要怎么改？哪一层负责丢掉浏览器带来的 X-Forwarded-For？"
+  points={[
+    { label: "最外层负责清洗", text: "离浏览器最近的那一层（nginx 或 Cloudflare）覆盖掉浏览器带来的值，只写它从连接上看到的地址。" },
+    { label: "每一层只信上一层", text: "门户只信 nginx 的地址，网关只信门户的地址；每层取「最右边那个不是受信代理的值」。" },
+    { label: "受信列表写具体地址", text: "不用 Boot 默认的私网段，也不信整个网段。" },
+    { label: "测试钉住", text: "加一条用例：非受信来源带的伪造值必须被忽略。" }
+  ]}
+/>

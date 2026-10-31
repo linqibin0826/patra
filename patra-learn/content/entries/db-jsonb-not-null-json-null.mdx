@@ -1,0 +1,81 @@
+---
+title: jsonb 的 NOT NULL 挡不住 JSON 的 null
+summary: Java 里的 null 交给 Jackson 序列化，得到的是字符串 "null"；把它转成 jsonb 是一个合法的 JSON null 值，列上的 NOT NULL 照样放行。要在写库之前就拒绝 null。
+type: pitfall
+difficulty: practice
+tags: [database, java]
+prerequisites: [db-jsonb-columns]
+sources:
+  - version: v0.14
+    issue: PAP-120
+    pr: 304
+personalEnv: false
+---
+
+<Diagnose
+  question="snapshot 列是 jsonb NOT NULL。代码执行 jsonMapper.writeValueAsString(snapshot)，此时 snapshot 恰好是 null，再用 CAST(:snapshot AS jsonb) 插入。会怎样？"
+  options={["违反 NOT NULL，插入失败", "插入成功，列里存的是 JSON 的 null", "Jackson 抛异常，到不了数据库"]}
+  answer="B"
+  ifRight="对。Jackson 把 null 写成四个字母的字符串 null，PostgreSQL 把它解析成 JSON 值 null，对 SQL 来说这一列不是空的。"
+  ifWrong="答案是 B。SQL 的 NULL 是「这一格没有值」，JSON 的 null 是「有值，值是 null」。NOT NULL 只认前者。这题考的是 jsonb 列存的是什么，先读 jsonb 那篇。"
+  suggest="db-jsonb-columns"
+/>
+
+## 坑
+
+jsonb 列上的 `NOT NULL` 只拦 SQL 的 NULL。JSON 文本 `null` 转成 jsonb 是一个合法的值，不算 SQL NULL，照样写得进去。
+
+而 Java 里的 `null` 交给 Jackson 的 `writeValueAsString`，得到的恰好就是字符串 `"null"`，不是 Java 的 `null`。
+
+<Quiz
+  title="你猜会怎样"
+  questions={[
+    {
+      question: "下面三种写法，哪一种会让 jsonb NOT NULL 列报错？",
+      options: ["参数是 Java 的 null，SQL 写 CAST(:p AS jsonb)", "参数是字符串 \"null\"，SQL 写 CAST(:p AS jsonb)", "参数是字符串 \"{}\"，SQL 写 CAST(:p AS jsonb)"],
+      answer: "A",
+      explain: "只有 A 传进去的是 SQL NULL，CAST 之后还是 NULL，NOT NULL 拦住。B 是 JSON 的 null 值，C 是空对象，都是有值的 jsonb。"
+    }
+  ]}
+/>
+
+## 为什么
+
+两种「空」不在一个层面上：
+
+| | 是什么 | `IS NULL` | `NOT NULL` 约束 |
+|---|---|---|---|
+| SQL 的 `NULL` | 这一格没有值 | true | 拦住 |
+| jsonb 的 `null` | 有值，值是 JSON null | false | 放行 |
+
+v0.14 讨论那一版，interaction 的对象登记表要登记本地对象（帖子）。登记行有一列 `snapshot jsonb NOT NULL`，存标题、期刊等展示信息。写库时用的是 `jsonMapper.writeValueAsString(snapshot)` 再 `CAST(:snapshot AS jsonb)`。
+
+<CodeRef at="patra-api/patra-interaction/patra-interaction-infra/src/main/resources/db/migration/subject/V20261024200000__create_subject_registry.sql@3cf6fa5757b3be54c3b030e4cace871f53e2599c" lines="24-25" />
+
+<CodeRef at="patra-api/patra-interaction/patra-interaction-infra/src/main/java/dev/patra/interaction/infra/subject/persistence/SubjectRows.java@6d96ac9d6c2b8463cddf24d8b3461215b4ff8f4c" lines="74-76" />
+
+调用方要是传了 `null`，库里就会多一行快照为 JSON null 的登记，`NOT NULL` 形同虚设，读出来的地方才会出错。
+
+## 怎么避开
+
+在写库之前拒绝 `null`。Patra 把检查放在登记入口（app 层的 Gateway 实现）：
+
+<CodeRef at="patra-api/patra-interaction/patra-interaction-app/src/main/java/dev/patra/interaction/app/subject/service/SubjectGatewayImpl.java@5073ab1358404ecd989e722373cd9f7edafe238b" lines="76-91" />
+
+<Callout kind="insight">
+
+走 JPA 映射器的 JSON 列不容易踩这个坑：项目统一用的 `JsonColumnCodec` 把 `null` 节点写成 Java 的 `null`，到库里就是 SQL NULL，`NOT NULL` 能拦住。踩坑的是「手写 SQL + 自己调 `writeValueAsString`」这种路径。
+
+</Callout>
+
+<CodeRef at="patra-tool/patra-tool-jpa/src/main/java/dev/patra/tool/jpa/json/JsonColumnCodec.java@b6e01875bb5692356021c8a19562f557f319fc54" lines="50-60" />
+
+<Transfer
+  prompt="除了 NOT NULL 之外，还有哪些地方会因为「JSON null」和「SQL NULL」不是一回事而出错？举两个例子，说说怎么防。"
+  points={[
+    { label: "查询条件", text: "WHERE col IS NULL 查不到存了 JSON null 的行；要么同时判 col = 'null'::jsonb，要么写库时统一成一种。" },
+    { label: "字段缺失与 null", text: "对象里 {\"title\": null} 和没有 title 键，用 -> 取出来分别是 JSON null 和 SQL NULL，统计时会被分成两类。" },
+    { label: "库里也可以加一道", text: "需要时可以加 CHECK (jsonb_typeof(col) = 'object')，让 JSON null 和数组都进不来。" },
+    { label: "边界处拒绝", text: "最省事的仍是在写库入口拒绝 Java null，别让它走到序列化那一步。" }
+  ]}
+/>

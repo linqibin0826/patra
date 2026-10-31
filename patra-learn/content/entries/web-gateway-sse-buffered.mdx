@@ -1,0 +1,92 @@
+---
+title: 网关把事件流攒住了
+summary: 通知服务推出的未读数事件经网关转发后迟迟不到浏览器。原因是网关底层的 HTTP 客户端一次读要读满 16 KB 才返回；推送路由改成逐字节读、读到事件结尾就刷出。
+type: troubleshooting
+difficulty: practice
+tags: [backend, network]
+prerequisites: [web-server-push-and-sse]
+topics: [realtime-push]
+sources:
+  - version: v0.16
+    issue: PAP-145
+    pr: 343
+personalEnv: false
+---
+
+<Diagnose
+  question="下游服务每隔一会儿往 SSE 连接里写一条几十字节的事件。中间的代理的转发方式是「读满一块缓冲区，再整块写给浏览器」，缓冲区 16 KB。浏览器什么时候收到第一条事件？"
+  options={["下游一写就收到", "攒够 16 KB，或者下游结束响应时", "代理会识别 text/event-stream，自动逐条转发"]}
+  answer="B"
+  ifRight="对。读的那一步不返回，后面的「刷出」就轮不到。这正是 Patra 的网关碰到的情况。"
+  ifWrong="答案是 B：转发是「读一块、写一块」，读不满就一直等。这题考的是 SSE 的事件是怎么一段段写出去的，先读 SSE 那篇。"
+  suggest="web-server-push-and-sse"
+/>
+
+## 现象
+
+v0.16 通知中心那一版加了实时推送：通知服务提供 SSE 接口，有新提醒就推一条「未读数变了」，门户的铃铛据此刷新。浏览器经网关连到通知服务。
+
+推送路由接好后，网关的集成测试里，第一条事件要等大约 5 秒才到客户端；真实场景里事件更稀疏，要等得更久。铃铛基本不动，推送等于失效。
+
+最容易带偏的方向：规划时的调研结论是「网关对 `text/event-stream` 逐块刷出」，按这个结论，网关不该攒数据。
+
+## 怎么查
+
+<DebugTrail
+  steps={[
+    { hypothesis: "网关对事件流根本不刷出？", result: "Spring Cloud Gateway 的代理交换对 text/event-stream 有专门处理：读一块、刷一次（缓冲区 16 KB）。刷出这一步是有的。", verdict: "ruled-out" },
+    { hypothesis: "刷出之前的「读一块」卡住了？", result: "网关用的 HTTP 客户端是 Reactor Netty。它的响应体输入流（Spring 7.0.10 的 SubscriberInputStream）在 read(buf, off, len) 时要读满 len 字节或读到流结束才返回，也不实现 available()。几十字节的事件进不满 16 KB，read 就一直不返回。", verdict: "found" }
+  ]}
+/>
+
+所以「逐块刷出」这句话本身没错，错在前提：它默认读操作「有多少给多少」。换成这种「不读满不返回」的客户端，就不成立了。
+
+## 根因：读不满，就轮不到刷
+
+<Params
+  title="动手：网关缓冲里攒了多少"
+  guess={{ question: "按原来的写法，每条事件按 60 字节算，通知服务连推 50 条，浏览器收到几条？", options: ["50 条", "0 条", "大约一半"], answer: "B", explain: "50 条才 3000 字节，离 16384 字节还远，read 一直不返回，浏览器一条都没收到。要攒到大约 274 条才会一次性涌出来。" }}
+  controls={[
+    { type: "switch", id: "fixed", label: "推送路由改成读到事件结尾就刷出", default: false },
+    { type: "slider", id: "events", label: "通知服务已推的事件数", min: 1, max: 300, step: 1, default: 1, unit: "条" }
+  ]}
+  cases={[
+    { when: { fixed: true }, results: [{ label: "网关缓冲", value: "每条事件结尾就清空", tone: "ok" }, { label: "浏览器已收", value: "全部 {events}", tone: "ok" }], verdict: { tone: "ok", head: "一条一到。", text: "读到空行（一条事件的结尾）就刷出，铃铛跟着变。" } },
+    { when: { events: [1, 273] }, results: [{ label: "网关缓冲", value: "还没满 16 KB", tone: "wait" }, { label: "浏览器已收", value: "0 条", tone: "bad" }], verdict: { tone: "bad", head: "全卡在网关里。", text: "推了 {events}，缓冲区没满，读操作不返回，一条也没转出去。" } },
+    { results: [{ label: "网关缓冲", value: "满了，整块交出", tone: "wait" }, { label: "浏览器已收", value: "一下子涌进来一大批", tone: "wait" }], verdict: { tone: "bad", head: "攒满才放。", text: "到第 274 条左右缓冲区满了，浏览器一次收到一大批，然后又从 0 开始攒。" } }
+  ]}
+/>
+
+（每条按 60 字节估算，只为看清量级；真实的未读数事件和心跳都只有几十字节。）
+
+## 修法
+
+推送路由不再照搬网关「读一块、刷一次」的写法，换成自己的代理交换 `PushProxyExchange`：逐字节读。单字节读只等「有数据」，不等读满。每读到一个字节就写进 Tomcat 的响应缓冲，读到连续两个换行（一条 SSE 事件的结尾）就刷给浏览器。
+
+<CodeRef at="patra-api/patra-gateway-boot/src/main/java/dev/patra/gateway/config/PushProxyExchange.java@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="44-66" />
+
+只有推送路由这么做。普通路由没有事件流，整块读写更省事，不受影响。推送路由在配置里用自定义的 `lb-push://` 协议区分，同时走一个单独的连接池。
+
+<CodeRef at="patra-api/patra-gateway-boot/src/main/resources/application.yml@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="91-100" />
+
+回归测试：下游每 600 毫秒滴一条 7 字节的心跳，第一条必须在 3 秒内到达客户端。
+
+<CodeRef at="patra-api/patra-gateway-boot/src/integrationTest/java/dev/patra/gateway/GatewayPushRouteIT.java@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="296-328" />
+
+<Callout kind="insight">
+
+「读满才返回」不是 bug，它是 `InputStream.read(buf, off, len)` 允许的一种实现：规范只保证至少读到 1 个字节或流结束，没保证「有多少给多少」。依赖「读到一部分就返回」的代码，换一个客户端就可能出事。以后网关里别的路由要转事件流，也要单独处理。
+
+</Callout>
+
+上线后在公网路径上实测：B 回复后，推送在同一秒到达；连接闲置 6 分多钟、收到 15 次心跳没有断。
+
+<Transfer
+  prompt="另一个项目在 SSE 服务前面放了一层 nginx，症状一样：事件攒一阵才到。不看源码，你会先查哪里？查到之后怎么改？"
+  points={[
+    { label: "先问是谁在攒", text: "绕过代理直连上游，看事件是不是一写就到；直连正常，就是中间这层在缓冲。" },
+    { label: "代理的缓冲开关", text: "反向代理一般默认缓冲上游响应（nginx 有 proxy_buffering），对事件流要关掉，或者让上游回 X-Accel-Buffering: no。" },
+    { label: "上游自己也要刷", text: "服务端每写完一条事件要 flush，否则数据停在它自己的响应缓冲里。" },
+    { label: "压缩也会攒", text: "代理或框架对响应做 gzip 时，压缩器会攒数据再输出，事件流不要压缩。" }
+  ]}
+/>

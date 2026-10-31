@@ -1,0 +1,86 @@
+---
+title: 短关键词让 GIN 索引全扫
+summary: 机构联想里输入「协和」两个字，在 psql 里 30 毫秒，经应用的预编译语句却可能要两三百毫秒。两个字凑不出三元组，通用计划仍选了 trigram 索引，结果扫完整个索引再逐行复核。
+type: troubleshooting
+difficulty: practice
+tags: [database]
+prerequisites: [db-trigram-search]
+sources:
+  - version: v0.12
+    issue: PAP-94
+    pr: 273
+personalEnv: false
+---
+
+<Diagnose
+  question="pg_trgm 把字符串切成连续三个字符的片段（三元组）来建索引。用户搜 %协和%，这个模式能从索引里精确筛出候选行吗？"
+  options={["能，索引里有「协和」", "不能：两个字凑不出一个完整的三元组，索引筛不掉任何行", "能，但只对英文有效"]}
+  answer="B"
+  ifRight="对。凑不出三元组时，trigram 索引什么也筛不掉，用了它反而要把整个索引读一遍。"
+  ifWrong="答案是 B。trigram 索引靠「模式里的三元组都出现过」来筛候选；两个字没有完整的三元组，等于没有筛选条件。这题考的是 trigram 索引怎么工作，先读那篇。"
+  suggest="db-trigram-search"
+/>
+
+## 现象
+
+v0.12 用户中心那一版，个人资料里填工作机构要用联想：输入几个字，从 ROR（全球科研机构库）的机构名和 Patra 自己维护的中文别名里找候选。机构名表有二十多万行，名字列上建了 trigram GIN 索引，`ILIKE '%关键词%'` 走它。
+
+<CodeRef at="patra-api/patra-catalog/patra-catalog-infra/src/main/resources/db/migration/V9__add_suggest_trigram_indexes.sql@af8cd13c3ec367ccba78615b72e6ff19535cef90" lines="9-14" />
+
+在 psql 里直接执行，搜「协和」走顺序扫描，30 毫秒左右，看起来一切正常。
+
+问题是评审时提出的：应用里的查询不是 psql 里那条带字面量的 SQL。
+
+## 怎么查
+
+<DebugTrail
+  steps={[
+    { hypothesis: "psql 里快，应用里也一定快？", result: "不一定。psql 里规划器拿到的是字面量 %协和%，看得出它凑不出三元组，就选了顺序扫描。应用经 pgjdbc 发的是参数化的预编译语句。", verdict: "closer" },
+    { hypothesis: "预编译语句的计划和字面量的不一样？", result: "pgjdbc 默认从第 5 次执行起改用服务端预编译语句，PostgreSQL 之后可能对它改用「通用计划」：不看参数的具体值，按一般情况规划。通用计划对参数化的 ILIKE 选了 trigram 索引。", verdict: "closer" },
+    { hypothesis: "在库里复现通用计划，量一下", result: "在部署机上用 PREPARE 加 SET plan_cache_mode = force_generic_plan 执行，「协和」「医院」都走 trigram 索引：扫完整个 22 MB 索引，再对 259,560 行逐行复核，220～380 毫秒。同样的语句用 force_custom_plan，32～37 毫秒。", verdict: "found" }
+  ]}
+/>
+
+<Callout kind="insight">
+
+PostgreSQL 对预编译语句有两种计划：每次按实际参数重新规划的「定制计划」，和只规划一次、谁来都用的「通用计划」。执行几次之后，如果通用计划的估算代价不比定制计划差太多，它就改用通用计划。通用计划看不到参数是两个字还是十个字，只能按一般情况选：一般情况下，trigram 索引对 `ILIKE` 是好选择。
+
+</Callout>
+
+## 根因
+
+<Compare
+  title="同一条 ILIKE，两种计划"
+  variants={[
+    { label: "定制计划（看得到参数）", steps: ["规划器拿到 %协和%", "发现凑不出三元组，索引筛不掉行", "选顺序扫描，直接逐行匹配"], results: [{ label: "耗时", value: "30 ms 左右", tone: "ok" }], verdict: { tone: "ok", head: "对症下药。", text: "知道索引帮不上忙，干脆不用。" } },
+    { label: "通用计划（看不到参数）", steps: ["规划器只知道是 ILIKE 一个参数", "按一般情况，选 trigram 索引", "运行时模式是两个字：索引扫完整个，再对全表逐行复核"], results: [{ label: "耗时", value: "220～380 ms", tone: "bad" }], verdict: { tone: "bad", head: "比顺序扫描还慢。", text: "读了整个索引，最后还是要逐行复核，两头都花了。" } }
+  ]}
+/>
+
+三个字以上的关键词有完整的三元组，通用计划选索引是对的。出问题的只有「凑不出三元组」的短关键词，而中文机构名恰恰常用两个字的简称搜（「协和」「华西」）。
+
+## 修法
+
+按码点数分流：两个码点以内的子串查询，走单独的一条 SQL，条件写成 `lower(列) LIKE lower(:contains)`。列上套了 `lower()`，规划器就用不了 trigram 索引，两种计划都是顺序扫描，实测 34 毫秒。
+
+<CodeRef at="patra-api/patra-catalog/patra-catalog-infra/src/main/java/dev/patra/catalog/infra/organization/persistence/dao/OrganizationSuggestSql.java@5073ab1358404ecd989e722373cd9f7edafe238b" lines="42-52" />
+
+<CodeRef at="patra-api/patra-catalog/patra-catalog-infra/src/main/java/dev/patra/catalog/infra/organization/persistence/OrganizationReadAdapter.java@5073ab1358404ecd989e722373cd9f7edafe238b" lines="54-68" />
+
+没有用全局开关（连接参数 `prepareThreshold=0` 关掉服务端预编译，或库级 `plan_cache_mode = force_custom_plan`）：它们会影响所有查询，而问题只出在这一种。
+
+<Callout kind="warn">
+
+验证时要模拟真实的执行方式：同一条语句先打 10 次以上，让 pgjdbc 切到服务端预编译，再带上两个字的中文关键词量耗时。只在 psql 里跑一次，永远看不到这个问题。
+
+</Callout>
+
+<Transfer
+  prompt="你的系统里有一个按状态筛订单的查询：WHERE status = ?。99% 的订单是「已完成」，1% 是「待处理」，status 上有普通 B-tree 索引。用预编译语句跑一段时间后，查「待处理」突然变慢。可能是什么原因？怎么确认？"
+  points={[
+    { label: "同一个机制", text: "通用计划看不到参数，按平均选择度规划；对「已完成」顺序扫描合理，于是对「待处理」也顺序扫描。" },
+    { label: "怎么复现", text: "PREPARE 这条语句，SET plan_cache_mode = force_generic_plan 后 EXPLAIN ANALYZE 执行「待处理」，和 force_custom_plan 对比。" },
+    { label: "针对性的修法", text: "给「待处理」建部分索引，或者把这一类查询拆成单独的 SQL，条件写字面量。" },
+    { label: "全局开关是最后手段", text: "关服务端预编译或强制定制计划会影响所有查询，先考虑只改有问题的那一条。" }
+  ]}
+/>

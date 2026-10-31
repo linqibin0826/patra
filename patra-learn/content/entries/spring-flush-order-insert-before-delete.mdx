@@ -1,0 +1,69 @@
+---
+title: 先删后插却撞了唯一约束
+summary: 代码里明明先调了派生的 deleteBy… 再保存新行，提交时却报唯一约束冲突。Hibernate flush 时先执行插入、后执行删除，旧行还在。整组替换要用批量删除语句，并在插入前先 flush。
+type: pitfall
+difficulty: practice
+tags: [spring, database]
+prerequisites: [spring-jpa-basics, db-constraints-and-null]
+sources:
+  - version: v0.11
+  - version: v0.12
+    issue: PAP-95
+    pr: 273
+personalEnv: false
+---
+
+<Diagnose
+  question="表上有唯一约束 (user_id, position)。一个事务里，代码先调 Spring Data 派生的 deleteByUserId(7)，再 saveAll 写入 user_id = 7 的新一组行（position 还是 1、2、3）。事务提交时会怎样？"
+  options={["顺利提交：先删了旧行，再插新行", "报唯一约束冲突", "新行被当成更新，覆盖旧行"]}
+  answer="B"
+  ifRight="对。代码里的调用顺序不等于数据库里 SQL 的执行顺序。这篇讲 Hibernate 在 flush 时怎么排序。"
+  ifWrong="答案是 B。JPA 先把改动攒在持久化上下文里，flush 时才发 SQL，而且按自己的顺序：插入排在删除前面。旧行还在，新行就撞上了唯一约束。这题考的是 JPA 什么时候真正写库，先读 JPA 基础那篇。"
+  suggest="spring-jpa-basics"
+/>
+
+## 坑
+
+Spring Data 的派生删除方法（`deleteByUserId` 这种按方法名生成的）不是一条 `DELETE` 语句。它先把要删的实体查出来，再逐个 `remove`。`remove` 只是在持久化上下文里登记「这个要删」，真正的 `DELETE` 要等 flush。
+
+而 Hibernate flush 时执行 SQL 的顺序是固定的：**插入在前，更新居中，删除在后**，和你在代码里调用的先后无关。
+
+<Compare
+  title="同一段「整组替换」，两种写法"
+  variants={[
+    { label: "派生 deleteBy… + saveAll", steps: ["deleteByUserId(7)：查出旧行，逐个登记待删除", "saveAll(新行)：登记待插入", "提交前 flush：先执行 INSERT，再执行 DELETE"], results: [{ label: "INSERT (7, position 1)", value: "撞上还没删的旧行", tone: "bad" }, { label: "事务", value: "回滚", tone: "bad" }], verdict: { tone: "bad", head: "唯一约束冲突。", text: "代码里是先删后插，数据库里收到的是先插后删。" } },
+    { label: "批量 DELETE + flush，再插入", steps: ["@Modifying @Query 的批量删除：立刻发出一条 DELETE", "flush：确认删除已经落到数据库", "saveAllAndFlush(新行)：执行 INSERT"], results: [{ label: "旧行", value: "已删除", tone: "ok" }, { label: "新行", value: "写入成功", tone: "ok" }], verdict: { tone: "ok", head: "顺序由你决定。", text: "批量语句绕过持久化上下文直接执行，先删的就真是先删。" } }
+  ]}
+/>
+
+## 为什么
+
+Hibernate 把一次 flush 要做的事放进一个动作队列，按类型分组执行：先插入，再更新，再删集合元素，最后删实体。这样排的初衷是保证外键顺序（先有父行再有子行），代价是你无法靠「调用顺序」控制删和插的先后。
+
+这个坑在 Patra 里踩过两次。v0.11 全文阅读那一版，同一个 URL 的资源先删旧行再插新行，撞了唯一约束。v0.12 用户中心那一版，个人资料里的「链接」和「关注领域」两张子表每次保存都整组替换，表上有 `(user_id, position)` 唯一约束：只要新旧两组里有相同的 position（几乎每次保存都是），派生删除的写法就会撞上。
+
+## 怎么避开
+
+用 `@Modifying @Query` 写一条批量删除，并在注释里写明为什么不用派生删除：
+
+<CodeRef at="patra-api/patra-identity/patra-identity-infra/src/main/java/dev/patra/identity/infra/account/persistence/dao/UserProfileLinkDao.java@5073ab1358404ecd989e722373cd9f7edafe238b" lines="19-26" />
+
+删完先 flush，再插入并 flush：
+
+<CodeRef at="patra-api/patra-identity/patra-identity-infra/src/main/java/dev/patra/identity/infra/account/persistence/UserProfileRepositoryAdapter.java@5073ab1358404ecd989e722373cd9f7edafe238b" lines="66-81" />
+
+<Callout kind="warn">
+
+批量 `DELETE` 语句绕过持久化上下文：已经加载进当前会话的那些实体，Hibernate 不知道它们被删了。删完之后别再用之前查出来的旧实体对象，需要就重新查。
+
+</Callout>
+
+<Transfer
+  prompt="一个排序列表（歌单里的歌，表上有 (playlist_id, position) 唯一约束），用户把第 3 首拖到第 1 位。如果你不想整组删了重插，而是逐行改 position，会遇到什么问题？怎么解决？"
+  points={[
+    { label: "逐行更新也会撞", text: "把第 3 首改成 position 1 时，原来的第 1 首还占着 1；无论先改哪一行，中间状态都可能违反唯一约束。" },
+    { label: "延迟约束", text: "PostgreSQL 可以把唯一约束声明成 DEFERRABLE INITIALLY DEFERRED，到提交时才检查，中间状态不算。" },
+    { label: "先挪到临时位置", text: "先把要动的行改成一个不会冲突的值（比如负数），再改回目标位置。" },
+    { label: "整组替换", text: "像 Patra 这样批量删、flush、再插，顺序完全由自己控制。" }
+  ]}
+/>

@@ -1,0 +1,68 @@
+---
+title: 代理的响应被补上了 Cache-Control
+summary: "Spring Security 默认会给缺这些头的响应补上 Cache-Control: no-store 等安全头，网关转发的下游响应也不例外。代理链要关掉默认的响应头写出器，并用集成测试钉住。"
+type: pitfall
+difficulty: practice
+tags: [backend, security, spring]
+prerequisites: [http-caching, web-reverse-proxy-and-gateway]
+sources:
+  - version: v0.8
+    issue: PAP-65
+  - version: v0.14
+    issue: PAP-123
+    pr: 304
+personalEnv: false
+---
+
+<Diagnose
+  question="下游服务回了一个只带 ETag、没写 Cache-Control 的响应，经过一个启用了 Spring Security 默认配置的网关转给浏览器。浏览器收到的响应头里会多出什么？"
+  options={["什么都不会多，网关原样转发", "Cache-Control: no-cache, no-store 等一组安全头", "网关会把 ETag 删掉"]}
+  answer="B"
+  ifRight="对。Spring Security 不区分「网关自己的响应」和「转发的响应」，缺什么补什么。"
+  ifWrong="答案是 B。Spring Security 默认带一个响应头写出器，会给缺少这些头的响应补上禁止缓存等安全头。这题考的是 Cache-Control 怎么决定浏览器能不能缓存，先读 HTTP 缓存那篇。"
+  suggest="http-caching"
+/>
+
+## 坑
+
+网关上用了 Spring Security 的 `HttpSecurity`，它默认带 `HeaderWriterFilter`。响应里缺这些头时，它会补上：`Cache-Control: no-cache, no-store, max-age=0, must-revalidate`、`Pragma`、`Expires`、`X-Content-Type-Options`、`X-Frame-Options`、`X-XSS-Protection`。
+
+网关转发下游的响应时，这个过滤器照样在链上。下游没写 `Cache-Control`，转出去就变成了 `no-store`。
+
+<Compare
+  title="同一个下游响应，经过两种网关配置"
+  variants={[
+    { label: "默认配置", steps: ["下游回 200，带 ETag，没写 Cache-Control", "网关转发，响应经过 HeaderWriterFilter", "过滤器发现缺 Cache-Control，补上 no-store 等一组头"], results: [{ label: "浏览器收到的 Cache-Control", value: "no-cache, no-store …", tone: "bad" }, { label: "下次带 If-None-Match 回来", value: "不会，no-store 不让存", tone: "bad" }], verdict: { tone: "bad", head: "缓存被关掉了。", text: "下游的 ETag 白给了，浏览器每次都要拿完整的响应体。" } },
+    { label: "代理链关掉默认响应头", steps: ["下游回 200，带 ETag，没写 Cache-Control", "网关转发，代理链上没有响应头写出器", "响应原样到达浏览器"], results: [{ label: "浏览器收到的 Cache-Control", value: "没有（照下游原样）", tone: "ok" }, { label: "缓存策略", value: "由下游决定", tone: "ok" }], verdict: { tone: "ok", head: "代理就该透明。", text: "缓存怎么做是下游的事，网关不替它改。" } }
+  ]}
+/>
+
+## 为什么
+
+这个默认值本身是为普通 Web 应用设计的：页面里可能有个人数据，默认不缓存最安全。它只看「响应里有没有这个头」，不知道这个响应是网关自己生成的，还是从下游转来的。
+
+v0.8 账号那一版给网关接 Spring Security 时就发现了这一点：网关有一份「代理透传的响应保持下游原样」的约定，补头直接违反了它。
+
+到 v0.14 讨论那一版，这件事有了具体的后果。提醒的未读数接口用条件请求省流量：200 与 304 都显式带 `ETag` 和 `Cache-Control: no-cache, private`，浏览器下次带 `If-None-Match` 来问，没变就回 304。经网关的流程测试专门断言 304 响应里**没有** `no-store`，防的就是网关替它补上。
+
+## 怎么避开
+
+网关有两条过滤器链。转发请求的那一条关掉默认的响应头写出器；只输出网关自己 403 的拒绝名单那一条保留默认值。
+
+<CodeRef at="patra-api/patra-gateway-boot/src/main/java/dev/patra/gateway/security/GatewaySecurityConfiguration.java@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="100-116" />
+
+<Callout kind="warn">
+
+关掉以后，网关不会再替任何响应加安全头。哪些头该加（比如门户页面的 `X-Frame-Options`），要由真正生成响应的那一方自己加。关掉之后要用集成测试钉住「透传的响应头和下游一致」，否则以后升级框架、改安全配置时又悄悄加回来。
+
+</Callout>
+
+<Transfer
+  prompt="还有哪些地方会像这样「好心」改掉代理转发的响应？各举一个例子，说说你会怎么发现它。"
+  points={[
+    { label: "压缩", text: "HTTP 客户端或框架默认解压下游的 gzip、抹掉 Content-Encoding，或者替请求补 Accept-Encoding。Patra 的网关就显式关了 Reactor 客户端的压缩协商。" },
+    { label: "重定向", text: "客户端默认跟随下游的 3xx，浏览器拿到的是跳转后的页面。网关要配成不跟随。" },
+    { label: "错误页", text: "框架把下游的 4xx、5xx 换成自己的错误页或错误 JSON。" },
+    { label: "怎么发现", text: "写一条集成测试：下游桩返回一组特定的头和状态码，断言经网关后逐个一致。" }
+  ]}
+/>
