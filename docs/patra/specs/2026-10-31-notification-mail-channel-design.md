@@ -103,10 +103,13 @@ adapter  SecurityMailListener.on(SecurityMailEvent)        ← 按 __TypeId__ �
 app      SendSecurityMailHandler
   1. deliveries.exists(eventId)？            是 → 返回 DUPLICATE（ack）
   2. 只为链接而发的信且链接已过期？           是 → 短事务：markProcessed + 记 LINK_EXPIRED → 返回
-  3. mailDelivery.deliver(mail.compose())     事务外；失败抛 MailDeliveryFailedException
+  3. mailDelivery.deliver(mail.compose())     事务外；失败抛 MailDeliveryFailedException，按 failure() 分三类（6.6）：
+       ALREADY_ACCEPTED → 当作已发，照第 4 步记 SENT
+       REJECTED         → 短事务：markProcessed + 记 REJECTED，不重试 → 返回
+       TRANSIENT        → 打 WARN 后原样抛出
   4. 短事务：markProcessed(队列, eventId) 为 true 时记 SENT
-infra    SmtpMailDeliveryAdapter：Thymeleaf 渲染 → MimeMessage（固定的头）→ JavaMailSender.send
-失败     异常抛回监听容器 → 本地重试 1、2、4 秒 → 仍失败：拒绝、不回队列 → <队列>.dlq，Spring AMQP 打 WARN
+infra    SmtpMailDeliveryAdapter：Thymeleaf 渲染 → MimeMessage（固定的头、固定的 Message-ID）→ JavaMailSender.send
+TRANSIENT 异常抛回监听容器 → 本地重试 1、2、4 秒 → 仍失败：拒绝、不回队列 → <队列>.dlq，Spring AMQP 打 WARN
 ```
 
 各步崩溃时会怎样：
@@ -131,16 +134,17 @@ infra    SmtpMailDeliveryAdapter：Thymeleaf 渲染 → MimeMessage（固定的�
 
 | 包 | 类 | 说明 |
 |---|---|---|
-| `model.vo` | `OutgoingMail` | 一封要发的信：`deliveryId`（UUID，就是幂等键）、`to`、`template`（模板名）、`subject`、`model`（模板变量，不可变；值不得为 null）。`@Builder`。`toString()` 只输出 `deliveryId` 与 `template` |
+| `model.vo` | `OutgoingMail` | 一封要发的信：`deliveryId`（UUID，就是幂等键）、`to`、`template`（模板名）、`subject`、`model`（模板变量，不可变；值不得为 null）、`headers`（附加的邮件头，可不传；值里不能有 `\r`、`\n`，防止注入别的头）。`@Builder`。`toString()` 只输出 `deliveryId` 与 `template` |
 | `model.vo` | `OperationContext` | 触发安全通知的那次操作：`occurredAt`（非空）、`device`、`ipAddress`、`ipLocation`（可空） |
 | `model.vo` | `SecurityNotice` | 安全通知片段的内容：`OperationContext` + 这一类的「不是我怎么办」 |
 | `model.vo` | `SecurityMail` | 一封安全邮件的事实：`eventId`、`kind`、`to`、`displayName`、`facts`（这一类模板专属的变量，值非空）、`context`（可空）、`linkExpiresAt`（可空）。`compose()` → `OutgoingMail`；`linkExpiredAt(Instant now)` |
 | `model.enums` | `SecurityMailKind` | 13 类：模板名、主题、「不是我怎么办」（没有安全通知片段的为 null）、`skipsWhenLinkExpired`。注销提醒的主题按 `daysLeft` 拼 |
-| `model.enums` | `MailDeliveryOutcome` | `SENT`、`LINK_EXPIRED` |
+| `model.enums` | `MailDeliveryOutcome` | `SENT`、`LINK_EXPIRED`、`REJECTED` |
+| `model.enums` | `MailDeliveryFailure` | 发信失败的三类：`ALREADY_ACCEPTED`、`REJECTED`、`TRANSIENT`（6.6） |
 | `model.aggregate` | `MailDelivery` | 发送记录：`deliveryId`、`template`、`outcome`、`recordedAt`；`sent(...)`、`linkExpired(...)` |
 | `port.delivery` | `MailDeliveryPort` | `void deliver(OutgoingMail mail)`：同步发出，失败抛 `MailDeliveryFailedException`。**契约**：同一个 `deliveryId` 必须对应同一份内容；实现把它写进 `Resend-Idempotency-Key` |
 | `port.repository` | `MailDeliveryRepository` | `boolean exists(UUID deliveryId)`、`void add(MailDelivery delivery)` |
-| `exception` | `MailDeliveryFailedException` | `DomainException` + `DEP_UNAVAILABLE`；消息含 `template`、`deliveryId` 与一段**脱敏后的原因**（见下）；**不挂原始异常为 cause** |
+| `exception` | `MailDeliveryFailedException` | `DomainException` + `DEP_UNAVAILABLE`；`failure()` 是三类之一；消息含 `template`、`deliveryId`、类别与一段**脱敏后的原因**（见下）；**不挂原始异常为 cause** |
 
 **为什么不挂 cause**：服务商拒收收件人时，SMTP 回复会带上地址（如 `550 5.1.1 <chen@example.com>: Recipient address rejected`），JavaMail 的 `SendFailedException` 也会列出地址。Spring AMQP 重试耗尽时的 WARN 会把整条 cause 链连同消息打出来，地址就进了日志。所以适配器把 cause 链压成一段文字：每一层的异常类名加消息，邮箱地址替换成 `***`，最长 500 个字符，放进异常消息；原始异常不往上挂。SMTP 回复码和服务商的原文（比如 Resend 拒绝同键不同内容时的说明）都还在，排查第 15 节的 409 靠它。
 
@@ -150,13 +154,13 @@ infra    SmtpMailDeliveryAdapter：Thymeleaf 渲染 → MimeMessage（固定的�
 
 - `SendSecurityMailCommand(String consumer, SecurityMail mail)`：`consumer` 是队列名，由监听方给出，用于 `markProcessed`。
 - `SendSecurityMailHandler implements CommandHandler<…, SendSecurityMailResult>`：第 5 节的四步；注入 `MailDeliveryRepository`、`MailDeliveryPort`、`ProcessedEventPort`、`TransactionOperations`、`Clock`。不标 `@Transactional`（规则 16b），事务只包第 2、4 步的写库。日志只打 `eventId` 与 `kind`。
-- `SendSecurityMailResult`：`SENT`、`DUPLICATE`、`LINK_EXPIRED`。
+- `SendSecurityMailResult`：`SENT`、`DUPLICATE`、`LINK_EXPIRED`、`REJECTED`。
 
 ### 6.3 infra（`infra.mail`）
 
 | 包 | 类 | 说明 |
 |---|---|---|
-| `delivery` | `SmtpMailDeliveryAdapter` | `MailDeliveryPort` 的实现：渲染 → `MimeMessageHelper`（`multipart/alternative`，UTF-8）→ 发件人、收件人、主题、文本 + HTML → 头 → `JavaMailSender.send`。头：`Resend-Idempotency-Key: <deliveryId>`、`Auto-Submitted: auto-generated`、`X-Auto-Response-Suppress: All`。`MessagingException` / `MailException` / 渲染异常 → `MailDeliveryFailedException`（脱敏原因，见 6.1）。不打日志（由 app 打） |
+| `delivery` | `SmtpMailDeliveryAdapter` | `MailDeliveryPort` 的实现：渲染 → `MimeMessageHelper`（`multipart/alternative`，UTF-8）→ 发件人、收件人、主题、文本 + HTML → 头 → `JavaMailSender.send`。先写调用方的 `headers`，再写固定头：`Resend-Idempotency-Key: <deliveryId>`、`Auto-Submitted: auto-generated`、`X-Auto-Response-Suppress: All`、`Message-ID: <deliveryId@发件人域名>`（固定头不会被调用方覆盖；Spring 的 `JavaMailSenderImpl` 会保留显式设过的 Message-ID）。`MessagingException` / `MailException` / 渲染异常 → `MailDeliveryFailedException`（脱敏原因，见 6.1）。不打日志（由 app 打） |
 | `delivery` | `ThymeleafMailRenderer`、`RenderedMail`、`SecurityNoticeView` | 从 identity 搬来；去掉 `MailLinkPolicy`（`securityUrl` 已随事件进 `model`）；公共变量 `siteName`、`subject`；`Instant` 一律格式化成 `2026-11-04 08:00 (UTC+8)`；`notice` 是 `SecurityNotice` 时换成 `SecurityNoticeView` |
 | `persistence` | `MailDeliveryRepositoryAdapter` | `JdbcClient`：`SELECT EXISTS` 与 `INSERT`；`add` 标 `MANDATORY`（只能在 app 的短事务里调） |
 | `config` | `MailDeliveryProperties`、`MailDeliveryConfiguration` | `patra.notification.mail.from`（只能一个合法地址，否则启动失败）、`patra.notification.mail.zone`；装配渲染器与适配器 |
@@ -166,17 +170,42 @@ infra    SmtpMailDeliveryAdapter：Thymeleaf 渲染 → MimeMessage（固定的�
 
 ### 6.4 adapter（`adapter.mail.mq`）
 
-- `SecurityMailListener`：`@RabbitListener(queues = QUEUE)`，一个方法 `on(SecurityMailEvent event)`；常量 `QUEUE = "notification.security-mail"`。参数是 sealed 接口，转换器按 `__TypeId__` 头反序列化成具体 record，只认 `trusted-packages` 里的包。
+- `SecurityMailListener`：`@RabbitListener(queues = QUEUE)`，一个方法 `on(Message message)`；常量 `QUEUE = "notification.security-mail"`。收原始消息，用事件模块的转换器按 `__TypeId__` 头还原（只认 `trusted-packages` 里的包），不是 `SecurityMailEvent` 就拒收（第 9 节）。
 - `SecurityMailEventConverter`：对 `SecurityMailEvent` 的 13 个分支穷举 `switch`（漏一类编译不过），每类给出 `kind`、`facts`、`context`、`linkExpiresAt`。
 - 依赖：`implementation(project(":patra-api:patra-identity:patra-identity-api"))`、`implementation("org.springframework.boot:spring-boot-starter-amqp")`；app 经 `api(project(app))`（与 PAP-142 写法一致）。
 
-**单方法 + 接口参数能否反序列化是第一个要证明的事**（计划第一步的 IT）：Spring AMQP 推断出的参数类型是接口时，转换器退回按类型头。证明不了就退回类级 `@RabbitListener` + 每类一个 `@RabbitHandler`，`trusted-packages` 配置不变。
+实施记录：最初的写法是参数为 sealed 接口、让 Spring 转（第一个 IT 证明可行），独立评审指出遇到被读成 Map 的正文会把它写进日志，改成收原始消息自己转。
 
 ### 6.5 boot
 
 - `config/MailQueueConfiguration`：`Declarables`：`EventQueue.named(SecurityMailListener.QUEUE).bind(SecurityMailEvent.EXCHANGE, SecurityMailEvent.ROUTING_KEY_PATTERN)`（事件模块 README 要求队列在 boot 声明）。
 - `application.yml`：`patra.notification.mail.zone: Asia/Shanghai`；`management.health.mail.enabled: false`（同 identity：容器健康检查每 10 秒一次会变成一天八千多次登录服务商，SMTP 抖动也不该让 CD 回滚）；`patra.events.consumer.trusted-packages` 写成 YAML 列表，`- dev.patra.identity.api.account.event`（PAP-143 加 interaction 的包时只追加一行）。
 - Nacos `patra-notification.yaml`：`spring.mail.*` 整块从 `patra-identity.yaml` 照搬（默认 Mailpit，`~/.patra/secrets/mail.env` 覆盖成 Resend），`patra.notification.mail.from: ${PATRA_MAIL_FROM:Patra <no-reply@patra.local>}`。环境变量名不变，mini 上的 `mail.env` 不用改内容。
+
+### 6.6 发信失败的三类
+
+服务商那一侧失败的原因差别很大：有的等一会儿就好（连不上、限流），有的永远不会好（地址不存在），还有一种其实是「已经发过了」（同一个幂等键被接受过）。混在一起重试，前者该等不等，后者白白重试三次再进死信。所以端口把失败分成三类，安全邮件与提醒邮件（PAP-146）共用：
+
+| 类别 | 含义 | 安全邮件怎么处理 | PAP-146 怎么处理 |
+|---|---|---|---|
+| `ALREADY_ACCEPTED` | 这个幂等键服务商已经接受过 | 当作已发，记 `SENT` | 记 `SENT` |
+| `REJECTED` | 这封信对这个收件人永远发不成 | 记 `REJECTED`，不重试、不进死信，打 WARN | 跳过，继续发别人的 |
+| `TRANSIENT` | 稍后可能就好了 | 抛给监听容器，重试 3 次后进死信 | 退避重试，停止本轮 |
+
+经 SMTP 发往 Resend 时怎么判（适配器沿 cause 链、`MessagingException` 的 next 链与 Spring `MailSendException` 收集的各封失败逐个看）：
+
+| 看到什么 | 判为 | 依据 |
+|---|---|---|
+| 回复文字含 `idempotent`（不区分大小写），且含 `concurrent` | `TRANSIENT` | Resend 的 HTTP 错误名 `concurrent_idempotent_requests`：同一个键还在处理中，稍后重试 |
+| 回复文字含 `idempotent` | `ALREADY_ACCEPTED` | Resend 的 HTTP 错误名 `invalid_idempotent_request`：同键不同内容，说明这个键之前被接受过 |
+| SMTP 回复码 4xx（421、450、451、452，含限流） | `TRANSIENT` | RFC 5321：4yz 是临时失败 |
+| SMTP 回复码 530、534、535，或鉴权异常（JavaMail `AuthenticationFailedException`、Spring `MailAuthenticationException`） | `TRANSIENT` | 鉴权失败是配置问题，每封都会失败；判成永久会让提醒邮件把每封都跳过 |
+| 其余 SMTP 回复码 5xx（550、551、553 收件人被拒，552 太大，554 事务失败） | `REJECTED` | RFC 5321：5yz 是永久失败 |
+| 连不上、超时、其他 IO 异常 | `TRANSIENT` | — |
+| 本地就组不出来：收件地址不合法、模板渲染失败 | `REJECTED` | 重试也一样；模板错误要改代码，跳过比卡住整轮好 |
+| 认不出的 | `TRANSIENT` | 保守：安全邮件会进死信，看得见、能重放 |
+
+**拿不准的地方**：Resend 文档只写了 HTTP 接口的 409 与错误名，没写 SMTP 回复码。「同键不同内容」经 SMTP 时回什么码不知道，这里按回复文字里的错误名匹配。上线后在 mini 日志里看到真实回复再核对（runbook 7.x 排查表）；匹配不上时会落到「其余 5xx → REJECTED」或「认不出 → TRANSIENT」，安全邮件分别记一行或进死信，都看得见。
 
 ## 7. 模板
 
@@ -195,19 +224,20 @@ infra    SmtpMailDeliveryAdapter：Thymeleaf 渲染 → MimeMessage（固定的�
 `patra-notification-infra/src/main/resources/db/migration/mail/V{时间戳}__create_mail_delivery.sql`：
 
 ```sql
-CREATE SCHEMA mail;
+CREATE SCHEMA IF NOT EXISTS mail;
 
 CREATE TABLE mail.mail_delivery
 (
     delivery_id UUID                     NOT NULL PRIMARY KEY, -- 幂等键；安全邮件就是 identity 的事件 ID
     template    TEXT                     NOT NULL,             -- 哪一类信（模板名）
-    outcome     TEXT                     NOT NULL CHECK (outcome IN ('SENT', 'LINK_EXPIRED')),
+    outcome     TEXT                     NOT NULL CHECK (outcome IN ('SENT', 'LINK_EXPIRED', 'REJECTED')),
     recorded_at TIMESTAMP WITH TIME ZONE NOT NULL
 );
 ```
 
 - **不存正文、链接、收件地址、用户 ID**：决策 F 不存邮箱副本；表里没有任何个人数据，注销清理也就不用管它。要查「某人有没有收到找回密码的信」：在 identity 日志里按用户找到事件 ID，再按 `delivery_id` 查这张表。
-- 发送失败不进表：失败的事务回滚了；失败看日志与死信队列。
+- 临时失败不进表：那次处理回滚了，看日志与死信队列；永久失败记 `REJECTED`。
+- schema 用 `IF NOT EXISTS`：PAP-146 的两张表也在 `mail` 下，两边的迁移谁先跑都行。
 - 只追加、不更新，没有 `updated_at`，不需要 `set_updated_at()`。
 
 ## 9. 队列、重试与死信
@@ -216,6 +246,7 @@ CREATE TABLE mail.mail_delivery
 - 重试、prefetch、AUTO ack 全用事件模块的默认值，不给邮件单独配容器工厂。考虑过给邮件更长的退避（服务商的抖动常常超过 7 秒），没选：要多一个容器工厂与配置项；死信里的信可以重放，链接类过期就跳过（第 5 节），重放是安全的。代价写在第 15 节。
 - 重试耗尽时 Spring AMQP 的 `RejectAndDontRequeueRecoverer` 打 WARN「Retries exhausted for message …」，带 `messageId`（就是事件 ID）与类型头。消息体超过 50 字节时 `Message.toString()` 不打印正文（spring-amqp 4.1.2 的 `DEFAULT_MAX_BODY_LENGTH`），链接与地址不会进日志；IT 断言这一点。WARN 里的 cause 是 `MailDeliveryFailedException`，只有脱敏后的原因（6.1）。每次发送失败，app 再打一条 WARN（事件 ID、类别、脱敏原因）。命令总线的日志拦截器只打命令类名与异常消息（也是脱敏后的）；`SecurityMail` 的 `toString()` 仍只输出事件 ID 与类别，以防别处打印它。
 - 反序列化失败（类型不在 `trusted-packages` 里、JSON 坏了）：Boot 的重试不区分这类失败，同样重试 3 次后进死信，不拖垮监听（死信 IT 验证）。
+- 还原出来不是安全邮件事件（没有类型头，或类型头是 Jackson 总是信任的 `java.lang.Object` 这类，正文被读成 Map）：监听方法收原始消息、自己转换，判出不是 `SecurityMailEvent` 就抛只带 messageId 与类型头的拒收异常，进死信。不用「方法参数是 sealed 接口、让 Spring 转」的写法：那样 Spring 报「Cannot convert from …」时会把整个正文（收件地址、令牌链接）写进异常消息（独立评审发现，`SecurityMailFlowIT` 复现）。
 
 ## 10. 配置与部署
 
@@ -226,17 +257,15 @@ CREATE TABLE mail.mail_delivery
 
 ## 11. 给 PAP-146 的用法
 
-提醒邮件和安全邮件共用：`MailDeliveryPort`、`OutgoingMail`、渲染器、发送记录、`Resend-Idempotency-Key`。PAP-146 要做的：
+10/31 与 PAP-146 直接对过（编排会话授权）。提醒邮件和安全邮件共用发信端口、`OutgoingMail`、渲染器与幂等键；发送记录各管各的。
 
-1. **模板**：在 `mail/html`、`mail/text` 下加自己的模板，模板名进 `OutgoingMail.template`，变量进 `model`（值非空）。渲染器不认识具体的信。
-2. **幂等键（最重要）**：提醒邮件不是由某个事件触发的，没有现成的事件 ID。`deliveryId` 必须由「这封信是什么」**确定地**算出来，不能每次随机：
-   - 离站逐条：`UUID.nameUUIDFromBytes(("reminder:" + userId + ":" + 类别 + ":" + 这一批里最早那条提醒的 ID).getBytes(UTF_8))`；
-   - 每日汇总：`UUID.nameUUIDFromBytes(("digest:" + userId + ":" + 北京日期).getBytes(UTF_8))`。
-   - 定时任务重跑、重试时算出同一个 ID：先 `MailDeliveryRepository.exists(id)` 跳过已发的，发完在短事务里 `add`。定时任务触发的信不经过 `processed_event`。
-   - 同一个 ID 的内容必须一样（2.5）：正文只依赖这批提醒本身，不依赖发送时刻。
-3. **退订头**：给 `OutgoingMail` 加一个 `headers`（`Map<String, String>`）分量；适配器先写这些头，再写 `Resend-Idempotency-Key`、`Auto-Submitted`、`X-Auto-Response-Suppress`，保证固定头不会被覆盖。本 Issue 不预先加（没有调用方）。
-4. `MailDeliveryOutcome` 按需加值（比如「邮箱未验证不发」），同步改表的 `CHECK`。
-5. 架构测试里声明 mail → inbox、mail → preference 两条边（骨架 spec 5.3）。
+1. **端口**：`MailDeliveryPort#deliver(OutgoingMail)`，同步，正常返回 = 服务商已接受；失败按 6.6 的三类报出。不要在事务里调。
+2. **入参**：模板名加变量，不收渲染好的 HTML。模板放 `mail/html`、`mail/text`，`model` 的值非空；渲染是确定的（2.5）。附加头放 `headers`（`List-Unsubscribe`、`List-Unsubscribe-Post`）。`Message-ID` 端口按投递 ID 固定，不用传。
+3. **幂等键（最重要）**：提醒邮件不是由某个事件触发的，`deliveryId` 必须由「这封信是什么」**确定地**算出来，不能每次随机，例如 `UUID.nameUUIDFromBytes(("digest:" + userId + ":" + 北京日期).getBytes(UTF_8))`。同一个 ID 的内容必须一样：建议冻结的是模型（或能按同一批提醒确定地重算），不冻结渲染好的 HTML（那等于把退订令牌链接与正文摘录存进库）；万一内容变了，Resend 拒绝同键不同内容，端口报 `ALREADY_ACCEPTED`，正好按已发处理。
+4. **发送记录**：端口不写。`mail.mail_delivery` 是安全邮件用例写的；PAP-146 以自己的 `mail.reminder_delivery` 为准，不写 `mail_delivery`，也不经过 `processed_event`。
+5. `layout.html` 原样搬自 identity；PAP-146 会在同一个文件里加可选变量（安全邮件不设，走原来的写法）。
+6. 门户地址：`.env.common` 的 `PATRA_PORTAL_BASE_URL=https://patra.linqibin.dev`（编排会话 10/31 决定，本 Issue 加）；notification 的配置项由 PAP-146 加。
+7. 架构测试里声明 mail → inbox、mail → preference 两条边（骨架 spec 5.3）。
 
 ## 12. 测试（对照 AC）
 
@@ -260,7 +289,7 @@ IT 用 GreenMail 而不是 Mailpit：仓库惯例（`GreenMailSmtpInitializer`�
 
 1. **合并前**：确认 mini 上 `~/.patra/secrets/mail.env` 存在（`ls -l`，0600），内容不用改。
 2. **合并前**：Nacos `patra-notification.yaml` 随后端 PR 由 CD 推送；本机冒烟需要时按 runbook 第 3 步的规则推。
-3. **部署顺序**：notification 先于 identity（PAP-104 契约第「上线顺序」节）：notification 启动时声明 `notification.security-mail` 与绑定；顺序反了不丢信，但 identity 的事件会在登记表里积着、每分钟补投。
+3. **部署顺序**：CD 的顺序是 identity 先于 notification。identity 起来、notification 还没声明 `notification.security-mail` 的几分钟里，安全邮件事件没有队列可投，留在 identity 的登记表，等 notification 起来后由补投任务（PAP-104 登记）送达：不丢信，只是晚到（runbook 5.x）。
 4. **合并后**：RabbitMQ 管理界面 Queues 里有 `notification.security-mail`、`.dlq`；Bindings 有 `identity.events` → `security-mail.*`。
 5. **合并后**：`docker exec patra-notification printenv PATRA_MAIL_HOST` 为 `smtp.resend.com`；`docker exec patra-identity printenv PATRA_MAIL_HOST` 无输出。
 6. **D6 验收**：测试账号走找回密码、换邮箱：收到信；换邮箱时确认信到新地址、变更通知到旧地址；Gmail「显示原始邮件」里没有 `List-Unsubscribe`；`mail.mail_delivery` 每封一行；identity 的 `event_publication` 为空。
@@ -275,7 +304,7 @@ IT 用 GreenMail 而不是 Mailpit：仓库惯例（`GreenMailSmtpInitializer`�
 5. 重试与死信全用事件模块默认值，不给邮件单独的退避（第 9 节）。
 6. 单个监听方法、参数是 sealed 接口；第一个 IT 证明不了就退回 `@RabbitHandler`（6.4）。
 7. 13 类的主题与「不是我怎么办」放领域枚举 `SecurityMailKind`；事件到领域模型的映射在 adapter（只有 adapter 依赖 identity-api）。
-8. 不加门户地址配置、不加 `headers` 分量：本 Issue 没有调用方，用法写在第 11 节给 PAP-146（改判了编排会话拍板 3，理由见第 4 节）。
+8. 不加 notification 的门户地址配置（改判了编排会话拍板 3，理由见第 4 节）；但按编排会话 10/31 的决定在 `.env.common` 加 `PATRA_PORTAL_BASE_URL=https://patra.linqibin.dev`。`headers` 分量与失败三类是 PAP-146 提出、10/31 加上的（第 11 节、6.6）。
 12. 发信失败的异常不挂原始 cause，只带脱敏后的原因（6.1），防止服务商回复里的收件地址经 Spring AMQP 的 WARN 进日志。
 9. `mail.env` 在 notification 块仍是 `required: false`，靠 runbook 核对兜底（第 10 节）。
 10. IT 用 GreenMail，不用 Mailpit（第 12 节）。
@@ -283,7 +312,9 @@ IT 用 GreenMail 而不是 Mailpit：仓库惯例（`GreenMailSmtpInitializer`�
 
 ## 15. 代价与留下的问题
 
-- **Message-ID 与 Date**：JavaMail 每次发送都生成新的 `Message-ID` 和 `Date`。Resend 文档没说这两个头算不算「内容」。算的话，「发出后、记录前崩溃」那次重投会被 409：重试 3 次都失败、进死信，但用户已经收到 1 封，结果仍正确，只是多一条死信。mini 上若在日志里看到 409，改成覆盖 `MimeMessage.updateMessageID()`、固定为 `<事件 ID@发件域名>`。
+- **Date 头与 MIME 分隔线**：`Message-ID` 已按投递 ID 固定，主题与各部分正文逐字相同（IT 验证），但 `Date` 头与 multipart 分隔线每次发送都不同。Resend 文档没说怎么比较「内容」；若比原始邮件，重试会被判同键不同内容，端口报 `ALREADY_ACCEPTED`、按已发记，结果仍正确。
+- **崩溃后晚到的重投**：只为链接而发的信发出后、记录前进程死了，重投时链接已过期，会记 `LINK_EXPIRED`，而用户其实收到了一封。少见，接受；runbook 排查表写了。
+- **SMTP 回复码的对应没在 Resend 上实测**（6.6「拿不准的地方」）。
 - **24 小时窗口**：Resend 只记 24 小时。超过一天的死信重放，或 broker 停了一天以上，通知类的信可能重复送达一封（链接类过期会跳过）。
 - **7 秒的重试**：Resend 抖动超过约 7 秒，这段时间的安全邮件会进死信，要人去重放；本版没有死信告警（决策 E 的代价）。
 - **Mailpit 不认幂等键**：本机崩溃窗口里会收到两封，属预期。
@@ -295,3 +326,31 @@ IT 用 GreenMail 而不是 Mailpit：仓库惯例（`GreenMailSmtpInitializer`�
 - **PAP-142**（`c5eeebcd5`，还没进本基线）：会和本分支同时改 notification 的 app / adapter / infra / boot 构建脚本、`application.yml`、README、runbook、`module-graph.json`。依赖行写法与它一致（`api(project(...-domain))`、`api(project(":patra-tool:patra-tool-cqrs"))`、`api(project(...-app))`），汇合时去重即可。
 - **PAP-143**：同样要给 adapter 加 `spring-boot-starter-amqp`、给 `trusted-packages` 加 interaction 的包，汇合时合并（列表写法便于追加）。
 - **PAP-146**：第 11 节。
+
+## 17. 实施记录（2026-10-31）
+
+### 17.1 与本设计、计划的偏离
+
+| # | 偏离 | 原因 |
+|---|---|---|
+| 1 | 监听从「参数是 sealed 接口、让 Spring 转」改成「收原始消息、自己转」 | 独立评审发现：类型头是 `java.lang.Object` 的消息会被读成 Map，Spring 报错时把整个正文写进日志（`SecurityMailFlowIT` 复现后修复，第 9 节） |
+| 2 | 发信失败分三类、`OutgoingMail` 加 `headers`、Message-ID 固定、结果加 `REJECTED` | PAP-146 要复用发信端口，10/31 直接对齐的契约（6.6、第 11 节）；Message-ID 固定顺带消掉第 15 节原来的一项风险 |
+| 3 | `.env.common` 加 `PATRA_PORTAL_BASE_URL=https://patra.linqibin.dev` | 编排会话 10/31 决定：identity 一直在用 Nacos 默认的 tailnet 地址，公网用户打不开 |
+| 4 | 不信任类型的消息也会重试 3 次再进死信 | Boot 的重试不区分反序列化失败；只多耗约 1 秒，不改 |
+| 5 | 转换器的单测是在监听 IT 驱动下写全分支后补的 | 用变异检查（改键名、调换 IP 与属地）确认 9 个用例会失败 |
+
+### 17.2 独立评审（Opus，只看代码与本 spec）
+
+| 发现 | 等级 | 处理 |
+|---|---|---|
+| 被读成 Map 的正文经「Cannot convert from …」进日志 | 重要 | 已修（偏离 1），先写复现测试（`should_dead_letter_untyped_payload_without_leaking_it`，加 `java.lang.Object` 一例后失败）再修 |
+| 崩溃后晚到的重投把已收到的信记成 `LINK_EXPIRED` | 次要 | 接受，写进第 15 节与 runbook 排查表 |
+| identity 回滚到旧镜像时 `mail.env` 已不在它身上 | 次要 | runbook 7.x 加回滚说明 |
+| 只固定 Message-ID 不能让重发逐字节相同（`Date`、MIME 分隔线） | 次要 | 第 15 节与 runbook 改写；同键不同内容现在判 `ALREADY_ACCEPTED`、按已发记，不再进死信 |
+| 「同键同内容」只测了渲染两次 | 次要 | `should_keep_idempotency_key_when_recording_fails_after_send` 加断言：两封的主题、Message-ID、正文逐字相同 |
+| `mail.env.example` 说代码里没有 Resend 专属的东西 | 次要 | 改成「只有幂等键头」 |
+| spec 第 13 节部署顺序与 runbook 不一致 | 次要 | 改成与 runbook 一致（identity 先于 notification） |
+
+### 17.3 测试与门禁
+
+只跑受影响模块（编排会话 10/31 的规则，全量由编排会话在集成分支跑）：notification 的 domain / app / adapter / infra / api 的 `check`，infra 与 boot 的 `integrationTest`，boot 的 `check`，`patra-identity-api:check`，`patra-tool-launch:test`（Nacos 配置文件与 jar 配置重叠检查），全部通过。改规则之前起的一次全量被中断，已跑完的部分里有 4 个失败都在本分支没碰的模块（`patra-tool-jpa` 的 `JpaAutoConfigurationTest` 高负载超时、`patra-tool-object-storage` / `patra-gateway-boot` / `patra-tool-test` 的集成测试），本机负载当时 190～390。
