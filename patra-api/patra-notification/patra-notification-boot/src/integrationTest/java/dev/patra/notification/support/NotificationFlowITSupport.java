@@ -12,6 +12,7 @@ import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMoc
 import com.github.tomakehurst.wiremock.WireMockServer;
 import dev.patra.notification.infra.config.NotificationITPostgreSQLContainerInitializer;
 import dev.patra.tool.security.test.TestIdentity;
+import dev.patra.tool.test.container.initializer.RabbitMQContainerInitializer;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,13 +31,18 @@ import org.springframework.test.web.servlet.client.RestTestClient;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
-/// 各子域流程测试的共用底座：真实 PostgreSQL、真实的身份断言验签；identity 与 interaction 由 WireMock 扮演，
+/// 各子域流程测试的共用底座：真实 PostgreSQL 与 RabbitMQ（信箱的监听在这里打开）、真实的身份断言验签；identity 与
+/// interaction 由 WireMock 扮演，
 /// 经 Spring Cloud LoadBalancer + SimpleDiscoveryClient 走 `lb://` 这条真实的路。
 /// 写法同 interaction 的 `InteractionFlowITSupport`。
 ///
 /// 子类共用同一个 Spring 上下文。每例前清空全部子域 schema 里的表（从 `pg_tables` 现查，新子域的表自动纳入）。
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-@ContextConfiguration(initializers = NotificationITPostgreSQLContainerInitializer.class)
+@ContextConfiguration(
+    initializers = {
+      NotificationITPostgreSQLContainerInitializer.class,
+      RabbitMQContainerInitializer.class
+    })
 @ActiveProfiles("test")
 @AutoConfigureRestTestClient
 public abstract class NotificationFlowITSupport {
@@ -53,6 +59,7 @@ public abstract class NotificationFlowITSupport {
   @DynamicPropertySource
   static void downstreamInstances(DynamicPropertyRegistry registry) {
     registry.add("spring.cloud.discovery.enabled", () -> "true");
+    registry.add("spring.rabbitmq.listener.simple.auto-startup", () -> "true");
     registry.add(
         "spring.cloud.discovery.client.simple.instances.patra-identity[0].uri", identity::baseUrl);
     registry.add(

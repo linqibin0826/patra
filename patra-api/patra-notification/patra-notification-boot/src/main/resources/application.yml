@@ -27,6 +27,15 @@ patra:
   web:
     error:
       context-prefix: NOTIFICATION
+  events:
+    consumer:
+      # 按消息头 __TypeId__ 还原事件时只认这些包（按包名精确匹配、不含子包；java.lang / java.util 总是信任）
+      trusted-packages:
+        # interaction 的评论与投稿经验事件：信箱队列一个监听类收多种事件（PAP-143）
+        - dev.patra.interaction.api.discussion.event
+        - dev.patra.interaction.api.post.event
+        # identity 的安全邮件事件（PAP-104）
+        - dev.patra.identity.api.account.event
   http-client:
     http-interface:
       groups:
@@ -44,12 +53,6 @@ patra:
     mail:
       # 邮件里时间的显示时区（链接过期时刻、注销到期时刻、安全通知的发生时间）；用户都在国内
       zone: Asia/Shanghai
-  events:
-    consumer:
-      # 监听收原始消息、按消息头 __TypeId__ 还原时只认这些包（按包名精确匹配、不含子包；java.lang / java.util 总是信任）
-      trusted-packages:
-        # identity 的安全邮件事件（PAP-104）
-        - dev.patra.identity.api.account.event
 
 management:
   health:

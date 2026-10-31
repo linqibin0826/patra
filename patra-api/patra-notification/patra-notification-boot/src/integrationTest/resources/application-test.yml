@@ -9,6 +9,11 @@ spring:
     service-registry:
       auto-registration:
         enabled: false
+  # 不起 RabbitMQ 监听：只有流程测试（NotificationFlowITSupport）起了 RabbitMQ 容器并打开它
+  rabbitmq:
+    listener:
+      simple:
+        auto-startup: false
 
 # 测试里不起 XXL-Job 执行器
 xxl:
