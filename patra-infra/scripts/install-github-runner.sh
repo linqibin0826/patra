@@ -17,7 +17,7 @@
 #     升级方式=闲时不带参数重跑本脚本（只更新二进制与 .path/.env，registration 不动）
 #   - 派发任务期间严禁 ./svc.sh stop/start——会杀死执行中的 Worker，job 显示 cancelled；
 #     重启前先 gh run list --status in_progress 确认为空
-#   - runner 离线 >30 天 GitHub 自动删除 registration（2026-08 实际发生）；
+#   - runner 离线 >14 天 GitHub 自动删除 registration（2026-08 实际发生）；
 #     runner-watchdog.yml 每日巡检兜底。重装=先删本地 .runner .credentials .credentials_rsaparams，
 #     再重新取 registration token 跑本脚本
 #   - CD 在本机跑 gradlew（构建原生 arm64 镜像），JAVA_HOME 指向 mise 全局 java。

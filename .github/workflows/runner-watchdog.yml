@@ -1,7 +1,7 @@
 name: Runner Watchdog
 
 # Mac mini runner 每日看门狗：
-#   check-runner（ubuntu）：API 查 macmini runner 是否 online——防「静默离线 30 天
+#   check-runner（ubuntu）：API 查 macmini runner 是否 online——防「静默离线 14 天
 #     被 GitHub 自动注销」（2026-08 实际发生，离线 2 个月 registration 被删）。
 #   canary（macmini）：docker 可用性 / 磁盘余量 / 无 unhealthy 容器——防「在线但不可用」。
 #   巡检失败时由 GitHub 原生通知推给 workflow 提交者（不设自建通知通道）。
