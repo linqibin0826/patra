@@ -1,4 +1,4 @@
-package dev.patra.notification.domain.inbox.model.vo;
+package dev.patra.notification.domain.inbox.model.read;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -27,11 +27,19 @@ class InboxCursorTest {
     assertThat(InboxCursor.parse("")).isNull();
   }
 
-  /// 不是 Base64、段数不对、数字不对、ID 不是正数：422。
+  /// 不是 Base64、段数不对、数字不对、ID 不是正数、时刻早于 1970（库里放不下的极端值）：422。
   @Test
   void should_reject_garbage() {
     for (String raw :
-        new String[] {"abc!", encode("x_y"), encode("1_-5"), encode("1"), encode("1_2_3")}) {
+        new String[] {
+          "abc!",
+          encode("x_y"),
+          encode("1_-5"),
+          encode("1"),
+          encode("1_2_3"),
+          encode("-1_5"),
+          encode("-9223372036854775807_1")
+        }) {
       assertThatThrownBy(() -> InboxCursor.parse(raw))
           .as(raw)
           .isInstanceOf(InvalidInboxRequestException.class);

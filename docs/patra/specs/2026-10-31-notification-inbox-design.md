@@ -270,7 +270,7 @@
 | 编辑先于发表 | 编辑写下 v2 正文与新增 @ 的提醒；发表到时版本 1 比已存低，正文不动，照常给被回复的人、经验作者、发表时 @ 的人写提醒 |
 | 删除先于发表 / 编辑 | 删除留下墓碑；之后的发表、编辑在第 2 步结束 |
 | 删除后又来删除（重投） | 去重挡住；即使事件 ID 不同，墓碑与删除都是幂等的 |
-| 经验删除先于它下面评论的发表 / 编辑 / 删除 | 第 1 步看到对象墓碑就结束 |
+| 经验删除先于它下面评论的发表 / 编辑 | 第 1 步看到对象墓碑就结束（同一经验下评论的删除照常留一行评论墓碑，无害，5 个月后随保留期清掉） |
 | 处理中途失败（库抖动） | 事务回滚，`processed_event` 也回滚；按 1、2、4 秒重试，三次后进 `notification.inbox.dlq` |
 
 ### 7.5 为什么只用一个队列
@@ -327,7 +327,7 @@
 |---|---|
 | `type` | `COMMENT_REPLY`（回复了你的评论）/ `POST_COMMENT`（评论了你的投稿经验）/ `MENTION`（@ 了你）；PAP-144 加有帮助的类型 |
 | `occurredAt` | 排序时间（6.2）。**比现在的 `createdAt` 改了名**：有帮助条目会变，叫「创建时间」不对 |
-| `actor` | 与讨论、投稿经验的作者对象同形；`profileVisible` 为假时 `username`、`avatarUrl` 为空；`actorAnonymous` 为真时恒为空；identity 不认识（已注销）时为空 |
+| `actor` | 与讨论、投稿经验的作者对象同形；`profileVisible` 为假时 `username`、`avatarUrl` 为空；`actorAnonymous` 为真时恒为空；identity 不认识时为空。**已注销的人 identity 给的是占位**：`actor` 不为空，`state` 为 `DELETED`、用户名与昵称为空，门户按 `state` 显示「已注销用户」（同 v0.15） |
 | `subject` | 读时现查（第 9 节）。查不到或 interaction 挂了为空；`type` 用门户的写法 `publication` / `post`；`title` 只有文献有；`journal`、`abbreviation`、`submittedMonth`、`experience` 只有经验有；`mine` = 经验作者是收件人 |
 | `commentId` | 回复与 @ 必有；有帮助点经验时为空（**现在恒非空，PAP-147 注意**） |
 | `excerpt` | 评论纯文本按 PAP-128 渲染：`<@ID>` 换成名字（主页对收件人可见用用户名，否则昵称，不认识写「已注销用户」），压成一行，截到 120 字素，不出半个名字；`subject` 为空或 `available` 为假（文献下线）时为空 |
@@ -469,7 +469,7 @@ UnreadCounts unreadCounts(long recipientId);   // replies、mentions、helpful�
 | 摘录渲染（换名、单行、120 字素、不出半个名字、截了去尾空白） | `ExcerptRendererTest`、`MentionNamesTest` | domain 单元 |
 | 游标编码与解析、非法游标 | `InboxCursorTest` | domain 单元 |
 | 保留期截止 | `InboxRetentionTest` | domain 单元 |
-| 去重、墓碑、版本、编辑先到、对象墓碑（7.4 每行） | `Record*HandlerTest`（mock 端口） + `InboxIngestFlowIT`（真 PG） | app 单元 + boot 集成 |
+| 去重、墓碑、版本、编辑先到、对象墓碑、处理失败回滚进死信（7.4 每行） | `Record*HandlerTest`（mock 端口） + `InboxEventFlowIT`（真 PG 与 RabbitMQ） | app 单元 + boot 集成 |
 | 写入语句：唯一索引、upsert 版本比较、按评论 / 对象删除、游标分页、未读数 | `NotificationRepositoryAdapterIT`、`CommentContentRepositoryAdapterIT`、`InboxReadAdapterIT`、`PresenceRepositoryAdapterIT` | infra 集成 |
 | 304：ETag、`If-None-Match`、两种响应的头、记在站 | `MyNotificationControllerTest`（WebMvc 切片） + `InboxRestFlowIT` | adapter + boot |
 | 列表拼装：降级、匿名、可见性、对象不可用不给摘录 | `InboxQueryServiceTest` | app 单元 |

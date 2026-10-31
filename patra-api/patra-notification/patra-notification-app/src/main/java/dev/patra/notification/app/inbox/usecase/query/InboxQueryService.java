@@ -1,8 +1,8 @@
 package dev.patra.notification.app.inbox.usecase.query;
 
 import dev.patra.notification.domain.inbox.model.enums.InboxTab;
+import dev.patra.notification.domain.inbox.model.read.InboxCursor;
 import dev.patra.notification.domain.inbox.model.read.InboxEntry;
-import dev.patra.notification.domain.inbox.model.vo.InboxCursor;
 import dev.patra.notification.domain.inbox.port.read.InboxReadPort;
 import dev.patra.notification.domain.kernel.exception.IdentityUnavailableException;
 import dev.patra.notification.domain.kernel.exception.InteractionUnavailableException;

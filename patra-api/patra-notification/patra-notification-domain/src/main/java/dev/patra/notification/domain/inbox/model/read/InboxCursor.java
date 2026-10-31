@@ -1,4 +1,4 @@
-package dev.patra.notification.domain.inbox.model.vo;
+package dev.patra.notification.domain.inbox.model.read;
 
 import dev.patra.notification.domain.inbox.exception.InvalidInboxRequestException;
 import java.nio.charset.StandardCharsets;
@@ -45,7 +45,8 @@ public record InboxCursor(Instant occurredAt, long notificationId) {
   ///
   /// @param raw 上一页的 `nextCursor`，可空
   /// @return 游标；第一页为 `null`
-  /// @throws InvalidInboxRequestException 不是本服务编出来的游标
+  /// @throws InvalidInboxRequestException 不是本服务编出来的游标（排序时间早于 1970 的也不是：库里的时刻放不下极端值，
+  ///     不拦下会变成数据库错误）
   public static InboxCursor parse(String raw) {
     if (raw == null || raw.isBlank()) {
       return null;
@@ -58,7 +59,7 @@ public record InboxCursor(Instant occurredAt, long notificationId) {
       }
       long micros = Long.parseLong(parts[0]);
       long id = Long.parseLong(parts[1]);
-      if (id <= 0) {
+      if (micros < 0 || id <= 0) {
         throw invalid();
       }
       return of(Instant.EPOCH.plus(micros, ChronoUnit.MICROS), id);

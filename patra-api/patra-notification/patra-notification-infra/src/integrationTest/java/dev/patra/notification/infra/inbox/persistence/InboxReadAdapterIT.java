@@ -6,9 +6,9 @@ import static dev.patra.notification.domain.inbox.model.read.NotificationType.PO
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.tuple;
 
+import dev.patra.notification.domain.inbox.model.read.InboxCursor;
 import dev.patra.notification.domain.inbox.model.read.InboxEntry;
 import dev.patra.notification.domain.inbox.model.read.UnreadCounts;
-import dev.patra.notification.domain.inbox.model.vo.InboxCursor;
 import dev.patra.notification.domain.kernel.model.enums.NotificationCategory;
 import java.time.Instant;
 import java.util.ArrayList;

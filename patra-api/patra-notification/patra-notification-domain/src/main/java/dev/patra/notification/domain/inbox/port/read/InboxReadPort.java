@@ -1,8 +1,8 @@
 package dev.patra.notification.domain.inbox.port.read;
 
+import dev.patra.notification.domain.inbox.model.read.InboxCursor;
 import dev.patra.notification.domain.inbox.model.read.InboxEntry;
 import dev.patra.notification.domain.inbox.model.read.UnreadCounts;
-import dev.patra.notification.domain.inbox.model.vo.InboxCursor;
 import dev.patra.notification.domain.kernel.model.enums.NotificationCategory;
 import java.util.List;
 

@@ -126,7 +126,7 @@ Expected: 编译失败（类不存在）
 ### Task 3: 信箱的读模型、游标、保留期、事件与端口
 
 **Files:**
-- Create: `.../domain/inbox/model/vo/InboxCursor.java`、`NotificationDraft.java`
+- Create: `.../domain/inbox/model/read/InboxCursor.java`（公开包：读端口签名用它）、`.../model/vo/NotificationDraft.java`
 - Create: `.../domain/inbox/model/read/InboxEntry.java`、`UnreadCounts.java`、`CreatedNotification.java`
 - Create: `.../domain/inbox/policy/InboxRetention.java`
 - Create: `.../domain/inbox/event/UnreadCountsChangedEvent.java`、`NotificationsCreatedEvent.java`

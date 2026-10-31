@@ -15,6 +15,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
+import org.springframework.amqp.core.AmqpAdmin;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -28,7 +29,11 @@ class InboxEventFlowIT extends NotificationFlowITSupport {
   private static final long POST_SUBJECT = 41L;
   private static final Instant AT = Instant.parse("2026-10-31T08:00:00Z");
 
+  /// 信箱的死信队列。
+  private static final String DEAD_LETTERS = "notification.inbox.dlq";
+
   @Autowired private RabbitTemplate rabbit;
+  @Autowired private AmqpAdmin amqpAdmin;
 
   /// 评论发表：被回复的人收到「回复我的」，@ 到的人收到「@ 我的」，正文进快照。
   @Test
@@ -97,6 +102,64 @@ class InboxEventFlowIT extends NotificationFlowITSupport {
             jdbcTemplate.queryForObject(
                 "SELECT type FROM inbox.notification WHERE recipient_id = 7", String.class))
         .isEqualTo("MENTION");
+  }
+
+  /// 编辑先于发表到达：编辑写下第二版正文与新增 @ 的提醒；发表晚到时正文不动，照常补被回复的人与发表时 @ 的人。
+  @Test
+  void should_notify_reply_when_publish_arrives_after_edit() {
+    send(CommentEdited.ROUTING_KEY, edited(UUID.randomUUID(), 500L, 2, "第二版", List.of(7L)));
+    awaitRows(1);
+
+    send(CommentPublished.ROUTING_KEY, published(UUID.randomUUID(), 500L, 40L, "谢谢 <@4>"));
+
+    awaitRows(3);
+    assertThat(
+            jdbcTemplate.queryForList(
+                "SELECT recipient_id || ':' || type FROM inbox.notification ORDER BY recipient_id",
+                String.class))
+        .containsExactly("2:COMMENT_REPLY", "4:MENTION", "7:MENTION");
+    assertThat(
+            jdbcTemplate.queryForObject(
+                "SELECT version || ':' || plain_text FROM inbox.comment WHERE comment_id = 500",
+                String.class))
+        .isEqualTo("2:第二版");
+  }
+
+  /// 处理中途失败：整个事务回滚（去重记录也不留），按 1、2、4 秒重试后进死信队列；修好后重放能正常处理。
+  @Test
+  void should_roll_back_and_dead_letter_when_processing_fails() {
+    jdbcTemplate.execute(
+        "CREATE OR REPLACE FUNCTION public.test_fail_inbox() RETURNS trigger LANGUAGE plpgsql AS"
+            + " $$ BEGIN IF NEW.comment_id = 600 THEN RAISE EXCEPTION 'test failure'; END IF;"
+            + " RETURN NEW; END $$");
+    jdbcTemplate.execute(
+        "CREATE TRIGGER test_fail_inbox BEFORE INSERT ON inbox.notification"
+            + " FOR EACH ROW EXECUTE FUNCTION public.test_fail_inbox()");
+    CommentPublished event = published(UUID.randomUUID(), 600L, 40L, "会失败");
+    try {
+      send(CommentPublished.ROUTING_KEY, event);
+
+      await()
+          .atMost(Duration.ofSeconds(30))
+          .until(() -> amqpAdmin.getQueueInfo(DEAD_LETTERS).getMessageCount() == 1);
+      assertThat(
+              jdbcTemplate.queryForObject(
+                  "SELECT count(*) FROM processed_event WHERE event_id = ?",
+                  Long.class,
+                  event.eventId()))
+          .isZero();
+      assertThat(
+              jdbcTemplate.queryForObject(
+                  "SELECT count(*) FROM inbox.comment WHERE comment_id = 600", Long.class))
+          .isZero();
+    } finally {
+      jdbcTemplate.execute("DROP TRIGGER IF EXISTS test_fail_inbox ON inbox.notification");
+      jdbcTemplate.execute("DROP FUNCTION IF EXISTS public.test_fail_inbox()");
+      amqpAdmin.purgeQueue(DEAD_LETTERS, false);
+    }
+
+    send(CommentPublished.ROUTING_KEY, event);
+    awaitRows(1);
   }
 
   /// 经验删除：它下面的提醒与快照都删掉，之后它下面评论的发表不生成提醒。
