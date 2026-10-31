@@ -22,14 +22,19 @@ Patra **学习站**：借 Patra 这个真实项目学后端，四档难度（入
 
 ## 设计系统来源
 
-源头是 Claude Design 画布 `e2bb7c08`（Tokens 页），v0.17 按「花园」方向画板替换。落地分工：
+源头是 PAP-156 hi-fi 画布（花园方向，`project/learn.css` 顶部 `:root`），设计简报 `docs/design-briefs/v0.17/learn-site.md`。落地分工：
 
-- **中性 / 语义色**在 `src/app/globals.css` 的 `@theme` token（每个 token 必须真被 utility 消费，防死类）；
-- **字体**：正文用系统字体（西文 `system-ui`，中文系统黑体 `"PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC"`，与 portal 同一组）；代码用 JetBrains Mono，随 npm 包 `@fontsource-variable/jetbrains-mono` 安装、由 `layout.tsx` 引入。构建时不联网下载字体，所以能用 Next 16 默认的 Turbopack（它遇到任何一个字体请求失败都会让构建失败）。不要用 `next/font/google` 引入字体，也不要加中文网页字体：每个中文字族有 101 个切片，首次访问每页要多下载约 1 MB（`fonts.test.ts` 兜底）。
+- **颜色、字号、圆角、阴影、缓动**在 `src/app/globals.css` 的 `@theme` token（每个 token 必须真被 utility 消费，防死类；用到 `learn.css` 里还没落的再补）；
+- **动效时长与缓动**由 GSAP 用，定义在 `src/teaching/motion.ts`（160 / 280 / 560 ms）；不跟随系统「减少动态效果」（决策 D）；
+- **字体**（决策 G）：标题 `font-display`、正文 `font-body` 首选 Source Serif 4（西文与数字），中文落到系统宋体 / 系统黑体；控件 `font-ui` 用系统 UI 字体；代码 `font-mono` 用 JetBrains Mono。两个西文字体随 npm 包 `@fontsource-variable/source-serif-4`、`@fontsource-variable/jetbrains-mono` 安装、由 `layout.tsx` 引入。构建时不联网下载字体，所以能用 Next 16 默认的 Turbopack（它遇到任何一个字体请求失败都会让构建失败）。不要用 `next/font/google` 引入字体，也不要加中文网页字体：每个中文字族有 101 个切片，首次访问每页要多下载约 1 MB（`fonts.test.ts` 兜底）。
+
+## 教学组件
+
+条目里的交互全部来自 `src/teaching/`（决策 D），写法文档是同目录的 `README.md`（写内容只读它），设计见工程 spec `docs/patra/specs/2026-10-31-learn-teaching-components-design.md`。加组件：`registry.ts` 登记 zod schema → 写实现与 jsdom 组件测试 → `mdx-components.tsx` 注册 → README 加一节带 mdx 示例（`readme.test.ts` 会跑它）。图示类组件只收数据（节点、边、步骤、状态），布局与动效在组件里算。
 
 ## 测试与命令
 
-- **`pnpm test` 是内容防线**：`src/lib/content/content.test.ts` 读真实 `content/` 跑全部规则，必须零问题；失败时列出每条问题的规则 id、文件与修法。写内容后跑它，不用改测试。各规则的单测在 `src/lib/content/*.test.ts`，纯逻辑、node 环境。
+- **`pnpm test` 是内容防线**：`src/lib/content/content.test.ts` 读真实 `content/` 跑全部规则，必须零问题；失败时列出每条问题的规则 id、文件与修法。写内容后跑它，不用改测试。各规则的单测在 `src/lib/content/*.test.ts`，纯逻辑、node 环境；教学组件的 `*.test.tsx` 在文件头切到 jsdom。
 - **`pnpm content:check-file <路径…>`**：只跑单篇规则（不查文件名与前置 / 路线 / 主题），给维护技能的条目模板用。
 - **`pnpm -s content:report`**：体检报告 JSON（全部问题 + 每个代码引用钉住之后的状态），要在完整克隆里跑；维护技能的体检只读它。
 - **e2e 只在本地跑，不进 CI**：`pnpm test:e2e`（Playwright smoke）。本机 QQ 客户端占用 `127.0.0.1:4001`（仅 IPv4），故 e2e 基座独占 **4010** 口（见 `playwright.config.ts` 注释），生产端口 4001 不变。

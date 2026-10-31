@@ -42,9 +42,34 @@
 4. **掌握度做成受控组件，不进登记表**：`Mastery` 只负责三档卡片、选中上浮、「记下了」提示 2.6 秒消失与取消标记，值与上次标记时间由页面传入、变化回调给页面；浏览器存储由 PAP-162 实现。
 5. **逐步动画的节点排成一行**（2～5 个），不支持二维布局：画板只有一行，一步只变一件事时一行足够；需要二维关系用 `Structure`。
 6. **`Params` 用 case 表而不是公式**：每个 case 是对控件取值的部分匹配，第一个匹配生效，最后一个必须是兜底。不支持算术（画板里「一小时重发 n 次」改写成「每 {interval} 重发一次」），避免在条目里写代码。
+7. **`Params` 可选先预测**：写了 `guess` 时控件先锁住，答完或「不猜，直接试」才能动（教学写法第 6 条「先问读者预测，再让他拖」）。
+8. **结构图的「发一条」自动走完几跳**（每跳 800 ms）：几跳只是一条消息的路径，画板也是自动走；需要读者逐步推进、插「你猜」的机制用 `Stepper`。
+9. **判对色 token 叫 `correct`**（画布叫 `--right`），见第 4 节。
 
-## 4. 对其他交付物的影响
+## 4. 实现
+
+| 文件（`patra-learn/src/teaching/`） | 内容 |
+|---|---|
+| `registry.ts` / `README.md` | 参数 schema 与写法文档（第 1～3 节） |
+| `diagnose.tsx` `quiz.tsx` `self-check.tsx` | 诊断题、考考自己、复述 / 迁移题 |
+| `structure.tsx` `sequence.tsx` `state-machine.tsx` `stepper.tsx` | 四种图示；共用件在 `diagram.tsx`（画布、节点、连线层、标签、消息块） |
+| `params.tsx` `compare.tsx` `controls.tsx` | 参数组件、对比切换、开关与分段切换 |
+| `callout.tsx` `debug-trail.tsx` `decision-options.tsx` | 排版类组件（`Callout` 无状态，服务端渲染） |
+| `mastery.tsx` | 掌握度（不进登记表） |
+| `ui.tsx` | 外壳、按钮、选项、判定条、说明条、步骤点、结果徽章、行内代码 |
+| `layout.ts` `logic.ts` | 纯函数：网格 / 一行布局、连线端点、箭头、标签位置、文字宽度估算；参数匹配、占位替换、逐步动画推进 |
+| `motion.ts` | GSAP 动效：浮入、弹一下、抖动、滑动（时长 160 / 280 / 560 ms，缓动 power3.out / power2.inOut / back.out(1.6)） |
+
+- **动效**：揭晓、展开、说明更换用 `rise`；状态机当前状态、掌握度选中用 `pop`；点了不会发生的事件、进程崩溃线用 `shake`；消息块位置变化用 FLIP 式 `useSlide`，前进后退走同一条路径，补间中途再变从当前看到的位置接着滑。悬停、按下、开关等小过渡用 CSS transition（缓动 token 与 GSAP 曲线对应）。都不读 `prefers-reduced-motion`。
+- **布局**：图示画布固定 632 px（680 版心减内边距），窄屏横向滚动不撑破页面。结构图与状态机按文字估算方块宽度，列两端对齐、空当均分，让连线标签放得下；一对反向连线沿法向错开，标签分放上下两侧。
+- **token**：画布 `learn.css` 的 `:root` 落进 `globals.css` 的 `@theme`，只放已被组件或页面用到的（防死类）；判对色改名 `correct`，避免 `text-right` 与对齐工具类撞名；排查类型色叫 `amber`。页面（PAP-162）用到其余 token 时从 `learn.css` 补。字体按决策 G：`--font-display` / `--font-body` 首选自托管的 Source Serif 4（`@fontsource-variable/source-serif-4`），中文落到系统宋体 / 黑体；`--font-ui` 系统 UI 字体；`--font-mono` JetBrains Mono。`fonts.test.ts` 按新字体栈改写，三条约束不变（不用 `next/font/google`、不下载中文网页字体、自托管字体排在首位）。
+- **测试**：每个组件按画板状态清单写 jsdom 组件测试（`questions.test.tsx`、`diagrams.test.tsx`、`interactions.test.tsx`，文件头 `// @vitest-environment jsdom`，新增 devDependency `jsdom`、`@testing-library/react`、`@testing-library/dom`）；纯逻辑在 `layout.test.ts`、`logic.test.ts`；README 的每个 mdx 示例由 `readme.test.ts` 跑内容校验。`vitest.config.ts` 的 include 扩到 `.test.tsx`，默认环境仍是 node。
+- **验证**：用一篇包含 README 全部示例的临时条目跑 `pnpm build`，再用 Playwright 在生产构建上逐个点过各组件的状态截图核对，提交前删除临时条目。
+
+## 5. 对其他交付物的影响
 
 维护技能的条目模板（`.claude/skills/patra/skills/learn/templates/*.mdx`）里 `<Diagnose question="…">答案</Diagnose>` 与 `<Transfer prompt="…">参考答案</Transfer>` 按新接口不再合法（缺 `options` / `answer` / `ifRight` / `ifWrong`、缺 `points`），模板里「待对齐 PAP-157」的注释也可以换成 README 的组件。由技能的维护方同步（本 Issue 不改技能文件）。
+
+条目页 `src/app/entries/[slug]/page.tsx` 只改了 `Diagnose` 的导入路径；它向诊断题注入的前置现在可以多带一行 `meta`（难度、时长、在哪条路线第几篇），由 PAP-162 按画板填。
 
 PAP-155 的内容规则单测（`mdx-rules.test.ts`、`validate.test.ts`）里的诊断题与复述题字面量已按新参数写全，测的仍是首尾结构；「标签与内容写在同一行」一例改用复述题，因为诊断题不再有子内容。

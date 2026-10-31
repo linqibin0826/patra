@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "@fontsource-variable/jetbrains-mono";
+import "@fontsource-variable/source-serif-4";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -10,7 +11,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="zh-CN">
-      <body className="bg-bg font-sans text-ink antialiased">{children}</body>
+      <body className="bg-ground font-body text-ink-2 antialiased">{children}</body>
     </html>
   );
 }
