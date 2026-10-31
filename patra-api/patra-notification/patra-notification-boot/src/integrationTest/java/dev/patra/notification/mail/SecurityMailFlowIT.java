@@ -26,16 +26,26 @@ import dev.patra.identity.api.account.event.SecurityMailEvent;
 import dev.patra.notification.domain.mail.port.repository.MailDeliveryRepository;
 import dev.patra.tool.test.mail.GreenMailSmtpInitializer;
 import jakarta.mail.Address;
+import jakarta.mail.MessagingException;
+import jakarta.mail.Multipart;
+import jakarta.mail.SendFailedException;
 import jakarta.mail.internet.MimeMessage;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.amqp.core.Message;
+import org.springframework.amqp.core.MessageProperties;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.mail.MailSendException;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.test.context.ContextConfiguration;
@@ -45,6 +55,7 @@ import org.springframework.test.util.AopTestUtils;
 /// 安全邮件端到端：identity 形状的事件进 `notification.security-mail`，经 SMTP（GreenMail）发出，
 /// 记发送记录与已处理事件（spec 第 12 节）。
 @ContextConfiguration(initializers = GreenMailSmtpInitializer.class)
+@ExtendWith(OutputCaptureExtension.class)
 @DisplayName("安全邮件端到端")
 class SecurityMailFlowIT extends SecurityMailITSupport {
 
@@ -79,6 +90,9 @@ class SecurityMailFlowIT extends SecurityMailITSupport {
       assertThat(mail.getHeader("Resend-Idempotency-Key"))
           .as(sample.routingKey())
           .containsExactly(sample.event().eventId().toString());
+      assertThat(mail.getHeader("Message-ID"))
+          .as(sample.routingKey())
+          .containsExactly("<" + sample.event().eventId() + "@patra.local>");
       assertThat(mail.getHeader("List-Unsubscribe")).as(sample.routingKey()).isNull();
       assertThat(mail.getHeader("List-Unsubscribe-Post")).as(sample.routingKey()).isNull();
     }
@@ -151,6 +165,10 @@ class SecurityMailFlowIT extends SecurityMailITSupport {
         .containsExactly(event.eventId().toString());
     assertThat(mails.get(1).getHeader("Resend-Idempotency-Key"))
         .containsExactly(event.eventId().toString());
+    assertThat(mails.get(1).getHeader("Message-ID"))
+        .isEqualTo(mails.get(0).getHeader("Message-ID"));
+    assertThat(mails.get(1).getSubject()).isEqualTo(mails.get(0).getSubject());
+    assertThat(bodyParts(mails.get(1))).isEqualTo(bodyParts(mails.get(0)));
   }
 
   /// SMTP 临时不通：第一次发送失败，按退避重试后发出，只记一行。
@@ -167,6 +185,57 @@ class SecurityMailFlowIT extends SecurityMailITSupport {
     awaitDelivery(event.eventId());
     assertThat(mailsTo("transient@example.com")).hasSize(1);
     verify(mailSender, times(2)).send(any(MimeMessage.class));
+  }
+
+  /// 服务商永久拒收（550）：不重试、不进死信，记 `REJECTED`，只调了一次发信器。
+  @Test
+  void should_record_rejected_recipient_without_retry() {
+    Map<Object, Exception> failed = new LinkedHashMap<>();
+    failed.put(
+        new Object(),
+        new SendFailedException(
+            "Invalid Addresses",
+            new MessagingException(
+                "550 5.1.1 <rejected@example.com>: Recipient address rejected")));
+    doThrow(new MailSendException(failed)).when(mailSender).send(any(MimeMessage.class));
+    PasswordResetMailEvent event = passwordReset("rejected@example.com", LATER);
+
+    publish(event, PasswordResetMailEvent.ROUTING_KEY);
+
+    assertThat(awaitDelivery(event.eventId())).containsEntry("outcome", "REJECTED");
+    assertThat(processedRows(event.eventId())).isEqualTo(1);
+    verify(mailSender, times(1)).send(any(MimeMessage.class));
+    assertThat(rabbitTemplate.receive(DEAD_LETTER_QUEUE, 500)).isNull();
+  }
+
+  /// 没有类型头、类型头写的是 `java.util` / `java.lang` 下的类型（Jackson 总是信任这两个包，`java.lang.Object`
+  /// 会把正文读成 Map）：都进死信，日志里没有收件地址与链接，后面的正常事件照发。
+  /// 例子：在管理界面手动重放死信时默认不带头；别的发布方没用 Jackson 转换器。
+  @Test
+  void should_dead_letter_untyped_payload_without_leaking_it(CapturedOutput output) {
+    PasswordResetMailEvent untyped = passwordReset("untyped@example.com", LATER);
+    PasswordResetMailEvent mapTyped = passwordReset("map-typed@example.com", LATER);
+    PasswordResetMailEvent objectTyped = passwordReset("object-typed@example.com", LATER);
+
+    sendRaw(untyped, null);
+    sendRaw(mapTyped, "java.util.HashMap");
+    sendRaw(objectTyped, "java.lang.Object");
+
+    assertThat(rabbitTemplate.receive(DEAD_LETTER_QUEUE, 15_000)).isNotNull();
+    assertThat(rabbitTemplate.receive(DEAD_LETTER_QUEUE, 15_000)).isNotNull();
+    assertThat(rabbitTemplate.receive(DEAD_LETTER_QUEUE, 15_000)).isNotNull();
+    PasswordResetMailEvent valid = passwordReset("after-poison@example.com", LATER);
+    publish(valid, PasswordResetMailEvent.ROUTING_KEY);
+    awaitDelivery(valid.eventId());
+    assertThat(mailsTo("untyped@example.com")).isEmpty();
+    assertThat(output.getAll())
+        .doesNotContain("untyped@example.com")
+        .doesNotContain("map-typed@example.com")
+        .doesNotContain("object-typed@example.com")
+        .doesNotContain(untyped.resetUrl())
+        .doesNotContain(mapTyped.resetUrl())
+        .doesNotContain(objectTyped.resetUrl())
+        .doesNotContain("token=");
   }
 
   /// 发送记录里没有正文、链接与收件地址。
@@ -198,6 +267,47 @@ class SecurityMailFlowIT extends SecurityMailITSupport {
 
     assertThat(awaitDelivery(event.eventId())).containsEntry("outcome", "LINK_EXPIRED");
     assertThat(mailsTo("expired@example.com")).isEmpty();
+  }
+
+  /// 照 identity 的 JSON 正文发一条消息，但类型头换成 `typeId`（`null` 表示不带类型头）。
+  ///
+  /// @param event 事件
+  /// @param typeId 类型头的值
+  private void sendRaw(PasswordResetMailEvent event, String typeId) {
+    Message message =
+        rabbitTemplate.getMessageConverter().toMessage(event, new MessageProperties());
+    message.getMessageProperties().getHeaders().remove("__TypeId__");
+    if (typeId != null) {
+      message.getMessageProperties().setHeader("__TypeId__", typeId);
+    }
+    message.getMessageProperties().setMessageId(event.eventId().toString());
+    rabbitTemplate.send(SecurityMailEvent.EXCHANGE, PasswordResetMailEvent.ROUTING_KEY, message);
+  }
+
+  /// 一封信的纯文本与 HTML 两部分的内容（不含 MIME 分隔线，那是每次发送随机生成的）。
+  ///
+  /// @param mail 信
+  /// @return 各部分的内容，按出现顺序
+  /// @throws Exception 读不出内容
+  private static List<String> bodyParts(MimeMessage mail) throws Exception {
+    List<String> parts = new ArrayList<>();
+    collectParts(mail.getContent(), parts);
+    return parts;
+  }
+
+  /// 递归取出多部分里每个文本部分的内容。
+  ///
+  /// @param content 内容
+  /// @param parts 收集到的文本
+  /// @throws Exception 读不出内容
+  private static void collectParts(Object content, List<String> parts) throws Exception {
+    if (content instanceof Multipart multipart) {
+      for (int i = 0; i < multipart.getCount(); i++) {
+        collectParts(multipart.getBodyPart(i).getContent(), parts);
+      }
+    } else {
+      parts.add(String.valueOf(content));
+    }
   }
 
   /// GreenMail 收到的、收件人是 `address` 的信。
