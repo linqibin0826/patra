@@ -288,7 +288,7 @@ IT 用 GreenMail 而不是 Mailpit：仓库惯例（`GreenMailSmtpInitializer`�
 
 1. **合并前**：确认 mini 上 `~/.patra/secrets/mail.env` 存在（`ls -l`，0600），内容不用改。
 2. **合并前**：Nacos `patra-notification.yaml` 随后端 PR 由 CD 推送；本机冒烟需要时按 runbook 第 3 步的规则推。
-3. **部署顺序**：CD 的顺序是 identity 先于 notification。identity 起来、notification 还没声明 `notification.security-mail` 的几分钟里，安全邮件事件没有队列可投，留在 identity 的登记表，等 notification 起来后由补投任务（PAP-104 登记）送达：不丢信，只是晚到（runbook 5.x）。
+3. **部署顺序**：CD 先部署 notification、再部署 identity（编排会话 10/31 改，`fd16755c5`）：notification 启动时声明好 `notification.security-mail` 与绑定，identity 的事件一发出就有队列接。补投任务（PAP-104 登记）只兜 RabbitMQ 停机这类情况（runbook 5.x）。
 4. **合并后**：RabbitMQ 管理界面 Queues 里有 `notification.security-mail`、`.dlq`；Bindings 有 `identity.events` → `security-mail.*`。
 5. **合并后**：`docker exec patra-notification printenv PATRA_MAIL_HOST` 为 `smtp.resend.com`；`docker exec patra-identity printenv PATRA_MAIL_HOST` 无输出。
 6. **D6 验收**：测试账号走找回密码、换邮箱：收到信；换邮箱时确认信到新地址、变更通知到旧地址；Gmail「显示原始邮件」里没有 `List-Unsubscribe`；`mail.mail_delivery` 每封一行；identity 的 `event_publication` 为空。
@@ -349,7 +349,7 @@ IT 用 GreenMail 而不是 Mailpit：仓库惯例（`GreenMailSmtpInitializer`�
 | 只固定 Message-ID 不能让重发逐字节相同（`Date`、MIME 分隔线） | 次要 | 第 15 节与 runbook 改写；同键不同内容现在判 `ALREADY_ACCEPTED`、按已发记，不再进死信 |
 | 「同键同内容」只测了渲染两次 | 次要 | `should_keep_idempotency_key_when_recording_fails_after_send` 加断言：两封的主题、Message-ID、正文逐字相同 |
 | `mail.env.example` 说代码里没有 Resend 专属的东西 | 次要 | 改成「只有幂等键头」 |
-| spec 第 13 节部署顺序与 runbook 不一致 | 次要 | 改成与 runbook 一致（identity 先于 notification） |
+| spec 第 13 节部署顺序与 runbook 不一致 | 次要 | 改成与 runbook 一致；之后编排会话把 CD 顺序改成 notification 先于 identity（`fd16755c5`），两处一起改了 |
 
 ### 17.3 测试与门禁
 
