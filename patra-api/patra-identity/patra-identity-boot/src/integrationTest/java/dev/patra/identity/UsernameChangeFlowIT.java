@@ -4,15 +4,15 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.patra.identity.config.IdentityClockITSpringConfig;
 import dev.patra.identity.config.IdentityITPostgreSQLContainerInitializer;
-import dev.patra.identity.config.IdentityMailITSpringConfig;
+import dev.patra.identity.config.IdentitySecurityMailITSpringConfig;
 import dev.patra.tool.core.security.AccountType;
 import dev.patra.tool.core.security.ClientType;
 import dev.patra.tool.core.security.CurrentUser;
 import dev.patra.tool.security.assertion.IdentityAssertionSigner;
 import dev.patra.tool.security.test.TestSigningKey;
 import dev.patra.tool.test.clock.MutableClock;
+import dev.patra.tool.test.container.initializer.RabbitMQContainerInitializer;
 import dev.patra.tool.test.container.initializer.RedisContainerInitializer;
-import dev.patra.tool.test.mail.GreenMailSmtpInitializer;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.net.http.HttpClient;
@@ -50,11 +50,11 @@ import tools.jackson.databind.json.JsonMapper;
     initializers = {
       IdentityITPostgreSQLContainerInitializer.class,
       RedisContainerInitializer.class,
-      GreenMailSmtpInitializer.class
+      RabbitMQContainerInitializer.class
     })
 @ActiveProfiles("test")
 @AutoConfigureRestTestClient
-@Import({IdentityClockITSpringConfig.class, IdentityMailITSpringConfig.class})
+@Import({IdentityClockITSpringConfig.class, IdentitySecurityMailITSpringConfig.class})
 @DisplayName("改名的完整流程")
 class UsernameChangeFlowIT {
 

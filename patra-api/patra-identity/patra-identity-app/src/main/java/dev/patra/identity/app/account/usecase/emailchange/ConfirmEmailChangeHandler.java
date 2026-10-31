@@ -35,8 +35,9 @@ import org.springframework.transaction.support.TransactionOperations;
 ///
 /// 事务里：按哈希查令牌（用途不符 422）→ 锁用户行（非 `ACTIVE` 422：注销中不做写操作）→ 条件消费 →
 /// 新地址这一小时内被别人注册了 409（点链接的人就是新地址的主人，不算泄露）→ 改邮箱并写验证时间 →
-/// 批量作废令牌（旧地址的验证、重设令牌全废）→ 签发 7 天的撤销令牌发往旧地址。事务后先发旧邮箱的通知
-/// （含撤销链接、遮掩过的新地址），再发新邮箱的「已绑定」。会话不动：申请时本人刚再认证过。
+/// 批量作废令牌（旧地址的验证、重设令牌全废）→ 签发 7 天的撤销令牌发往旧地址 → 先登记旧邮箱的通知
+/// （含撤销链接、遮掩过的新地址），再登记新邮箱的「已绑定」（与改邮箱同成同败，PAP-104）。
+/// 会话不动：申请时本人刚再认证过。
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -60,6 +61,9 @@ public class ConfirmEmailChangeHandler
   @Override
   public EmailChanged handle(ConfirmEmailChangeCommand command) {
     EmailTokenSecret secret = parse(command.token());
+    // 解析 UA 与属地是纯计算：放在事务之外
+    ClientOrigin origin =
+        clientOriginResolver.resolve(RequestOrigin.of(command.clientIp(), command.userAgent()));
     Instant now = clock.instant();
     Changed changed =
         Objects.requireNonNull(
@@ -96,25 +100,20 @@ public class ConfirmEmailChangeHandler
                           command.clientIp());
                   UserAccountReadModel account =
                       userReadPort.findAccount(userId).orElseThrow(() -> invalid());
-                  return new Changed(
-                      userId, oldEmail, newEmail, account.displayName(), revert.secret());
+                  emailDelivery.send(
+                      EmailChangedNoticeMail.builder()
+                          .to(oldEmail)
+                          .displayName(account.displayName())
+                          .newEmailMasked(newEmail.masked())
+                          .revertUrl(links.revertEmailChangeUrl(revert.secret()))
+                          .linkExpiresAt(revert.token().getExpiresAt())
+                          .notice(origin.toNotice(now))
+                          .build());
+                  emailDelivery.send(
+                      EmailChangedConfirmationMail.of(
+                          newEmail, account.displayName(), origin.toNotice(now)));
+                  return new Changed(userId, newEmail);
                 }));
-    // 解析放在事务提交之后、发信之前：纯计算，不占事务
-    ClientOrigin origin =
-        clientOriginResolver.resolve(RequestOrigin.of(command.clientIp(), command.userAgent()));
-    emailDelivery.send(
-        EmailChangedNoticeMail.builder()
-            .to(changed.oldEmail())
-            .displayName(changed.displayName())
-            .newEmailMasked(changed.newEmail().masked())
-            .revertUrl(links.revertEmailChangeUrl(changed.revertSecret()))
-            .notice(origin.toNotice(now, EmailChangedNoticeMail.NOT_ME_ADVICE))
-            .build());
-    emailDelivery.send(
-        EmailChangedConfirmationMail.of(
-            changed.newEmail(),
-            changed.displayName(),
-            origin.toNotice(now, EmailChangedConfirmationMail.NOT_ME_ADVICE)));
     log.info("邮箱已更改: userId={}", changed.userId());
     return EmailChanged.of(changed.newEmail().value(), now);
   }
@@ -140,14 +139,6 @@ public class ConfirmEmailChangeHandler
   /// 事务里的结果。
   ///
   /// @param userId 用户 ID
-  /// @param oldEmail 旧邮箱
   /// @param newEmail 新邮箱
-  /// @param displayName 昵称
-  /// @param revertSecret 撤销令牌的原文
-  private record Changed(
-      long userId,
-      EmailAddress oldEmail,
-      EmailAddress newEmail,
-      String displayName,
-      EmailTokenSecret revertSecret) {}
+  private record Changed(long userId, EmailAddress newEmail) {}
 }

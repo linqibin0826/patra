@@ -3,14 +3,14 @@ package dev.patra.identity;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.patra.identity.config.IdentityITPostgreSQLContainerInitializer;
-import dev.patra.identity.config.IdentityMailITSpringConfig;
+import dev.patra.identity.config.IdentitySecurityMailITSpringConfig;
 import dev.patra.identity.infra.session.store.SessionToken;
 import dev.patra.tool.core.security.AccountType;
 import dev.patra.tool.core.security.ClientType;
 import dev.patra.tool.core.security.CurrentUser;
 import dev.patra.tool.security.test.TestIdentity;
+import dev.patra.tool.test.container.initializer.RabbitMQContainerInitializer;
 import dev.patra.tool.test.container.initializer.RedisContainerInitializer;
-import dev.patra.tool.test.mail.GreenMailSmtpInitializer;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -43,10 +43,10 @@ import tools.jackson.databind.json.JsonMapper;
     initializers = {
       IdentityITPostgreSQLContainerInitializer.class,
       RedisContainerInitializer.class,
-      GreenMailSmtpInitializer.class
+      RabbitMQContainerInitializer.class
     })
 @ActiveProfiles("test")
-@Import(IdentityMailITSpringConfig.class)
+@Import(IdentitySecurityMailITSpringConfig.class)
 @AutoConfigureRestTestClient
 @ExtendWith(OutputCaptureExtension.class)
 @DisplayName("前台用户会话的完整流程")

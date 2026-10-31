@@ -43,8 +43,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.support.TransactionOperations;
 
 /// 改密码：每次都输当前密码（不走再认证窗口）；新密码按注册规则且不能与当前相同；
-/// 事务里换哈希、按用户批量作废令牌、撤销其余会话并记 `PASSWORD_CHANGED`、最后本机换令牌（刷新 `auth_at`）；
-/// 事务提交后发「密码已修改」。
+/// 事务里换哈希、按用户批量作废令牌、撤销其余会话并记 `PASSWORD_CHANGED`、登记「密码已修改」（与改密码同成同败，
+/// PAP-104）、最后本机换令牌（刷新 `auth_at`）。
 ///
 /// 当前密码的校验和登录共用失败限制：错是 401 + `PASSWORD_MISMATCH`，锁定 429。校验在锁外（Argon2 不占行锁），
 /// 锁内再比一次凭据哈希还是不是校验过的那个：两次并发改密码只有先到的生效，后到的 401。
@@ -98,6 +98,9 @@ public class ChangePasswordHandler
       throw new InvalidUserFieldsException(List.of(UserFieldViolations.newPasswordUnchanged()));
     }
     PasswordHash hash = passwordHashing.hash(newPassword);
+    // 解析 UA 与属地是纯计算：放在事务之外
+    ClientOrigin origin =
+        clientOriginResolver.resolve(RequestOrigin.of(command.clientIp(), command.userAgent()));
     Instant now = clock.instant();
     Changed changed =
         Objects.requireNonNull(
@@ -126,6 +129,9 @@ public class ChangePasswordHandler
                       userReadPort
                           .findAccount(userId)
                           .orElseThrow(AuthenticationRequiredException::new);
+                  // 登记是一次写库、可能失败，放在换令牌之前
+                  emailDelivery.send(
+                      PasswordChangedMail.of(email, account.displayName(), origin.toNotice(now)));
                   // 换令牌放在事务最后一步：之前任何一步失败都不碰旧令牌，用户还能在原会话里重试
                   // 改密码每次都换（宽限期为零）：输过当前密码就是一次再认证，旧令牌必须作废
                   String token =
@@ -135,14 +141,6 @@ public class ChangePasswordHandler
                           .orElseThrow(AuthenticationRequiredException::new);
                   return new Changed(token, account, revoked.size());
                 }));
-    // 解析放在事务提交之后、发信之前：纯计算，不占事务
-    ClientOrigin origin =
-        clientOriginResolver.resolve(RequestOrigin.of(command.clientIp(), command.userAgent()));
-    emailDelivery.send(
-        PasswordChangedMail.of(
-            email,
-            changed.account().displayName(),
-            origin.toNotice(now, PasswordChangedMail.NOT_ME_ADVICE)));
     log.info(
         "前台用户已改密码: userId={}, sessionId={}, revokedSessions={}",
         userId,

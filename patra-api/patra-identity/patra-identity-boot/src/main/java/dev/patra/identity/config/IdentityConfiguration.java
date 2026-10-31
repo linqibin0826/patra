@@ -14,7 +14,6 @@ import dev.patra.identity.domain.account.policy.UsernameChangePolicy;
 import dev.patra.identity.domain.account.policy.UsernamePolicy;
 import dev.patra.identity.domain.account.port.geolocation.IpGeolocationPort;
 import dev.patra.identity.domain.account.port.hashing.PasswordHashingPort;
-import dev.patra.identity.domain.account.port.mail.EmailDeliveryPort;
 import dev.patra.identity.domain.account.port.password.CommonPasswordPort;
 import dev.patra.identity.domain.account.port.repository.EmailTokenRepository;
 import dev.patra.identity.domain.account.port.useragent.UserAgentParsingPort;
@@ -31,8 +30,6 @@ import dev.patra.identity.domain.session.service.SessionIssuer;
 import dev.patra.identity.domain.session.service.SessionTerminator;
 import dev.patra.identity.infra.account.avatar.AvatarStorageProperties;
 import dev.patra.identity.infra.account.hashing.PasswordHashingAdapter;
-import dev.patra.identity.infra.account.mail.SmtpEmailDeliveryAdapter;
-import dev.patra.identity.infra.account.mail.ThymeleafMailRenderer;
 import dev.patra.identity.infra.session.store.RedisSessionStore;
 import dev.patra.tool.core.security.AccountType;
 import dev.patra.tool.core.security.ClientType;
@@ -46,10 +43,10 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.core.StringRedisTemplate;
-import org.springframework.mail.javamail.JavaMailSender;
 
 /// identity 的装配：把配置项变成领域层的规则对象，创建密码哈希适配器、会话策略、Redis 会话存储、签发领域服务、
-/// 邮件链接规则、重发限流规则、令牌签发服务、模板渲染器与 SMTP 发信端口，以及再认证、找回密码、改邮箱的规则与守卫。
+/// 邮件链接规则、重发限流规则、令牌签发服务，以及再认证、找回密码、改邮箱的规则与守卫。安全邮件的投递端口由 infra 的
+/// `OutboxEmailDeliveryAdapter` 自行注册，外送配置在 `IdentityEventsConfiguration`（PAP-104）。
 @Configuration(proxyBeanMethods = false)
 @EnableConfigurationProperties({
   IdentityProperties.class,
@@ -57,9 +54,6 @@ import org.springframework.mail.javamail.JavaMailSender;
   AvatarStorageProperties.class
 })
 public class IdentityConfiguration {
-
-  /// 同时发送的邮件上限：一次 SMTP 会话几百毫秒，上限只防突发把连接打满。
-  static final int MAIL_MAX_CONCURRENCY = 4;
 
   /// 登录失败限制的参数来源：每次调用都按配置的当前值构造，配置刷新后下一次登录即用上新值。
   ///
@@ -119,7 +113,7 @@ public class IdentityConfiguration {
     return new ProfilePolicy(displayNamePolicy);
   }
 
-  /// 公开主页的展示规则：加入时间按安全通知邮件的同一个展示时区换算到月。
+  /// 公开主页的展示规则：加入时间按 `patra.identity.mail.zone` 的时区换算到月。
   ///
   /// @param properties identity 配置
   /// @return 规则
@@ -246,29 +240,6 @@ public class IdentityConfiguration {
   @Bean
   public EmailTokenIssuer emailTokenIssuer(EmailTokenRepository tokens, Clock clock) {
     return new EmailTokenIssuer(tokens, clock, new SecureRandom());
-  }
-
-  /// 邮件模板渲染器，按配置的时区显示安全通知里的时间。
-  ///
-  /// @param links 链接规则
-  /// @param properties 配置
-  /// @return 渲染器
-  @Bean
-  public ThymeleafMailRenderer mailRenderer(MailLinkPolicy links, IdentityProperties properties) {
-    return new ThymeleafMailRenderer(links, ZoneId.of(properties.mail().zone()));
-  }
-
-  /// 邮件发送端口：SMTP 异步发信，自带虚拟线程执行器。发件人不是合法地址时启动失败。
-  ///
-  /// @param mailSender Boot 按 `spring.mail.*` 装配的发信器
-  /// @param renderer 渲染器
-  /// @param properties 配置
-  /// @return 端口
-  @Bean
-  public EmailDeliveryPort emailDeliveryPort(
-      JavaMailSender mailSender, ThymeleafMailRenderer renderer, IdentityProperties properties) {
-    return SmtpEmailDeliveryAdapter.async(
-        mailSender, renderer, properties.mail().from(), MAIL_MAX_CONCURRENCY);
   }
 
   /// 再认证规则：窗口不是正数时启动失败。

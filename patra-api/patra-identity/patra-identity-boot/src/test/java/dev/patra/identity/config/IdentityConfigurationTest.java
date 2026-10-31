@@ -31,8 +31,6 @@ import dev.patra.identity.domain.session.port.store.SessionStorePort;
 import dev.patra.identity.domain.session.service.ReauthenticationGuard;
 import dev.patra.identity.domain.session.service.SessionIssuer;
 import dev.patra.identity.domain.session.service.SessionTerminator;
-import dev.patra.identity.infra.account.mail.SmtpEmailDeliveryAdapter;
-import dev.patra.identity.infra.account.mail.ThymeleafMailRenderer;
 import dev.patra.identity.infra.session.store.RedisSessionStore;
 import dev.patra.tool.core.security.ClientType;
 import dev.patra.tool.core.security.CurrentUserPort;
@@ -47,7 +45,6 @@ import org.springframework.boot.test.context.assertj.AssertableApplicationContex
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.core.ResolvableType;
 import org.springframework.data.redis.core.StringRedisTemplate;
-import org.springframework.mail.javamail.JavaMailSender;
 
 /// IdentityConfiguration 单元测试。
 ///
@@ -78,7 +75,6 @@ class IdentityConfigurationTest {
         .withBean(SessionStorePort.class, () -> mock(SessionStorePort.class))
         .withBean(CurrentUserPort.class, () -> mock(CurrentUserPort.class))
         .withBean(EmailTokenRepository.class, () -> mock(EmailTokenRepository.class))
-        .withBean(JavaMailSender.class, () -> mock(JavaMailSender.class))
         .withBean(UserAgentParsingPort.class, () -> mock(UserAgentParsingPort.class))
         .withBean(IpGeolocationPort.class, () -> mock(IpGeolocationPort.class));
   }
@@ -233,7 +229,8 @@ class IdentityConfigurationTest {
   }
 
   @Test
-  @DisplayName("邮件相关的默认值：冷却 60 秒、5 / 10 / 30；链接指向默认门户地址；签发服务、渲染器、发信端口都是 Bean")
+  @DisplayName(
+      "邮件相关的默认值：冷却 60 秒、5 / 10 / 30；链接指向默认门户地址；签发服务是 Bean；发信端口不在这里装配（infra 的出站适配器自行注册，PAP-104）")
   void should_bind_mail_defaults() {
     runner.run(
         context -> {
@@ -248,9 +245,7 @@ class IdentityConfigurationTest {
           assertThat(links.securitySettingsUrl())
               .isEqualTo("http://linqibins-mac-mini:4000/settings/security");
           assertThat(context).hasSingleBean(EmailTokenIssuer.class);
-          assertThat(context).hasSingleBean(ThymeleafMailRenderer.class);
-          assertThat(context.getBean(EmailDeliveryPort.class))
-              .isInstanceOf(SmtpEmailDeliveryAdapter.class);
+          assertThat(context).doesNotHaveBean(EmailDeliveryPort.class);
         });
   }
 
@@ -275,7 +270,7 @@ class IdentityConfigurationTest {
   }
 
   @Test
-  @DisplayName("重发上限不是正数、门户地址不是绝对 http 地址、发件人不是地址：启动失败")
+  @DisplayName("重发上限不是正数、门户地址不是绝对 http 地址：启动失败")
   void should_fail_on_invalid_mail_configuration() {
     runner
         .withPropertyValues("patra.identity.mail.resend.per-account-hourly=0")
@@ -285,9 +280,6 @@ class IdentityConfigurationTest {
         .run(context -> assertThat(context).hasFailed());
     runner
         .withPropertyValues("patra.identity.mail.links.base-url=patra.example")
-        .run(context -> assertThat(context).hasFailed());
-    runner
-        .withPropertyValues("patra.identity.mail.from=nobody")
         .run(context -> assertThat(context).hasFailed());
   }
 

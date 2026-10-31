@@ -3,9 +3,9 @@ package dev.patra.identity;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.patra.identity.config.IdentityITPostgreSQLContainerInitializer;
-import dev.patra.identity.config.IdentityMailITSpringConfig;
+import dev.patra.identity.config.IdentitySecurityMailITSpringConfig;
+import dev.patra.tool.test.container.initializer.RabbitMQContainerInitializer;
 import dev.patra.tool.test.container.initializer.RedisContainerInitializer;
-import dev.patra.tool.test.mail.GreenMailSmtpInitializer;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -23,10 +23,10 @@ import org.springframework.test.context.ContextConfiguration;
     initializers = {
       IdentityITPostgreSQLContainerInitializer.class,
       RedisContainerInitializer.class,
-      GreenMailSmtpInitializer.class
+      RabbitMQContainerInitializer.class
     })
 @ActiveProfiles("test")
-@Import(IdentityMailITSpringConfig.class)
+@Import(IdentitySecurityMailITSpringConfig.class)
 @DisplayName("identity 应用启动")
 class PatraIdentityApplicationIT {
 
@@ -53,6 +53,18 @@ class PatraIdentityApplicationIT {
             "idn_user_profile",
             "idn_user_profile_link",
             "idn_user_research_interest");
+  }
+
+  @Test
+  @DisplayName("Flyway 建好事件发布登记表 event_publication（表名由 Modulith 固定，不加 idn_ 前缀）")
+  void should_create_event_publication_table() {
+    List<String> tables =
+        jdbcTemplate.queryForList(
+            "SELECT table_name FROM information_schema.tables "
+                + "WHERE table_schema = 'public' AND table_name = 'event_publication'",
+            String.class);
+
+    assertThat(tables).containsExactly("event_publication");
   }
 
   @Test

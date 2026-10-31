@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
@@ -32,9 +33,11 @@ import dev.patra.identity.domain.account.port.repository.UserProfileRepository;
 import dev.patra.identity.domain.account.port.repository.UserRepository;
 import dev.patra.identity.domain.session.model.enums.LoginEndReason;
 import dev.patra.identity.domain.session.service.SessionTerminator;
+import dev.patra.tool.test.transaction.RecordingTransactions;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.LongStream;
@@ -43,9 +46,8 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InOrder;
-import org.springframework.transaction.support.TransactionOperations;
 
-/// ExecuteDueAccountDeletionsHandler 单元测试：匿名化清单、锁内复核、单个失败不影响其他、键集翻页、发信。
+/// ExecuteDueAccountDeletionsHandler 单元测试：匿名化清单、锁内复核、单个失败不影响其他、键集翻页、「已注销」与匿名化同事务登记。
 @DisplayName("ExecuteDueAccountDeletionsHandler 单元测试")
 class ExecuteDueAccountDeletionsHandlerTest {
 
@@ -61,6 +63,7 @@ class ExecuteDueAccountDeletionsHandlerTest {
   private final AvatarStoragePort avatarStorage = mock(AvatarStoragePort.class);
   private final SessionTerminator sessionTerminator = mock(SessionTerminator.class);
   private final EmailDeliveryPort emailDelivery = mock(EmailDeliveryPort.class);
+  private final List<String> events = new ArrayList<>();
   private final ExecuteDueAccountDeletionsHandler handler =
       new ExecuteDueAccountDeletionsHandler(
           users,
@@ -71,7 +74,7 @@ class ExecuteDueAccountDeletionsHandlerTest {
           avatarStorage,
           sessionTerminator,
           emailDelivery,
-          TransactionOperations.withoutTransaction(),
+          new RecordingTransactions(events),
           Clock.fixed(NOW, ZoneOffset.UTC));
 
   @BeforeEach
@@ -79,12 +82,18 @@ class ExecuteDueAccountDeletionsHandlerTest {
     when(users.findIdsDueForDeletion(eq(NOW), anyLong(), eq(100))).thenReturn(List.of());
     when(users.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
     when(sessionTerminator.terminateAll(anyLong(), any(), any())).thenReturn(List.of());
-    when(emailDelivery.send(any())).thenReturn(true);
+    doAnswer(
+            invocation -> {
+              events.add("send");
+              return null;
+            })
+        .when(emailDelivery)
+        .send(any());
   }
 
   @Test
-  @DisplayName("到期用户：转已注销、删凭据、清资料、删令牌、撤会话，提交后给原邮箱发「已注销」")
-  void should_anonymize_due_user_and_send_completed_mail() {
+  @DisplayName("到期用户：转已注销、删凭据、清资料、删令牌、撤会话，同一事务里给原邮箱登记「已注销」")
+  void should_register_completion_mail_inside_anonymizing_transaction() {
     dueUsers(42L);
     UserProfile profile = UserProfile.create(42L);
     profile.edit(ProfileContent.builder().bio(new Bio("心内科医生")).build());
@@ -107,6 +116,8 @@ class ExecuteDueAccountDeletionsHandlerTest {
     assertThat(completed.to()).isEqualTo(email(42L));
     assertThat(completed.displayName()).isEqualTo("陈宇");
     assertThat(completed.username()).isEqualTo("u-42");
+    assertThat(events)
+        .containsExactly(RecordingTransactions.BEGIN, "send", RecordingTransactions.END);
     assertThat(result).isEqualTo(DeletionRunResult.of(1, 0));
   }
 
@@ -208,13 +219,16 @@ class ExecuteDueAccountDeletionsHandlerTest {
   }
 
   @Test
-  @DisplayName("「已注销」被发信执行器拒收：注销照样算完成")
-  void should_count_completed_even_if_mail_rejected() {
+  @DisplayName("「已注销」登记失败：异常抛出让匿名化一起回滚，计入失败，用户仍在冷静期等下次重试")
+  void should_roll_back_and_count_failure_when_registration_fails() {
     dueUsers(42L);
-    when(emailDelivery.send(any())).thenReturn(false);
+    doThrow(new IllegalStateException("登记表写入失败")).when(emailDelivery).send(any());
 
-    assertThat(handler.handle(ExecuteDueAccountDeletionsCommand.of()))
-        .isEqualTo(DeletionRunResult.of(1, 0));
+    DeletionRunResult result = handler.handle(ExecuteDueAccountDeletionsCommand.of());
+
+    assertThat(result).isEqualTo(DeletionRunResult.of(0, 1));
+    verify(emailDelivery).send(any());
+    assertThat(events).as("事务没有提交").containsExactly(RecordingTransactions.BEGIN);
   }
 
   /// 这些 ID 是第一页的到期用户，各自在冷静期且已到期。

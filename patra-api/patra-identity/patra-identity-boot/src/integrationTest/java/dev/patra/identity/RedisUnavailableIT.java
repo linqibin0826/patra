@@ -3,8 +3,8 @@ package dev.patra.identity;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.patra.identity.config.IdentityITPostgreSQLContainerInitializer;
-import dev.patra.identity.config.IdentityMailITSpringConfig;
-import dev.patra.tool.test.mail.GreenMailSmtpInitializer;
+import dev.patra.identity.config.IdentitySecurityMailITSpringConfig;
+import dev.patra.tool.test.container.initializer.RabbitMQContainerInitializer;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.net.ServerSocket;
@@ -30,9 +30,12 @@ import tools.jackson.databind.json.JsonMapper;
 /// 把 Redis 指向一个没人监听的端口，不去停共享的 Redis 测试容器。
 @SpringBootTest
 @ContextConfiguration(
-    initializers = {IdentityITPostgreSQLContainerInitializer.class, GreenMailSmtpInitializer.class})
+    initializers = {
+      IdentityITPostgreSQLContainerInitializer.class,
+      RabbitMQContainerInitializer.class
+    })
 @ActiveProfiles("test")
-@Import(IdentityMailITSpringConfig.class)
+@Import(IdentitySecurityMailITSpringConfig.class)
 @AutoConfigureRestTestClient
 @DisplayName("Redis 不可用时注册回滚、登录返回 503")
 class RedisUnavailableIT {

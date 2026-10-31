@@ -41,11 +41,18 @@ dependencies {
     // 头像存专用桶
     implementation(project(":patra-tool:patra-tool-object-storage"))
 
+    // 安全邮件改发事件（PAP-104）：事件发布登记 + 外送 RabbitMQ；映射成 -api 里的集成事件
+    implementation(project(":patra-tool:patra-tool-events"))
+    implementation(project(":patra-api:patra-identity:patra-identity-api"))
+
     testImplementation(project(":patra-tool:patra-tool-test"))
     testImplementation(testFixtures(project(":patra-api:patra-identity:patra-identity-infra")))
 
     // 测试里自动注入测试公钥，并能签出带身份的请求头
     testImplementation(testFixtures(project(":patra-tool:patra-tool-security")))
+
+    // 安全邮件经登记表序列化器往返的 IT 要直接用 Modulith 的 EventSerializer（事件模块只在 implementation 里带它）
+    integrationTestImplementation("org.springframework.modulith:spring-modulith-events-core")
 }
 
 // 装配了 ip2region 适配器的测试上下文要有数据文件（PAP-99）：用 infra 按 ip2region.properties 下好的那份，

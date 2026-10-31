@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
@@ -48,10 +49,12 @@ import dev.patra.identity.domain.session.port.throttle.NewDeviceMailThrottlePort
 import dev.patra.identity.domain.session.service.SessionIssuer;
 import dev.patra.tool.core.error.field.FieldViolation;
 import dev.patra.tool.core.security.AccountType;
+import dev.patra.tool.test.transaction.RecordingTransactions;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -145,6 +148,7 @@ class LoginUserHandlerTest {
   private final UserLoginRecordRepository records = mock(UserLoginRecordRepository.class);
   private final NewDeviceMailThrottlePort newDeviceThrottle = mock(NewDeviceMailThrottlePort.class);
   private final EmailDeliveryPort emailDelivery = mock(EmailDeliveryPort.class);
+  private final List<String> events = new ArrayList<>();
   private final LoginUserHandler handler =
       new LoginUserHandler(
           users,
@@ -158,7 +162,7 @@ class LoginUserHandlerTest {
           NEW_DEVICE_POLICY,
           newDeviceThrottle,
           emailDelivery,
-          TransactionOperations.withoutTransaction(),
+          new RecordingTransactions(events),
           Clock.fixed(NOW, ZoneOffset.UTC));
 
   /// 默认放行，用户和凭据都存在。
@@ -557,14 +561,29 @@ class LoginUserHandlerTest {
   }
 
   @Test
-  @DisplayName("没见过的设备：在事务里、建会话之前判定，提交后取限流并发新设备邮件")
-  void should_mail_when_device_not_seen() {
+  @DisplayName("没见过的设备：在事务里、建会话之前判定；提交后在事务外取限流（Redis），放行才另开一个短事务登记新设备邮件")
+  void
+      should_acquire_new_device_throttle_outside_login_transaction_and_register_mail_in_second_transaction() {
     when(passwordHashing.matches(any(), any())).thenReturn(true);
     when(records.existsTrustedDevice(eq(42L), any(), any())).thenReturn(false);
-    when(newDeviceThrottle.acquire(eq(42L), any(), any())).thenReturn(true);
-    when(emailDelivery.send(any())).thenReturn(true);
+    when(newDeviceThrottle.acquire(eq(42L), any(), any()))
+        .thenAnswer(
+            invocation -> {
+              events.add("throttle");
+              return true;
+            });
+    recordSends();
 
     handler.handle(command("chen.yu@example.com", "correct horse", "web", DEVICE));
+
+    assertThat(events)
+        .containsExactly(
+            RecordingTransactions.BEGIN,
+            RecordingTransactions.END,
+            "throttle",
+            RecordingTransactions.BEGIN,
+            "send",
+            RecordingTransactions.END);
 
     verify(newDeviceThrottle, never()).reset(anyLong(), any());
     InOrder order = inOrder(records, sessionIssuer, newDeviceThrottle, emailDelivery);
@@ -582,31 +601,32 @@ class LoginUserHandlerTest {
     assertThat(sent.notice().ipAddress()).isEqualTo("203.0.113.9");
     assertThat(sent.notice().ipLocation()).isEqualTo("澳大利亚");
     assertThat(sent.notice().occurredAt()).isEqualTo(NOW);
-    assertThat(sent.notice().notMeAdvice()).isEqualTo(NewDeviceLoginMail.NOT_ME_ADVICE);
   }
 
   @Test
-  @DisplayName("发信被拒（队列满、已停机）：退还这台设备的冷却，下次登录还能提醒")
-  void should_release_cooldown_when_mail_rejected() {
+  @DisplayName("登记新设备邮件失败（数据库抖动）：登录已提交、照常成功，退还这台设备的冷却，下次登录还能提醒")
+  void should_still_log_in_and_reset_cooldown_when_registration_fails() {
     when(passwordHashing.matches(any(), any())).thenReturn(true);
     when(records.existsTrustedDevice(eq(42L), any(), any())).thenReturn(false);
     when(newDeviceThrottle.acquire(eq(42L), any(), any())).thenReturn(true);
-    when(emailDelivery.send(any())).thenReturn(false);
+    doThrow(new IllegalStateException("登记表写入失败")).when(emailDelivery).send(any());
 
-    handler.handle(command("chen.yu@example.com", "correct horse", "web", DEVICE));
+    AuthenticatedUser result =
+        handler.handle(command("chen.yu@example.com", "correct horse", "web", DEVICE));
 
+    assertThat(result.sessionToken()).isEqualTo("patra_user_x");
     InOrder order = inOrder(emailDelivery, newDeviceThrottle);
     order.verify(emailDelivery).send(any(NewDeviceLoginMail.class));
     order.verify(newDeviceThrottle).reset(42L, new DeviceId(DEVICE));
   }
 
   @Test
-  @DisplayName("发信被拒且退还冷却时 Redis 不可用：登录照常成功")
+  @DisplayName("登记失败且退还冷却时 Redis 不可用：登录照常成功")
   void should_still_log_in_when_cooldown_release_fails() {
     when(passwordHashing.matches(any(), any())).thenReturn(true);
     when(records.existsTrustedDevice(eq(42L), any(), any())).thenReturn(false);
     when(newDeviceThrottle.acquire(eq(42L), any(), any())).thenReturn(true);
-    when(emailDelivery.send(any())).thenReturn(false);
+    doThrow(new IllegalStateException("登记表写入失败")).when(emailDelivery).send(any());
     doThrow(new TemporarilyUnavailableException()).when(newDeviceThrottle).reset(eq(42L), any());
 
     AuthenticatedUser result =
@@ -636,6 +656,7 @@ class LoginUserHandlerTest {
     handler.handle(command("chen.yu@example.com", "correct horse", "web", DEVICE));
 
     verifyNoInteractions(emailDelivery);
+    assertThat(events).containsExactly(RecordingTransactions.BEGIN, RecordingTransactions.END);
   }
 
   @Test
@@ -680,5 +701,16 @@ class LoginUserHandlerTest {
         .clientType(clientType)
         .deviceId(deviceId)
         .build();
+  }
+
+  /// 发信端口把调用记进事件列表。
+  private void recordSends() {
+    doAnswer(
+            invocation -> {
+              events.add("send");
+              return null;
+            })
+        .when(emailDelivery)
+        .send(any());
   }
 }

@@ -3,6 +3,7 @@ package dev.patra.identity.app.account.usecase.deletion;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -26,15 +27,17 @@ import dev.patra.tool.core.security.AuthenticationRequiredException;
 import dev.patra.tool.core.security.ClientType;
 import dev.patra.tool.core.security.CurrentUser;
 import dev.patra.tool.core.security.CurrentUserPort;
+import dev.patra.tool.test.transaction.RecordingTransactions;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
-import org.springframework.transaction.support.TransactionOperations;
 
 /// CancelAccountDeletionHandler 单元测试：冷静期回到正常并发信；本来正常时幂等；封禁、已注销 401。
 @DisplayName("CancelAccountDeletionHandler 单元测试")
@@ -58,6 +61,7 @@ class CancelAccountDeletionHandlerTest {
   private final UserRepository users = mock(UserRepository.class);
   private final UserReadPort userReadPort = mock(UserReadPort.class);
   private final EmailDeliveryPort emailDelivery = mock(EmailDeliveryPort.class);
+  private final List<String> events = new ArrayList<>();
   private final CancelAccountDeletionHandler handler =
       new CancelAccountDeletionHandler(
           currentUserPort,
@@ -67,7 +71,7 @@ class CancelAccountDeletionHandlerTest {
               userAgent -> DeviceProfile.of("Chrome 141 · macOS", DeviceClass.DESKTOP),
               ip -> Optional.empty()),
           emailDelivery,
-          TransactionOperations.withoutTransaction(),
+          new RecordingTransactions(events),
           Clock.fixed(NOW, ZoneOffset.UTC));
 
   @BeforeEach
@@ -75,13 +79,24 @@ class CancelAccountDeletionHandlerTest {
     when(currentUserPort.require()).thenReturn(CURRENT);
     when(users.findByIdForUpdate(42L))
         .thenAnswer(invocation -> Optional.of(user(UserStatus.PENDING_DELETION)));
-    when(users.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+    when(users.save(any()))
+        .thenAnswer(
+            invocation -> {
+              events.add("save");
+              return invocation.getArgument(0);
+            });
     when(userReadPort.findAccount(42L)).thenReturn(Optional.of(ACCOUNT));
-    when(emailDelivery.send(any())).thenReturn(true);
+    doAnswer(
+            invocation -> {
+              events.add("send");
+              return null;
+            })
+        .when(emailDelivery)
+        .send(any());
   }
 
   @Test
-  @DisplayName("冷静期内取消：回到正常、清到期时间，提交后发「已取消」，返回账号信息")
+  @DisplayName("冷静期内取消：回到正常、清到期时间，同一事务里登记「已取消」，返回账号信息")
   void should_cancel_pending_deletion_and_send_mail() {
     UserAccountReadModel result = handler.handle(command());
 
@@ -93,6 +108,8 @@ class CancelAccountDeletionHandlerTest {
     verify(emailDelivery).send(mail.capture());
     assertThat(mail.getValue()).isInstanceOf(AccountDeletionCancelledMail.class);
     assertThat(mail.getValue().to()).isEqualTo(EMAIL);
+    assertThat(events)
+        .containsExactly(RecordingTransactions.BEGIN, "save", "send", RecordingTransactions.END);
     assertThat(result).isEqualTo(ACCOUNT);
   }
 

@@ -1,5 +1,6 @@
 package dev.patra.identity.app.account.usecase.register;
 
+import static dev.patra.identity.app.account.usecase.OutgoingMailMatchers.sameMailAs;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -113,8 +114,12 @@ class RegisterUserHandlerTest {
           .revertEmailChangePath("/revert-email-change")
           .build();
   private static final EmailVerificationMail EXPECTED_MAIL =
-      EmailVerificationMail.of(
-          EMAIL, "chen-yu", LINKS.verifyEmailUrl(SECRET), NOW.plus(Duration.ofHours(24)));
+      EmailVerificationMail.builder()
+          .to(EMAIL)
+          .displayName("chen-yu")
+          .verifyUrl(LINKS.verifyEmailUrl(SECRET))
+          .linkExpiresAt(NOW.plus(Duration.ofHours(24)))
+          .build();
 
   private final UserRepository users = mock(UserRepository.class);
   private final UserProfileRepository profiles = mock(UserProfileRepository.class);
@@ -470,8 +475,8 @@ class RegisterUserHandlerTest {
   }
 
   @Test
-  @DisplayName("注册成功：令牌在事务里签发，提交后先计数（不带 IP）再发信；IP 交给签发；发信端口收到签发返回的邮件")
-  void should_issue_verification_token_inside_transaction_and_send_after_commit() {
+  @DisplayName("注册成功：令牌签发与验证邮件登记都在事务里，提交后再计入重发限流（不带 IP）；IP 交给签发；发信端口收到签发返回的邮件")
+  void should_issue_token_and_register_mail_inside_transaction_then_count_after_commit() {
     AtomicBoolean inTransaction = new AtomicBoolean(false);
     RegisterUserHandler transactional = handler(recording(inTransaction));
     stubHappyPath();
@@ -490,7 +495,7 @@ class RegisterUserHandlerTest {
         .markSent(anyLong(), any());
     doAnswer(
             invocation -> {
-              assertThat(inTransaction).isFalse();
+              assertThat(inTransaction).isTrue();
               return null;
             })
         .when(emailDelivery)
@@ -504,13 +509,13 @@ class RegisterUserHandlerTest {
             .clientIp("203.0.113.9")
             .build());
 
-    InOrder order = inOrder(sessionIssuer, emailTokenIssuer, emailResendThrottle, emailDelivery);
+    InOrder order = inOrder(sessionIssuer, emailTokenIssuer, emailDelivery, emailResendThrottle);
     order.verify(sessionIssuer).issue(eq(42L), any(), any());
     order
         .verify(emailTokenIssuer)
         .issue(eq(EmailTokenPurpose.EMAIL_VERIFY), eq(42L), eq(EMAIL), eq("203.0.113.9"));
+    order.verify(emailDelivery).send(sameMailAs(EXPECTED_MAIL));
     order.verify(emailResendThrottle).markSent(42L, NOW);
-    order.verify(emailDelivery).send(EXPECTED_MAIL);
   }
 
   @Test
@@ -522,7 +527,7 @@ class RegisterUserHandlerTest {
 
     verify(emailTokenIssuer)
         .issue(eq(EmailTokenPurpose.EMAIL_VERIFY), eq(42L), eq(EMAIL), isNull());
-    verify(emailDelivery).send(EXPECTED_MAIL);
+    verify(emailDelivery).send(sameMailAs(EXPECTED_MAIL));
   }
 
   @Test
@@ -537,7 +542,7 @@ class RegisterUserHandlerTest {
         handler.handle(command("chen.yu@example.com", "chen-yu", "correct horse battery"));
 
     assertThat(result.sessionToken()).isEqualTo("patra_user_x");
-    verify(emailDelivery).send(EXPECTED_MAIL);
+    verify(emailDelivery).send(sameMailAs(EXPECTED_MAIL));
   }
 
   @Test

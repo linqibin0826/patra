@@ -253,13 +253,6 @@ public final class User {
     }
   }
 
-  /// 清掉到期前提醒的标记，让下一次提醒任务重发（这封被发信执行器拒收时用）。不在冷静期时什么都不做。
-  public void clearDeletionReminder() {
-    if (status == UserStatus.PENDING_DELETION) {
-      deletionRemindedAt = null;
-    }
-  }
-
   /// 注销是否已到期：冷静期内且到期时间不晚于现在（恰好等于也算）。
   ///
   /// @param now 当前时间

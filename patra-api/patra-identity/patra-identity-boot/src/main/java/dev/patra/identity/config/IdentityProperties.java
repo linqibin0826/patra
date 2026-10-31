@@ -11,7 +11,7 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
 /// @param passwordHashing 密码哈希
 /// @param session 会话策略
 /// @param username 改名规则
-/// @param mail 邮件：发件人、显示时区、令牌保留期、链接、重发限流
+/// @param mail 邮件链接与令牌：显示时区、令牌保留期、链接、重发限流
 /// @param reauth 再认证
 /// @param passwordReset 找回密码的限流
 /// @param emailChange 改邮箱的限流
@@ -67,15 +67,13 @@ public record IdentityProperties(
   /// @param perAccountDaily 每账号每天的申请上限
   public record EmailChange(@DefaultValue("3") int perAccountDaily) {}
 
-  /// 邮件。
+  /// 邮件链接与令牌（identity 不发信，安全邮件改发事件，PAP-104）。
   ///
-  /// @param from 发件人，形如 `Patra <no-reply@example.com>`；随服务商定，mini 由 `mail.env` 覆盖
-  /// @param zone 安全通知里时间的显示时区
+  /// @param zone 显示时区：公开主页的加入时间按它换算到月
   /// @param tokenRetention 过期令牌保留多久后删行
   /// @param links 邮件里站内链接的拼法
   /// @param resend 重发验证邮件的限流
   public record Mail(
-      @DefaultValue("Patra <no-reply@patra.local>") String from,
       @DefaultValue("Asia/Shanghai") String zone,
       @DefaultValue("30d") Duration tokenRetention,
       @DefaultValue Links links,

@@ -2,10 +2,10 @@ package dev.patra.identity;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import dev.patra.identity.api.account.event.NewDeviceLoginMailEvent;
 import dev.patra.identity.infra.session.store.RedisSessionStore;
 import dev.patra.identity.infra.session.store.SessionToken;
 import java.time.Duration;
-import java.util.Arrays;
 import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -31,7 +31,6 @@ class LoginDeviceFlowIT extends IdentityFlowITSupport {
   static final String DEVICE_B = "Zz9_y-8xW7vU6tS5rQ4pO3nM2lK1jI0hG9fE8dC7bAa";
   static final String DEVICE_C = "Cc3_c-3cC3cC3cC3cC3cC3cC3cC3cC3cC3cC3cC3cC3";
   static final String SHENZHEN_IP = "113.92.157.29";
-  static final String NEW_DEVICE_SUBJECT = "你的 Patra 账号在新设备上登录";
 
   @Test
   @DisplayName("注册与登录都把设备名、端、IP、属地、UA 写进登录记录")
@@ -110,7 +109,7 @@ class LoginDeviceFlowIT extends IdentityFlowITSupport {
   }
 
   @Test
-  @DisplayName("新设备邮件：注册时的设备再登录不发；换一台设备登录发一封，写着设备、IP 与属地")
+  @DisplayName("新设备提醒：注册时的设备再登录不登记；换一台设备登录登记一个事件，带设备、IP、属地与安全设置链接")
   void should_mail_on_login_from_new_device_only() {
     String email = "new.device@example.com";
     long userId = userIdOf(registerFrom(email, "new-device", DEVICE_A));
@@ -121,8 +120,11 @@ class LoginDeviceFlowIT extends IdentityFlowITSupport {
     assertThat(redis.hasKey(newDeviceThrottleKey(userId, DEVICE_B))).isTrue();
 
     awaitNewDeviceMails(email, 1);
-    String text = partText(mailFor(email, NEW_DEVICE_SUBJECT), "text/plain");
-    assertThat(text).contains("Chrome 141 · macOS").contains(SHENZHEN_IP).contains("中国 广东 深圳");
+    NewDeviceLoginMailEvent mail = mailEvent(NewDeviceLoginMailEvent.class, email);
+    assertThat(mail.context().device()).isEqualTo("Chrome 141 · macOS");
+    assertThat(mail.context().ipAddress()).isEqualTo(SHENZHEN_IP);
+    assertThat(mail.context().ipLocation()).isEqualTo("中国 广东 深圳");
+    assertThat(mail.securitySettingsUrl()).endsWith("/settings/security");
   }
 
   @Test
@@ -377,17 +379,14 @@ class LoginDeviceFlowIT extends IdentityFlowITSupport {
     return response;
   }
 
-  /// 等到发给某个地址的新设备提醒有 `expected` 封，再确认没有多出来的。发信是异步的：
-  /// 按总封数等会被上一个用例晚到的邮件凑数，所以按收件人与主题等。
+  /// 发给某个地址的新设备提醒事件正好 `expected` 个：先等登记表清空（已登记的都进了捕获队列），再数。
   ///
   /// @param email 收件人
-  /// @param expected 期望的封数
+  /// @param expected 期望的个数
   void awaitNewDeviceMails(String email, long expected) {
-    long deadline = System.nanoTime() + Duration.ofSeconds(5).toNanos();
-    while (newDeviceMailsTo(email) < expected && System.nanoTime() < deadline) {
-      greenMail.waitForIncomingEmail(200, greenMail.getReceivedMessages().length + 1);
-    }
-    assertThat(newDeviceMailsTo(email)).as("发给 %s 的新设备提醒", email).isEqualTo(expected);
+    assertThat(securityMails.all(NewDeviceLoginMailEvent.class, email))
+        .as("发给 %s 的新设备提醒", email)
+        .hasSize((int) expected);
   }
 
   /// 新设备提醒的限流键：被判为新设备时，登录请求里就同步写下它（键名规则同 `NewDeviceMailThrottleAdapter`）。
@@ -397,17 +396,6 @@ class LoginDeviceFlowIT extends IdentityFlowITSupport {
   /// @return 键名
   static String newDeviceThrottleKey(long userId, String deviceId) {
     return "idn:new-device-mail:user:" + userId + ":" + sha256Hex(deviceId).substring(0, 32);
-  }
-
-  /// 发给某个地址的新设备提醒有几封。
-  ///
-  /// @param email 收件人
-  /// @return 封数
-  long newDeviceMailsTo(String email) {
-    return Arrays.stream(greenMail.getReceivedMessages())
-        .filter(mail -> recipients(mail).contains(email))
-        .filter(mail -> NEW_DEVICE_SUBJECT.equals(subjectOf(mail)))
-        .count();
   }
 
   /// 带设备标识登录。

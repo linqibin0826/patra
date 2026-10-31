@@ -3,13 +3,13 @@ package dev.patra.identity;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.patra.identity.config.IdentityITPostgreSQLContainerInitializer;
-import dev.patra.identity.config.IdentityMailITSpringConfig;
+import dev.patra.identity.config.IdentitySecurityMailITSpringConfig;
 import dev.patra.tool.core.security.AccountType;
 import dev.patra.tool.core.security.ClientType;
 import dev.patra.tool.core.security.CurrentUser;
 import dev.patra.tool.security.test.TestIdentity;
+import dev.patra.tool.test.container.initializer.RabbitMQContainerInitializer;
 import dev.patra.tool.test.container.initializer.RedisContainerInitializer;
-import dev.patra.tool.test.mail.GreenMailSmtpInitializer;
 import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -34,10 +34,10 @@ import tools.jackson.databind.node.ObjectNode;
     initializers = {
       IdentityITPostgreSQLContainerInitializer.class,
       RedisContainerInitializer.class,
-      GreenMailSmtpInitializer.class
+      RabbitMQContainerInitializer.class
     })
 @ActiveProfiles("test")
-@Import(IdentityMailITSpringConfig.class)
+@Import(IdentitySecurityMailITSpringConfig.class)
 @AutoConfigureRestTestClient
 @DisplayName("登录与当前用户按四态分流")
 class UserStatusFlowIT {

@@ -2,11 +2,11 @@ package dev.patra.identity;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.icegreen.greenmail.util.GreenMail;
+import dev.patra.identity.api.account.event.EmailVerificationMailEvent;
 import dev.patra.identity.config.IdentityClockITSpringConfig;
 import dev.patra.identity.config.IdentityITPostgreSQLContainerInitializer;
-import dev.patra.identity.config.IdentityMailITSpringConfig;
-import dev.patra.identity.domain.account.model.vo.mail.EmailVerificationMail;
+import dev.patra.identity.config.IdentitySecurityMailITFixture;
+import dev.patra.identity.config.IdentitySecurityMailITSpringConfig;
 import dev.patra.identity.infra.session.store.SessionToken;
 import dev.patra.tool.core.security.AccountType;
 import dev.patra.tool.core.security.ClientType;
@@ -14,12 +14,8 @@ import dev.patra.tool.core.security.CurrentUser;
 import dev.patra.tool.security.assertion.IdentityAssertionSigner;
 import dev.patra.tool.security.test.TestSigningKey;
 import dev.patra.tool.test.clock.MutableClock;
+import dev.patra.tool.test.container.initializer.RabbitMQContainerInitializer;
 import dev.patra.tool.test.container.initializer.RedisContainerInitializer;
-import dev.patra.tool.test.mail.GreenMailSmtpInitializer;
-import jakarta.mail.BodyPart;
-import jakarta.mail.MessagingException;
-import jakarta.mail.internet.MimeMessage;
-import jakarta.mail.internet.MimeMultipart;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.net.http.HttpClient;
@@ -28,7 +24,6 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.Arrays;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
@@ -59,7 +54,7 @@ import org.springframework.web.client.RestClient.RequestHeadersSpec.ConvertibleC
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
-/// 邮箱验证的完整流程：真实的 PostgreSQL、Redis、GreenMail 和安全过滤器链，时钟可拨动。
+/// 邮箱验证的完整流程：真实的 PostgreSQL、Redis、RabbitMQ（捕获队列收验证邮件事件）和安全过滤器链，时钟可拨动。
 ///
 /// 全部请求走裸的 JDK HttpClient：`RestTestClient` 在真实端口上的 Apache 客户端会按 `Retry-After` 自动重试 429，
 /// 60 秒的冷却等于挂死。断言用测试时钟签：identity 验签 `exp` 用的也是这个时钟。
@@ -68,11 +63,11 @@ import tools.jackson.databind.json.JsonMapper;
     initializers = {
       IdentityITPostgreSQLContainerInitializer.class,
       RedisContainerInitializer.class,
-      GreenMailSmtpInitializer.class
+      RabbitMQContainerInitializer.class
     })
 @ActiveProfiles("test")
 @AutoConfigureRestTestClient
-@Import({IdentityClockITSpringConfig.class, IdentityMailITSpringConfig.class})
+@Import({IdentityClockITSpringConfig.class, IdentitySecurityMailITSpringConfig.class})
 @ExtendWith(OutputCaptureExtension.class)
 @DisplayName("邮箱验证的完整流程")
 class EmailVerificationFlowIT {
@@ -87,16 +82,16 @@ class EmailVerificationFlowIT {
   @Autowired private MutableClock clock;
   @Autowired private Environment environment;
 
-  private final GreenMail greenMail = GreenMailSmtpInitializer.getGreenMail();
+  @Autowired private IdentitySecurityMailITFixture securityMails;
 
   @BeforeEach
   void reset() {
     clock.set(T0);
-    GreenMailSmtpInitializer.purge();
+    securityMails.purge();
   }
 
   @Test
-  @DisplayName("注册发一封 multipart/alternative 的验证邮件：链接只来自配置、不来自转发头；响应和日志没有令牌；库里只有哈希")
+  @DisplayName("注册登记一个验证邮件事件：发往注册邮箱，链接只来自配置、不来自转发头；响应和日志没有令牌；库里只有哈希")
   void should_send_verification_mail_on_register_with_links_from_configuration_not_host_header(
       CapturedOutput output) {
     RawResponse registered =
@@ -112,18 +107,12 @@ class EmailVerificationFlowIT {
     assertThat(registered.status()).as(registered.body()).isEqualTo(201);
     long userId = userIdOf(registered);
 
-    assertThat(greenMail.waitForIncomingEmail(5_000, 1)).isTrue();
-    MimeMessage mail = greenMail.getReceivedMessages()[0];
-    assertThat(recipients(mail)).containsExactly("flow.mail@example.com");
-    String text = partText(mail, "text/plain");
-    String html = partText(mail, "text/html");
-    String token = tokenIn(text);
-    assertThat(tokenIn(html)).isEqualTo(token);
+    EmailVerificationMailEvent mail =
+        securityMails.await(EmailVerificationMailEvent.class, "flow.mail@example.com");
+    String token = tokenIn(mail.verifyUrl());
     String expectedPrefix = "http://linqibins-mac-mini:4000/verify-email#token=";
-    assertThat(text).contains(expectedPrefix + token).doesNotContain("evil.example");
-    assertThat(html)
-        .contains("href=\"" + expectedPrefix + token + "\"")
-        .doesNotContain("evil.example");
+    assertThat(mail.verifyUrl()).isEqualTo(expectedPrefix + token).doesNotContain("evil.example");
+    assertThat(mail.linkExpiresAt()).isEqualTo(T0.plus(Duration.ofHours(24)));
     assertThat(registered.body()).doesNotContain(token);
     assertThat(output.getAll()).doesNotContain(token);
     assertThat(
@@ -148,7 +137,7 @@ class EmailVerificationFlowIT {
     RawResponse login = login("flow.verify@example.com");
     String tokenB = sessionTokenOf(login);
     long sessionB = latestSessionIdOf(userId);
-    String token = tokenIn(partText(waitForMail(1), "text/plain"));
+    String token = verificationToken("flow.verify@example.com", 1);
 
     RawResponse verified =
         post("/auth/email/verify", Map.of("token", token), assertionFor(userId, sessionA));
@@ -177,7 +166,7 @@ class EmailVerificationFlowIT {
     long userId = userIdOf(registered);
     long sessionId = latestSessionIdOf(userId);
     HttpHeaders assertion = assertionFor(userId, sessionId);
-    String first = tokenIn(partText(waitForMail(1), "text/plain"));
+    String first = verificationToken("flow.resend@example.com", 1);
 
     RawResponse tooSoon = resend(assertion);
     assertThat(tooSoon.status()).isEqualTo(429);
@@ -189,7 +178,7 @@ class EmailVerificationFlowIT {
     assertThat(second.status()).as(second.body()).isEqualTo(202);
     assertThat(JSON.readTree(second.body()).get("nextResendAt").asString())
         .isEqualTo(T0.plusSeconds(121).toString());
-    String replacement = tokenIn(partText(waitForMail(2), "text/plain"));
+    String replacement = verificationToken("flow.resend@example.com", 2);
     assertThat(replacement).isNotEqualTo(first);
     assertThat(post("/auth/email/verify", Map.of("token", first), new HttpHeaders()).status())
         .isEqualTo(422);
@@ -238,7 +227,7 @@ class EmailVerificationFlowIT {
             "select id from idn_user_login_record where user_id = ? order by id",
             Long.class,
             aliceId);
-    String aliceToken = tokenIn(partText(waitForMail(1), "text/plain"));
+    String aliceToken = verificationToken("flow.alice@example.com", 1);
     RawResponse bob = register("flow.bob@example.com", "u-flow-bob");
     String bobSession = sessionTokenOf(bob);
 
@@ -260,7 +249,7 @@ class EmailVerificationFlowIT {
     RawResponse verifiedUser = register("flow.done@example.com", "u-flow-done");
     long doneId = userIdOf(verifiedUser);
     long doneSession = latestSessionIdOf(doneId);
-    String token = tokenIn(partText(waitForMail(1), "text/plain"));
+    String token = verificationToken("flow.done@example.com", 1);
     assertThat(
             post("/auth/email/verify", Map.of("token", token), assertionFor(doneId, doneSession))
                 .status())
@@ -405,92 +394,25 @@ class EmailVerificationFlowIT {
     return headers;
   }
 
-  /// 等收到第 n 封验证邮件，返回它。只数验证邮件：登录会额外发新设备提醒（PAP-99），按总封数取会取错。
+  /// 本用例里第 n 个验证邮件事件链接里的令牌。登录还会登记新设备提醒（PAP-99），所以只数验证邮件事件。
   ///
-  /// @param count 第几封验证邮件
-  /// @return 那一封
-  private MimeMessage waitForMail(int count) {
-    long deadline = System.nanoTime() + Duration.ofSeconds(5).toNanos();
-    while (true) {
-      MimeMessage[] verifications =
-          Arrays.stream(greenMail.getReceivedMessages())
-              .filter(mail -> EmailVerificationMail.SUBJECT.equals(subjectOf(mail)))
-              .toArray(MimeMessage[]::new);
-      if (verifications.length >= count) {
-        return verifications[count - 1];
-      }
-      assertThat(System.nanoTime()).as("等第 %d 封验证邮件", count).isLessThan(deadline);
-      greenMail.waitForIncomingEmail(200, greenMail.getReceivedMessages().length + 1);
-    }
-  }
-
-  /// 邮件主题。
-  ///
-  /// @param mail 邮件
-  /// @return 主题
-  private static String subjectOf(MimeMessage mail) {
-    try {
-      return mail.getSubject();
-    } catch (MessagingException e) {
-      throw new IllegalStateException(e);
-    }
-  }
-
-  /// 邮件里某种类型的那一部分的正文。
-  ///
-  /// @param mail 邮件
-  /// @param contentType `text/plain` 或 `text/html`
-  /// @return 正文
-  private static String partText(MimeMessage mail, String contentType) {
-    try {
-      String found = findPart(mail.getContent(), contentType);
-      assertThat(found).as("%s 部分", contentType).isNotNull();
-      return found;
-    } catch (Exception e) {
-      throw new IllegalStateException("读邮件失败", e);
-    }
-  }
-
-  /// 递归找某种类型的部分。
-  ///
-  /// @param content 内容
-  /// @param contentType 类型前缀
-  /// @return 正文；没有时为 `null`
-  private static String findPart(Object content, String contentType) throws Exception {
-    if (content instanceof MimeMultipart multipart) {
-      for (int i = 0; i < multipart.getCount(); i++) {
-        BodyPart part = multipart.getBodyPart(i);
-        if (part.getContentType().startsWith(contentType)) {
-          return part.getContent().toString();
-        }
-        String nested = findPart(part.getContent(), contentType);
-        if (nested != null) {
-          return nested;
-        }
-      }
-    }
-    return null;
-  }
-
-  /// 收件人列表。
-  ///
-  /// @param mail 邮件
-  /// @return 地址
-  private static List<String> recipients(MimeMessage mail) {
-    try {
-      return Arrays.stream(mail.getAllRecipients()).map(Object::toString).toList();
-    } catch (Exception e) {
-      throw new IllegalStateException(e);
-    }
-  }
-
-  /// 从正文里的链接取令牌。
-  ///
-  /// @param text 正文
+  /// @param recipient 收件地址
+  /// @param count 第几个验证邮件事件
   /// @return 令牌
-  private static String tokenIn(String text) {
-    Matcher matcher = TOKEN_IN_LINK.matcher(text);
-    assertThat(matcher.find()).as("正文里有验证链接").isTrue();
+  private String verificationToken(String recipient, int count) {
+    List<EmailVerificationMailEvent> events =
+        securityMails.all(EmailVerificationMailEvent.class, recipient);
+    assertThat(events).as("验证邮件事件").hasSizeGreaterThanOrEqualTo(count);
+    return tokenIn(events.get(count - 1).verifyUrl());
+  }
+
+  /// 从链接里取令牌。
+  ///
+  /// @param link 链接
+  /// @return 令牌
+  private static String tokenIn(String link) {
+    Matcher matcher = TOKEN_IN_LINK.matcher(link);
+    assertThat(matcher.find()).as("链接里有令牌").isTrue();
     return matcher.group(1);
   }
 

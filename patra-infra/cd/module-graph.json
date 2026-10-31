@@ -422,6 +422,7 @@
             "unit": "foundation",
             "impacts": [
                 "foundation",
+                "identity",
                 "interaction",
                 "notification"
             ],

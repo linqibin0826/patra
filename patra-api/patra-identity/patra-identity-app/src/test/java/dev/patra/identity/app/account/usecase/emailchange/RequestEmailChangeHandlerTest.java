@@ -1,5 +1,6 @@
 package dev.patra.identity.app.account.usecase.emailchange;
 
+import static dev.patra.identity.app.account.usecase.OutgoingMailMatchers.sameMailAs;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -153,7 +154,7 @@ class RequestEmailChangeHandlerTest {
   }
 
   @Test
-  @DisplayName("顺序：状态 → 再认证 → 待确认 → 占用 → 限流 → 事务签发 → 事务后发到新邮箱")
+  @DisplayName("顺序：状态 → 再认证 → 待确认 → 占用 → 限流 → 事务里签发并登记发到新邮箱的确认信")
   void should_check_in_order_fields_status_reauth_pending_taken_throttle() {
     when(emailTokenIssuer.issue(any(), anyLong(), any(), any()))
         .thenAnswer(
@@ -163,7 +164,7 @@ class RequestEmailChangeHandlerTest {
             });
     doAnswer(
             invocation -> {
-              assertThat(inTransaction).isFalse();
+              assertThat(inTransaction).isTrue();
               return null;
             })
         .when(emailDelivery)
@@ -192,8 +193,14 @@ class RequestEmailChangeHandlerTest {
     order
         .verify(emailDelivery)
         .send(
-            EmailChangeConfirmMail.of(
-                NEW, "陈宇", "https://patra.example/confirm-email-change#token=" + SECRET.value()));
+            sameMailAs(
+                EmailChangeConfirmMail.builder()
+                    .to(NEW)
+                    .displayName("陈宇")
+                    .confirmUrl(
+                        "https://patra.example/confirm-email-change#token=" + SECRET.value())
+                    .linkExpiresAt(ISSUED.token().getExpiresAt())
+                    .build()));
     assertThat(result.newEmail()).isEqualTo("new@example.com");
     assertThat(result.expiresAt()).isEqualTo(ISSUED.token().getExpiresAt());
   }

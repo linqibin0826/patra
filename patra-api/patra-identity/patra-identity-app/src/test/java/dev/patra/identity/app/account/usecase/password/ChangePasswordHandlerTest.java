@@ -70,7 +70,7 @@ import org.springframework.transaction.support.SimpleTransactionStatus;
 import org.springframework.transaction.support.TransactionCallback;
 import org.springframework.transaction.support.TransactionOperations;
 
-/// ChangePasswordHandler 单元测试：字段、状态、当前密码、新旧相同、事务里的顺序、事务后发信。
+/// ChangePasswordHandler 单元测试：字段、状态、当前密码、新旧相同、事务里的顺序（含登记「密码已修改」在换令牌之前）。
 @DisplayName("ChangePasswordHandler 单元测试")
 class ChangePasswordHandlerTest {
 
@@ -239,7 +239,7 @@ class ChangePasswordHandlerTest {
   }
 
   @Test
-  @DisplayName("成功：换哈希 → 批量作废令牌 → 撤销其余并记 REVOKED → 读账号 → 本机换令牌（事务最后一步）→ 发「密码已修改」；返回新令牌")
+  @DisplayName("成功：换哈希 → 批量作废令牌 → 撤销其余并记 REVOKED → 读账号 → 登记「密码已修改」→ 本机换令牌（事务最后一步）；返回新令牌")
   void should_change_in_order_rotate_keep_current_and_revoke_the_rest() {
     AuthenticatedUser result =
         handler.handle(
@@ -253,7 +253,6 @@ class ChangePasswordHandlerTest {
         .verify(records, times(2))
         .save(argThat(r -> r.getEndReason() == LoginEndReason.PASSWORD_CHANGED));
     order.verify(userReadPort).findAccount(42L);
-    order.verify(sessions).rotate(AccountType.USER, 42L, 7001L, Duration.ZERO);
     order
         .verify(emailDelivery)
         .send(
@@ -263,17 +262,17 @@ class ChangePasswordHandlerTest {
                         && mail.to().equals(EMAIL)
                         && mail.displayName().equals("陈宇")
                         && mail.notice().occurredAt().equals(NOW)
-                        && mail.notice().notMeAdvice().equals(PasswordChangedMail.NOT_ME_ADVICE)
                         && mail.notice().device().equals("Chrome 141 · macOS")
                         && mail.notice().ipAddress().equals("127.0.0.1")
                         && mail.notice().ipLocation().equals("内网")));
+    order.verify(sessions).rotate(AccountType.USER, 42L, 7001L, Duration.ZERO);
     assertThat(result.sessionToken()).isEqualTo(NEW_TOKEN);
     assertThat(result.account()).isEqualTo(ACCOUNT);
   }
 
   @Test
-  @DisplayName("哈希在事务外，换哈希在事务内，发信在事务提交后")
-  void should_send_mail_only_after_transaction() {
+  @DisplayName("哈希在事务外，换哈希与登记「密码已修改」在事务内，登记在换令牌之前（换令牌是事务最后一步）")
+  void should_register_mail_inside_transaction_before_session_rotation() {
     when(passwordHashing.hash(any()))
         .thenAnswer(
             invocation -> {
@@ -288,7 +287,7 @@ class ChangePasswordHandlerTest {
             });
     doAnswer(
             invocation -> {
-              assertThat(inTransaction).isFalse();
+              assertThat(inTransaction).isTrue();
               return null;
             })
         .when(emailDelivery)
@@ -297,11 +296,13 @@ class ChangePasswordHandlerTest {
     handler.handle(
         ChangePasswordCommand.of("Correct-Horse-02", "Another-Horse-03", "127.0.0.1", null));
 
-    verify(emailDelivery).send(any());
+    InOrder order = inOrder(emailDelivery, sessions);
+    order.verify(emailDelivery).send(any());
+    order.verify(sessions).rotate(AccountType.USER, 42L, 7001L, Duration.ZERO);
   }
 
   @Test
-  @DisplayName("换令牌时 Redis 失败：异常从事务里抛出（回滚，密码没改成），不发信")
+  @DisplayName("换令牌时 Redis 失败：异常从事务里抛出（回滚，密码没改成），已登记的邮件随事务作废")
   void should_roll_back_password_when_session_rotation_fails() {
     TemporarilyUnavailableException down = new TemporarilyUnavailableException();
     when(sessions.rotate(AccountType.USER, 42L, 7001L, Duration.ZERO)).thenThrow(down);
@@ -312,7 +313,7 @@ class ChangePasswordHandlerTest {
                     ChangePasswordCommand.of(
                         "Correct-Horse-02", "Another-Horse-03", "127.0.0.1", null)))
         .isSameAs(down);
-    verifyNoInteractions(emailDelivery);
+    verify(emailDelivery).send(any());
   }
 
   @Test

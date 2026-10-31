@@ -2,10 +2,10 @@ package dev.patra.identity;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import dev.patra.tool.test.mail.GreenMailSmtpInitializer;
+import dev.patra.identity.api.account.event.PasswordResetDoneMailEvent;
+import dev.patra.identity.api.account.event.PasswordResetMailEvent;
 import java.time.Duration;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
@@ -18,13 +18,11 @@ import tools.jackson.databind.JsonNode;
 class PasswordResetFlowIT extends IdentityFlowITSupport {
 
   @Test
-  @DisplayName("已注册与未注册的邮箱都 202 且结构一致、只给已注册的发信、耗时同一量级；同邮箱每天第 6 次 429")
+  @DisplayName("已注册与未注册的邮箱都 202 且结构一致、只给已注册的登记重设邮件、耗时同一量级；同邮箱每天第 6 次 429")
   void should_answer_202_for_registered_and_unknown_emails_alike_and_only_mail_registered() {
     String registered = "flow.forgot.known@example.com";
     String unknown = "flow.forgot.unknown@example.com";
     register(registered, "u-flow-forgot-known");
-    waitForMails(1);
-    GreenMailSmtpInitializer.purge();
 
     List<Long> knownNanos = new ArrayList<>();
     List<Long> unknownNanos = new ArrayList<>();
@@ -37,18 +35,15 @@ class PasswordResetFlowIT extends IdentityFlowITSupport {
     assertThat(known.get("code").asString()).isEqualTo("IDN-0429");
     assertThat(known.get("retryAfterSeconds").asInt()).isPositive();
 
-    waitForMails(5);
-    assertThat(
-            Arrays.stream(greenMail.getReceivedMessages()).map(IdentityFlowITSupport::recipients))
-        .hasSize(5)
-        .allSatisfy(to -> assertThat(to).containsExactly(registered));
+    assertThat(securityMails.all(PasswordResetMailEvent.class, registered)).hasSize(5);
+    assertThat(securityMails.all(PasswordResetMailEvent.class, unknown)).isEmpty();
     double ratio = (double) median(knownNanos) / median(unknownNanos);
     assertThat(ratio).as("已注册 / 未注册 的耗时中位数之比").isLessThan(10.0);
   }
 
   @Test
   @DisplayName(
-      "重设：全部会话 401 并记 PASSWORD_RESET、全部令牌作废（含待确认的改邮箱）、失败计数清零、email_verified_at 已写、收到「密码已重设」、同一令牌再提交 422")
+      "重设：全部会话 401 并记 PASSWORD_RESET、全部令牌作废（含待确认的改邮箱）、失败计数清零、email_verified_at 已写、登记「密码已重设」、同一令牌再提交 422")
   void should_reset_password_revoke_everything_clear_failures_and_verify_email() {
     String email = "flow.reset@example.com";
     RawResponse registered = register(email, "u-flow-reset");
@@ -69,8 +64,7 @@ class PasswordResetFlowIT extends IdentityFlowITSupport {
     assertThat(redis.hasKey(loginThrottleKeys(email).get(0))).isTrue();
     assertThat(post("/auth/password/forgot", Map.of("email", email), noHeaders()).status())
         .isEqualTo(202);
-    waitForMails(3);
-    String resetToken = tokenInMail(email, "重设你的 Patra 密码");
+    String resetToken = tokenIn(mailEvent(PasswordResetMailEvent.class, email).resetUrl());
 
     RawResponse reset =
         post(
@@ -94,12 +88,10 @@ class PasswordResetFlowIT extends IdentityFlowITSupport {
                 "SELECT email_verified_at FROM idn_user WHERE id = ?", Object.class, userId))
         .isNotNull();
     assertThat(redis.hasKey(loginThrottleKeys(email).get(0))).as("失败计数清零").isFalse();
-    waitForMails(4);
-    assertThat(partText(mailFor(email, "你的 Patra 密码已重设"), "text/plain"))
-        .contains("时间：")
-        .contains("Chrome 141 · macOS")
-        .contains("113.92.157.29（中国 广东 深圳）")
-        .doesNotContain("/settings/security");
+    PasswordResetDoneMailEvent done = mailEvent(PasswordResetDoneMailEvent.class, email);
+    assertThat(done.context().device()).isEqualTo("Chrome 141 · macOS");
+    assertThat(done.context().ipAddress()).isEqualTo("113.92.157.29");
+    assertThat(done.context().ipLocation()).isEqualTo("中国 广东 深圳");
     assertThat(login(email, "Another-Horse-03").status()).isEqualTo(200);
     assertThat(login(email, PASSWORD).status()).isEqualTo(401);
     RawResponse again =
@@ -117,8 +109,9 @@ class PasswordResetFlowIT extends IdentityFlowITSupport {
     register(email, "u-flow-reset-expire");
     assertThat(post("/auth/password/forgot", Map.of("email", email), noHeaders()).status())
         .isEqualTo(202);
-    waitForMails(2);
-    String resetToken = tokenInMail(email, "重设你的 Patra 密码");
+    PasswordResetMailEvent resetMail = mailEvent(PasswordResetMailEvent.class, email);
+    assertThat(resetMail.linkExpiresAt()).isEqualTo(T0.plus(Duration.ofMinutes(60)));
+    String resetToken = tokenIn(resetMail.resetUrl());
     clock.set(T0.plus(Duration.ofMinutes(61)));
 
     RawResponse expired =

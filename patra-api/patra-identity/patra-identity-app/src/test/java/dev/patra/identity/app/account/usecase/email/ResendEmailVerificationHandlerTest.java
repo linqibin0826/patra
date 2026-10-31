@@ -1,5 +1,6 @@
 package dev.patra.identity.app.account.usecase.email;
 
+import static dev.patra.identity.app.account.usecase.OutgoingMailMatchers.sameMailAs;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -77,8 +78,12 @@ class ResendEmailVerificationHandlerTest {
           .revertEmailChangePath("/revert-email-change")
           .build();
   private static final EmailVerificationMail EXPECTED_MAIL =
-      EmailVerificationMail.of(
-          EMAIL, "陈宇", LINKS.verifyEmailUrl(SECRET), NOW.plus(Duration.ofHours(24)));
+      EmailVerificationMail.builder()
+          .to(EMAIL)
+          .displayName("陈宇")
+          .verifyUrl(LINKS.verifyEmailUrl(SECRET))
+          .linkExpiresAt(NOW.plus(Duration.ofHours(24)))
+          .build();
   private static final UserAccountReadModel ACCOUNT =
       UserAccountReadModel.builder()
           .userId(42L)
@@ -122,7 +127,7 @@ class ResendEmailVerificationHandlerTest {
   }
 
   @Test
-  @DisplayName("顺序：预判状态 → 限流 → 加锁重读 → 签发（事务内）→ 发信（事务外）；返回邮箱和下次可重发时间")
+  @DisplayName("顺序：预判状态 → 限流 → 加锁重读 → 签发与登记验证邮件（都在事务内）；返回邮箱和下次可重发时间")
   void should_resend_in_order_and_return_next_resend_at() {
     when(emailTokenIssuer.issue(any(), anyLong(), any(), any()))
         .thenAnswer(
@@ -132,7 +137,7 @@ class ResendEmailVerificationHandlerTest {
             });
     doAnswer(
             invocation -> {
-              assertThat(inTransaction).isFalse();
+              assertThat(inTransaction).isTrue();
               return null;
             })
         .when(emailDelivery)
@@ -150,7 +155,7 @@ class ResendEmailVerificationHandlerTest {
     order
         .verify(emailTokenIssuer)
         .issue(eq(EmailTokenPurpose.EMAIL_VERIFY), eq(42L), eq(EMAIL), eq("203.0.113.9"));
-    order.verify(emailDelivery).send(EXPECTED_MAIL);
+    order.verify(emailDelivery).send(sameMailAs(EXPECTED_MAIL));
   }
 
   @Test

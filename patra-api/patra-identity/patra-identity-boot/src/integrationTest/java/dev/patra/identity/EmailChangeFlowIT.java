@@ -2,7 +2,10 @@ package dev.patra.identity;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import jakarta.mail.internet.MimeMessage;
+import dev.patra.identity.api.account.event.EmailChangeConfirmMailEvent;
+import dev.patra.identity.api.account.event.EmailChangeRevertedMailEvent;
+import dev.patra.identity.api.account.event.EmailChangedConfirmationMailEvent;
+import dev.patra.identity.api.account.event.EmailChangedNoticeMailEvent;
 import java.time.Duration;
 import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
@@ -15,13 +18,8 @@ import tools.jackson.databind.JsonNode;
 @DisplayName("改邮箱的完整流程")
 class EmailChangeFlowIT extends IdentityFlowITSupport {
 
-  private static final String CONFIRM_SUBJECT = "确认你的新 Patra 邮箱";
-  private static final String NOTICE_SUBJECT = "你的 Patra 邮箱已更改";
-  private static final String BOUND_SUBJECT = "本邮箱已绑定你的 Patra 账号";
-  private static final String REVERTED_SUBJECT = "你的 Patra 邮箱已改回，请重设密码";
-
   @Test
-  @DisplayName("申请后旧邮箱仍是登录标识、第二次申请 409；确认后立即用新邮箱登录、旧邮箱收到含撤销链接与遮掩新地址的通知、新邮箱收到「已绑定」、会话不动")
+  @DisplayName("申请后旧邮箱仍是登录标识、第二次申请 409；确认信发到新邮箱；确认后立即用新邮箱登录、变更通知（撤销链接、遮掩的新地址）只发旧邮箱、「已绑定」只发新邮箱、会话不动")
   void should_request_confirm_and_switch_login_email() {
     String old = "flow.change.old@example.com";
     String fresh = "flow.change.new@example.com";
@@ -48,8 +46,9 @@ class EmailChangeFlowIT extends IdentityFlowITSupport {
             assertionFor(userId, sessionId));
     assertThat(secondRequest.status()).isEqualTo(409);
     assertThat(json(secondRequest).get("traits").toString()).contains("EMAIL_CHANGE_PENDING");
-    waitForMails(2);
-    String confirmToken = tokenInMail(fresh, CONFIRM_SUBJECT);
+    EmailChangeConfirmMailEvent confirmMail = mailEvent(EmailChangeConfirmMailEvent.class, fresh);
+    assertThat(confirmMail.linkExpiresAt()).isEqualTo(T0.plus(Duration.ofHours(1)));
+    String confirmToken = tokenIn(confirmMail.confirmUrl());
 
     RawResponse confirmed =
         post(
@@ -66,17 +65,21 @@ class EmailChangeFlowIT extends IdentityFlowITSupport {
     assertThat(login(fresh, PASSWORD).status()).isEqualTo(200);
     assertThat(login(old, PASSWORD).status()).isEqualTo(401);
     assertThat(get("/me/email/change", assertionFor(userId, sessionId)).status()).isEqualTo(204);
-    waitForMails(4);
-    MimeMessage notice = mailFor(old, NOTICE_SUBJECT);
-    String noticeText = partText(notice, "text/plain");
-    assertThat(noticeText)
-        .contains("f***@example.com")
-        .doesNotContain(fresh)
-        .contains("/revert-email-change#token=")
-        .contains("7 天")
-        .contains("Chrome 141 · macOS")
-        .contains("113.92.157.29（中国 广东 深圳）");
-    assertThat(mailFor(fresh, BOUND_SUBJECT)).isNotNull();
+    EmailChangedNoticeMailEvent notice = mailEvent(EmailChangedNoticeMailEvent.class, old);
+    assertThat(notice.newEmailMasked()).isEqualTo("f***@example.com");
+    assertThat(notice.revertUrl()).contains("/revert-email-change#token=").doesNotContain(fresh);
+    assertThat(notice.linkExpiresAt()).isEqualTo(T0.plus(Duration.ofDays(7)));
+    assertThat(notice.context().device()).isEqualTo("Chrome 141 · macOS");
+    assertThat(notice.context().ipAddress()).isEqualTo("113.92.157.29");
+    assertThat(notice.context().ipLocation()).isEqualTo("中国 广东 深圳");
+    assertThat(mailEvent(EmailChangedConfirmationMailEvent.class, fresh).context().device())
+        .isEqualTo("Chrome 141 · macOS");
+    assertThat(securityMails.all(EmailChangedNoticeMailEvent.class, fresh))
+        .as("变更通知不发新邮箱")
+        .isEmpty();
+    assertThat(securityMails.all(EmailChangedConfirmationMailEvent.class, old))
+        .as("「已绑定」不发旧邮箱")
+        .isEmpty();
     assertThat(activeTokenPurposesOf(userId)).containsExactly("EMAIL_CHANGE_REVERT");
   }
 
@@ -89,7 +92,7 @@ class EmailChangeFlowIT extends IdentityFlowITSupport {
     long userId = userIdOf(registered);
     String sessionToken = sessionTokenOf(registered);
     long sessionId = latestSessionIdOf(userId);
-    String revertToken = changeEmail(userId, sessionId, fresh, old, 2);
+    String revertToken = changeEmail(userId, sessionId, fresh, old);
     String freshSessionToken = sessionTokenOf(login(fresh, PASSWORD));
     long freshSessionId = latestSessionIdOf(userId);
 
@@ -107,10 +110,7 @@ class EmailChangeFlowIT extends IdentityFlowITSupport {
         .isEqualTo(old);
     assertThat(login(old, PASSWORD).status()).as("凭据已删").isEqualTo(401);
     assertThat(login(fresh, PASSWORD).status()).isEqualTo(401);
-    waitForMails(5);
-    String resetToken = tokenInMail(old, REVERTED_SUBJECT);
-    assertThat(partText(mailFor(old, REVERTED_SUBJECT), "text/plain"))
-        .doesNotContain("/settings/security");
+    String resetToken = tokenIn(mailEvent(EmailChangeRevertedMailEvent.class, old).resetUrl());
     assertThat(
             post(
                     "/auth/password/reset",
@@ -123,15 +123,12 @@ class EmailChangeFlowIT extends IdentityFlowITSupport {
     clock.set(T0);
     RawResponse expiredSetup = register("flow.revert2.old@example.com", "u-flow-revert2");
     long user2 = userIdOf(expiredSetup);
-    // 此前 5 封 + 重设后的「密码已重设」+ 第二个用户的验证邮件
-    waitForMails(7);
     String revert2 =
         changeEmail(
             user2,
             latestSessionIdOf(user2),
             "flow.revert2.new@example.com",
-            "flow.revert2.old@example.com",
-            8);
+            "flow.revert2.old@example.com");
     clock.set(T0.plus(Duration.ofDays(7)).plusSeconds(1));
     assertThat(post("/auth/email/change/revert", Map.of("token", revert2), noHeaders()).status())
         .isEqualTo(422);
@@ -146,7 +143,7 @@ class EmailChangeFlowIT extends IdentityFlowITSupport {
     RawResponse registered = register(x, "u-flow-chain");
     long userId = userIdOf(registered);
     long sessionId = latestSessionIdOf(userId);
-    String revertX = changeEmail(userId, sessionId, y, x, 2);
+    String revertX = changeEmail(userId, sessionId, y, x);
 
     RawResponse changed =
         exchange(
@@ -155,8 +152,7 @@ class EmailChangeFlowIT extends IdentityFlowITSupport {
             Map.of("currentPassword", PASSWORD, "newPassword", "Another-Horse-03"),
             assertionFor(userId, sessionId));
     assertThat(changed.status()).as(changed.body()).isEqualTo(200);
-    waitForMails(5);
-    String revertY = changeEmail(userId, sessionId, z, y, 6);
+    String revertY = changeEmail(userId, sessionId, z, y);
     assertThat(activeTokenPurposesOf(userId))
         .as("两条撤销令牌并存")
         .containsExactly("EMAIL_CHANGE_REVERT", "EMAIL_CHANGE_REVERT");
@@ -180,8 +176,8 @@ class EmailChangeFlowIT extends IdentityFlowITSupport {
     RawResponse registered = register(x, "u-flow-race");
     long userId = userIdOf(registered);
     long sessionId = latestSessionIdOf(userId);
-    String revertX = changeEmail(userId, sessionId, y, x, 2);
-    String revertY = changeEmail(userId, sessionId, z, y, 5);
+    String revertX = changeEmail(userId, sessionId, y, x);
+    String revertY = changeEmail(userId, sessionId, z, y);
 
     RawResponse revertedToY =
         post("/auth/email/change/revert", Map.of("token", revertY), noHeaders());
@@ -200,13 +196,12 @@ class EmailChangeFlowIT extends IdentityFlowITSupport {
   }
 
   @Test
-  @DisplayName("新邮箱已被别人使用：409 errors[0].field 是 email、不发信、没有待确认；改密码后待确认的改邮箱消失")
+  @DisplayName("新邮箱已被别人使用：409 errors[0].field 是 email、不登记确认信、没有待确认；改密码后待确认的改邮箱消失")
   void should_reject_taken_email_with_409_and_leave_no_pending_change() {
     RawResponse alice = register("flow.taken.alice@example.com", "u-flow-taken-alice");
     register("flow.taken.bob@example.com", "u-flow-taken-bob");
     long aliceId = userIdOf(alice);
     long aliceSession = latestSessionIdOf(aliceId);
-    waitForMails(2);
 
     RawResponse taken =
         post(
@@ -220,7 +215,9 @@ class EmailChangeFlowIT extends IdentityFlowITSupport {
     assertThat(error.get("code").asString()).isEqualTo("ALREADY_REGISTERED");
     assertThat(get("/me/email/change", assertionFor(aliceId, aliceSession)).status())
         .isEqualTo(204);
-    assertThat(greenMail.getReceivedMessages()).hasSize(2);
+    assertThat(securityMails.all(EmailChangeConfirmMailEvent.class, "flow.taken.bob@example.com"))
+        .as("被占用的地址不收确认信")
+        .isEmpty();
 
     assertThat(
             post(
@@ -271,27 +268,24 @@ class EmailChangeFlowIT extends IdentityFlowITSupport {
     assertThat(json(fourth).get("detail").asString()).isEqualTo("今天更改邮箱的次数已用完，请明天再试");
   }
 
-  /// 申请并确认一次改邮箱，返回旧邮箱收到的撤销令牌。
+  /// 申请并确认一次改邮箱，返回发往旧邮箱的变更通知里的撤销令牌。
   ///
   /// @param userId 用户 ID
   /// @param sessionId 会话 ID（再认证窗口内）
   /// @param fresh 新邮箱
   /// @param old 旧邮箱
-  /// @param mailsAfterRequest 申请后累计应收到的邮件数
   /// @return 撤销令牌
-  private String changeEmail(
-      long userId, long sessionId, String fresh, String old, int mailsAfterRequest) {
+  private String changeEmail(long userId, long sessionId, String fresh, String old) {
     RawResponse requested =
         post("/me/email/change", Map.of("newEmail", fresh), assertionFor(userId, sessionId));
     assertThat(requested.status()).as(requested.body()).isEqualTo(202);
-    waitForMails(mailsAfterRequest);
     RawResponse confirmed =
         post(
             "/auth/email/change/confirm",
-            Map.of("token", tokenInMail(fresh, CONFIRM_SUBJECT)),
+            Map.of(
+                "token", tokenIn(mailEvent(EmailChangeConfirmMailEvent.class, fresh).confirmUrl())),
             noHeaders());
     assertThat(confirmed.status()).as(confirmed.body()).isEqualTo(200);
-    waitForMails(mailsAfterRequest + 2);
-    return tokenInMail(old, NOTICE_SUBJECT);
+    return tokenIn(mailEvent(EmailChangedNoticeMailEvent.class, old).revertUrl());
   }
 }

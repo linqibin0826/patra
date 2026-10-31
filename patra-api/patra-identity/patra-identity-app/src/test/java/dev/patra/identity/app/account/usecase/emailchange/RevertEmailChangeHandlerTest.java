@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -45,6 +46,7 @@ import dev.patra.tool.core.security.AccountType;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -236,11 +238,29 @@ class RevertEmailChangeHandlerTest {
                             .equals(
                                 "https://patra.example/reset-password#token="
                                     + RESET_SECRET.value())
-                        && r.notice().notMeAdvice().equals(EmailChangeRevertedMail.NOT_ME_ADVICE)
+                        && r.linkExpiresAt()
+                            .equals(NOW.plus(EmailTokenPurpose.PASSWORD_RESET.validity()))
                         && r.notice().device().equals("Chrome 141 · macOS")
                         && r.notice().ipAddress().equals("127.0.0.1")
                         && r.notice().ipLocation().equals("内网")));
     assertThat(result.email()).isEqualTo("chen.yu@example.com");
+  }
+
+  @Test
+  @DisplayName("「已改回请重设密码」在撤销的事务里登记")
+  void should_register_reverted_mail_inside_transaction() {
+    List<Boolean> sentInTransaction = new ArrayList<>();
+    doAnswer(
+            invocation -> {
+              sentInTransaction.add(inTransaction.get());
+              return null;
+            })
+        .when(emailDelivery)
+        .send(any());
+
+    handler.handle(RevertEmailChangeCommand.of(SECRET.value(), "127.0.0.1", null));
+
+    assertThat(sentInTransaction).containsExactly(true);
   }
 
   @Test

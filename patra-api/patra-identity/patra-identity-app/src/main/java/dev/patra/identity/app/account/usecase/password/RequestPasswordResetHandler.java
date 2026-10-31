@@ -26,11 +26,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.support.TransactionOperations;
 
-/// 找回密码的申请：一律 202、异步发信，未注册或已封禁的邮箱不发信。
+/// 找回密码的申请：一律 202，未注册或已封禁的邮箱不发信。
 ///
 /// 顺序：格式（422）→ 限流（在查用户之前、对任何邮箱都计数：只给已注册的计数，429 本身就成了
-/// 「已注册」的信号）→ 查用户 → 正常 / 冷静期用户：事务里锁用户行并重判状态、签发 `PASSWORD_RESET`，
-/// 事务后发信；未注册 / 已封禁（含锁行前刚被删或封禁的）：做同样的随机数与哈希计算后直接返回。
+/// 「已注册」的信号）→ 查用户 → 正常 / 冷静期用户：事务里锁用户行并重判状态、签发 `PASSWORD_RESET`、
+/// 登记重设邮件（与令牌同成同败，提交后由通知服务发出，PAP-104）；未注册 / 已封禁（含锁行前刚被删或封禁的）：
+/// 做同样的随机数与哈希计算后直接返回。已注册路径因此多一次写库（同一事务里，约 1 毫秒），耗时仍是同一量级。
 /// 不碰登录失败限制。
 @Slf4j
 @Component
@@ -107,38 +108,34 @@ public class RequestPasswordResetHandler
       return PasswordResetRequested.of(email.value(), policy.nextRequestAt(now));
     }
     long userId = user.get().getId();
-    Optional<Prepared> prepared =
+    Optional<IssuedEmailToken> issuedToken =
         transactions.execute(
             status -> {
               // 锁下重判：查到用户和锁行之间被删或被封禁，走和未注册一样的静默分支
               Optional<User> locked =
                   users.findByIdForUpdate(userId).filter(found -> !found.isBanned());
               if (locked.isEmpty()) {
-                return Optional.<Prepared>empty();
+                return Optional.<IssuedEmailToken>empty();
               }
               UserAccountReadModel account =
                   userReadPort.findAccount(userId).orElseThrow(IllegalStateException::new);
               IssuedEmailToken issued =
                   emailTokenIssuer.issue(
                       EmailTokenPurpose.PASSWORD_RESET, userId, email, command.clientIp());
-              return Optional.of(
-                  new Prepared(
-                      issued,
-                      PasswordResetMail.of(
-                          email, account.displayName(), links.resetPasswordUrl(issued.secret()))));
+              emailDelivery.send(
+                  PasswordResetMail.builder()
+                      .to(email)
+                      .displayName(account.displayName())
+                      .resetUrl(links.resetPasswordUrl(issued.secret()))
+                      .linkExpiresAt(issued.token().getExpiresAt())
+                      .build());
+              return Optional.of(issued);
             });
-    if (prepared == null || prepared.isEmpty()) {
+    if (issuedToken == null || issuedToken.isEmpty()) {
       log.info("找回密码申请的用户在锁行前已被删或被封禁，不发信");
       return PasswordResetRequested.of(email.value(), policy.nextRequestAt(now));
     }
-    emailDelivery.send(prepared.get().mail());
-    log.info("重设密码邮件已排队: userId={}, tokenId={}", userId, prepared.get().issued().token().getId());
+    log.info("重设密码邮件已登记: userId={}, tokenId={}", userId, issuedToken.get().token().getId());
     return PasswordResetRequested.of(email.value(), policy.nextRequestAt(now));
   }
-
-  /// 事务里签发好的令牌和邮件。
-  ///
-  /// @param issued 已保存的令牌与原文
-  /// @param mail 要发的邮件
-  private record Prepared(IssuedEmailToken issued, PasswordResetMail mail) {}
 }

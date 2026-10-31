@@ -8,24 +8,9 @@ spring:
       password: ${REDIS_PASSWORD}
   rabbitmq:
     password: ${RABBITMQ_PASSWORD}
-  mail:
-    # 默认指向 Mailpit（mini 的 core 栈，无鉴权、无 TLS）；mini 的真实服务商（Resend）由 ~/.patra/secrets/mail.env 覆盖
-    host: ${PATRA_MAIL_HOST:${PATRA_INFRA_HOST:127.0.0.1}}
-    port: ${PATRA_MAIL_PORT:1025}
-    username: ${PATRA_MAIL_USERNAME:}
-    password: ${PATRA_MAIL_PASSWORD:}
-    properties:
-      "[mail.smtp.auth]": ${PATRA_MAIL_AUTH:false}
-      "[mail.smtp.ssl.enable]": ${PATRA_MAIL_SSL:false}
-      "[mail.smtp.starttls.enable]": ${PATRA_MAIL_STARTTLS:false}
-      "[mail.smtp.starttls.required]": ${PATRA_MAIL_STARTTLS:false}
-      "[mail.smtp.connectiontimeout]": 10000
-      "[mail.smtp.timeout]": 15000
-      "[mail.smtp.writetimeout]": 15000
 
 patra:
   identity:
     mail:
-      from: ${PATRA_MAIL_FROM:Patra <no-reply@patra.local>}
       links:
         base-url: ${PATRA_PORTAL_BASE_URL:http://linqibins-mac-mini:4000}

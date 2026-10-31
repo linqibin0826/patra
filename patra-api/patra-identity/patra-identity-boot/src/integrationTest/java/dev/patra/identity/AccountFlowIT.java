@@ -4,9 +4,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
 import dev.patra.identity.config.IdentityITPostgreSQLContainerInitializer;
-import dev.patra.identity.config.IdentityMailITSpringConfig;
+import dev.patra.identity.config.IdentitySecurityMailITSpringConfig;
+import dev.patra.tool.test.container.initializer.RabbitMQContainerInitializer;
 import dev.patra.tool.test.container.initializer.RedisContainerInitializer;
-import dev.patra.tool.test.mail.GreenMailSmtpInitializer;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -38,10 +38,10 @@ import tools.jackson.databind.node.ObjectNode;
     initializers = {
       IdentityITPostgreSQLContainerInitializer.class,
       RedisContainerInitializer.class,
-      GreenMailSmtpInitializer.class
+      RabbitMQContainerInitializer.class
     })
 @ActiveProfiles("test")
-@Import(IdentityMailITSpringConfig.class)
+@Import(IdentitySecurityMailITSpringConfig.class)
 @AutoConfigureRestTestClient
 @ExtendWith(OutputCaptureExtension.class)
 @DisplayName("前台用户账号的完整流程")

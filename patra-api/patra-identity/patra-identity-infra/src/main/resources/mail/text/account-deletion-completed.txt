@@ -1,8 +1,0 @@
-[# th:replace="~{text/fragments/header}" /]
-你好，[(${displayName})]：
-
-你的 [(${siteName})] 账号 @[(${username})] 已按你的申请注销，资料、头像和关注领域已删除。
-
-用户名 @[(${username})] 不会再被任何人使用。这个邮箱可以重新注册 [(${siteName})]，新账号与旧账号没有任何关联。
-
-[# th:replace="~{text/fragments/footer}" /]

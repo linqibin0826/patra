@@ -51,6 +51,7 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -294,7 +295,7 @@ class ResetPasswordHandlerTest {
   }
 
   @Test
-  @DisplayName("成功：换哈希 → 批量作废令牌 → 写验证时间 → 撤销全部会话并记 REVOKED → 清零登录失败 → 发「密码已重设」")
+  @DisplayName("成功：换哈希 → 批量作废令牌 → 写验证时间 → 撤销全部会话并记 REVOKED → 登记「密码已重设」（事务内）→ 提交后清零登录失败")
   void should_reset_in_order_and_clear_login_failures() {
     PasswordReset result =
         handler.handle(
@@ -308,7 +309,6 @@ class ResetPasswordHandlerTest {
     order.verify(users).save(argThat(User::isEmailVerified));
     order.verify(sessions).revokeAll(AccountType.USER, 42L);
     order.verify(records).save(argThat(r -> r.getEndReason() == LoginEndReason.PASSWORD_RESET));
-    order.verify(loginThrottle).clear(AccountType.USER, EMAIL);
     order
         .verify(emailDelivery)
         .send(
@@ -316,11 +316,28 @@ class ResetPasswordHandlerTest {
                 m ->
                     m instanceof PasswordResetDoneMail mail
                         && mail.to().equals(EMAIL)
-                        && mail.notice().notMeAdvice().equals(PasswordResetDoneMail.NOT_ME_ADVICE)
                         && mail.notice().device().equals("Chrome 141 · macOS")
                         && mail.notice().ipAddress().equals("127.0.0.1")
                         && mail.notice().ipLocation().equals("内网")));
+    order.verify(loginThrottle).clear(AccountType.USER, EMAIL);
     assertThat(result.email()).isEqualTo("chen.yu@example.com");
+  }
+
+  @Test
+  @DisplayName("「密码已重设」在重设的事务里登记")
+  void should_register_reset_done_mail_inside_transaction() {
+    List<Boolean> sentInTransaction = new ArrayList<>();
+    doAnswer(
+            invocation -> {
+              sentInTransaction.add(inTransaction.get());
+              return null;
+            })
+        .when(emailDelivery)
+        .send(any());
+
+    handler.handle(ResetPasswordCommand.of(SECRET.value(), "Another-Horse-03", "127.0.0.1", null));
+
+    assertThat(sentInTransaction).containsExactly(true);
   }
 
   @Test

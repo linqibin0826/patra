@@ -24,13 +24,12 @@ class ClientOriginTest {
             .ipRegion("中国 广东 深圳")
             .build();
 
-    SecurityNotice notice = origin.toNotice(NOW, "不是我");
+    SecurityNotice notice = origin.toNotice(NOW);
 
     assertThat(notice.occurredAt()).isEqualTo(NOW);
     assertThat(notice.device()).isEqualTo("Chrome 141 · macOS");
     assertThat(notice.ipAddress()).isEqualTo("113.92.157.29");
     assertThat(notice.ipLocation()).isEqualTo("中国 广东 深圳");
-    assertThat(notice.notMeAdvice()).isEqualTo("不是我");
   }
 
   @Test
@@ -43,8 +42,7 @@ class ClientOriginTest {
             .privateNetwork(true)
             .build();
 
-    assertThat(origin.toNotice(NOW, "x").ipLocation())
-        .isEqualTo(ClientOrigin.PRIVATE_NETWORK_LABEL);
+    assertThat(origin.toNotice(NOW).ipLocation()).isEqualTo(ClientOrigin.PRIVATE_NETWORK_LABEL);
     assertThat(ClientOrigin.PRIVATE_NETWORK_LABEL).isEqualTo("内网");
   }
 
@@ -52,7 +50,7 @@ class ClientOriginTest {
   @DisplayName("没有 IP：IP 与属地都为 null")
   void should_leave_ip_and_location_empty_without_ip() {
     SecurityNotice notice =
-        ClientOrigin.builder().deviceClass(DeviceClass.UNKNOWN).build().toNotice(NOW, "x");
+        ClientOrigin.builder().deviceClass(DeviceClass.UNKNOWN).build().toNotice(NOW);
 
     assertThat(notice.ipAddress()).isNull();
     assertThat(notice.ipLocation()).isNull();

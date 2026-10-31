@@ -2,73 +2,43 @@ package dev.patra.identity.domain.account.model.vo.mail;
 
 import dev.patra.identity.domain.account.model.vo.EmailAddress;
 import dev.patra.identity.domain.session.model.vo.SecurityNotice;
-import java.util.Map;
 import java.util.Objects;
+import java.util.UUID;
 
 /// 「密码已重设」的安全通知，发给当前邮箱。
 ///
+/// @param eventId 事件 ID：构造时生成，补投时不变
 /// @param to 收件人
 /// @param displayName 收件人的昵称
-/// @param notice 安全通知上下文
-public record PasswordResetDoneMail(EmailAddress to, String displayName, SecurityNotice notice)
+/// @param notice 安全通知上下文：时间、设备、IP 与属地
+public record PasswordResetDoneMail(
+    UUID eventId, EmailAddress to, String displayName, SecurityNotice notice)
     implements OutgoingMail {
 
-  /// 模板名。
-  public static final String TEMPLATE = "password-reset-done";
-
-  /// 主题。
-  public static final String SUBJECT = "你的 Patra 密码已重设";
-
-  /// 不是本人操作时该怎么办。
-  public static final String NOT_ME_ADVICE = "如果不是你，你的邮箱可能已被盗：请先找回邮箱，再用『忘记密码』重设密码";
-
-  /// 字段都不能为 `null`。
+  /// 除基本类型外的字段都不能为 `null`。
   public PasswordResetDoneMail {
+    Objects.requireNonNull(eventId, "eventId 不能为 null");
     Objects.requireNonNull(to, "to 不能为 null");
     Objects.requireNonNull(displayName, "displayName 不能为 null");
     Objects.requireNonNull(notice, "notice 不能为 null");
   }
 
-  /// 创建邮件。
+  /// 创建邮件，生成新的事件 ID。
   ///
   /// @param to 收件人
   /// @param displayName 收件人的昵称
-  /// @param notice 安全通知上下文
+  /// @param notice 安全通知上下文：时间、设备、IP 与属地
   /// @return 邮件
   public static PasswordResetDoneMail of(
       EmailAddress to, String displayName, SecurityNotice notice) {
-    return new PasswordResetDoneMail(to, displayName, notice);
+    return new PasswordResetDoneMail(UUID.randomUUID(), to, displayName, notice);
   }
 
-  /// 模板名 `password-reset-done`。
-  ///
-  /// @return 模板名
-  @Override
-  public String template() {
-    return TEMPLATE;
-  }
-
-  /// 主题「你的 Patra 密码已重设」。
-  ///
-  /// @return 主题
-  @Override
-  public String subject() {
-    return SUBJECT;
-  }
-
-  /// 模板变量：`displayName`、`notice`。
-  ///
-  /// @return 变量
-  @Override
-  public Map<String, Object> model() {
-    return Map.of("displayName", displayName, "notice", notice);
-  }
-
-  /// 不输出收件人和链接。
+  /// 不输出收件人与链接。
   ///
   /// @return 描述
   @Override
   public String toString() {
-    return "PasswordResetDoneMail[displayName=" + displayName + "]";
+    return "PasswordResetDoneMail[eventId=" + eventId + ", displayName=" + displayName + "]";
   }
 }

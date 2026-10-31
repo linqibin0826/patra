@@ -33,15 +33,9 @@ public record ClientOrigin(
   /// 转成安全通知的上下文：设备、IP、属地取自本来源，内网地址的属地写「内网」。
   ///
   /// @param occurredAt 事件发生的时间
-  /// @param notMeAdvice 不是本人操作时该怎么办
   /// @return 安全通知
-  public SecurityNotice toNotice(Instant occurredAt, String notMeAdvice) {
-    return SecurityNotice.builder()
-        .occurredAt(occurredAt)
-        .device(deviceName)
-        .ipAddress(ip)
-        .ipLocation(privateNetwork ? PRIVATE_NETWORK_LABEL : ipRegion)
-        .notMeAdvice(notMeAdvice)
-        .build();
+  public SecurityNotice toNotice(Instant occurredAt) {
+    return SecurityNotice.of(
+        occurredAt, deviceName, ip, privateNetwork ? PRIVATE_NETWORK_LABEL : ipRegion);
   }
 }

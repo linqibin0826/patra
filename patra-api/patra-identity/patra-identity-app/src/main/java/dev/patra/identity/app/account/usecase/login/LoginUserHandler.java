@@ -56,7 +56,8 @@ import org.springframework.transaction.support.TransactionOperations;
 ///    封禁随后的「删全部会话」会把这条新会话一起删掉。哈希在事务外，事务不占着连接等排队。
 ///    Redis 写失败回滚记录，返回 503。
 /// 7. 设备与属地（PAP-99）：校验通过后、事务之外解析 IP 与 UA，登录记录带上；事务里建会话之前判定
-///    这个账号是否见过这台设备，提交后对没见过的设备取 24 小时限流、放行才发新设备提醒。
+///    这个账号是否见过这台设备，提交后对没见过的设备取 24 小时限流、放行才另开一个短事务登记新设备提醒
+///    （PAP-104）。限流在 Redis，不能放进登录事务（`transaction.md` 第 2 节），所以两次提交之间进程崩了会丢这一封。
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -178,8 +179,8 @@ public class LoginUserHandler implements CommandHandler<LoginUserCommand, Authen
         .orElse(false);
   }
 
-  /// 新设备登录：取 24 小时限流，放行才发提醒；发信被拒（队列满、已停机）时退还冷却。
-  /// 限流的 Redis 不可用只记日志：提醒不能挡住登录。
+  /// 新设备登录：事务外取 24 小时限流，放行才在一个只写登记行的短事务里登记提醒；登记失败时退还冷却。
+  /// 限流的 Redis 不可用、登记失败都只记日志：提醒不能挡住已经提交的登录。
   ///
   /// @param account 账号信息
   /// @param client 客户端信息
@@ -197,21 +198,23 @@ public class LoginUserHandler implements CommandHandler<LoginUserCommand, Authen
     if (!allowed) {
       return;
     }
-    boolean accepted =
-        emailDelivery.send(
-            NewDeviceLoginMail.of(
-                EmailAddress.of(account.email()),
-                account.displayName(),
-                origin.toNotice(now, NewDeviceLoginMail.NOT_ME_ADVICE)));
-    if (accepted) {
-      log.info("已发新设备登录提醒: userId={}", account.userId());
-      return;
-    }
-    // 这封被丢掉了：退还冷却，否则这台设备 24 小时内再登录也不会提醒
     try {
-      newDeviceThrottle.reset(account.userId(), client.device().orElse(null));
+      transactions.executeWithoutResult(
+          status ->
+              emailDelivery.send(
+                  NewDeviceLoginMail.of(
+                      EmailAddress.of(account.email()),
+                      account.displayName(),
+                      origin.toNotice(now))));
+      log.info("已登记新设备登录提醒: userId={}", account.userId());
     } catch (RuntimeException e) {
-      log.warn("新设备提醒没发出，退还冷却也失败: userId={}, {}", account.userId(), e.getMessage());
+      // 登录已经提交：提醒登记失败不让登录失败；退还冷却，否则这台设备 24 小时内再登录也不会提醒
+      log.warn("新设备提醒登记失败: userId={}", account.userId(), e);
+      try {
+        newDeviceThrottle.reset(account.userId(), client.device().orElse(null));
+      } catch (RuntimeException resetFailure) {
+        log.warn("新设备提醒没登记上，退还冷却也失败: userId={}, {}", account.userId(), resetFailure.getMessage());
+      }
     }
   }
 

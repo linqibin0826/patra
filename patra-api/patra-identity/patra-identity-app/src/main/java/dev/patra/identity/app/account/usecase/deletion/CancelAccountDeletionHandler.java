@@ -22,7 +22,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.support.TransactionOperations;
 
 /// 取消注销（PAP-100 设计第 7.2 节）：加锁读用户，冷静期内回到正常；本来就正常时什么都不改（两个标签页先后点）。
-/// 只有真的从冷静期回到正常才在提交后发「已取消注销」。
+/// 只有真的从冷静期回到正常才在同一事务里登记「已取消注销」（与取消同成同败，PAP-104）。
 ///
 /// 不要求再认证：取消是往安全方向走，冷静期内的会话本来就是刚输过密码登录得来的。会话不动。
 /// 封禁、已注销 401：这两种状态没有有效会话，与 `requireActive()` 一致。
@@ -47,6 +47,10 @@ public class CancelAccountDeletionHandler
   @Override
   public UserAccountReadModel handle(CancelAccountDeletionCommand command) {
     long userId = currentUserPort.require().userId();
+    // 解析 UA 与属地是纯计算：放在事务之外
+    ClientOrigin origin =
+        clientOriginResolver.resolve(RequestOrigin.of(command.clientIp(), command.userAgent()));
+    Instant now = clock.instant();
     Cancelled cancelled =
         Objects.requireNonNull(
             transactions.execute(
@@ -67,32 +71,24 @@ public class CancelAccountDeletionHandler
                       userReadPort
                           .findAccount(userId)
                           .orElseThrow(AuthenticationRequiredException::new);
-                  EmailAddress email =
-                      user.getEmail().orElseThrow(AuthenticationRequiredException::new);
-                  return new Cancelled(account, email, pending);
+                  if (pending) {
+                    EmailAddress email =
+                        user.getEmail().orElseThrow(AuthenticationRequiredException::new);
+                    emailDelivery.send(
+                        AccountDeletionCancelledMail.of(
+                            email, account.displayName(), origin.toNotice(now)));
+                  }
+                  return new Cancelled(account, pending);
                 }));
     if (cancelled.changed()) {
-      Instant now = clock.instant();
-      ClientOrigin origin =
-          clientOriginResolver.resolve(RequestOrigin.of(command.clientIp(), command.userAgent()));
-      boolean accepted =
-          emailDelivery.send(
-              AccountDeletionCancelledMail.of(
-                  cancelled.email(),
-                  cancelled.account().displayName(),
-                  origin.toNotice(now, AccountDeletionCancelledMail.NOT_ME_ADVICE)));
-      if (!accepted) {
-        log.warn("「已取消注销」邮件被发信执行器拒收: userId={}", userId);
-      }
       log.info("前台用户已取消注销: userId={}", userId);
     }
     return cancelled.account();
   }
 
-  /// 事务里一起产出的账号信息、收件人，以及这次是不是真的从冷静期回到了正常。
+  /// 事务里一起产出的账号信息，以及这次是不是真的从冷静期回到了正常。
   ///
   /// @param account 账号信息
-  /// @param email 收件人
   /// @param changed 真的取消了时为 `true`
-  private record Cancelled(UserAccountReadModel account, EmailAddress email, boolean changed) {}
+  private record Cancelled(UserAccountReadModel account, boolean changed) {}
 }

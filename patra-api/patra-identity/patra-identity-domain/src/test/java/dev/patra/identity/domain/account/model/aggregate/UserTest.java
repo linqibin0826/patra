@@ -371,20 +371,6 @@ class UserTest {
   }
 
   @Test
-  @DisplayName("显式清提醒标记：冷静期内清空，其他状态什么都不做")
-  void should_clear_reminder_explicitly_only_while_pending() {
-    User pending = pendingUser();
-    pending.markDeletionReminded(T0);
-    User active = User.register(EMAIL, USERNAME);
-
-    pending.clearDeletionReminder();
-
-    assertThat(pending.getDeletionRemindedAt()).isNull();
-    assertThatCode(active::clearDeletionReminder).doesNotThrowAnyException();
-    assertThat(active.getDeletionRemindedAt()).isNull();
-  }
-
-  @Test
   @DisplayName("到期判定：恰好到期时刻就算到期，早一秒不算；正常状态永远不到期")
   void should_be_due_exactly_at_due_time() {
     User user = pendingUser();

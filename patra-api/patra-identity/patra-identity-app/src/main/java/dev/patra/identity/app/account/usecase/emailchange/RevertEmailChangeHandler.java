@@ -38,7 +38,8 @@ import org.springframework.transaction.support.TransactionOperations;
 /// 拿到账号后申请注销是很自然的事，原主必须能撤回，撤回不碰注销状态）→ 条件消费 → 旧地址 7 天内被别人
 /// 注册了 409 且事务回滚（令牌没被消费；当前邮箱已经是旧地址时不算占用）→ 改回并写验证时间 → 作废全部令牌 + 只作废比本条更晚签发的
 /// 撤销令牌（更早的保留：X → Y → Z 时攻击者先点 Y 的也废不掉原主 X 的）→ 删凭据
-/// （作废密码）→ 撤销全部会话并记 `EMAIL_REVERTED` → 签发重设令牌。事务后向改回的地址发含重设链接的通知。
+/// （作废密码）→ 撤销全部会话并记 `EMAIL_REVERTED` → 签发重设令牌 → 登记发往改回地址的含重设链接的通知
+/// （与撤销同成同败，PAP-104）。
 /// 不通知被踢掉的新地址。
 @Slf4j
 @Component
@@ -65,6 +66,9 @@ public class RevertEmailChangeHandler
   @Override
   public EmailChangeReverted handle(RevertEmailChangeCommand command) {
     EmailTokenSecret secret = ConfirmEmailChangeHandler.parse(command.token());
+    // 解析 UA 与属地是纯计算：放在事务之外
+    ClientOrigin origin =
+        clientOriginResolver.resolve(RequestOrigin.of(command.clientIp(), command.userAgent()));
     Instant now = clock.instant();
     Reverted reverted =
         Objects.requireNonNull(
@@ -111,18 +115,16 @@ public class RevertEmailChangeHandler
                       userReadPort
                           .findAccount(userId)
                           .orElseThrow(ConfirmEmailChangeHandler::invalid);
-                  return new Reverted(
-                      userId, restore, account.displayName(), reset.secret(), revoked.size());
+                  emailDelivery.send(
+                      EmailChangeRevertedMail.builder()
+                          .to(restore)
+                          .displayName(account.displayName())
+                          .resetUrl(links.resetPasswordUrl(reset.secret()))
+                          .linkExpiresAt(reset.token().getExpiresAt())
+                          .notice(origin.toNotice(now))
+                          .build());
+                  return new Reverted(userId, restore, revoked.size());
                 }));
-    // 解析放在事务提交之后、发信之前：纯计算，不占事务
-    ClientOrigin origin =
-        clientOriginResolver.resolve(RequestOrigin.of(command.clientIp(), command.userAgent()));
-    emailDelivery.send(
-        EmailChangeRevertedMail.of(
-            reverted.email(),
-            reverted.displayName(),
-            links.resetPasswordUrl(reverted.resetSecret()),
-            origin.toNotice(now, EmailChangeRevertedMail.NOT_ME_ADVICE)));
     log.info(
         "邮箱更改已撤销: userId={}, revokedSessions={}", reverted.userId(), reverted.revokedSessions());
     return EmailChangeReverted.of(reverted.email().value());
@@ -132,13 +134,6 @@ public class RevertEmailChangeHandler
   ///
   /// @param userId 用户 ID
   /// @param email 改回的旧邮箱
-  /// @param displayName 昵称
-  /// @param resetSecret 重设令牌的原文
   /// @param revokedSessions 撤销了几条会话
-  private record Reverted(
-      long userId,
-      EmailAddress email,
-      String displayName,
-      EmailTokenSecret resetSecret,
-      int revokedSessions) {}
+  private record Reverted(long userId, EmailAddress email, int revokedSessions) {}
 }
