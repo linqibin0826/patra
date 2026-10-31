@@ -129,6 +129,40 @@ class InboxQueryServiceTest {
     verifyNoInteractions(users);
   }
 
+  /// 有帮助的评论条目：人数原样给出；最近一位是所在匿名经验的作者（点了自己经验下我的评论）时不查他的名片。
+  @Test
+  void helpful_row_hides_anonymous_owner() {
+    when(reads.page(ME, NotificationCategory.HELPFUL, null, 21))
+        .thenReturn(List.of(helpfulEntry(NotificationType.COMMENT_HELPFUL, 500L, true, 3, "评论正文")));
+    when(subjects.findViews(any())).thenReturn(Map.of(40L, post(40L, true)));
+
+    NotificationView view = query.page("helpful", null).items().getFirst();
+
+    assertThat(view.type()).isEqualTo(NotificationType.COMMENT_HELPFUL);
+    assertThat(view.actorCount()).isEqualTo(3);
+    assertThat(view.commentId()).isEqualTo(500L);
+    assertThat(view.actor()).isNull();
+    assertThat(view.actorAnonymous()).isTrue();
+    assertThat(view.excerpt()).isEqualTo("评论正文");
+    verifyNoInteractions(users);
+  }
+
+  /// 经验没有文字：摘录为空，结果行字段照常给（门户据此写「大修 → 录用」）。
+  @Test
+  void post_helpful_without_text_has_no_excerpt() {
+    when(reads.page(ME, NotificationCategory.HELPFUL, null, 21))
+        .thenReturn(List.of(helpfulEntry(NotificationType.POST_HELPFUL, null, false, 1, null)));
+    when(subjects.findViews(any())).thenReturn(Map.of(40L, post(40L, true)));
+    when(users.findCards(any(), eq(ME))).thenReturn(Map.of(ACTOR, card(ACTOR, "wang", true)));
+
+    NotificationView view = query.page("helpful", null).items().getFirst();
+
+    assertThat(view.excerpt()).isNull();
+    assertThat(view.actorCount()).isEqualTo(1);
+    assertThat(view.subject().experience())
+        .isEqualTo(ExperienceOutline.of("MAJOR_REVISION", "ACCEPTED", 41, 96));
+  }
+
   /// interaction 挂了：对象与摘录都为空，不报错。
   @Test
   void should_degrade_subject_when_interaction_unavailable() {
@@ -270,6 +304,29 @@ class InboxQueryServiceTest {
         .actorAnonymous(anonymous)
         .subjectId(40L)
         .commentId(500L)
+        .plainText(plainText)
+        .occurredAt(AT)
+        .build();
+  }
+
+  /// 一条有帮助条目（对象 40）。
+  ///
+  /// @param type `COMMENT_HELPFUL` 或 `POST_HELPFUL`
+  /// @param commentId 被点的评论；点经验时为空
+  /// @param anonymous 最近一位是所在匿名经验的作者
+  /// @param actorCount 人数
+  /// @param plainText 正文，可空
+  /// @return 行
+  private static InboxEntry helpfulEntry(
+      NotificationType type, Long commentId, boolean anonymous, int actorCount, String plainText) {
+    return InboxEntry.builder()
+        .notificationId(21L)
+        .type(type)
+        .commentId(commentId)
+        .actorId(ACTOR)
+        .actorAnonymous(anonymous)
+        .actorCount(actorCount)
+        .subjectId(40L)
         .plainText(plainText)
         .occurredAt(AT)
         .build();

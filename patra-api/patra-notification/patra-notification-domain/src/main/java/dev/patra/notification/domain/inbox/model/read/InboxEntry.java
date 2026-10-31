@@ -10,9 +10,11 @@ import lombok.Builder;
 /// @param type 类型
 /// @param actorId 触发人
 /// @param actorAnonymous 触发人是对象的匿名所有者
+/// @param actorCount 触发人数：有帮助是点过的人数（取消不减），回复与 @ 恒为 1
 /// @param subjectId 所在对象
 /// @param commentId 评论，可空
-/// @param plainText 评论最新版本的纯文本全文（PAP-128，含 `<@ID>`）；评论已删除或没有快照时为空
+/// @param plainText 正文全文（PAP-128，含 `<@ID>`）：评论取最新版本的快照，有帮助点经验时取条目上的经验正文；评论已删除、
+///     没有快照或经验没有文字时为空
 /// @param occurredAt 排序时间
 /// @param readAt 已读时刻；未读为空
 @Builder
@@ -21,6 +23,7 @@ public record InboxEntry(
     NotificationType type,
     long actorId,
     boolean actorAnonymous,
+    int actorCount,
     long subjectId,
     Long commentId,
     String plainText,

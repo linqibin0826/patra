@@ -31,9 +31,10 @@ patra:
     consumer:
       # 按消息头 __TypeId__ 还原事件时只认这些包（按包名精确匹配、不含子包；java.lang / java.util 总是信任）
       trusted-packages:
-        # interaction 的评论与投稿经验事件：信箱队列一个监听类收多种事件（PAP-143）
+        # interaction 的评论、投稿经验与有帮助事件：信箱队列一个监听类收多种事件（PAP-143、PAP-144）
         - dev.patra.interaction.api.discussion.event
         - dev.patra.interaction.api.post.event
+        - dev.patra.interaction.api.reaction.event
         # identity 的安全邮件事件（PAP-104）
         - dev.patra.identity.api.account.event
   http-client:

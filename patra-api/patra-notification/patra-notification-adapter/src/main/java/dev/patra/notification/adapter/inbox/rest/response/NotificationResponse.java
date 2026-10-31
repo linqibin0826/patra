@@ -7,11 +7,12 @@ import lombok.Builder;
 /// 提醒列表的一行（spec 8.2）。
 ///
 /// @param notificationId 提醒 ID
-/// @param type `COMMENT_REPLY` / `POST_COMMENT` / `MENTION`（有帮助的类型由 PAP-144 加）
+/// @param type `COMMENT_REPLY` / `POST_COMMENT` / `MENTION` / `COMMENT_HELPFUL` / `POST_HELPFUL`
 /// @param read 是否已读
 /// @param occurredAt 排序时间（有帮助条目再被点时会变）
-/// @param actor 触发人；匿名作者或已注销用户时为空
+/// @param actor 触发人（有帮助是最近一位点的人）；匿名作者或已注销用户时为空
 /// @param actorAnonymous 触发人是匿名作者（为 `true` 时 `actor` 恒为空）
+/// @param actorCount 触发人数：有帮助是点过的人数（取消不减），回复与 @ 恒为 1
 /// @param subject 对象上下文；查不到或 interaction 挂了时为空
 /// @param commentId 评论（永久链接用）；有帮助点经验时为空
 /// @param excerpt 纯文本摘录 ≤ 120 字素；对象为空或不可用时为空
@@ -24,6 +25,7 @@ public record NotificationResponse(
     Instant occurredAt,
     ActorResponse actor,
     boolean actorAnonymous,
+    int actorCount,
     SubjectRefResponse subject,
     Long commentId,
     String excerpt,
@@ -41,6 +43,7 @@ public record NotificationResponse(
         .occurredAt(view.occurredAt())
         .actor(ActorResponse.from(view.actor()))
         .actorAnonymous(view.actorAnonymous())
+        .actorCount(view.actorCount())
         .subject(SubjectRefResponse.from(view.subject()))
         .commentId(view.commentId())
         .excerpt(view.excerpt())

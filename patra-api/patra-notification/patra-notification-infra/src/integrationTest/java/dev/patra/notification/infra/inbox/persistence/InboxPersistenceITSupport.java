@@ -25,7 +25,8 @@ abstract class InboxPersistenceITSupport {
   /// 每例从空表开始。
   @BeforeEach
   void truncateInboxTables() {
-    jdbcTemplate.update("TRUNCATE inbox.notification, inbox.comment, inbox.subject_tombstone");
+    jdbcTemplate.update(
+        "TRUNCATE inbox.helpful_actor, inbox.notification, inbox.comment, inbox.subject_tombstone");
   }
 
   /// 一条回复或 @ 提醒的草稿：触发人 9、对象 40、排序时间与写入时刻都是 {@link #NOW}。

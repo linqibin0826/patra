@@ -102,6 +102,7 @@ class InboxRestFlowIT extends NotificationFlowITSupport {
     assertThat(item.get("type").asString()).isEqualTo("COMMENT_REPLY");
     assertThat(item.get("read").asBoolean()).isFalse();
     assertThat(item.get("occurredAt").asString()).isEqualTo("2026-10-31T08:00:00Z");
+    assertThat(item.get("actorCount").asInt()).isEqualTo(1);
     assertThat(item.get("commentId").asString()).isEqualTo("500");
     assertThat(item.get("excerpt").asString()).isEqualTo("谢谢 @周敏");
     assertThat(item.get("excerptTruncated").asBoolean()).isFalse();

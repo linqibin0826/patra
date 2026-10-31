@@ -4,12 +4,14 @@ import dev.patra.interaction.api.discussion.event.CommentDeleted;
 import dev.patra.interaction.api.discussion.event.CommentEdited;
 import dev.patra.interaction.api.discussion.event.CommentPublished;
 import dev.patra.interaction.api.post.event.PostDeleted;
+import dev.patra.interaction.api.reaction.event.HelpfulMarked;
 import dev.patra.interaction.api.subject.event.SubjectContext;
 import dev.patra.notification.app.inbox.usecase.ingest.InboxConsumer;
 import dev.patra.notification.app.inbox.usecase.ingest.IngestOutcome;
 import dev.patra.notification.app.inbox.usecase.ingest.RecordCommentDeletedCommand;
 import dev.patra.notification.app.inbox.usecase.ingest.RecordCommentEditedCommand;
 import dev.patra.notification.app.inbox.usecase.ingest.RecordCommentPublishedCommand;
+import dev.patra.notification.app.inbox.usecase.ingest.RecordHelpfulMarkedCommand;
 import dev.patra.notification.app.inbox.usecase.ingest.RecordPostDeletedCommand;
 import dev.patra.notification.domain.inbox.model.vo.CommentFacts;
 import dev.patra.notification.domain.kernel.model.enums.SubjectType;
@@ -23,7 +25,7 @@ import org.springframework.amqp.rabbit.annotation.RabbitHandler;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.stereotype.Component;
 
-/// 信箱队列 `notification.inbox` 的监听：interaction 的评论发表 / 编辑 / 删除、经验删除（PAP-144 往这里加有帮助）。
+/// 信箱队列 `notification.inbox` 的监听：interaction 的评论发表 / 编辑 / 删除、经验删除、有帮助已点。
 ///
 /// 一个队列多种事件，按消息头 `__TypeId__` 分到各个 `@RabbitHandler`（`patra.events.consumer.trusted-packages` 里写着
 /// 这些事件所在的包）。只做「集成事件 → 命令」的映射，去重与事务在处理器里。
@@ -110,6 +112,29 @@ public class InboxEventListener {
         event.eventId(),
         commandBus.handle(
             RecordPostDeletedCommand.of(event.eventId(), event.subjectId(), event.deletedAt())));
+  }
+
+  /// 有帮助已点。经验结果（`experience`）不进命令：列表读时按对象现查。
+  ///
+  /// @param event 事件
+  @RabbitHandler
+  public void on(HelpfulMarked event) {
+    log(
+        "helpful.marked",
+        event.eventId(),
+        commandBus.handle(
+            RecordHelpfulMarkedCommand.builder()
+                .eventId(event.eventId())
+                .targetType(event.targetType())
+                .targetId(event.targetId())
+                .targetAuthorId(event.targetAuthorId())
+                .actorId(event.userId())
+                .markedAt(event.markedAt())
+                .subjectId(event.subject().subjectId())
+                .subjectOwnerId(event.subject().ownerId())
+                .subjectOwnerAnonymous(event.subject().ownerAnonymous())
+                .targetPlainText(event.targetPlainText())
+                .build()));
   }
 
   /// 评论事件里收件人规则要的事实。不认识的对象类型按 `null`（不当经验）。

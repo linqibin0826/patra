@@ -2,7 +2,7 @@
 
 通知服务：v0.16 起接管站内提醒、提醒偏好与一键退订、邮件（安全邮件与提醒邮件）、实时推送。interaction 与 identity 只发「发生了什么」的集成事件，由本服务决定提醒谁、怎么送达（release spec `docs/patra/release-specs/v0.16-notification.md` 决策 A）。
 
-工程设计：`docs/patra/specs/2026-10-30-notification-skeleton-design.md`（服务骨架、子域划分、存储与部署接入）；`docs/patra/specs/2026-10-31-notification-preference-unsubscribe-design.md`（提醒偏好与一键退订，PAP-142）；`docs/patra/specs/2026-10-31-notification-inbox-design.md`（信箱接管站内提醒，PAP-143）。
+工程设计：`docs/patra/specs/2026-10-30-notification-skeleton-design.md`（服务骨架、子域划分、存储与部署接入）；`docs/patra/specs/2026-10-31-notification-preference-unsubscribe-design.md`（提醒偏好与一键退订，PAP-142）；`docs/patra/specs/2026-10-31-notification-inbox-design.md`（信箱接管站内提醒，PAP-143）；`docs/patra/specs/2026-10-31-notification-helpful-design.md`（有帮助提醒，PAP-144）。
 
 ## 1. 三个概念
 
@@ -41,8 +41,9 @@ inbox 不依赖 preference：偏好只管邮件，站内提醒照常。
 
 ### inbox：信箱
 
-- 一个队列 `notification.inbox`（死信 `.dlx` / `.dlq`），绑定 interaction 的评论发表 / 编辑 / 删除、经验删除（PAP-144 加有帮助），单消费线程顺序处理。每个事件一个事务：先 `ProcessedEventPort` 按事件 ID 去重，再写业务。
-- 三张表：`inbox.notification`（一行一个收件人一条提醒，按收件人哈希分 16 区；列表按可变的排序时间 `occurred_at` 加 ID 翻页；`created_at` 是写入信箱的时刻，提醒邮件的时间窗口从它算）、`inbox.comment`（每条评论最新版本的纯文本与墓碑：版本更新才覆盖正文，删除后变墓碑，之后这条评论的事件都丢弃）、`inbox.subject_tombstone`（已删除的投稿经验）。
+- 一个队列 `notification.inbox`（死信 `.dlx` / `.dlq`），绑定 interaction 的评论发表 / 编辑 / 删除、经验删除、有帮助已点，单消费线程顺序处理。每个事件一个事务：先 `ProcessedEventPort` 按事件 ID 去重，再写业务。
+- 表：`inbox.notification`（一行一个收件人一条提醒，按收件人哈希分 16 区；列表按可变的排序时间 `occurred_at` 加 ID 翻页；`created_at` 是写入信箱的时刻，提醒邮件的时间窗口从它算）、`inbox.comment`（每条评论最新版本的纯文本与墓碑：版本更新才覆盖正文，删除后变墓碑，之后这条评论的事件都丢弃）、`inbox.subject_tombstone`（已删除的投稿经验）、`inbox.helpful_actor`（有帮助点过的人，见下一条）。
+- 有帮助（PAP-144）：按「被点的内容 × 北京时间一天」合成 `inbox.notification` 的一行（`category = HELPFUL`，类型 `COMMENT_HELPFUL` / `POST_HELPFUL`），那一天由事件里的点击时刻 `markedAt` 换算，不看处理时刻。点过的人与各自第一次点的时刻在附表 `inbox.helpful_actor`（级联外键随信箱行删除）：人数 = 附表行数，最近一位 = 第一次点得最晚的人，新的人让条目重新未读；同一个人取消后再点不算又有人点，结果与消息到达顺序无关。点评论的摘录走评论快照（没有快照时用事件正文补一行版本 0），点经验的存在条目行的 `post_plain_text`（事件时刻最晚者为准）。不进铃铛、不发邮件、不发「提醒生成」。
 - 收件人规则 `RecipientRules`（搬自 interaction）：先被回复的人、再经验作者（只对经验下的根评论）、最后 @ 到的人，同一人取第一次出现的类型，去掉作者本人；编辑只给第一次 @ 到的人发，并去掉发表负责的那两类人，结果与到达顺序无关。
 - 读时组合：列表的对象信息（链接 key、标题、期刊、是否还在、经验结果）调 interaction 现查，挂了降级为不带对象信息；名片调 identity，挂了 503。
 - 给别的子域的：读端口 `InboxReadPort`（列表、三个未读数），领域事件 `UnreadCountsChangedEvent`（实时推送提交后订阅）、`NotificationsCreatedEvent`（提醒邮件同事务订阅）。

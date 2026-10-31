@@ -19,10 +19,14 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class InboxReadAdapter implements InboxReadPort {
 
-  /// 列表的查询：评论正文从快照表关联（墓碑的正文为空）。
+  /// 列表的查询：评论正文从快照表关联（墓碑的正文为空），有帮助点经验时取条目上的经验正文；有帮助的人数数附表，
+  /// 其余为 1。
   private static final String PAGE =
       "SELECT n.notification_id, n.type, n.actor_id, n.actor_anonymous, n.subject_id, n.comment_id,"
-          + " c.plain_text, n.occurred_at, n.read_at"
+          + " COALESCE(c.plain_text, n.post_plain_text) AS plain_text, n.occurred_at, n.read_at,"
+          + " CASE WHEN n.category = 'HELPFUL' THEN (SELECT count(*) FROM inbox.helpful_actor a"
+          + " WHERE a.recipient_id = n.recipient_id AND a.notification_id = n.notification_id)"
+          + " ELSE 1 END AS actor_count"
           + " FROM inbox.notification n LEFT JOIN inbox.comment c ON c.comment_id = n.comment_id"
           + " WHERE n.recipient_id = :recipientId AND n.category = :category";
 
@@ -38,6 +42,7 @@ public class InboxReadAdapter implements InboxReadPort {
               .type(NotificationType.valueOf(rs.getString("type")))
               .actorId(rs.getLong("actor_id"))
               .actorAnonymous(rs.getBoolean("actor_anonymous"))
+              .actorCount(rs.getInt("actor_count"))
               .subjectId(rs.getLong("subject_id"))
               .commentId(rs.getObject("comment_id", Long.class))
               .plainText(rs.getString("plain_text"))

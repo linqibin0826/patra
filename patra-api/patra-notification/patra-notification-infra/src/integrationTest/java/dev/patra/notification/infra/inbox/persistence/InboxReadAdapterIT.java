@@ -1,20 +1,28 @@
 package dev.patra.notification.infra.inbox.persistence;
 
+import static dev.patra.notification.domain.inbox.model.read.NotificationType.COMMENT_HELPFUL;
 import static dev.patra.notification.domain.inbox.model.read.NotificationType.COMMENT_REPLY;
 import static dev.patra.notification.domain.inbox.model.read.NotificationType.MENTION;
 import static dev.patra.notification.domain.inbox.model.read.NotificationType.POST_COMMENT;
+import static dev.patra.notification.domain.inbox.model.read.NotificationType.POST_HELPFUL;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.tuple;
 
+import dev.patra.notification.domain.inbox.model.aggregate.HelpfulNotification;
+import dev.patra.notification.domain.inbox.model.enums.HelpfulTargetType;
 import dev.patra.notification.domain.inbox.model.read.InboxCursor;
 import dev.patra.notification.domain.inbox.model.read.InboxEntry;
 import dev.patra.notification.domain.inbox.model.read.UnreadCounts;
+import dev.patra.notification.domain.inbox.model.vo.HelpfulMark;
+import dev.patra.notification.domain.inbox.model.vo.HelpfulTarget;
+import dev.patra.notification.domain.inbox.model.vo.SubjectOwner;
 import dev.patra.notification.domain.kernel.model.enums.NotificationCategory;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.transaction.support.TransactionTemplate;
 
 /// 信箱的读端：按排序时间与 ID 翻页、按类别过滤、关联评论正文、三个未读数。
 class InboxReadAdapterIT extends InboxPersistenceITSupport {
@@ -22,6 +30,8 @@ class InboxReadAdapterIT extends InboxPersistenceITSupport {
   @Autowired private InboxReadAdapter reads;
   @Autowired private NotificationRepositoryAdapter notifications;
   @Autowired private CommentContentRepositoryAdapter comments;
+  @Autowired private HelpfulNotificationRepositoryAdapter helpful;
+  @Autowired private TransactionTemplate transactions;
 
   /// 排序时间新的在前，同一时刻按 ID 倒序；按游标翻两页不重不漏。
   @Test
@@ -102,5 +112,50 @@ class InboxReadAdapterIT extends InboxPersistenceITSupport {
 
     assertThat(reads.unreadCounts(2L)).isEqualTo(UnreadCounts.of(2, 1, 0));
     assertThat(reads.unreadCounts(99L)).isEqualTo(UnreadCounts.of(0, 0, 0));
+  }
+
+  /// 有帮助的两种条目：人数取附表、经验的摘录取条目上的经验正文、评论的取评论快照；点经验时没有评论。
+  @Test
+  void helpful_rows_carry_actor_count_and_post_text() {
+    Instant t1 = Instant.parse("2026-10-31T01:00:00Z");
+    HelpfulNotification post =
+        HelpfulNotification.open(
+            2L,
+            HelpfulTarget.of(HelpfulTargetType.POST, 55L, 41L),
+            SubjectOwner.of(2L, false),
+            HelpfulMark.of(11L, t1),
+            "经验正文");
+    post.absorb(HelpfulMark.of(12L, t1.plusSeconds(60)), "经验正文");
+    post.absorb(HelpfulMark.of(13L, t1.plusSeconds(120)), "经验正文");
+    transactions.executeWithoutResult(status -> helpful.insert(post, NOW));
+    comments.saveIfNewer(500L, 40L, 1, "评论正文", NOW);
+    HelpfulNotification comment =
+        HelpfulNotification.open(
+            2L,
+            HelpfulTarget.of(HelpfulTargetType.COMMENT, 500L, 40L),
+            SubjectOwner.of(null, false),
+            HelpfulMark.of(11L, t1.plusSeconds(600)),
+            "评论正文");
+    transactions.executeWithoutResult(status -> helpful.insert(comment, NOW));
+    notifications.insertAll(List.of(draft(2L, COMMENT_REPLY, 501L)));
+
+    List<InboxEntry> page = reads.page(2L, NotificationCategory.HELPFUL, null, 20);
+
+    assertThat(page)
+        .extracting(
+            InboxEntry::type, InboxEntry::actorCount, InboxEntry::plainText, InboxEntry::commentId)
+        .containsExactly(
+            tuple(COMMENT_HELPFUL, 1, "评论正文", 500L), tuple(POST_HELPFUL, 3, "经验正文", null));
+    assertThat(page.get(1).actorId()).isEqualTo(13L);
+  }
+
+  /// 回复与 @ 的行人数恒为 1。
+  @Test
+  void reply_rows_report_one_actor() {
+    notifications.insertAll(List.of(draft(2L, COMMENT_REPLY, 500L)));
+
+    assertThat(reads.page(2L, NotificationCategory.REPLY, null, 20))
+        .extracting(InboxEntry::actorCount)
+        .containsExactly(1);
   }
 }

@@ -134,6 +134,7 @@ public class InboxQueryService {
         .occurredAt(entry.occurredAt())
         .actor(entry.actorAnonymous() ? null : cards.get(entry.actorId()))
         .actorAnonymous(entry.actorAnonymous())
+        .actorCount(entry.actorCount())
         .subject(subject == null ? null : subjectRef(subject, recipient))
         .commentId(entry.commentId())
         .excerpt(excerpt == null ? null : excerpt.text())

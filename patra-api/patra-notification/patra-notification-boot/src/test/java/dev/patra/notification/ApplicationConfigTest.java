@@ -3,6 +3,7 @@ package dev.patra.notification;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
@@ -62,6 +63,24 @@ class ApplicationConfigTest {
   @Test
   void should_not_configure_redis() throws IOException {
     assertThat(propertyNames()).noneMatch(name -> name.startsWith("spring.data.redis"));
+  }
+
+  /// 信箱监听按 `__TypeId__` 分发，信任包里要有 interaction 三个事件包：少了有帮助的包，`helpful.marked` 反序列化失败、
+  /// 重试三次后进死信。
+  ///
+  /// @throws IOException 读取失败时
+  @Test
+  void should_trust_interaction_event_packages() throws IOException {
+    List<String> trusted = new ArrayList<>();
+    for (int i = 0; property("patra.events.consumer.trusted-packages[" + i + "]") != null; i++) {
+      trusted.add(property("patra.events.consumer.trusted-packages[" + i + "]"));
+    }
+
+    assertThat(trusted)
+        .contains(
+            "dev.patra.interaction.api.discussion.event",
+            "dev.patra.interaction.api.post.event",
+            "dev.patra.interaction.api.reaction.event");
   }
 
   /// 读出 `application.yml` 里某个属性的值。

@@ -10,7 +10,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
 
-/// 写提醒并发领域事件（评论发表、编辑共用，PAP-144 的有帮助也用）。必须在调用方的事务里调：事件随之发布，回滚就没有。
+/// 写提醒并发领域事件（评论发表、编辑共用；有帮助不走这里：它是合并条目，也不发「提醒生成」）。必须在调用方的事务里调：事件随之发布，回滚就没有。
 @Component
 @RequiredArgsConstructor
 public class NotificationWriter {
