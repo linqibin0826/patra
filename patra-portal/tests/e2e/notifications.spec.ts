@@ -59,7 +59,7 @@ const E = {
   email: process.env.PATRA_E2E_VERIFIED_E_EMAIL ?? "",
   password: process.env.PATRA_E2E_VERIFIED_E_PASSWORD ?? "",
 };
-/// 投稿经验用例里的作者 C：原来的测试账号 C 已注销，由 E 担任
+/// 投稿经验用例里的作者 C：由测试账号 E 担任，免得和改 C 账号的手工验收（找回密码、换邮箱）撞在一起
 const C = E;
 
 /// 场景 2 的那条经验：3 月投稿，首轮 6 周（42 天）大修，之后录用
