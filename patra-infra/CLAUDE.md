@@ -19,11 +19,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Compose 分栈结构
 
-每个子栈是**独立的 Docker project**（`patra-core` / `patra-storage` / `patra-search` / `patra-observability` / `patra-tailnet` / `patra-jobs`），共享外部网络 `patra-net`。拆成多 project 是为了让 IDEA / OrbStack 的 Docker 视图按子栈分组显示，而非合成一个 `patra` 组。
+每个子栈是**独立的 Docker project**（`patra-core` / `patra-pipeline` / `patra-storage` / `patra-search` / `patra-observability` / `patra-tailnet` / `patra-jobs`），共享外部网络 `patra-net`。拆成多 project 是为了让 IDEA / OrbStack 的 Docker 视图按子栈分组显示，而非合成一个 `patra` 组。
 
 | 子栈 / project | 内容 |
 |---|---|
 | `patra-core` | postgres / redis / nacos / rabbitmq |
+| `patra-pipeline` | clickhouse / kafka / kafka-init（v0.18 行为数据；手动部署，不进 CD；内存紧张时可整栈 down 腾出约 3 GB） |
 | `patra-storage` | minio / minio-init |
 | `patra-search` | elasticsearch |
 | `patra-observability` | otel-collector / prometheus / loki / tempo / grafana / alertmanager |
@@ -51,6 +52,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 4. **CD 在 runner 工作区里执行，被 git 忽略的文件每次都会被清掉。** `actions/checkout` 默认 `clean: true`，每次运行前执行 `git clean -ffdx`，放在 compose 目录里的密钥文件活不过下一次部署。所以密钥放在仓库外的 `~/.patra/secrets/`，compose 按 `${HOME}` 绝对路径加载（runner 进程的 `HOME` 就是用户主目录），见 README「密钥」。
 
 5. **RabbitMQ 的三个坑**（详见 README「RabbitMQ」）：hostname 固定为 `patra-rabbitmq`，变了会另起空的数据目录；它不读容器内存上限，`rabbitmq/conf.d/20-patra.conf` 的可用内存要和 compose 的 `limits.memory` 一起改；`patra` 账号只在首次启动时按 `rabbitmq.env` 创建，改文件不改密码，要在容器里 `rabbitmqctl change_password`。
+
+6. **pipeline 栈的三个坑**（详见 README「ClickHouse」「Kafka」）：ClickHouse 的密码变量不能叫 `CLICKHOUSE_PASSWORD` / `CLICKHOUSE_USER`（镜像入口脚本会据此改掉 `default` 账号并放开网络访问），用的是 `CLICKHOUSE_PATRA_PASSWORD`、`CLICKHOUSE_GRAFANA_PASSWORD`，经 `users.d` 的 `from_env` 读；Kafka 的 `CLUSTER_ID` 写死在 compose 里，改了起不来；Kafka 的 `EXTERNAL` 通告地址是 `linqibins-mac-mini:9092`，新增连 Kafka 的应用容器要有 `extra_hosts: linqibins-mac-mini:host-gateway`。
 
 ## Self-hosted Runner 与 CD（多服务，Mac mini 原生构建）
 

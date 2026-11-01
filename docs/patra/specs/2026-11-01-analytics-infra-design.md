@@ -128,7 +128,7 @@ inter.broker.listener.name = INTERNAL
 
 端口映射只有 `9092:9092`。通告地址沿用 MinIO 的写法，可用 `PATRA_INFRA_HOST` 覆盖（本机验证时设成 `localhost`）。
 
-**broker 级配置**：内部 topic（消费位点、事务状态、共享组状态）副本数都设 1；`auto.create.topics.enable=false`（写错 topic 名直接报错，不会悄悄建一个没有上限的新 topic）；`log.retention.check.interval.ms=60000`（默认 5 分钟，压测时 5 分钟能多写一两 GB，缩到 1 分钟）；`group.initial.rebalance.delay.ms=0`。
+**broker 级配置**：内部 topic（消费位点、事务状态、共享组状态）副本数都设 1；`auto.create.topics.enable=false`（写错 topic 名直接报错，不会悄悄建一个没有上限的新 topic）；`log.retention.check.interval.ms=30000`、`log.segment.delete.delay.ms=5000`（超出上限的部分要等清理检查发现、再等删除延迟才真删，默认 5 分钟 + 1 分钟；本机演练时先缩到 1 分钟，不限速写入下峰值仍拖了约 100 秒，再缩到 30 秒 + 5 秒）；`group.initial.rebalance.delay.ms=0`。
 
 **认证**：不设（PLAINTEXT），端口只在 tailnet 与局域网可达，不进 Cloudflare Tunnel（用户 11/01 确认，第 9 节）。
 
@@ -138,14 +138,14 @@ inter.broker.listener.name = INTERNAL
 2. **认证**（SASL）：常用 `SCRAM-SHA-512`。账号存在 KRaft 元数据里，用 `kafka-configs.sh --alter --add-config 'SCRAM-SHA-512=[password=...]' --entity-type users --entity-name analytics-collector` 创建；客户端配 `security.protocol=SASL_SSL`、`sasl.mechanism=SCRAM-SHA-512`、`sasl.jaas.config=...ScramLoginModule required username=... password=...;`。每个服务一个账号。
 3. **授权**（ACL）：broker 开 `authorizer.class.name=org.apache.kafka.metadata.authorizer.StandardAuthorizer`（KRaft 下的实现）、`allow.everyone.if.no.acl.found=false`，再按最小权限授权，例如采集服务只能写 `events.raw` 与 `events.dlq`：`kafka-acls.sh --add --allow-principal User:analytics-collector --operation Write --topic events.raw`；入库消费者只能读 `events.raw` 并使用自己的消费组：`--operation Read --topic events.raw --group analytics-ingest`。
 
-**数据**：`${HOME}/.patra/docker/kafka/data:/var/lib/kafka/data`。镜像以 uid 1000 运行，`init-volumes.sh` 给目录放开写权限（同 Elasticsearch 的做法）。
+**数据**：`${HOME}/.patra/docker/kafka/data:/var/lib/kafka/data`。镜像以 uid 1000 运行；本机演练确认 OrbStack 的 bind mount 不用改目录权限就能写（Elasticsearch 当初要 `chmod 777`，这里不需要），`init-volumes.sh` 只建目录。
 
 **topic**（由 `kafka-init` 边车建，见下）：
 
 | topic | 分区 | `retention.ms` | `retention.bytes`（每分区） | `segment.bytes` | `segment.ms` | 最坏占用 |
 |---|---|---|---|---|---|---|
-| `events.raw` | 3 | 2 天 | 1 GiB | 256 MiB | 6 小时 | 3 × 1.25 GiB = 3.75 GiB + 1 分钟写入量 |
-| `events.dlq` | 1 | 2 天 | 512 MiB | 128 MiB | 6 小时 | 0.625 GiB + 1 分钟写入量 |
+| `events.raw` | 3 | 2 天 | 1 GiB | 256 MiB | 6 小时 | 3 × 1.25 GiB = 3.75 GiB + 约 35 秒的写入量 |
+| `events.dlq` | 1 | 2 天 | 512 MiB | 128 MiB | 6 小时 | 0.625 GiB + 约 35 秒的写入量 |
 
 - 分区数 3：PAP-168 的消费者最多 3 个并行，单节点上足够，也给模拟器的吞吐留了余地。
 - `segment.ms` 6 小时：流量小时让段文件按时间滚动，「保留 2 天」最多拖到 2 天 6 小时。
@@ -161,7 +161,7 @@ inter.broker.listener.name = INTERNAL
 - **插件**：Grafana 12 起用 `GF_PLUGINS_PREINSTALL_SYNC=grafana-clickhouse-datasource@4.22.1`（Grafana 启动前同步装好，provisioning 能立刻用上）。插件装在 `/var/lib/grafana/plugins`，那是已有的 bind mount，重建容器不用重装。钉版本：不钉时每次启动会自动升小版本。4.22.1 是一个月前的版本、要求 Grafana ≥ 11.6，当前 12.3.0 满足。
 - **装不上时**：mini 的容器访问 grafana.com 要经过 mini 的出向网络（实测前不确定）。runbook 写备用做法：MacBook 下载插件 zip、`scp` 到 mini 的 `~/.patra/docker/grafana/data/plugins/` 解压，再去掉环境变量重启。
 - **数据源**（`provisioning/datasources/datasources.yaml` 加一项，也加进 `deleteDatasources`）：`type: grafana-clickhouse-datasource`、`uid: clickhouse`、`host: patra-clickhouse`、`port: 8123`、`protocol: http`、`defaultDatabase: patra_analytics`、`username: grafana`、`secureJsonData.password: $CLICKHOUSE_GRAFANA_PASSWORD`。provisioning 文件支持环境变量展开，grafana 容器加 `env_file: ${HOME}/.patra/secrets/clickhouse-grafana.env`（`required: true`）：只拿只读账号的密码，拿不到读写账号的。
-- **内存**：插件是一个独立的 Go 后端进程，现有 256 MiB 上限本机实测后再定是否调到 384 MiB。
+- **内存**：插件是一个独立的 Go 后端进程。本机实测首次启动约 200 MiB（256 MiB 上限的 80%），30 个并发查询各返回 20 万行时插件进程被 OOM 杀掉（Grafana 自动拉起）。上限调到 384 MiB；面板要在 ClickHouse 里聚合好再返回。
 
 ### 4.4 密钥：`~/.patra/secrets/clickhouse.env` 与 `clickhouse-grafana.env`
 
@@ -216,10 +216,10 @@ CLICKHOUSE_GRAFANA_PASSWORD=<64 位十六进制>  # 账号 grafana，只读
 | `patra-infra/docker/grafana/provisioning/datasources/datasources.yaml` | 加 ClickHouse 数据源 |
 | `patra-infra/docker/secrets/clickhouse.env.example`、`clickhouse-grafana.env.example` | 新增 |
 | `patra-infra/scripts/compose-all.sh` | `ORDER` 加 `pipeline`（在 core 之后、observability 之前：grafana 要读 clickhouse-grafana.env，数据源启动时不要求 ClickHouse 已在线） |
-| `patra-infra/scripts/init-volumes.sh` | 建 clickhouse、kafka 目录，kafka 目录放开权限 |
+| `patra-infra/scripts/init-volumes.sh` | 建 clickhouse、kafka 目录 |
 | `patra-infra/cd/detect-changes.sh` + `.test.sh` | 新配置目录归为纯基建 |
 | `patra-infra/docker/README.md`、`patra-infra/CLAUDE.md` | 结构、密钥表、服务 URL、新增「ClickHouse」「Kafka」两节、资源表 |
-| `docs/patra/runbooks/2026-11-01-pap165-pipeline-deploy.md` | 新增：部署与回滚手册 |
+| `docs/patra/runbooks/v0.18-analytics-go-live-runbook.md` | 新增：v0.18 上线手册，本 Issue 建立并写 pipeline 栈的部署、验收与回滚，后续 Issue 往里加小节 |
 | `gradle/libs.versions.toml` | 加两个 Testcontainers 模块 |
 | `patra-tool/patra-tool-test/build.gradle.kts` | `api` 加两个模块；`integrationTestImplementation` 加 `kafka-clients` |
 | `patra-tool/patra-tool-test/.../ContainerType.java` | 加 `CLICKHOUSE`、`KAFKA` |
@@ -237,7 +237,7 @@ CLICKHOUSE_GRAFANA_PASSWORD=<64 位十六进制>  # 账号 grafana，只读
    - `docker stats`：ClickHouse 空闲与跑查询时都在 2 GiB 内；Kafka 在 1 GiB 内；记录实测值写进 runbook 作为对照。
    - 两个账号能登录；`grafana` 账号 `INSERT` 被拒；重建容器后照常。
    - `kafka-configs.sh --describe` 显示两个 topic 的配置与表格一致；重跑 `kafka-init` 幂等。
-   - **压满测试**：用 `kafka-producer-perf-test.sh` 往 `events.raw` 写约 7 GB，观察 `events.raw` 三个分区目录总大小停在 3.75 GiB 附近、不再增长。
+   - **压满测试**：用 `kafka-producer-perf-test.sh` 往 `events.raw` 写约 7 GB，观察 `events.raw` 三个分区目录总大小回落到 3.75 GiB 以内、不再增长。
    - Grafana 插件装上、数据源对 ClickHouse 执行 `SELECT 1` 成功。
 3. `bash patra-infra/cd/detect-changes.test.sh` 通过；`docker compose -f ... config --quiet` 校验通过。
 
@@ -255,7 +255,7 @@ CLICKHOUSE_GRAFANA_PASSWORD=<64 位十六进制>  # 账号 grafana，只读
 
 **代价**：改了 pipeline 栈的配置要记得去 mini 手动 `up`。runbook 写清楚。
 
-runbook（`docs/patra/runbooks/2026-11-01-pap165-pipeline-deploy.md`）内容：部署前记录（`docker stats --no-stream`、`df -h`、OrbStack 内存）→ 放密钥 → `init-volumes.sh` → `compose-all.sh up pipeline observability` → 验收（AC 逐条的命令与预期）→ 部署后记录 → 回滚（停栈并按需清数据目录；Grafana 去掉插件与数据源）。
+runbook（`docs/patra/runbooks/v0.18-analytics-go-live-runbook.md`，按项目惯例一版一份）内容：部署前记录（`docker stats --no-stream`、`df -h`、OrbStack 内存）→ 放密钥 → `init-volumes.sh` → `compose-all.sh up pipeline observability` → 验收（AC 逐条的命令与预期）→ 部署后记录 → 回滚（停栈并按需清数据目录；Grafana 去掉插件与数据源）。
 
 ## 8. 风险
 

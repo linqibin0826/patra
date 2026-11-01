@@ -78,7 +78,7 @@
 - Create: `patra-infra/docker/clickhouse/config.d/patra.xml`、`users.d/patra.xml`、`initdb/01-database.sql`
 - Create: `patra-infra/docker/secrets/clickhouse.env.example`、`clickhouse-grafana.env.example`
 - Modify: `patra-infra/scripts/compose-all.sh`（`ORDER=(core pipeline storage search observability tailnet jobs apps)`，注释与用法同步）
-- Modify: `patra-infra/scripts/init-volumes.sh`（建 `clickhouse/data`、`clickhouse/logs`、`kafka/data`，`kafka/data` 放开权限）
+- Modify: `patra-infra/scripts/init-volumes.sh`（建 `clickhouse/data`、`clickhouse/logs`、`kafka/data`）
 
 要点（取值见 spec 4.1）：容器 `patra-clickhouse`、hostname 同名、端口 `8123`/`9000`、`limits.memory: 2g`、`ulimits.nofile 262144`、`env_file` 两个密钥文件 `required: true`、健康检查 `/ping`；`config.d` 含 Altinity 低内存项、缓存缩到 128/32/16 MiB、关多余系统日志（按 26.8 镜像实际默认开启的列表）、`query_log`/`part_log` 7 天 TTL、`storage_configuration` 默认磁盘 `keep_free_space_bytes` 22 GB；`users.d` 两个账号 `from_env`。
 
@@ -135,7 +135,7 @@
 - Modify: `patra-infra/docker/README.md`（结构、密钥表与生成命令、服务 URL、新增「ClickHouse」「Kafka」两节、选择性启动、资源表、依赖图）
 - Modify: `patra-infra/CLAUDE.md`（子栈表、非显性约束加 Kafka 集群 ID / 通告地址 / ClickHouse 变量名三条）
 - Modify: `patra-tool/patra-tool-test/README.md`（初始化器清单）
-- Create: `docs/patra/runbooks/2026-11-01-pap165-pipeline-deploy.md`（spec 第 7 节的结构；附本机演练记录的内存与磁盘实测）
+- Create: `docs/patra/runbooks/v0.18-analytics-go-live-runbook.md`（spec 第 7 节的结构；附本机演练记录的内存与磁盘实测）
 
 - [ ] **Step 1: 写文档**
 - [ ] **Step 2: 核对**：README 里每条命令在本机演练里跑过或语法检查过；runbook 的验收命令与 AC 一一对应
