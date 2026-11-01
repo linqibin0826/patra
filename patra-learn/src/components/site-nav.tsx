@@ -1,10 +1,11 @@
 // patra-learn/src/components/site-nav.tsx
-// 顶栏（画板 Nav）：站名、今天 / 路线 / 主题 / 标签、搜索入口；任意页按 / 进搜索
+// 顶栏（画板 Nav）：站名、今天 / 路线 / 主题 / 标签 / 批注、搜索入口；任意页按 / 进搜索
 "use client";
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
+import { useAnnotations } from "@/lib/annotations/use-annotations";
 import { cx, wrap } from "./ui";
 
 const LINKS = [
@@ -50,6 +51,32 @@ function useSlashToSearch() {
   }, [router]);
 }
 
+/// 「我的批注」入口，有批注时带条数（批注只在浏览器里，服务端与水合时是 0）
+function NotesLink({ current }: { current: boolean }) {
+  const { annotations } = useAnnotations();
+  const count = annotations.length;
+  return (
+    <Link
+      href="/notes"
+      aria-current={current ? "page" : undefined}
+      aria-label={count > 0 ? `批注，${count} 条` : undefined}
+      className={cx(
+        "inline-flex items-center gap-1.5 rounded-full px-3 py-1.5",
+        current
+          ? "bg-surface font-medium text-ink shadow-[inset_0_0_0_1px_var(--color-line)]"
+          : "text-ink-3 hover:bg-surface hover:text-ink",
+      )}
+    >
+      批注
+      {count > 0 ? (
+        <span className="box-border inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-teal-tint px-1.5 font-semibold text-[11.5px] text-teal-deep">
+          {count}
+        </span>
+      ) : null}
+    </Link>
+  );
+}
+
 export function SiteNav() {
   const pathname = usePathname();
   useSlashToSearch();
@@ -78,6 +105,7 @@ export function SiteNav() {
             </Link>
           );
         })}
+        <NotesLink current={pathname.startsWith("/notes")} />
       </nav>
       <span className="flex-1 max-sm:hidden" />
       <Link
