@@ -139,10 +139,18 @@ services:
       - ${HOME}/.patra/docker/grafana/data:/var/lib/grafana
     ports:
       - "3000:3000"
+    env_file:
+      # ClickHouse 只读账号 grafana 的密码，provisioning/datasources/datasources.yaml 展开 $CLICKHOUSE_GRAFANA_PASSWORD。
+      # 只放 mini，缺失时 compose 拒绝执行（见 README「ClickHouse」）
+      - path: ${HOME}/.patra/secrets/clickhouse-grafana.env
+        required: true
     environment:
       TZ: Asia/Shanghai
       GF_SECURITY_ADMIN_USER: admin
       GF_SECURITY_ADMIN_PASSWORD: patra123
+      # ClickHouse 数据源插件：启动前同步装好（provisioning 立刻能用），装在 /var/lib/grafana/plugins，即上面的数据卷，
+      # 重建容器不用重装。钉版本：不钉时每次启动会自动升小版本。拉不到时的离线装法见 README「ClickHouse」
+      GF_PLUGINS_PREINSTALL_SYNC: grafana-clickhouse-datasource@4.22.1
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:3000/api/health || exit 1"]
       interval: 15s
@@ -152,7 +160,10 @@ services:
     deploy:
       resources:
         limits:
-          memory: 256M
+          # 256M → 384M（PAP-165）：ClickHouse 插件是一个独立的后端进程。本机实测首次启动装插件时约 200 MiB，
+          # 10 个并发查询各返回 1 万行时约 130 MiB。30 个并发各返回 20 万行原始数据时插件进程在 384M 下也会被 OOM 杀掉
+          # （Grafana 会自动拉起它）：面板要在 ClickHouse 里聚合好再返回，不要把明细整表拉进 Grafana
+          memory: 384M
     depends_on:
       prometheus:
         condition: service_healthy

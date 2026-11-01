@@ -1,0 +1,103 @@
+<!--
+  Patra 对 ClickHouse 服务器的配置，挂到 /etc/clickhouse-server/config.d/，叠加在镜像自带的 config.xml 之上。
+  改完在 mini 上 git pull，再 docker restart patra-clickhouse 生效。
+
+  思路照 Altinity 知识库的「低内存环境」样例（kb.altinity.com，configure_clickhouse_for_low_mem_envs）：
+  缩缓存、限并发、关掉用不到的系统日志。样例是给 4~8 GB 机器的，这里按容器上限 2 GB 再往下调。
+-->
+<clickhouse>
+  <!-- 日志：镜像默认 trace 级别、10 个 1000 MB 的滚动文件，最多能写 10 GB。改成 information、3 个 100 MB -->
+  <logger>
+    <level>information</level>
+    <size>100M</size>
+    <count>3</count>
+  </logger>
+
+  <!-- 不用 MySQL、PostgreSQL 兼容协议 -->
+  <mysql_port remove="1"/>
+  <postgresql_port remove="1"/>
+
+  <!-- 不把程序本身锁在内存里，允许系统在内存紧张时换出不常用的代码页 -->
+  <mlock_executable>false</mlock_executable>
+
+  <!-- 缓存：Altinity 样例是 256 / 64 / 16 MiB，按 2 GB 把前两个减半。
+       查询条件缓存默认约 100 MB、查询结果缓存默认 1 GB（只在查询显式开启时使用），一并调小 -->
+  <mark_cache_size>134217728</mark_cache_size>
+  <index_mark_cache_size>33554432</index_mark_cache_size>
+  <uncompressed_cache_size>16777216</uncompressed_cache_size>
+  <query_condition_cache_size>33554432</query_condition_cache_size>
+  <query_cache>
+    <max_size_in_bytes>67108864</max_size_in_bytes>
+  </query_cache>
+
+  <!-- 内存：ClickHouse 能读出容器的 cgroup 上限，0.75 即 2 GB × 0.75 ≈ 1.5 GB，
+       剩下的留给它统计不到的内存。和 docker-compose.pipeline.yaml 的 limits.memory 一起看 -->
+  <max_server_memory_usage_to_ram_ratio>0.75</max_server_memory_usage_to_ram_ratio>
+  <max_server_memory_usage>0</max_server_memory_usage>
+
+  <!-- 并发 -->
+  <max_thread_pool_size>2000</max_thread_pool_size>
+  <max_connections>64</max_connections>
+  <max_concurrent_queries>8</max_concurrent_queries>
+
+  <!-- 后台合并：写入压力大时合并最吃内存，限制并行数和单次合并的大小（最大 1 GB 一个数据片段） -->
+  <background_pool_size>2</background_pool_size>
+  <background_merges_mutations_concurrency_ratio>2</background_merges_mutations_concurrency_ratio>
+  <merge_tree>
+    <merge_max_block_size>1024</merge_max_block_size>
+    <max_bytes_to_merge_at_max_space_in_pool>1073741824</max_bytes_to_merge_at_max_space_in_pool>
+    <number_of_free_entries_in_pool_to_lower_max_size_of_merge>2</number_of_free_entries_in_pool_to_lower_max_size_of_merge>
+    <number_of_free_entries_in_pool_to_execute_mutation>2</number_of_free_entries_in_pool_to_execute_mutation>
+    <number_of_free_entries_in_pool_to_execute_optimize_entire_partition>2</number_of_free_entries_in_pool_to_execute_optimize_entire_partition>
+    <min_bytes_for_wide_part>134217728</min_bytes_for_wide_part>
+    <vertical_merge_algorithm_min_bytes_to_activate>134217728</vertical_merge_algorithm_min_bytes_to_activate>
+  </merge_tree>
+
+  <!-- 其余线程池缩到最小 -->
+  <background_buffer_flush_schedule_pool_size>1</background_buffer_flush_schedule_pool_size>
+  <background_merges_mutations_scheduling_policy>round_robin</background_merges_mutations_scheduling_policy>
+  <background_move_pool_size>1</background_move_pool_size>
+  <background_fetches_pool_size>1</background_fetches_pool_size>
+  <background_common_pool_size>2</background_common_pool_size>
+  <background_schedule_pool_size>8</background_schedule_pool_size>
+  <background_message_broker_schedule_pool_size>1</background_message_broker_schedule_pool_size>
+  <background_distributed_schedule_pool_size>1</background_distributed_schedule_pool_size>
+  <tables_loader_foreground_pool_size>0</tables_loader_foreground_pool_size>
+  <tables_loader_background_pool_size>0</tables_loader_background_pool_size>
+
+  <!-- 磁盘兜底：写入和合并前先预留空间，剩余空间低于 22 GB 时拒绝预留，写入报 NOT_ENOUGH_SPACE，
+       不会一直写到 runner 看门狗的 20 GB 红线以下。数据目录是 mini 宿主机磁盘的 bind mount，看到的就是整盘余量 -->
+  <storage_configuration>
+    <disks>
+      <default>
+        <keep_free_space_bytes>22000000000</keep_free_space_bytes>
+      </default>
+    </disks>
+  </storage_configuration>
+
+  <!-- 系统日志：只留 query_log（慢查询、PAP-172 数据质量面板）、part_log（每次写入生成几个数据片段、
+       合并了哪些，看 TOO_MANY_PARTS 的现场）和 crash_log，前两个只存 7 天 -->
+  <query_log>
+    <ttl>event_date + INTERVAL 7 DAY DELETE</ttl>
+  </query_log>
+  <part_log>
+    <ttl>event_date + INTERVAL 7 DAY DELETE</ttl>
+  </part_log>
+  <asynchronous_insert_log remove="1"/>
+  <asynchronous_metric_log remove="1"/>
+  <background_schedule_pool_log remove="1"/>
+  <backup_log remove="1"/>
+  <blob_storage_log remove="1"/>
+  <error_log remove="1"/>
+  <instrumentation_trace_log remove="1"/>
+  <latency_log remove="1"/>
+  <metric_log remove="1"/>
+  <opentelemetry_span_log remove="1"/>
+  <processors_profile_log remove="1"/>
+  <query_metric_log remove="1"/>
+  <query_thread_log remove="1"/>
+  <query_views_log remove="1"/>
+  <session_log remove="1"/>
+  <text_log remove="1"/>
+  <trace_log remove="1"/>
+</clickhouse>

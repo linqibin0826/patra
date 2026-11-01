@@ -1,0 +1,67 @@
+<!--
+  Patra 的 ClickHouse 账号与查询限制，挂到 /etc/clickhouse-server/users.d/。
+  密码不在这里：from_env 每次启动从容器环境变量读，变量来自 ~/.patra/secrets/ 下的
+  clickhouse.env 与 clickhouse-grafana.env（见 README「ClickHouse」）。改密码 = 改文件 + 重建容器。
+
+  变量名不能叫 CLICKHOUSE_PASSWORD / CLICKHOUSE_USER：镜像入口脚本看到它们，会把 default 账号改成用这个密码并放开网络访问。
+  两个都不出现时，入口脚本把 default 限制为只能在容器内本机登录（健康检查与 docker exec 维护用）。
+-->
+<clickhouse>
+  <profiles>
+    <!-- 所有账号的基础限制（Altinity 低内存样例，按 2 GB 缩）：每条查询最多 2 个线程、1 GiB 内存，
+         聚合和排序超过 512 MiB 落盘而不是失败 -->
+    <default>
+      <max_threads>2</max_threads>
+      <max_block_size>8192</max_block_size>
+      <queue_max_wait_ms>1000</queue_max_wait_ms>
+      <max_execution_time>600</max_execution_time>
+      <input_format_parallel_parsing>0</input_format_parallel_parsing>
+      <output_format_parallel_formatting>0</output_format_parallel_formatting>
+      <max_memory_usage>1073741824</max_memory_usage>
+      <max_bytes_before_external_group_by>536870912</max_bytes_before_external_group_by>
+      <max_bytes_before_external_sort>536870912</max_bytes_before_external_sort>
+    </default>
+    <!-- Grafana：只读。readonly=2 不能写，但允许插件设置查询参数（readonly=1 会让插件的查询报错）；
+         面板查询超过 60 秒就断掉 -->
+    <grafana>
+      <profile>default</profile>
+      <readonly>2</readonly>
+      <max_execution_time>60</max_execution_time>
+    </grafana>
+  </profiles>
+
+  <users>
+    <!-- 应用账号：patra-analytics 服务（PAP-167/168）与模拟器（PAP-171） -->
+    <patra>
+      <password from_env="CLICKHOUSE_PATRA_PASSWORD"/>
+      <networks>
+        <ip>::/0</ip>
+      </networks>
+      <profile>default</profile>
+      <quota>default</quota>
+      <grants>
+        <query>GRANT ALL ON patra_analytics.*</query>
+        <!-- 运维视图：数据片段数与磁盘占用、每次写入与合并、慢查询（PAP-168/171/172 用） -->
+        <query>GRANT SELECT ON system.parts</query>
+        <query>GRANT SELECT ON system.part_log</query>
+        <query>GRANT SELECT ON system.query_log</query>
+      </grants>
+    </patra>
+    <!-- Grafana 数据源的只读账号 -->
+    <grafana>
+      <password from_env="CLICKHOUSE_GRAFANA_PASSWORD"/>
+      <networks>
+        <ip>::/0</ip>
+      </networks>
+      <profile>grafana</profile>
+      <quota>default</quota>
+      <grants>
+        <query>GRANT SELECT ON patra_analytics.*</query>
+        <!-- 运维视图：数据片段数与磁盘占用、每次写入与合并、慢查询（PAP-168/171/172 用） -->
+        <query>GRANT SELECT ON system.parts</query>
+        <query>GRANT SELECT ON system.part_log</query>
+        <query>GRANT SELECT ON system.query_log</query>
+      </grants>
+    </grafana>
+  </users>
+</clickhouse>
