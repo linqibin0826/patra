@@ -31,6 +31,7 @@
   --color-teal-pale: #c6dcd9; /* 掌握度：刚接触 */
   --color-link-line: #9fcfd6; /* 正文链接下划线 */
   --color-mark: #fbe7b5; /* 搜索命中高亮 */
+  --color-question: #f8e6c6; /* 批注「有问题」的高亮底、徽章 */
 
   /* 语义：判对判错、悬而未决（同排查类型色）、决策类型色 */
   --color-correct: #2f6b3a;
@@ -106,4 +107,17 @@
     outline: 2px solid var(--color-teal-mark);
     outline-offset: 2px;
   }
+}
+
+/* 读者批注的高亮（CSS Custom Highlight API，不改正文 DOM，见 components/annotations.tsx）：
+   有问题琥珀底、笔记水青底、正在写的那一段浅青。
+   Turbopack 的 CSS 解析器还不认 ::highlight()，构建时会报「Parsing CSS source code failed」，但规则原样保留、浏览器照常生效 */
+::highlight(patra-question) {
+  background-color: var(--color-question);
+}
+::highlight(patra-note) {
+  background-color: var(--color-teal-tint);
+}
+::highlight(patra-pending) {
+  background-color: var(--color-teal-pale);
 }
