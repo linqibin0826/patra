@@ -32,6 +32,7 @@ mkdir -p \
   "$ROOT"/rabbitmq/data \
   "$ROOT"/clickhouse/data \
   "$ROOT"/clickhouse/logs \
+  "$ROOT"/kafka/data \
   "$ROOT"/minio/data \
   "$ROOT"/es/data \
   "$ROOT"/xxl-job-admin/logs \

@@ -48,6 +48,78 @@ services:
       retries: 10
       start_period: 20s
 
+  kafka:
+    # mini 用 JVM 版（才能按 release spec 决策 D 设堆）；测试容器用同版本的 apache/kafka-native，
+    # 版本号以 .github/workflows/ci.yml 的 KAFKA_VERSION 为准，CI 核对这里、kafka-init 和 KafkaContainerInitializer
+    image: apache/kafka:4.3.2
+    container_name: patra-kafka
+    hostname: patra-kafka
+    restart: unless-stopped
+    environment:
+      # 单节点 KRaft：同一个进程既当控制器（管元数据）又当 broker，不需要 ZooKeeper。
+      # 集群 ID 在数据目录第一次格式化时写入，之后每次启动都要对得上，不要改（不是密钥）
+      CLUSTER_ID: _prxjFG5Q7ikA914AcQqnA
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@patra-kafka:9093
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      # 两个对客户端的监听器，通告地址不同（spec 2.4 节）：
+      #   INTERNAL  patra-net 上按容器名直连：kafka-init、健康检查
+      #   EXTERNAL  经宿主机 9092：MacBook 上的进程（MagicDNS），apps 栈的容器（extra_hosts 指回宿主机）
+      # 控制器端口 9093 只在容器内，不映射（宿主机 9093 是 alertmanager）
+      KAFKA_LISTENERS: INTERNAL://:29092,EXTERNAL://:9092,CONTROLLER://:9093
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://patra-kafka:29092,EXTERNAL://${PATRA_INFRA_HOST:-linqibins-mac-mini}:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_LOG_DIRS: /var/lib/kafka/data
+      # 单节点：内部 topic 只能有 1 个副本；消费位点 topic 默认 50 个分区，单节点用不上，减到 3
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_OFFSETS_TOPIC_NUM_PARTITIONS: 3
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_SHARE_COORDINATOR_STATE_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_SHARE_COORDINATOR_STATE_TOPIC_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      # topic 只由 kafka-init 按 kafka/init-topics.sh 建：写错名字直接报错，不会悄悄建出一个没有上限的 topic
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+      # 超出上限的部分要等「清理检查」发现、再等「删除延迟」才真正删掉文件，这段时间的写入量就是超出上限的量。
+      # 默认 5 分钟 + 1 分钟，本机不限速压测（约 390 MB/s）时峰值多出一倍多；缩到 30 秒 + 5 秒
+      KAFKA_LOG_RETENTION_CHECK_INTERVAL_MS: 30000
+      KAFKA_LOG_SEGMENT_DELETE_DELAY_MS: 5000
+      # 堆 512 MB（决策 D）；堆外的元空间、线程栈、网络缓冲和页缓存靠下面 1 GB 的容器上限兜住
+      KAFKA_HEAP_OPTS: -Xms512m -Xmx512m
+      TZ: Asia/Shanghai
+    ports:
+      - "9092:9092"
+    volumes:
+      # 镜像以 uid 1000 运行，目录由 scripts/init-volumes.sh 建好
+      - ${HOME}/.patra/docker/kafka/data:/var/lib/kafka/data
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+    healthcheck:
+      # 命令行工具每次都起一个 JVM，堆压到 64 MB（不覆盖会沿用上面的 512 MB），间隔放宽到 30 秒
+      test: [ "CMD-SHELL", "KAFKA_HEAP_OPTS=-Xmx64m /opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server patra-kafka:29092 >/dev/null 2>&1" ]
+      interval: 30s
+      timeout: 20s
+      retries: 5
+      start_period: 30s
+
+  kafka-init:
+    # 建 topic、写保留策略，跑完退出。每次 up pipeline 都会重跑，幂等（见 kafka/init-topics.sh）
+    image: apache/kafka:4.3.2
+    container_name: patra-kafka-init
+    restart: "no"
+    depends_on:
+      kafka:
+        condition: service_healthy
+    environment:
+      KAFKA_HEAP_OPTS: -Xmx128m
+    entrypoint: [ "bash", "/opt/patra/init-topics.sh" ]
+    volumes:
+      - ./kafka/init-topics.sh:/opt/patra/init-topics.sh:ro
+
 networks:
   default:
     # 各子栈独立 project，共享外部网络 patra-net（由 scripts/compose-all.sh 首次创建）
