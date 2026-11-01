@@ -3,7 +3,7 @@
 > **Issue**：Linear PAP-165，v0.18 Analytics，Milestone Pipeline Ready。
 > **产品定义**：release spec `docs/patra/release-specs/v0.18-analytics.md` 决策 C（内存预算）、D（Kafka）、E（入库）、G（数据分层）、J（保留期）。
 > **决策授权**：两处安全与镜像问题经编排会话请用户拍板（第 9 节）；其余是我定的，同样列在第 9 节。
-> **状态**：设计中
+> **状态**：已实施，待 mini 部署（2026-11-01，计划 `docs/patra/plans/2026-11-01-analytics-infra.md`，部署按 `docs/patra/runbooks/v0.18-analytics-go-live-runbook.md`）。本机演练结果记在 runbook 第 0 节
 > **创建日期**：2026-11-01
 
 ---
