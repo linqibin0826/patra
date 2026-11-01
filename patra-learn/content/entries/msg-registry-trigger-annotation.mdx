@@ -1,0 +1,117 @@
+---
+title: 只让要外送的事件进登记表
+summary: Spring Modulith 默认给每一个提交后监听器都写一行登记，服务内部「丢了也无所谓」的副作用也会被补投。Patra 升到 Modulith 2.1.2，用 registry-trigger-annotation 只登记带 @ApplicationModuleListener 的监听器，也就是外送器。
+type: decision
+difficulty: practice
+tags: [spring, messaging, backend]
+prerequisites: [msg-after-commit-listeners, msg-transactional-outbox]
+topics: [spring-modulith, event-delivery]
+sources:
+  - version: v0.16
+    issue: PAP-137
+    pr: 343
+personalEnv: false
+---
+
+<Diagnose
+  question="一个服务引入了 Modulith 的事件登记，代码里另有一个普通的 @TransactionalEventListener，提交后给浏览器推一条实时消息。什么都不配置时，这个推送监听器会不会在 event_publication 表里留下登记行？"
+  options={["不会，只有要外送到 RabbitMQ 的事件才登记", "只有同时加了 @Async 的提交后监听器才登记", "会，每个提交后监听器都各登记一行"]}
+  answer="C"
+  ifRight="对。Modulith 默认不分好坏，提交后监听器一律登记。这篇讲 Patra 为什么要把它收窄、怎么收窄。"
+  ifWrong="答案是 C。Modulith 默认给每一个提交后监听器（贴了 @TransactionalEventListener 的）各写一行登记，和是不是外送、有没有 @Async 无关。这题要先知道提交后监听器是什么，以及登记行是干什么的。"
+  suggest="msg-after-commit-listeners"
+/>
+
+## 背景：登记表里该放什么
+
+Modulith 的事件登记是这样工作的：事务里调 `publishEvent(事件)` 时，它找出所有会在提交后处理这个事件的监听器，**每个监听器写一行**登记（行里记着监听器的 ID）。监听器执行成功，那一行才算完成；没成功的留在表里，补投任务会再调一次那个监听器。
+
+v0.16 Patra 第一次跨服务发事件，登记表只想放一种东西：**要外送到 RabbitMQ 的事件**。理由有两条：
+
+- 服务内部还有「提交后做一下、丢了也无所谓」的副作用。通知服务（v0.16 新建）要用普通的提交后监听器给浏览器推实时消息，推不到，用户下次刷新页面照样看得到提醒。这类事要是进了登记表，失败后会被补投，过几分钟又推一遍，反而奇怪。
+- Patra 把发成功的登记行设成「发完即删」，表里只剩没发出去的。只放外送的事件，「表不空」就等于「有事件卡住了」，排查一眼就看出来。
+
+要分清这两类监听器，先得认识 Modulith 自己的注解。`@ApplicationModuleListener` 只是三个 Spring 注解的组合：
+
+```java
+// Spring Modulith 2.1.2 源码：org.springframework.modulith.events.ApplicationModuleListener
+@Async
+@Transactional(propagation = Propagation.REQUIRES_NEW)
+@TransactionalEventListener
+public @interface ApplicationModuleListener {
+```
+
+提交后、换一条线程、在新事务里处理。Modulith 外送事件的那个监听器（`EventExternalizerModuleListener` 的 `externalize` 方法）就贴着它，只是把传播方式改成了 `SUPPORTS`（为什么改，后面「等确认时占不占连接」那篇讲）。
+
+## 选项
+
+<DecisionOptions
+  options={[
+    { name: "照默认，全部登记", summary: "什么都不配，每个提交后监听器都写登记行。", pros: "零配置。", cons: "内部副作用也被补投，失败的推送过几分钟又推一遍；表里混着两类行，「表不空」不再等于「有积压」。" },
+    { name: "留在旧版本，用规则禁掉", summary: "停在 Modulith 2.0.8，用 ArchUnit 禁止发事件的服务写提交后监听器，模块再拆成「发布」「消费」两块。", pros: "不用先升 Spring Boot。", cons: "通知服务恰恰要用提交后监听器做实时推送，规则得开例外；为了绕开框架行为多拆一层模块。" },
+    { name: "升到 2.1.2，按注解挑", summary: "用 2.1.2 新加的 `spring.modulith.events.registry-trigger-annotation`，只登记带 `@ApplicationModuleListener` 的监听器。", pros: "一行配置；外送器自带这个注解，正好只剩它进表；普通 `@TransactionalEventListener` 照 Spring 原来的行为走。", cons: "要先把 Spring Boot 升到 4.1；服务代码里从此不能写 `@ApplicationModuleListener`。", chosen: true }
+  ]}
+/>
+
+这个配置项只在 Modulith 2.1.2 里才有（2.1.0、2.1.1 都没有），而 2.1 要配 Spring Boot 4.1。作者 10/30 决定先升 Boot 4.1，第三个选项才成立，第二个选项作废。
+
+## 选择
+
+<Callout kind="lead" label="选了什么">
+
+升到 Modulith 2.1.2，由事件工具模块出一个默认值：`registry-trigger-annotation` 填 `@ApplicationModuleListener` 的全类名。登记表里从此只有外送器的行。
+
+</Callout>
+
+<CodeRef at="patra-tool/patra-tool-events/src/main/java/dev/patra/tool/events/autoconfigure/EventsDefaultsPostProcessor.java@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="24-31" />
+
+```java
+/// 本模块出的默认键。
+static final Map<String, Object> DEFAULTS =
+    Map.ofEntries(
+        entry("spring.modulith.events.jdbc.schema-initialization.enabled", "false"),
+        entry("spring.modulith.events.completion-mode", "delete"),
+        entry(
+            "spring.modulith.events.registry-trigger-annotation",
+            "org.springframework.modulith.events.ApplicationModuleListener"),
+```
+
+它放在优先级最低的默认配置里，服务真有需要可以在自己的配置里改掉。
+
+<Compare
+  title="同一次 publishEvent，两种配置各写几行登记"
+  variants={[
+    { label: "默认", steps: ["事务里 publishEvent(评论已发表)", "多播器找出两个提交后监听器：外送器、实时推送", "两个监听器各写一行登记", "提交后两个都执行；推送失败的那行留下等补投"], results: [{ label: "event_publication", value: "2 行", tone: "wait" }, { label: "推送失败时", value: "几分钟后再推一遍", tone: "bad" }], verdict: { tone: "bad", head: "内部副作用也被补投。", text: "表里有一行没完成，可能只是一次无所谓的推送失败。" } },
+    { label: "按注解挑", steps: ["事务里 publishEvent(评论已发表)", "多播器只认带 @ApplicationModuleListener 的：外送器", "只为外送器写一行登记", "提交后两个都执行；推送失败就算了"], results: [{ label: "event_publication", value: "1 行", tone: "ok" }, { label: "推送失败时", value: "不补，用户刷新照样看得到", tone: "ok" }], verdict: { tone: "ok", head: "表里只有外送。", text: "表不空，就是有事件没送到 RabbitMQ。" } }
+  ]}
+/>
+
+## 代价
+
+<Callout kind="cost">
+
+- **服务代码里不写 `@ApplicationModuleListener`**。写了它就会进登记表，失败后被补投；而且它默认是 `REQUIRES_NEW`，在新事务里跑。服务内部的提交后副作用一律用普通的 `@TransactionalEventListener`，接受「崩了就丢」。
+- **只消费、不外送的服务也得建 `event_publication` 表**。通知服务不会写登记行，但 Modulith 关机时会查一遍未完成的行，没有这张表会报 SQL 错。
+- 服务内部哪天出现一个「提交后必须做成」的副作用，这条约定就要重新想：要么把它变成外送事件，要么单独为它设计可靠的做法。
+
+</Callout>
+
+<Quiz
+  questions={[
+    {
+      question: "interaction 里有人给一个内部监听器加了 @ApplicationModuleListener。按 Patra 现在的配置，会发生什么？",
+      options: ["它也进登记表，失败了会被补投", "配置只认外送器，它照普通监听器处理", "启动失败，配置不允许别的监听器用这个注解"],
+      answer: "A",
+      explain: "配置按注解挑，不按是谁挑。外送器进表是因为它带这个注解，别的监听器带上同样会进表。"
+    }
+  ]}
+/>
+
+<Transfer
+  prompt="另一个项目也用 Modulith 2.1.2，服务里有三个提交后要做的事：发欢迎邮件（必须送到）、刷新本地缓存（丢了无所谓，下次读会回源）、外送事件到 Kafka。你会怎么配 registry-trigger-annotation、三个监听器各贴什么注解？"
+  points={[
+    { label: "触发注解必须盖住外送器", text: "外送器自带 `@ApplicationModuleListener`。要是自定义一个别的注解当触发条件，外送器就不登记了，外送事件反而变得会丢。" },
+    { label: "邮件用 @ApplicationModuleListener", text: "触发注解填 `@ApplicationModuleListener`，欢迎邮件的监听器也贴它，失败了能补投；它在新事务里跑，邮件要能防重发。" },
+    { label: "缓存刷新用普通注解", text: "刷新缓存用普通的 `@TransactionalEventListener`，不进登记表，丢了也不补。" }
+  ]}
+/>

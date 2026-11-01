@@ -1,0 +1,148 @@
+---
+title: 补投途中进程崩了，登记行会永远卡在 RESUBMITTED
+summary: Spring Modulith 补投前先把登记行标成 RESUBMITTED，并拒绝再补投这个状态的行；进程恰好崩在这之后，这一行就再也发不出去。它自带的过期检查要开 @EnableScheduling 才会跑，Patra 用 XXL-Job，所以每轮补投先自己把卡了 10 分钟的行改回 FAILED。
+type: pitfall
+difficulty: practice
+tags: [spring, messaging, database]
+prerequisites: [msg-transactional-outbox]
+topics: [spring-modulith, event-delivery]
+sources:
+  - version: v0.16
+    issue: PAP-137
+    pr: 343
+personalEnv: false
+---
+
+<Diagnose
+  question="补投任务把一行 FAILED 的登记领走、标成 RESUBMITTED，正要重新外送时，进程被 kill 了。重启之后，只靠 Modulith 自己的补投，这一行会怎样？"
+  options={["下一轮补投照常把它再领一次", "一直卡住，再也不会被补投", "重启时 Modulith 自动把它重新发出去"]}
+  answer="B"
+  ifRight="对，而且表面上看不出来：这一行既不报错，也不再被尝试。往下读看它为什么卡住、Patra 怎么解开。"
+  ifWrong="答案是 B。Modulith 领走一行时只认「不是 RESUBMITTED 的行」，已经标成 RESUBMITTED 的，它当作别人正在处理，不会再领。这题要先知道登记行和补投是什么，先读发件箱那篇。"
+  suggest="msg-transactional-outbox"
+/>
+
+## 坑
+
+<Callout kind="lead" label="坑在哪">
+
+补投先把登记行标成 RESUBMITTED、再去执行。进程崩在这两步之间，这一行就永远停在 RESUBMITTED，没有人会再补投它。
+
+</Callout>
+
+## 先认全登记行的五个状态
+
+发件箱那篇的状态图只画了「待外送 / 失败 / 已删除」，够理解发件箱的思路。Modulith 2.1 实际给登记行记了五个状态：
+
+| 状态 | 意思 |
+|---|---|
+| `PUBLISHED` | 事务提交了，行在表里，监听器还没开始执行 |
+| `PROCESSING` | 监听器正在执行（对外送器来说就是发送、等确认） |
+| `COMPLETED` | 执行成功。Patra 设成「发完即删」，这一行直接删掉 |
+| `FAILED` | 执行抛了异常，留给补投 |
+| `RESUBMITTED` | 被补投领走了，等着重新执行 |
+
+点下面的事件按钮走一遍，走到「被领走」（RESUBMITTED）之后，再点一次「补投任务领走」试试：
+
+<StateMachine
+  title="一行登记在补投里的状态"
+  subject="event_publication"
+  states={[
+    { id: "published", label: "已提交", sub: "未执行", col: 1, desc: "`PUBLISHED`。事务提交，登记行落库。外送器在另一条线程里很快就会开始执行它。" },
+    { id: "processing", label: "发送中", sub: "等确认", col: 2, desc: "`PROCESSING`。外送器正在发送、等 RabbitMQ 的确认。确认来了就完成，失败或超时就标 FAILED。" },
+    { id: "deleted", label: "已删除", sub: "发成功了", col: 3, desc: "`COMPLETED`。发成功了。Patra 的完成模式是「发完即删」，表里不留这一行。" },
+    { id: "resubmitted", label: "被领走", sub: "等重新执行", col: 1, row: 2, desc: "`RESUBMITTED`。补投任务领走了它，排队等重新执行。Modulith 不会再领一次已经是这个状态的行：进程这时崩了，它就一直停在这里。" },
+    { id: "failed", label: "失败", sub: "等补投", col: 2, row: 2, desc: "`FAILED`。发送失败（broker 停了、被退回、等不到确认）。下一轮补投会领走它。" }
+  ]}
+  start="published"
+  events={[
+    { id: "run", label: "外送器开始执行" },
+    { id: "ok", label: "收到确认" },
+    { id: "fail", label: "发送失败" },
+    { id: "claim", label: "补投任务领走" },
+    { id: "unstick", label: "卡了 10 分钟，改回 FAILED" }
+  ]}
+  transitions={[
+    { from: "published", event: "run", to: "processing", label: "执行" },
+    { from: "published", event: "claim", to: "resubmitted", label: "发布超 1 分钟才领" },
+    { from: "processing", event: "ok", to: "deleted", label: "确认" },
+    { from: "processing", event: "fail", to: "failed", label: "失败" },
+    { from: "processing", event: "claim", to: "resubmitted", label: "超 10 分钟没动静才领" },
+    { from: "failed", event: "claim", to: "resubmitted", label: "领走" },
+    { from: "resubmitted", event: "run", to: "processing", label: "重新执行" },
+    { from: "resubmitted", event: "unstick", to: "failed", label: "解卡" }
+  ]}
+/>
+
+图里「解卡」那一步不是 Modulith 自己会做的，是 Patra 补上的。
+
+## 为什么会卡住
+
+Modulith 领走一行时执行的是这样一条 SQL（2.1.2 的 JDBC 实现）：
+
+```sql
+UPDATE event_publication
+SET STATUS = 'RESUBMITTED',
+    COMPLETION_ATTEMPTS = COMPLETION_ATTEMPTS + 1,
+    LAST_RESUBMISSION_DATE = ?
+WHERE ID = ?
+  AND COMPLETION_DATE IS NULL
+  AND (STATUS IS NULL OR STATUS != 'RESUBMITTED')
+```
+
+最后一个条件是为了多实例：两台机器同时补投，同一行只会被一边领走，另一边的 UPDATE 改不到行，就跳过。代价是它分不清「别人正在处理」和「处理它的进程已经死了」，两种情况都跳过。
+
+Modulith 其实给这种情况准备了「过期检查」：配了 `spring.modulith.events.staleness.resubmitted`，就定期把停留太久的行改成 FAILED。可这个检查是靠 Spring 的定时任务机制跑的（它实现的是 `SchedulingConfigurer`），应用要开 `@EnableScheduling` 它才会动。Patra 的定时任务全交给 XXL-Job，没开 `@EnableScheduling`，配了也不会执行。
+
+<Callout kind="insight" label="怎么认出它">
+
+表里有 `status = 'RESUBMITTED'` 的行，`last_resubmission_date` 停在很久以前，`completion_attempts` 也不再增加。日志里没有任何报错：Modulith 只是每轮都安静地跳过它。
+
+</Callout>
+
+## 怎么避开
+
+既然定时检查不会自己跑，Patra 就在每分钟的补投任务里先把检查做一遍，再补投：
+
+<CodeRef at="patra-tool/patra-tool-events/src/main/java/dev/patra/tool/events/resubmit/EventPublicationResubmitter.java@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="54-76" />
+
+```java
+public int resubmit() {
+  Instant now = clock.instant();
+  Instant cutoff = now.minus(minAge);
+  Instant inFlightCutoff = now.minus(STALE_AFTER);
+  registry.markStalePublicationsFailed(
+      status -> status == Status.RESUBMITTED ? STALE_AFTER : Staleness.UNCONFIGURED_DURATION);
+  AtomicInteger count = new AtomicInteger();
+  publications.resubmitIncompletePublications(
+      publication -> {
+        boolean due =
+            publication.getPublicationDate().isBefore(cutoff)
+                && !inFlight(publication, inFlightCutoff);
+        // ……计数、尝试 10 次以上打 WARN
+        return due;
+      });
+  // ……
+}
+```
+
+两步：
+
+1. **解卡**：调 Modulith 自己的 `markStalePublicationsFailed`，只看 RESUBMITTED 一种状态，按最后一次补投时间算，停了 10 分钟以上的改回 FAILED。这一轮接着就能把它领走。
+2. **补投时跳过还在发的**：只领发布超过 1 分钟的行，并且跳过 10 分钟内还有动静的 PROCESSING 行。Modulith 的「未完成」查询不排除 PROCESSING，不加这一条，broker 卡住时每一轮都会把同一行再排一份，broker 恢复时一下冲出好几份重复消息。
+
+<Callout kind="warn">
+
+10 分钟要远长于一次发送最多花的时间（连接超时 5 秒加等确认 5 秒），否则正常发送中的行会被误判成卡住、被提前重发。反过来，阈值也不能太长：卡住的行要等它过去才会被补上。
+
+</Callout>
+
+<Transfer
+  prompt="另一个项目也用 Modulith 的事件登记，但它没有 XXL-Job，定时任务都用 Spring 的 @Scheduled，应用上本来就开着 @EnableScheduling。它还需要像 Patra 一样自己写解卡吗？要配什么、阈值怎么定？"
+  points={[
+    { label: "不用自己写", text: "开着 `@EnableScheduling`，Modulith 的过期检查会按 `check-interval`（默认 1 分钟）自己跑，不用在补投里手动调。" },
+    { label: "但要配上阈值", text: "过期检查只看配了时长的状态，什么都不配就什么都不查。至少要配 `spring.modulith.events.staleness.resubmitted`。" },
+    { label: "阈值看一次发送的最长耗时", text: "阈值要明显长于一次发送加等确认的最长时间，免得把还在发的行判成卡住、造成重复发送。" },
+    { label: "补投本身还得有人触发", text: "过期检查只是把行改回 FAILED，真正重发还要定时调补投（或者开重启时重发），否则改回 FAILED 的行也只是躺着。" }
+  ]}
+/>

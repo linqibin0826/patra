@@ -1,0 +1,98 @@
+---
+title: Spring Modulith：两半各管一件事，Patra 只用了事件那一半
+summary: Spring Modulith 一半检查应用里各模块的边界，一半让模块之间的事件可靠送到。Patra 只引了事件那几个构件，没要 starter，因为模块校验认的「顶层包就是模块」和 Patra 自己的分包规则对不上。
+type: concept
+difficulty: basic
+tags: [spring, messaging, backend]
+prerequisites: [msg-in-process-events]
+topics: [spring-modulith]
+sources:
+  - version: v0.16
+    issue: PAP-137
+    pr: 343
+personalEnv: false
+---
+
+<Diagnose
+  question="不用任何别的库，Spring 自己就能 publishEvent、也能监听。Spring Modulith 的事件那一半，主要给它补上了什么？"
+  options={["把事件记进数据库，没处理完的能重来", "让监听器能直接调用另一个服务里的方法", "让同步监听器跑在单独的线程池里，不拖慢请求"]}
+  answer="A"
+  ifRight="对。Spring 的事件只在内存里转一圈，进程一崩就没了；Modulith 把它记成一行数据。往下读先认全 Modulith 的两半，再看 Patra 用了哪几块。"
+  ifWrong="答案是 A。Spring 自带的事件只在一个进程的内存里传，监听器没跑完进程就崩了，这件事就没了；Modulith 补的是「记下来、能重来」。这题考的是 Spring 自带的进程内事件长什么样，先读那一篇。"
+  suggest="msg-in-process-events"
+/>
+
+<Callout kind="lead">
+
+Spring Modulith 是 Spring 官方给「一个应用里分成几个模块」准备的工具，分两半：一半检查模块之间的边界，一半让模块之间的事件可靠送到。两半可以只用其中一半。
+
+</Callout>
+
+## 两半，各管一件事
+
+| | 模块结构那一半 | 事件那一半 |
+|---|---|---|
+| 解决什么 | 一个应用写久了，模块之间互相乱引用，边界越来越糊 | 事件只在内存里传，监听器没跑完进程崩了就丢 |
+| 主要的东西 | `ApplicationModules`、`verify()`、`@ApplicationModuleTest`、文档生成 | 事件发布登记（`event_publication` 表）、补投、外送到消息中间件、`@ApplicationModuleListener` |
+| 构件 | `spring-modulith-core` 等 | `spring-modulith-events-*` |
+| Patra 用没用 | 没用 | 用了 |
+
+下面两节分别讲这两半，再说 Patra 为什么只要其中一半。
+
+## 模块结构那一半：它怎么认「模块」
+
+Modulith 把启动类所在包下面的**每一个直接子包**当成一个模块。比如启动类在 `com.shop`，那 `com.shop.order`、`com.shop.inventory` 就是两个模块；模块的顶层包是对外的接口，它下面再套的子包算内部实现。
+
+认出模块之后，它能做三件事：
+
+- `ApplicationModules.of(启动类).verify()`：写成一个单元测试，模块之间有循环依赖、或者一个模块引用了另一个模块的内部子包，测试就失败。
+- `@ApplicationModuleTest`：测试时默认只启动这一个模块（也可以设成连它依赖的模块一起），不用把整个应用都拉起来。
+- 文档生成：按模块之间的依赖画出模块图。
+
+这些都建立在一个前提上：**一个顶层包等于一个模块**。
+
+## Patra 为什么不要这一半
+
+Patra 的分法是两层：先按六边形的层拆成 Gradle 模块（domain、app、infra……），每个层模块里面再按子域分包。同一个子域散在好几个 Gradle 模块里，子域包也不在启动类正下方。Modulith 的「顶层包就是模块」认不出这种结构，它会把 `domain`、`app` 这样的层当成模块，规则和 Patra 自己的分层规则打架。
+
+所以 Patra 的子域边界由自己写的 ArchUnit 规则在构建里检查，「层内先按子域分包」那篇把 Modulith 的模块列为被否掉的选项。v0.16 做事件模块时，设计里还专门写了一条反目标：不许把 Modulith 的模块结构校验带进来。
+
+## 事件那一半：Patra 引了哪几块
+
+Modulith 的事件能力拆成了几个小构件，Patra 的 `patra-tool-events` 只挑了这几个：
+
+<CodeRef at="patra-tool/patra-tool-events/build.gradle.kts@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="23-28" />
+
+```kotlin
+// Modulith 事件：只要事件相关构件，不要 starter（会带进模块结构校验 spring-modulith-core）
+api("org.springframework.modulith:spring-modulith-events-api")
+implementation("org.springframework.modulith:spring-modulith-events-core")
+runtimeOnly("org.springframework.modulith:spring-modulith-events-jdbc")
+runtimeOnly("org.springframework.modulith:spring-modulith-events-jackson")
+runtimeOnly("org.springframework.modulith:spring-modulith-events-amqp")
+```
+
+| 构件 | 管什么 |
+|---|---|
+| `events-api` | 业务代码会碰到的类型：`@ApplicationModuleListener`、外送配置、登记行的状态 |
+| `events-core` | 发布登记本身：事务里写登记行、处理完标完成、补投的入口 |
+| `events-jdbc` | 登记行存进数据库的 `event_publication` 表 |
+| `events-jackson` | 事件对象和表里的 JSON 互相转换 |
+| `events-amqp` | 把事件外送到 RabbitMQ 这类 AMQP 消息中间件 |
+
+<Callout kind="warn">
+
+最省事的引法是 Modulith 的 starter，但它会顺带引进 `spring-modulith-core`，也就是模块结构校验。只想要事件的项目，要像上面这样按构件引。
+
+</Callout>
+
+接下来几篇顺着一个事件的路线往下讲：事务里怎么记成一行、哪些监听器会被记、提交后怎么外送到 RabbitMQ、发失败了怎么补投。
+
+<Transfer
+  prompt="另一个团队做的是一个单体 Spring Boot 应用，启动类在 `com.shop`，下面按 `order`、`payment`、`inventory` 分包。他们有两个烦恼：一是 `order` 里有人直接 new 了 `inventory` 内部的类；二是下单成功后通知库存的事件偶尔丢。Modulith 的两半各能帮他们解决哪个？他们该怎么引依赖？"
+  points={[
+    { label: "模块结构那一半管边界", text: "他们的包结构正好是「启动类下面一个顶层包一个模块」，写一个 `ApplicationModules.of(...).verify()` 测试，就能抓到 order 引用 inventory 内部类。" },
+    { label: "事件那一半管不丢", text: "下单和登记行写在同一个事务里，库存监听器没处理完的留在表里，可以补投。" },
+    { label: "两半都要就用 starter", text: "他们两半都需要，直接引 Modulith 的 starter 最省事；Patra 只按构件引，是因为不要模块校验。" }
+  ]}
+/>

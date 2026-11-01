@@ -1,0 +1,145 @@
+---
+title: 等 broker 确认时，不占数据库连接
+summary: 评审担心外送在事务里同步等 RabbitMQ 确认，broker 一卡住就把连接池占光，identity 为此把异步并发压到了 2。对照 Modulith 源码、再用压到 2 条连接的集成测试实测，外送根本不占连接；Patra 删掉了并发上限，改加两道护栏。
+type: decision
+difficulty: practice
+tags: [spring, messaging, database]
+prerequisites: [msg-publisher-confirms, spring-proxies-and-transactional]
+topics: [spring-modulith, event-delivery]
+sources:
+  - version: v0.16
+    issue: PAP-104
+    pr: 343
+personalEnv: false
+---
+
+<Diagnose
+  question="一个提交后的异步监听器在 REQUIRES_NEW 事务里往 RabbitMQ 发消息，并同步等 5 秒确认。broker 卡住了，确认一直不回。连接池一共 10 条，同时有 8 个这样的发送在等，会怎样？"
+  options={["8 条连接被占着，别人只剩 2 条", "没影响，等确认是网络上的事，不用数据库", "事务超时立刻回滚，连接马上归还"]}
+  answer="A"
+  ifRight="对。事务开着，连接就一直被它拿着，哪怕这段时间在等网络。这篇讲 Patra 的外送是不是这样、怎么查清的。"
+  ifWrong="答案是 A。事务从开始到结束一直拿着一条数据库连接，中间在干什么都不还；Spring 的 @Transactional 默认也不设超时。这题考的是事务和连接的关系、以及 REQUIRES_NEW 会新开事务，先读代理与 @Transactional 那篇。"
+  suggest="spring-proxies-and-transactional"
+/>
+
+## 背景：评审的担心
+
+v0.16 接入 identity 的事件外送时（PAP-104），一次独立评审提出：外送在 Modulith 的 `REQUIRES_NEW` 事务里同步等 broker 确认；broker 卡住（端口通、就是不回确认）时，每个外送都拿着一条连接等满超时。Spring Boot 默认的异步线程池有 8 个线程，identity 的连接池只有 10 条，8 个外送一起等，就能占掉 8 条，登录、注册这些和事件毫不相干的请求跟着排队、超时。
+
+identity 当时的应对是在自己的配置里把异步并发压到 2（`spring.task.execution.pool.core-size: 2`）。
+
+<Callout kind="analogy">
+
+连接池像一叠号码牌。请求要查库就领一张，用完还回去；牌发完了，后来的只能排队，排到超时就报错。所以有一条铁律：拿着号码牌的时候不要去等网络。
+
+</Callout>
+
+担心本身没错，可它建立在一个前提上：外送真的在事务里。PAP-104 的修复没有直接加限制，而是先把这个前提查清楚。
+
+## 先查清：外送到底拿不拿着连接
+
+<DebugTrail
+  steps={[
+    { hypothesis: "外送器跑在 @ApplicationModuleListener 默认的 REQUIRES_NEW 事务里？", result: "对照 Modulith 2.1.2 源码：外送器方法贴的是 `@ApplicationModuleListener(propagation = SUPPORTS)`。SUPPORTS 是「有事务就加入，没有就不开」，提交后的异步线程上没有事务，所以不开物理事务。", verdict: "ruled-out" },
+    { hypothesis: "进入时标 PROCESSING、结束时标完成或失败，这两次写库会不会拿着连接跨过等待？", result: "这两步由外层的完成登记拦截器做，各是一个 REQUIRES_NEW 短事务，写完就还连接，不跨等确认那段。", verdict: "ruled-out" },
+    { hypothesis: "那 SUPPORTS 是不是就绝对不占连接？", result: "不是。SUPPORTS 仍会开一个空的事务作用域，事务同步是打开的：作用域里只要有代码查一次库，那条连接就绑在线程上，一直拿到外送方法返回，也就跨过了整个等确认。外送配置的选择、路由、映射、消息转换都在这个作用域里。", verdict: "closer" },
+    { hypothesis: "Patra 现在的外送路径查不查库？实测一下", result: "集成测试把连接池压到 2 条、取连接最多等 3 秒，让确认永远不回：首次外送 4 个、补投 5 个同时等确认，活动连接数一直是 0，业务写库照常成功。", verdict: "closer" },
+    { hypothesis: "这个测试真能抓到「占连接」吗？", result: "两个反证：临时加一个在 REQUIRES_NEW 事务里拿着连接睡眠的异步监听器，测试立刻报 `Connection is not available … active=2`；在映射函数里查一次库，测试同样变红。测试有效，现在的外送确实不占连接。", verdict: "found" }
+  ]}
+/>
+
+第四步的测试就是这一段：
+
+<CodeRef at="patra-tool/patra-tool-events/src/integrationTest/java/dev/patra/tool/events/ExternalizationConnectionIT.java@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="42-98" />
+
+```java
+@TestPropertySource(
+    properties = {
+      "patra.events.publisher.confirm-timeout=8s",
+      "spring.datasource.hikari.maximum-pool-size=2",
+      "spring.datasource.hikari.connection-timeout=3000"
+    })
+// ……
+    for (int i = 1; i <= WAITING_SENDS; i++) {
+      orders.place(EventsITOrderPlaced.routedTo("W-" + i, EventsITSpringConfig.ORDER_REJECTED));
+    }
+    // ……等 4 行都进入 PROCESSING
+    HikariPoolMXBean pool = ((HikariDataSource) dataSource).getHikariPoolMXBean();
+    await()
+        .during(Duration.ofMillis(800))
+        .atMost(Duration.ofSeconds(2))
+        .until(() -> pool.getActiveConnections() == 0);
+    orders.place(EventsITOrderPlaced.routedTo("W-5", EventsITSpringConfig.ORDER_REJECTED));
+    assertThat(fixture.orderCount()).isEqualTo(WAITING_SENDS + 1);
+```
+
+<Quiz
+  questions={[
+    {
+      question: "外送器用 SUPPORTS，为什么测试还要专门做一个「在映射函数里查一次库」的反证？",
+      options: ["证明映射函数里查库时 SUPPORTS 会自动开新事务", "证明「不占连接」有前提：外送路径上不能有代码查库", "证明映射函数查库会让 Modulith 报错停止外送"],
+      answer: "B",
+      explain: "SUPPORTS 只是不主动开事务，作用域里有人取了连接，连接照样绑在线程上跨过等确认。所以「不占连接」成立的前提是外送路径不查库。"
+    }
+  ]}
+/>
+
+## 选项
+
+前提查清了：外送线程本来就不拿连接。剩下的问题是，还要不要限制它们。
+
+<DecisionOptions
+  options={[
+    { name: "给外送配一个有界执行器", summary: "外送单独用一个线程池，限制同时等确认的线程数。", pros: "broker 卡住时线程数有上限。", cons: "限制的是本来就不占连接的线程，护不住连接池；正常时反而让外送排队变慢。" },
+    { name: "模块出默认并发上限并校验", summary: "事件模块默认把异步并发压低，并在启动时校验它小于连接池大小。", pros: "每个服务自动带上，不用各自记得配。", cons: "要校验的「异步线程数会吃掉连接」这层关系并不存在。" },
+    { name: "不加上限，加两道护栏", summary: "删掉 identity 的并发上限；发送前检查线程上有没有挂着事务资源，再用集成测试守住「外送不占连接」。", pros: "去掉一个没用的限制；真有人在外送路径上查库，测试里立刻暴露，而不是线上耗尽连接池。", cons: "外送路径从此不能查库，这是写映射、路由的人要记住的约束。", chosen: true }
+  ]}
+/>
+
+## 选择
+
+<Callout kind="lead" label="选了什么">
+
+不加并发上限，加两道护栏。identity 的 `core-size: 2` 和它的配置测试删掉，interaction 也不用配。
+
+</Callout>
+
+第一道是运行时的：等确认的发送模板在发送前先看一眼线程上有没有挂着事务资源，有就直接报错，不发也不等。
+
+<CodeRef at="patra-tool/patra-tool-events/src/main/java/dev/patra/tool/events/publisher/ConfirmingRabbitMessagingTemplate.java@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="83-92" />
+
+```java
+/// 等确认会阻塞几秒到更久，期间线程上挂着的事务资源（数据库连接、EntityManager 等）一直不还，broker 一卡住
+/// 就能把连接池占光。Modulith 的外送器跑在 `SUPPORTS` 作用域里，本身不绑资源；外送路径上的选择、路由、映射、
+/// 消息转换只要查一次库，连接就会绑到线程上，这里直接拒绝，让问题在测试里暴露，而不是线上饿死连接池。
+private static void assertNoTransactionalResources() {
+  if (!TransactionSynchronizationManager.getResourceMap().isEmpty()) {
+    throw new IllegalStateException(
+        "线程上挂着事务资源（数据库连接或 EntityManager）时不能等 broker 确认：外送路径（选择、路由、映射、"
+            + "消息转换）不能查库，也不要在事务里经 RabbitMessageOperations 发送");
+  }
+}
+```
+
+报错时事件不会丢：外送失败，登记行留在表里，修好代码后由补投发出去。
+
+第二道是测试：上面那个集成测试留在仓库里。哪天升级 Modulith，外送器被改回在事务里跑，它会变红。
+
+## 代价
+
+<Callout kind="cost">
+
+- **外送路径不能查库**。外送配置里的选择、路由（包括表达式里引用的 bean）、映射、消息转换，都只能用事件自己带的数据。
+- **broker 卡住时线程照样被占**。每个外送至少等满确认超时（5 秒）；真卡住时可能到分钟级，因为等不到确认的信道不回缓存，新开信道的那次调用只受 `channel-rpc-timeout` 限制（Spring Boot 默认 10 分钟）。只占线程、不占连接；补投会把排太久的行再派一次，恢复后多出来的重复消息由消费端去重兜住。
+- **线程池的排队不设上限**。长时间卡住时，排队的外送任务堆在内存里（每个只带一个事件对象，现在的量可以忽略）。哪天要给它配队列容量，拒绝策略不能用 `CallerRunsPolicy`：提交后监听在业务事务的收尾阶段执行，那时请求线程还拿着业务连接，队列满了让请求线程自己跑外送，原来的问题就回来了。
+
+</Callout>
+
+<Transfer
+  prompt="有人想让「有人回复了你」的提醒里显示回复者的昵称，打算在外送配置的映射函数里按用户 ID 查一次 identity 的库，把昵称塞进集成事件。按 Patra 现在的做法，这样写会出什么事？你会怎么改？"
+  points={[
+    { label: "护栏直接报错", text: "映射里查库会把连接绑到外送线程上，等确认的模板发送前发现挂着事务资源，直接抛异常；事件留在登记表，每分钟补投一次、每次都失败。" },
+    { label: "就算没护栏也不对", text: "连接会被拿着跨过等确认；而且补投时映射会重跑，查出来的昵称随时间变化，同一个事件两次发出的内容不一样。" },
+    { label: "事件里只放 ID", text: "集成事件只带回复者的用户 ID，通知服务展示时按 ID 现读当前昵称。Patra 对用户名、昵称这类会改的东西一向这么做：别处只存 user_id，展示时现读。" }
+  ]}
+/>

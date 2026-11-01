@@ -7,6 +7,7 @@ entries:
   - msg-exchange-queue-binding
   - msg-ack-and-redelivery
   - msg-in-process-events
+  - spring-modulith-overview
   - msg-after-commit-listeners
   - msg-dual-write-problem
   - msg-transactional-outbox
@@ -16,6 +17,9 @@ entries:
   - msg-ordering
   - ddd-domain-vs-integration-events
   - msg-why-rabbitmq
+  - msg-registry-trigger-annotation
+  - msg-resubmitted-stuck
+  - msg-confirm-wait-no-connection
   - msg-recipient-lookup-two-paths
   - msg-mail-idempotency-key
   - ddd-extract-notification-service
