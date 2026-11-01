@@ -58,6 +58,8 @@ dependencies {
     api(libs.testcontainers.minio)
     api(libs.testcontainers.rabbitmq)
     api(libs.testcontainers.kafka)
+    // 只带容器，不带 JDBC 驱动：ClickHouse 客户端由用到它的服务自己引
+    api(libs.testcontainers.clickhouse)
 
     // MinIO Java Client（MinIOContainerInitializer 创建存储桶需要）
     api(libs.minio) {
