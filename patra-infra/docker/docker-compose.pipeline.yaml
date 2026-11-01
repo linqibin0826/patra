@@ -1,0 +1,55 @@
+name: patra-pipeline
+
+# 行为数据管线（v0.18）：Kafka 缓冲事件、ClickHouse 存明细与汇总。
+# 独立成栈：内存紧张时 `compose-all.sh down pipeline` 一次腾出约 3 GB，不影响 core 的服务。
+# 手动部署，不进 CD（见 docs/patra/specs/2026-11-01-analytics-infra-design.md 第 7 节）。
+# 只在 tailnet 与局域网内可达，不进 Cloudflare Tunnel。
+
+services:
+  clickhouse:
+    image: clickhouse/clickhouse-server:26.8.36.3
+    container_name: patra-clickhouse
+    hostname: patra-clickhouse
+    restart: unless-stopped
+    env_file:
+      # 两个账号的密码放在仓库外（见 README「密钥」「ClickHouse」）。缺失时 compose 拒绝执行。
+      # 这里不能出现 CLICKHOUSE_USER / CLICKHOUSE_PASSWORD：镜像入口脚本会据此改掉 default 账号
+      - path: ${HOME}/.patra/secrets/clickhouse.env
+        required: true
+      - path: ${HOME}/.patra/secrets/clickhouse-grafana.env
+        required: true
+    environment:
+      TZ: Asia/Shanghai
+    ports:
+      - "8123:8123"   # HTTP 接口：应用、Grafana、curl
+      - "9000:9000"   # 原生 TCP：clickhouse client
+    volumes:
+      - ${HOME}/.patra/docker/clickhouse/data:/var/lib/clickhouse
+      - ${HOME}/.patra/docker/clickhouse/logs:/var/log/clickhouse-server
+      # 低内存配置、账号、建库脚本（建库只在数据目录为空时执行）
+      - ./clickhouse/config.d/patra.xml:/etc/clickhouse-server/config.d/patra.xml:ro
+      - ./clickhouse/users.d/patra.xml:/etc/clickhouse-server/users.d/patra.xml:ro
+      - ./clickhouse/initdb:/docker-entrypoint-initdb.d:ro
+    ulimits:
+      # 官方 compose 样例的值，默认的打开文件数上限太小会报 Too many open files
+      nofile:
+        soft: 262144
+        hard: 262144
+    deploy:
+      resources:
+        limits:
+          # 和 clickhouse/config.d/patra.xml 的 max_server_memory_usage_to_ram_ratio 一起看
+          memory: 2g
+    healthcheck:
+      # /ping 不要账号，就绪时返回 Ok.
+      test: [ "CMD-SHELL", "wget -qO- http://127.0.0.1:8123/ping | grep -q Ok" ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+networks:
+  default:
+    # 各子栈独立 project，共享外部网络 patra-net（由 scripts/compose-all.sh 首次创建）
+    name: patra-net
+    external: true

@@ -2,7 +2,7 @@
 # Patra 基础设施 - 多 project 编排入口
 # ==============================================================
 # 各子栈是独立 Docker project（patra-core / patra-storage / patra-search /
-# patra-observability / patra-tailnet / patra-jobs），共享外部网络 patra-net。
+# patra-observability / patra-tailnet / patra-jobs / patra-pipeline），共享外部网络 patra-net。
 # 这样 IDEA / OrbStack 的 Docker 视图按 project 把各子栈分组显示，而非合成一个 patra 组。
 #
 # 取代旧的 docker-compose.dev.yaml include 单项目模型——compose 的 include 会把
@@ -17,8 +17,9 @@ set -euo pipefail
 
 DOCKER_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../docker" && pwd)"
 
-# 启动顺序：core 基础设施先行；tailnet 网关先于 jobs（jobs 的路由边车 getent 解析 tailscale-gw）。
-ORDER=(core storage search observability tailnet jobs apps)
+# 启动顺序：core 基础设施先行；pipeline 先于 observability（Grafana 的 ClickHouse 数据源指向它）；
+# tailnet 网关先于 jobs（jobs 的路由边车 getent 解析 tailscale-gw）。
+ORDER=(core pipeline storage search observability tailnet jobs apps)
 
 compose() { docker compose -f "$DOCKER_DIR/docker-compose.$1.yaml" "${@:2}"; }
 

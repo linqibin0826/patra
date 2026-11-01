@@ -102,6 +102,7 @@ mini 上有两类客户端，它们眼里 broker 的地址不同：
 - `users.d/patra.xml`（账号与查询级限制）：
   - `default` 配置档：每条查询最多 2 线程、1 GiB 内存，聚合与排序超过 512 MiB 落盘（Altinity 样例是 3 GB，按比例缩）。
   - 账号 `patra`：应用用，`GRANT ALL ON patra_analytics.*`。
+  - 两个账号都能读 `system.parts`、`system.part_log`、`system.query_log`：数据片段数与磁盘占用、写入与合并记录、慢查询，PAP-168 / 171 / 172 要用。
   - 账号 `grafana`：只读，`GRANT SELECT ON patra_analytics.*`，配置档 `readonly=2`（不能写，但允许 Grafana 插件设置查询参数），单条查询最多 60 秒。
   - 密码不进仓库：`<password from_env="..."/>` 从容器环境变量读，变量来自 `${HOME}/.patra/secrets/` 下的两个文件（4.4 节）。变量名**不能**叫 `CLICKHOUSE_PASSWORD`：镜像入口脚本看到它就会把 `default` 账号改成用这个密码、并放开网络访问。
   - 镜像自带的 `default` 账号：容器里不出现 `CLICKHOUSE_USER` / `CLICKHOUSE_PASSWORD` 时，镜像入口脚本把它限制为只能从容器内本机登录，留给健康检查和 `docker exec` 维护用。

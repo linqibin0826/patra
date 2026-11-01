@@ -30,6 +30,8 @@ mkdir -p \
   "$ROOT"/nacos/data \
   "$ROOT"/nacos/logs \
   "$ROOT"/rabbitmq/data \
+  "$ROOT"/clickhouse/data \
+  "$ROOT"/clickhouse/logs \
   "$ROOT"/minio/data \
   "$ROOT"/es/data \
   "$ROOT"/xxl-job-admin/logs \
