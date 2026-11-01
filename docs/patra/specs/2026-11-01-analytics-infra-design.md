@@ -97,7 +97,7 @@ mini 上有两类客户端，它们眼里 broker 的地址不同：
   - 内存：`max_server_memory_usage_to_ram_ratio` 0.75。ClickHouse 能读出容器的 cgroup 上限，所以是 2 GB × 0.75 ≈ 1.5 GB，剩下的留给不受它统计的内存。
   - 并发：`max_concurrent_queries` 8、`max_connections` 64，后台合并、拉取、调度各线程池按 Altinity 样例缩到最小，`merge_tree` 的单次合并上限 1 GB。
   - 端口：关掉 MySQL、PostgreSQL 兼容端口。
-  - 磁盘兜底：默认磁盘设 `keep_free_space_bytes` 22 GB。ClickHouse 写入和合并前要先「预留」空间，剩余空间低于这个值时拒绝预留，写入报 `NOT_ENOUGH_SPACE`，而不是一直写到看门狗的 20 GB 红线以下。这是兜底，不是容量规划：触发时 PAP-168 的消费者写不进去，事件在 Kafka 里等着（最多 2 天），腾出空间后自动补上。
+  - 磁盘兜底：默认磁盘设 `keep_free_space_bytes` 22 GB。ClickHouse 写入和合并前要先「预留」空间，剩余空间低于这个值时拒绝预留，写入报 `NOT_ENOUGH_SPACE`，而不是一直写到看门狗的 20 GB 红线以下。本机演练确认容器经 bind mount 看到的是宿主机整盘：`system.disks` 的可用空间正好等于宿主机 `df` 的剩余减去 22 GB。这是兜底，不是容量规划：触发时 PAP-168 的消费者写不进去，事件在 Kafka 里等着（最多 2 天），腾出空间后自动补上。
   - 系统日志：关掉 `metric_log`、`asynchronous_metric_log`、`trace_log`、`text_log`、`query_thread_log`、`query_views_log`、`processors_profile_log`、`opentelemetry_span_log` 等（实测核对 26.8 默认开了哪些）；**保留 `query_log` 与 `part_log`，加 7 天 TTL**：前者是排查慢查询与 PAP-172 数据质量面板的依据，后者能看到每次写入生成了几个数据片段、合并了哪些，是理解 `TOO_MANY_PARTS` 的现场。
 - `users.d/patra.xml`（账号与查询级限制）：
   - `default` 配置档：每条查询最多 2 线程、1 GiB 内存，聚合与排序超过 512 MiB 落盘（Altinity 样例是 3 GB，按比例缩）。
