@@ -1,0 +1,154 @@
+---
+title: 应用模块与 verify()：Modulith 怎么守住模块边界
+summary: Java 的包挡不住引用，public 类谁都能用。Spring Modulith 把启动类下的每个子包当成一个模块、子包下面再套的包当内部实现，再用 verify() 在测试里查三件事：模块之间有没有成环、有没有碰别人的内部包、有没有依赖没声明的模块。Patra 的子域散在多个层模块里，套不上这个约定，所以用自己写的 ArchUnit 规则做同样的检查。
+type: concept
+difficulty: basic
+tags: [spring, ddd, backend]
+prerequisites: [spring-modulith-overview]
+topics: [spring-modulith]
+sources:
+  - version: v0.15
+  - version: v0.16
+    issue: PAP-137
+    pr: 343
+personalEnv: false
+---
+
+<Diagnose
+  question="一个应用的启动类在 com.shop。com.shop.inventory.internal 包里有一个 public 类 StockCalculator，com.shop.order 里的代码直接 new 了它。编译会怎样？"
+  options={["编译通过，没有任何东西拦它", "编译报错：internal 包外面用不了", "编译通过，启动时 Spring 报错"]}
+  answer="A"
+  ifRight="对。包名叫 internal 只是约定，Java 不认。这篇讲 Modulith 怎么把这种约定变成能失败的检查。"
+  ifWrong="答案是 A。Java 只看 public / private，不看包名：public 类在哪个包都能被引用，叫 internal 也一样，Spring 启动时也不管这个。全景篇开头讲过的「边界守不住」就是这个问题。"
+  suggest="spring-modulith-overview"
+/>
+
+<Callout kind="lead">
+
+应用模块就是一个包：启动类所在包下的每个直接子包是一个模块，模块顶层包里的类对外，下面再套的包算内部实现。`verify()` 在测试里扫一遍代码，有人越界就失败。
+
+</Callout>
+
+## Java 的包挡不住引用
+
+Java 只有一层可见性：`public` 的类，任何包都能用。你可以把内部实现放进叫 `internal` 的包，也可以在代码评审时提醒别人别碰，可编译器从来不拦。项目小的时候靠自觉没问题；人一多、时间一长，总有人为了省事直接用了别的模块的内部类。等到想改那个内部类时才发现，三个模块都在用它。
+
+要守住边界，需要两样东西：先说清楚「哪些包算一个模块、哪些类算对外」，再有一个会失败的检查。Modulith 两样都给。
+
+## Modulith 怎么认模块
+
+默认规则只有一条：**启动类所在包的每个直接子包，是一个模块**。拿一个网店应用举例：
+
+```text
+com.shop                         ← 启动类 ShopApplication 在这里
+├── order                        ← 模块 order
+│   ├── OrderService.java        ← 顶层包里的 public 类：对外
+│   └── internal
+│       └── OrderRepository.java ← 子包：内部实现
+└── inventory                    ← 模块 inventory
+    ├── InventoryService.java    ← 对外
+    └── internal
+        └── StockCalculator.java ← 内部实现，order 不许碰
+```
+
+| 位置 | 算什么 | 别的模块能不能用 |
+|---|---|---|
+| 模块顶层包里的 public 类 | 模块的 API | 能 |
+| 模块下面再套的子包 | 内部实现 | 不能（哪怕类是 public） |
+
+模块之间除了调用对方的 API，更推荐的协作方式是发事件，这是全景篇里事件那一半的内容。
+
+## verify() 查三件事
+
+认出模块之后，`ApplicationModules.of(启动类)` 会把整个应用扫成一个「模块模型」。在它上面调 `verify()`，一般写成一个单元测试：
+
+```java
+class ModularityTests {
+
+  @Test
+  void verifies_module_boundaries() {
+    ApplicationModules.of(ShopApplication.class).verify();
+  }
+}
+```
+
+它查三件事，任何一件不满足就抛异常，测试失败：
+
+1. **模块之间不能成环**：order 依赖 inventory，inventory 又依赖 order，不行。
+2. **只能用别的模块的 API**：order 里引用 `inventory.internal.StockCalculator`，不行。
+3. **只能依赖声明过的模块**：模块声明了「我只依赖谁」，就不能再依赖别的（下一节）。
+
+<Quiz
+  questions={[
+    {
+      question: "开头那个例子里，order 直接 new 了 inventory.internal 里的 StockCalculator。加上 verify() 测试之后，什么时候会发现？",
+      options: ["编译时就报错，代码合不进去", "跑测试时 verify() 失败", "应用启动时 Spring 自动报错"],
+      answer: "B",
+      explain: "verify() 只是一个方法，写在测试里就在跑测试时检查。编译器照样不拦；启动时检查要另外加依赖并打开开关，默认是关的。"
+    }
+  ]}
+/>
+
+## 想多开一扇门，或者少一条依赖
+
+默认规则不够用时，有两个常用的调节：
+
+- **命名接口**：模块想让某个子包也对外（比如给别的模块实现的扩展接口放在 `inventory.spi`），在那个子包的 `package-info.java` 上贴 `@NamedInterface("spi")`。
+- **允许的依赖**：在模块的 `package-info.java` 上贴 `@ApplicationModule(allowedDependencies = "inventory :: spi")`，表示这个模块只能依赖 inventory 的 `spi` 这扇门，别的模块一概不许依赖。
+
+这两样属于进阶用法，知道有就行，真要用时查官方文档。
+
+## 认出模块之后，还能做什么
+
+模块模型是 Modulith 结构那一半的共同基础，除了 `verify()`，它还能：
+
+- **只启动一个模块做集成测试**：`@ApplicationModuleTest` 像 `@SpringBootTest`，但默认只启动测试所在的模块，缺的别的模块的 bean 自己 mock。
+- **从代码生成文档**：按模块之间的依赖画出模块关系图，每个模块再生成一张卡片，列出它的 bean、发布和监听的事件。
+- **启动时检查**：加上运行时支持并打开开关，启动时也跑一遍检查。这个开关默认是关的，所以别以为写了 `verify()` 线上就自动守住了，它只在测试里生效。
+
+## Patra 为什么用自己的规则
+
+Patra 的分包是两层：先按六边形的层拆成 Gradle 模块，每个层模块里再按子域分包。以 interaction 服务的讨论子域为例，它的代码散在好几个地方：
+
+```text
+patra-interaction-domain   dev.patra.interaction.domain.discussion..
+patra-interaction-app      dev.patra.interaction.app.discussion..
+patra-interaction-infra    dev.patra.interaction.infra.discussion..
+patra-interaction-adapter  dev.patra.interaction.adapter.discussion..
+```
+
+Modulith 的一个模块只能对应一个基包和它下面的子包（认模块的规则可以换，这一条换不了）。讨论子域分在四个兄弟包里，还分属四个 Gradle 构件，认不成一个模块；按默认规则，Modulith 反倒会把 `domain`、`app` 这几层认成模块，和 Patra 自己的分层规则打架。v0.15 定分包规范时就决定不引入 Modulith 的结构校验，v0.16 做事件模块时又把「不能把它带进来」写成了一条反目标。
+
+Patra 自己写了一套 ArchUnit 规则，查的是同样三类事：
+
+<CodeRef at="patra-tool/patra-tool-test/src/main/java/dev/patra/tool/test/archunit/SubdomainArchitectureRules.java@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="25-45" />
+
+```java
+/// 子域之间只经对方的**公开包**交互：
+///
+/// - 任意子域 X：`{根包}.domain.X.port.read..`、`{根包}.domain.X.model.read..`，以及事件契约
+///   `{根包}.domain.X.event..`（X 发布的进程内事件）
+/// - 底座子域（共享内核）对同服务的其他子域完全公开：所有层、所有包都可以用；底座只放被两个以上子域共用的东西
+///
+/// 依赖方向也要声明：任何子域都可以依赖底座；其余的边用 {@link #allowingDependency} 或
+/// {@link #allowingSubscription} 声明，没声明的边违规（{@link #crossSubdomainDependenciesAreDeclared}）。
+```
+
+| Modulith | Patra 的对应做法 |
+|---|---|
+| 应用模块 | 子域，跨所有层 |
+| 模块顶层包是 API、命名接口多开的门 | 每个子域固定的公开包：读端口、读模型、事件契约 |
+| 允许的依赖 | `allowingDependency`（可以用对方的公开包）、`allowingSubscription`（只能订阅对方的事件） |
+| `verify()` 写在测试里 | 规则挂在 `./gradlew check` 上，违规构建失败 |
+
+两边的思路一样：先说清楚边界在哪，再用一个会失败的检查守住它。差别只在「模块」的形状。
+
+<Transfer
+  prompt="一个网店单体应用，启动类在 com.shop，下面有 order、inventory、payment 三个模块。要求：order 可以用 inventory 放在 com.shop.inventory.spi 里的一个接口，但不能碰 inventory 的其他内部类；payment 不许依赖 inventory。你会怎么用 Modulith 表达这些规则，怎么保证有人违反时 CI 会失败？"
+  points={[
+    { label: "开一扇门", text: "在 `com.shop.inventory.spi` 的 `package-info.java` 上贴 `@NamedInterface(\"spi\")`，让这个子包也对外。" },
+    { label: "声明依赖", text: "order 的 `package-info.java` 上写 `@ApplicationModule(allowedDependencies = \"inventory :: spi\")`；payment 的允许依赖里不写 inventory。" },
+    { label: "写成测试", text: "加一个调用 `ApplicationModules.of(ShopApplication.class).verify()` 的测试，CI 跑测试时违规就失败。" },
+    { label: "别指望运行时", text: "启动时检查默认关，边界只靠这个测试守。" }
+  ]}
+/>

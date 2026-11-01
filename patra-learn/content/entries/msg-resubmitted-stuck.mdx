@@ -4,7 +4,7 @@ summary: Spring Modulith 补投前先把登记行标成 RESUBMITTED，并拒绝�
 type: pitfall
 difficulty: practice
 tags: [spring, messaging, database]
-prerequisites: [msg-transactional-outbox]
+prerequisites: [spring-modulith-event-publication-registry]
 topics: [spring-modulith, event-delivery]
 sources:
   - version: v0.16
@@ -18,8 +18,8 @@ personalEnv: false
   options={["下一轮补投照常把它再领一次", "一直卡住，再也不会被补投", "重启时 Modulith 自动把它重新发出去"]}
   answer="B"
   ifRight="对，而且表面上看不出来：这一行既不报错，也不再被尝试。往下读看它为什么卡住、Patra 怎么解开。"
-  ifWrong="答案是 B。Modulith 领走一行时只认「不是 RESUBMITTED 的行」，已经标成 RESUBMITTED 的，它当作别人正在处理，不会再领。这题要先知道登记行和补投是什么，先读发件箱那篇。"
-  suggest="msg-transactional-outbox"
+  ifWrong="答案是 B。Modulith 领走一行时只认「不是 RESUBMITTED 的行」，已经标成 RESUBMITTED 的，它当作别人正在处理，不会再领。这题要先知道登记行的状态和补投是什么，先读事件发布登记那篇。"
+  suggest="spring-modulith-event-publication-registry"
 />
 
 ## 坑
@@ -30,17 +30,9 @@ personalEnv: false
 
 </Callout>
 
-## 先认全登记行的五个状态
+## 补投时，一行登记怎么走
 
-发件箱那篇的状态图只画了「待外送 / 失败 / 已删除」，够理解发件箱的思路。Modulith 2.1 实际给登记行记了五个状态：
-
-| 状态 | 意思 |
-|---|---|
-| `PUBLISHED` | 事务提交了，行在表里，监听器还没开始执行 |
-| `PROCESSING` | 监听器正在执行（对外送器来说就是发送、等确认） |
-| `COMPLETED` | 执行成功。Patra 设成「发完即删」，这一行直接删掉 |
-| `FAILED` | 执行抛了异常，留给补投 |
-| `RESUBMITTED` | 被补投领走了，等着重新执行 |
+登记行的五个状态（已发布、处理中、已完成、失败、已补投）在「事件发布登记」那篇讲过。这里只看补投那一段，以及 Patra 的补投规则：
 
 点下面的事件按钮走一遍，走到「被领走」（RESUBMITTED）之后，再点一次「补投任务领走」试试：
 

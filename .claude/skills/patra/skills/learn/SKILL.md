@@ -63,6 +63,7 @@ description: 维护公开学习站 patra-learn 时使用：版本收尾时把本
    | 类型 | `type` | 什么时候用 | 模板 |
    |---|---|---|---|
    | 概念 | `concept` | 讲一个机制或术语：它是什么、为什么这样 | [templates/concept.mdx](templates/concept.mdx) |
+   | 全景 | `concept` | 一门技术要写成几篇时的入口：是什么、解决什么、核心概念全貌、学习路线（teaching.md「全景篇」） | [templates/overview.mdx](templates/overview.mdx) |
    | 排查 | `troubleshooting` | 现象 → 怎么查 → 根因 → 修法，查的过程本身值得学 | [templates/troubleshooting.mdx](templates/troubleshooting.mdx) |
    | 决策 | `decision` | 在几个选项里选了一个，写背景、选项、选择、代价 | [templates/decision.mdx](templates/decision.mdx) |
    | 坑 | `pitfall` | 一句话说得清：「做 A 时会 B，要 C」；一坑一页 | [templates/pitfall.mdx](templates/pitfall.mdx) |
@@ -77,7 +78,7 @@ description: 维护公开学习站 patra-learn 时使用：版本收尾时把本
    - `topics`：可选；挂主题的条目必须有带 `version` 的出处。
    - `sources`：每条 `version`（必填，如 `v0.16`）、`issue`、`pr`。
    - `personalEnv`：见规矩 1，默认 `false`。
-4. **补入门篇**：本版引入了新技术（新中间件、新协议、新框架），检查对应路线的入门、基础层有没有讲它的概念篇；没有就补写，并把它列为本篇的前置。
+4. **补入门篇**：本版引入了新技术（新中间件、新协议、新框架），检查对应路线的入门、基础层有没有讲它的概念篇；没有就补写，并把它列为本篇的前置。这门技术要写成几篇时，先写全景篇，再给它开一条路线（「3. 合并与归位 · 开新路线」）。
 5. **写正文**：按模板的节和 [teaching.md](teaching.md)。
 6. **归位**：按难度插进路线 YAML 的 `entries`（难度不倒排，本路线里的前置排在前面），需要就挂进主题；`personalEnv: true` 的不进路线。
 7. **校验**：`pnpm content:check-file content/entries/<slug>.mdx` 改到无输出，再 `pnpm test` 全绿。

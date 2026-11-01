@@ -1,12 +1,13 @@
 ---
-title: Spring Modulith：两半各管一件事，Patra 只用了事件那一半
-summary: Spring Modulith 一半检查应用里各模块的边界，一半让模块之间的事件可靠送到。Patra 只引了事件那几个构件，没要 starter，因为模块校验认的「顶层包就是模块」和 Patra 自己的分包规则对不上。
+title: Spring Modulith：它解决什么问题、怎么解决
+summary: 一个应用里的几块业务越写越缠：边界被随手打穿，一块出错连累另一块，事件一崩就丢。Spring Modulith 用「包即模块 + 测试里检查边界」守住结构，用「事件先在业务事务里记一笔、提交后再处理」让模块之间可靠协作。这篇是 Modulith 系列的入口：讲清它是什么、核心概念各管什么、该按什么顺序往下学。
 type: concept
 difficulty: basic
 tags: [spring, messaging, backend]
-prerequisites: [msg-in-process-events]
+prerequisites: [spring-dependency-injection, db-transactions]
 topics: [spring-modulith]
 sources:
+  - version: v0.14
   - version: v0.16
     issue: PAP-137
     pr: 343
@@ -14,52 +15,154 @@ personalEnv: false
 ---
 
 <Diagnose
-  question="不用任何别的库，Spring 自己就能 publishEvent、也能监听。Spring Modulith 的事件那一半，主要给它补上了什么？"
-  options={["把事件记进数据库，没处理完的能重来", "让监听器能直接调用另一个服务里的方法", "让同步监听器跑在单独的线程池里，不拖慢请求"]}
-  answer="A"
-  ifRight="对。Spring 的事件只在内存里转一圈，进程一崩就没了；Modulith 把它记成一行数据。往下读先认全 Modulith 的两半，再看 Patra 用了哪几块。"
-  ifWrong="答案是 A。Spring 自带的事件只在一个进程的内存里传，监听器没跑完进程就崩了，这件事就没了；Modulith 补的是「记下来、能重来」。这题考的是 Spring 自带的进程内事件长什么样，先读那一篇。"
-  suggest="msg-in-process-events"
+  question="发表评论的代码在同一个事务里直接调用「写提醒」的方法。某天写提醒的代码因为一个 bug 抛了异常。用户发评论会怎样？"
+  options={["评论发出去了，只是这次没有提醒", "评论成功，提醒过一会儿自动重试", "评论也发不出去，整个事务一起回滚"]}
+  answer="C"
+  ifRight="对。两件事绑在一个事务里，次要的那件出错，主要的那件跟着失败。这只是 Modulith 要解决的问题之一，往下读看全貌。"
+  ifWrong="答案是 C。写提醒和写评论在同一个事务里，任何一步抛异常，整个事务回滚，评论也没了；没有任何东西会自动重试。这题考的是事务「要么全成、要么全不成」，先读事务那篇。"
+  suggest="db-transactions"
 />
+
+## 痛点：一个应用里的几块业务，越写越缠
+
+拿 Patra 里一件很普通的事当例子：**有人回复了你的评论，系统要给你写一条提醒。**「评论」和「提醒」是两块业务。最省事的写法是在发评论的代码里，顺手调一下写提醒的方法。刚开始这样没问题，日子久了会冒出三类麻烦：
+
+1. **一块出错，连累另一块。** 两件事在同一个事务里，开头那道题就是这个情况：提醒的 bug 让评论也发不出去。想把提醒挪到事务提交之后、换一条线程去做，又会出现新问题：评论提交了，写提醒之前进程恰好被重启，这条提醒就再也没人记得。
+2. **谁都认识谁。** 发评论的代码要认识提醒；以后加邮件、加实时推送，还得回来改发评论的代码。测评论时，提醒、邮件、推送要一起拉起来。业务越多，牵一发动全身。
+3. **边界说不清，也守不住。** 大家口头约定「提醒的内部类别人别碰」，可 Java 的 `public` 类谁都能引用，编译器不拦。某天有人图方便直接用了提醒的内部类，没人发现。
+
+这三类麻烦在任何「一个应用里有好几块业务」的项目里都会出现，不管它最后是单体还是微服务。
+
+## 以前怎么做，哪里不够
+
+| 做法 | 能做到 | 不够的地方 |
+|---|---|---|
+| 拆成多个 Gradle / Maven 模块 | 编译期就拦住不该有的引用 | 模块一多构建配置膨胀；一个模块里还是分不出「对外的类」和「内部的类」；不管事件怎么可靠 |
+| 自己写 ArchUnit 规则 | 想守什么规则都能写成测试 | 「模块」是什么、哪些包算对外，都要自己定义、自己维护 |
+| 直接拆成微服务 | 进程级隔离，谁也碰不到谁的代码 | 过早背上网络、分布式一致性和部署的成本；边界划错了代价很高 |
+| Spring 的事件加 `@Async` | 发布方不再认识订阅方，提交后再处理不连累主事务 | 订阅方失败、或进程在处理前崩了，事件就丢了，没有记录可以重来 |
+
+每种做法都只解决一部分，第四种还引出了新问题。
+
+## Spring Modulith 是什么
 
 <Callout kind="lead">
 
-Spring Modulith 是 Spring 官方给「一个应用里分成几个模块」准备的工具，分两半：一半检查模块之间的边界，一半让模块之间的事件可靠送到。两半可以只用其中一半。
+Spring Modulith 是一组按需取用的库：帮你在一个 Spring Boot 应用里把代码按业务分成模块，在测试里检查模块边界，并让模块之间靠事件可靠地协作。
+
+它不是微服务框架，也不是消息队列：模块还是在同一个应用、同一个进程里运行，事件记在你自己的业务数据库里。
 
 </Callout>
 
-## 两半，各管一件事
+Spring Boot 对技术结构有主张（控制器、服务、仓库怎么写），对业务结构以前只有口头建议；Modulith 补的就是业务结构这一块。它把一个应用叫作**模块化单体**：只部署一个应用，里面按业务切成边界清楚的模块。
 
-| | 模块结构那一半 | 事件那一半 |
+## 核心思路
+
+两个想法，各对付上面的一部分麻烦：
+
+- **把包当模块，在测试里检查边界。** 启动类所在包下的每个子包就是一个模块，子包下面再套的包算内部实现。写一个测试让 Modulith 扫一遍代码，有人引用了别的模块的内部类、或者模块之间互相依赖成环，测试就失败。这对付「边界守不住」。
+- **模块之间发事件，不直接调用；事件先记一笔再处理。** 评论模块只发布「评论已发表」，不认识提醒。Modulith 在评论的事务里顺手记一行「这个事件还欠提醒模块处理一次」，提交后再换一条线程处理，处理成功才把这一行划掉。处理失败、进程崩了，这一行都还在，可以重来。这对付「互相连累」和「谁都认识谁」。
+
+<Callout kind="analogy">
+
+像一家公司的几个部门。部门之间只走正式窗口，不进别人办公室翻文件（模块只用对方对外的类）；要通知别的部门，就发一份内部函件，收发室的登记簿记着每份函件谁还没签收（事件发布登记）。函件丢了，照着登记簿再送一次。
+
+</Callout>
+
+## 核心概念全貌
+
+Modulith 的概念分两条线：左边一列管结构，右边两列管事件。点方块看它管什么：
+
+<Structure
+  title="Spring Modulith 的核心概念"
+  nodes={[
+    { id: "module", label: "应用模块", sub: "包即模块", col: 1, desc: "启动类所在包下的每个子包是一个模块。模块顶层包里的类对外，下面再套的包算内部实现。" },
+    { id: "verify", label: "verify()", sub: "检查边界", code: true, col: 1, row: 2, desc: "扫一遍代码，模块之间成环、或引用了别的模块的内部包，就报错。通常写成一个单元测试。" },
+    { id: "event", label: "模块间事件", sub: "publishEvent", col: 2, desc: "模块之间用发布事件代替直接调用：发布方只说「发生了什么」，不认识谁在关心。" },
+    { id: "listener", label: "模块监听器", sub: "提交后 · 异步 · 新事务", col: 3, desc: "`@ApplicationModuleListener`，Modulith 推荐的事件监听写法：等发布方的事务提交后，换一条线程，在新事务里处理。" },
+    { id: "registry", label: "事件发布登记", sub: "event_publication 表", col: 3, row: 2, desc: "发布事件时，在发布方的事务里为每个要处理它的监听器记一行；处理成功才算完成，失败的留着可以补投。" },
+    { id: "externalize", label: "外送", sub: "发到消息中间件", col: 2, row: 2, desc: "一个特殊的监听器：把事件发到 RabbitMQ、Kafka 这类消息中间件，让别的服务也能收到。它同样受登记保护。" }
+  ]}
+  edges={[
+    { from: "module", to: "verify", label: "检查" },
+    { from: "module", to: "event", label: "靠它协作" },
+    { from: "event", to: "listener", label: "提交后处理" },
+    { from: "listener", to: "registry", label: "先记一行" },
+    { from: "registry", to: "externalize", label: "保护" }
+  ]}
+/>
+
+| 概念 | 一句话 | 在 Patra 里 |
 |---|---|---|
-| 解决什么 | 一个应用写久了，模块之间互相乱引用，边界越来越糊 | 事件只在内存里传，监听器没跑完进程崩了就丢 |
-| 主要的东西 | `ApplicationModules`、`verify()`、`@ApplicationModuleTest`、文档生成 | 事件发布登记（`event_publication` 表）、补投、外送到消息中间件、`@ApplicationModuleListener` |
-| 构件 | `spring-modulith-core` 等 | `spring-modulith-events-*` |
-| Patra 用没用 | 没用 | 用了 |
+| 应用模块 | 包即模块，顶层包对外、子包对内 | 没用：Patra 的子域散在好几个 Gradle 模块里，认不成一个模块 |
+| `verify()` | 在测试里检查模块边界 | 没用：Patra 用自己写的 ArchUnit 规则检查子域边界 |
+| 模块间事件 | 发布事件代替直接调用 | 用：服务里的子域之间用同步事件，跨服务靠外送 |
+| `@ApplicationModuleListener` | 提交后、异步、新事务里处理 | 服务代码不写，只有 Modulith 的外送器带着它 |
+| 事件发布登记 | 处理之前先在业务事务里记一行 | 用：当发件箱，发不出去的每分钟补投 |
+| 外送 | 把事件发到消息中间件 | 用：发到 RabbitMQ，并等 broker 确认 |
 
-下面两节分别讲这两半，再说 Patra 为什么只要其中一半。
+除了这六个，Modulith 还有模块级集成测试（`@ApplicationModuleTest`）、从代码生成模块关系图、模块级的链路追踪、「过了一小时 / 一天」这类时间事件。它们都建立在「应用模块」之上，Patra 没用到，路线最后会给出去处。
 
-## 模块结构那一半：它怎么认「模块」
+## 从头走一遍：评论发了，提醒怎么才不丢
 
-Modulith 把启动类所在包下面的**每一个直接子包**当成一个模块。比如启动类在 `com.shop`，那 `com.shop.order`、`com.shop.inventory` 就是两个模块；模块的顶层包是对外的接口，它下面再套的子包算内部实现。
+把开头的例子一步步改，每一步只补一个概念。前两步和最后一步是 Patra 真实走过的路，中间两步是讲解：
 
-认出模块之后，它能做三件事：
+<Stepper
+  title="评论发表后写提醒，一步步改"
+  nodes={[
+    { id: "comment", label: "评论", sub: "讨论子域" },
+    { id: "registry", label: "登记表", sub: "Modulith" },
+    { id: "reminder", label: "提醒", sub: "提醒子域" },
+    { id: "mq", label: "RabbitMQ" },
+    { id: "notify", label: "通知服务" }
+  ]}
+  links={[
+    { from: "comment", to: "registry" },
+    { from: "registry", to: "reminder" },
+    { from: "registry", to: "mq" },
+    { from: "mq", to: "notify" }
+  ]}
+  steps={[
+    { caption: "直接调用：发评论的代码在同一个事务里调写提醒的方法。评论认识提醒，提醒一出错评论跟着回滚。", focus: ["comment", "reminder"], notes: [{ at: "comment", text: "认识提醒", tone: "bad" }] },
+    { caption: "改成同步事件：评论只发布「评论已发表」，提醒订阅它。评论不再认识提醒，但两者还在同一个线程、同一个事务里。Patra v0.14 就是这样做的，当时有意要评论和提醒同成同败。", focus: ["comment", "reminder"], tokens: [{ id: "evt", label: "评论已发表", at: "reminder" }], notes: [{ at: "comment", text: "同一个事务", tone: "wait" }] },
+    { caption: "改成提交后、换一条线程处理：提醒出错不再连累评论。可写提醒之前进程被重启，这个事件只在内存里，没了。", focus: ["comment", "reminder"], tokens: [{ id: "evt", label: "评论已发表", at: "reminder", state: "dropped" }], notes: [{ at: "reminder", text: "进程重启，事件丢失", tone: "bad" }] },
+    { caption: "用 @ApplicationModuleListener 加事件发布登记：发布时在评论的事务里多记一行，提交后再处理，成功才划掉这一行。进程崩了，这一行还在，可以补投。", focus: ["comment", "registry", "reminder"], links: ["comment>registry", "registry>reminder"], tokens: [{ id: "evt", label: "评论已发表", at: "registry" }], notes: [{ at: "registry", text: "1 行 · 未完成", tone: "wait" }] },
+    { caption: "提醒搬进独立的通知服务（Patra v0.16）：两个服务各有各的库，同一个进程里的监听器够不着了。登记行改由外送器发到 RabbitMQ，通知服务从队列里取。", focus: ["registry", "mq", "notify"], links: ["comment>registry", "registry>mq", "mq>notify"], tokens: [{ id: "evt", label: "评论已发表", at: "notify" }], notes: [{ at: "registry", text: "确认后删除", tone: "ok" }, { at: "notify", text: "写提醒", tone: "ok" }] }
+  ]}
+  guesses={[
+    { before: 3, question: "改成提交后、换一条线程写提醒。评论提交后、写提醒之前，进程被重启了。这条提醒会怎样？", options: ["重启后自动补上", "丢了，没有任何记录", "评论也跟着被撤销"], answer: "B", explain: "提交后的监听器只在内存里排着，进程一重启就没了；评论早已提交，也不会被撤销。下一步要补的就是「记录」。" },
+    { before: 5, question: "提醒搬进了另一个服务，登记行还在发评论那个服务的库里。谁把事件送到通知服务？", options: ["通知服务定时来查评论服务的登记表", "评论服务把登记行发到消息中间件", "两个服务共用一个事务一起提交"], answer: "B", explain: "别的服务不该直接读你的库，跨服务也没法共用一个事务。Modulith 的外送器把登记的事件发到 RabbitMQ，通知服务从队列取。" }
+  ]}
+/>
 
-- `ApplicationModules.of(启动类).verify()`：写成一个单元测试，模块之间有循环依赖、或者一个模块引用了另一个模块的内部子包，测试就失败。
-- `@ApplicationModuleTest`：测试时默认只启动这一个模块（也可以设成连它依赖的模块一起），不用把整个应用都拉起来。
-- 文档生成：按模块之间的依赖画出模块图。
+第四步到第五步的细节（登记行有哪些状态、外送怎么选事件和路由、怎么等 broker 确认、发不出去怎么补投），就是这个系列后面各篇的内容。
 
-这些都建立在一个前提上：**一个顶层包等于一个模块**。
+## 常见误解
 
-## Patra 为什么不要这一半
+- **以为它是微服务的替代品**：名字里有「模块」，又常和微服务放在一起比较。实际上它管的是代码结构，和怎么部署无关：模块化单体里的模块不能单独扩容，一个模块把内存吃光，整个应用一起倒。Patra 本身是微服务，照样用了它的事件那一半。
+- **以为事件发布登记就是消息队列**：都能「先存下来、稍后处理」。实际上登记表只是你业务库里的一张表，没有消费组，不保证顺序；失败的行也不会自己重试，要有人定时调补投。
+- **以为 `@ApplicationModuleListener` 只是语法糖**：它确实只是三个注解的组合，但每一个都改变行为：提交后才执行（发布方回滚就不执行）、换一条线程、在新事务里跑（处理失败不会回滚发布方）。
+- **以为登记行标了完成，消息就一定到了 broker**：Modulith 的 RabbitMQ 外送默认发完就算成功，不等 broker 回确认。Patra 为此自己补了「等确认」这一步。
+- **以为有了登记就「恰好一次」**：确认在路上丢了、补投时重发，同一个事件都可能到两次。它保证的是不丢，不保证不重，收消息的一方要能去重。
 
-Patra 的分法是两层：先按六边形的层拆成 Gradle 模块（domain、app、infra……），每个层模块里面再按子域分包。同一个子域散在好几个 Gradle 模块里，子域包也不在启动类正下方。Modulith 的「顶层包就是模块」认不出这种结构，它会把 `domain`、`app` 这样的层当成模块，规则和 Patra 自己的分层规则打架。
+## 什么时候用，代价是什么
 
-所以 Patra 的子域边界由自己写的 ArchUnit 规则在构建里检查，「层内先按子域分包」那篇把 Modulith 的模块列为被否掉的选项。v0.16 做事件模块时，设计里还专门写了一条反目标：不许把 Modulith 的模块结构校验带进来。
+<Callout kind="cost">
 
-## 事件那一半：Patra 引了哪几块
+**适合**：一个 Spring Boot 应用里有好几块业务，想守住它们之间的边界；模块之间有「提交后必须做成」的事，想有记录、能重来；以后可能把某块拆成独立服务。
 
-Modulith 的事件能力拆成了几个小构件，Patra 的 `patra-tool-events` 只挑了这几个：
+**代价**：
+
+- 结构那一半要求包结构服从它的约定（一个模块就是一个基包）。Patra 的分包是「先按层分 Gradle 模块、层里再按子域分包」，套不上，所以只用了事件那一半。
+- 事件那一半要多建一张表，定时补投，选好发成功的行怎么清理。
+- 事件序列化后存进表里，改事件的类名或字段、升级 Modulith，都要先确认表里没有积压的旧行。
+- 只保证至少一次，所有收事件的一方都要能去重。
+
+</Callout>
+
+## Patra 用了哪一半
+
+Patra 的事件工具模块只按构件引了事件相关的几块，没用 Modulith 的 starter，因为 starter 会顺带引进结构那一半的校验：
 
 <CodeRef at="patra-tool/patra-tool-events/build.gradle.kts@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="23-28" />
 
@@ -72,27 +175,28 @@ runtimeOnly("org.springframework.modulith:spring-modulith-events-jackson")
 runtimeOnly("org.springframework.modulith:spring-modulith-events-amqp")
 ```
 
-| 构件 | 管什么 |
-|---|---|
-| `events-api` | 业务代码会碰到的类型：`@ApplicationModuleListener`、外送配置、登记行的状态 |
-| `events-core` | 发布登记本身：事务里写登记行、处理完标完成、补投的入口 |
-| `events-jdbc` | 登记行存进数据库的 `event_publication` 表 |
-| `events-jackson` | 事件对象和表里的 JSON 互相转换 |
-| `events-amqp` | 把事件外送到 RabbitMQ 这类 AMQP 消息中间件 |
+`events-core` 是登记本身，`events-jdbc` 把登记行存进数据库，`events-jackson` 负责事件和 JSON 互转，`events-amqp` 负责外送到 RabbitMQ。
 
-<Callout kind="warn">
+## 学习路线
 
-最省事的引法是 Modulith 的 starter，但它会顺带引进 `spring-modulith-core`，也就是模块结构校验。只想要事件的项目，要像上面这样按构件引。
+「Spring Modulith」路线按下面的顺序排好了，从这篇往下读：
 
-</Callout>
+| 档 | 学什么 | 篇目 |
+|---|---|---|
+| 结构 | 模块怎么认、`verify()` 查什么、Patra 为什么用自己的规则 | 应用模块与 verify() |
+| 事件基础 | Spring 自己的事件、提交后监听为什么会丢、为什么要先记一笔 | 进程内事件；提交后再处理；双写问题；发件箱 |
+| 事件发布登记 | `@ApplicationModuleListener`、登记行的五个状态、完成模式、补投 | 事件发布登记 |
+| 跨服务 | 外送怎么选事件和路由、领域事件与集成事件、等 broker 确认、消费端去重 | 外送；领域事件与集成事件；发送确认；至少一次与去重 |
+| Patra 的取舍与坑 | 只登记外送事件、补投卡死、等确认不占连接、为什么换 RabbitMQ | 后面四篇实战 |
 
-接下来几篇顺着一个事件的路线往下讲：事务里怎么记成一行、哪些监听器会被记、提交后怎么外送到 RabbitMQ、发失败了怎么补投。
+Patra 没用到的部分（命名接口、模块级集成测试与 `Scenario`、文档生成、时间事件、可观测性），去看 Spring Modulith 的官方参考文档，学完结构那一篇再看会顺很多。
 
-<Transfer
-  prompt="另一个团队做的是一个单体 Spring Boot 应用，启动类在 `com.shop`，下面按 `order`、`payment`、`inventory` 分包。他们有两个烦恼：一是 `order` 里有人直接 new 了 `inventory` 内部的类；二是下单成功后通知库存的事件偶尔丢。Modulith 的两半各能帮他们解决哪个？他们该怎么引依赖？"
+<Recap
+  prompt="不看上文，用自己的话讲一遍：Spring Modulith 解决什么问题、怎么解决、它的核心概念各管什么？Patra 为什么只用了一半？"
   points={[
-    { label: "模块结构那一半管边界", text: "他们的包结构正好是「启动类下面一个顶层包一个模块」，写一个 `ApplicationModules.of(...).verify()` 测试，就能抓到 order 引用 inventory 内部类。" },
-    { label: "事件那一半管不丢", text: "下单和登记行写在同一个事务里，库存监听器没处理完的留在表里，可以补投。" },
-    { label: "两半都要就用 starter", text: "他们两半都需要，直接引 Modulith 的 starter 最省事；Patra 只按构件引，是因为不要模块校验。" }
+    { label: "解决什么", text: "一个应用里几块业务越写越缠：边界守不住、一块出错连累另一块、提交后处理的事件一崩就丢。" },
+    { label: "怎么解决", text: "结构上包即模块、用 verify() 在测试里检查边界；事件上模块之间发事件不直接调用，事件先在业务事务里记一行，提交后再处理，失败可补投。" },
+    { label: "核心概念", text: "应用模块、verify()、模块间事件、@ApplicationModuleListener、事件发布登记、外送；后三个一环扣一环。" },
+    { label: "Patra 只用一半", text: "Patra 的子域散在多个层模块里，套不上「一个模块一个基包」，结构用自己的 ArchUnit 规则；事件那一半拿来当发件箱，外送到 RabbitMQ。" }
   ]}
 />

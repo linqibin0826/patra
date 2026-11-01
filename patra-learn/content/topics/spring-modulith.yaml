@@ -1,2 +1,2 @@
 title: Spring Modulith 在 Patra
-summary: Patra 只用了 Spring Modulith 的事件那一半：事务里记一行登记、只登记要外送的事件、提交后外送到 RabbitMQ 并等确认、发不出去的补投。几次取舍都绕着同一个问题：怎么让这一行登记靠得住。这里按版本排列，想按阅读顺序学，走「消息与事件」路线。
+summary: Patra 只用了 Spring Modulith 的事件那一半：事务里记一行登记、只登记要外送的事件、提交后外送到 RabbitMQ 并等确认、发不出去的补投。几次取舍都绕着同一个问题：怎么让这一行登记靠得住。这里按版本排列，想按阅读顺序学，走「Spring Modulith」路线。

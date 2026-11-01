@@ -1,0 +1,112 @@
+---
+# 全景篇：一门技术要写成几篇时的入口，写法见 teaching.md「全景篇」；frontmatter 按 SKILL.md「1. 写新条目」第 3 步填
+title: 〔X：它是什么、解决什么问题〕
+summary: 〔一两句话：没有它时哪里痛、它怎么解决、Patra 用了哪部分〕
+type: concept
+difficulty: basic         # intro 入门 | basic 基础 | advanced 进阶 | practice 实战
+tags: [backend]               # 至少 1 个，从 content/tags.yaml 里选
+prerequisites: []             # 直接前置的 slug，1～3 篇，必须已存在
+# topics: [<主题 slug>]       # 可选；挂主题必须有带 version 的出处
+# sources:
+#   - version: v0.17
+#     issue: PAP-xx
+#     pr: 123
+personalEnv: false            # 要作者同款工具或机器才会碰到时为 true
+---
+
+<Diagnose
+  question="〔一个场景：不用 X 时这样写，某件事发生后会怎样？只问结果，不问术语〕"
+  options={["〔结果甲〕", "〔结果乙〕", "〔结果丙〕"]}
+  answer="B"
+  ifRight="〔确认 + 一句「这正是 X 要解决的」〕"
+  ifWrong="〔正确结果是什么，这题考的是哪个前置知识〕"
+/>{/* 有前置时加 suggest="<前置 slug>"；answer 每题换位置，别照抄这里的 B（teaching.md 第 1 条） */}
+
+## 〔痛点：没有 X 时，哪一步会出错〕
+
+一个 Patra 里真实的场景，先不用术语。写清楚是哪一步、出了什么错、为什么平常看不出来。
+
+## 以前怎么做，哪里不够
+
+| 做法 | 能做到 | 不够的地方 |
+|---|---|---|
+| 〔做法甲〕 | 〔…〕 | 〔…〕 |
+| 〔做法乙〕 | 〔…〕 | 〔…〕 |
+
+## X 是什么
+
+<Callout kind="lead">
+
+〔一句话定义〕
+
+〔它不是什么：最容易混淆的那一种〕
+
+</Callout>
+
+## 核心思路
+
+一两段，连到读者已经懂的东西。
+
+{/* 日常类比：<Callout kind="analogy">…</Callout> */}
+
+## 核心概念全貌
+
+<Structure
+  title="〔X 的核心概念〕"
+  nodes={[
+    { id: "a", label: "〔概念甲〕", col: 1, desc: "〔一句话：它是什么、管什么〕" },
+    { id: "b", label: "〔概念乙〕", col: 2, desc: "〔一句话〕" }
+  ]}
+  edges={[{ from: "a", to: "b", label: "〔关系〕" }]}
+/>
+
+| 概念 | 一句话 | 在 Patra 里 |
+|---|---|---|
+| 〔概念甲〕 | 〔…〕 | 〔…〕 |
+
+## 从头走一遍
+
+一个贯穿的例子：朴素做法 → 哪里不行 → 补一个概念，每一步只引入一个新概念。
+
+<Stepper
+  title="〔例子在讲什么〕"
+  nodes={[
+    { id: "a", label: "〔部件甲〕" },
+    { id: "b", label: "〔部件乙〕" }
+  ]}
+  links={[{ from: "a", to: "b" }]}
+  steps={[
+    { caption: "〔朴素做法〕", focus: ["a"] },
+    { caption: "〔补上一个概念之后〕", focus: ["b"], links: ["a>b"] }
+  ]}
+  guesses={[
+    { before: 2, question: "〔朴素做法哪里会出错〕", options: ["〔选项甲〕", "〔选项乙〕"], answer: "A", explain: "〔为什么〕" }
+  ]}
+/>
+
+## 常见误解
+
+- **以为〔…〕**：〔为什么会这么以为〕。实际上〔…〕。
+
+## 什么时候用，代价是什么
+
+<Callout kind="cost">
+
+〔适合什么情况、不适合什么情况、用了要付出什么〕
+
+</Callout>
+
+## 学习路线
+
+| 档 | 学什么 | 对应篇目 |
+|---|---|---|
+| 〔入门〕 | 〔…〕 | 〔篇目标题〕 |
+
+<Recap
+  prompt="不看上文，用自己的话讲一遍：X 解决什么问题、怎么解决、核心概念各管什么？"
+  points={[
+    { label: "解决什么", text: "〔参考答案的一条〕" },
+    { label: "怎么解决", text: "〔参考答案的一条〕" },
+    { label: "核心概念", text: "〔参考答案的一条〕" }
+  ]}
+/>

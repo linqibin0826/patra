@@ -11,11 +11,13 @@ entries:
   - msg-after-commit-listeners
   - msg-dual-write-problem
   - msg-transactional-outbox
+  - spring-modulith-event-publication-registry
   - msg-publisher-confirms
   - msg-at-least-once-and-dedup
   - msg-dead-letter
   - msg-ordering
   - ddd-domain-vs-integration-events
+  - spring-modulith-externalization
   - msg-why-rabbitmq
   - msg-registry-trigger-annotation
   - msg-resubmitted-stuck

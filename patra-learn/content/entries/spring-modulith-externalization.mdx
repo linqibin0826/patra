@@ -1,0 +1,147 @@
+---
+title: 外送：把登记的事件发到 RabbitMQ
+summary: 提醒搬进别的服务后，同一个进程里的监听器够不着了。Spring Modulith 的外送是它自带的一个监听器：事务提交后，把选中的领域事件映射成对外的消息、按路由发到 RabbitMQ，并且和别的监听器一样受登记保护。这篇讲它怎么工作、Patra 怎么配，以及默认不替你保证的三件事。
+type: concept
+difficulty: advanced
+tags: [spring, messaging, backend]
+prerequisites: [spring-modulith-event-publication-registry, ddd-domain-vs-integration-events]
+topics: [spring-modulith, event-delivery]
+sources:
+  - version: v0.16
+    issue: PAP-141
+    pr: 343
+personalEnv: false
+---
+
+<Diagnose
+  question="interaction 的领域事件「评论已发表」要让通知服务也收到。用 Modulith 外送时，把它发到 RabbitMQ 的那段代码在什么时候运行？"
+  options={["提交后，由一个被登记的监听器发", "事务里，publishEvent 那一刻就发", "通知服务隔一阵子来表里拉"]}
+  answer="A"
+  ifRight="对。外送本身就是一个提交后的监听器，所以它也有登记行、发失败了也能补投。往下读看它怎么选事件、发到哪。"
+  ifWrong="答案是 A。在事务里直接发，会碰上「事务回滚了消息却发出去了」的老问题；让别的服务读你的库也不行。外送是 Modulith 自带的一个提交后监听器，受登记保护。这题要先懂事件发布登记。"
+  suggest="spring-modulith-event-publication-registry"
+/>
+
+<Callout kind="lead">
+
+外送是 Modulith 自带的一个监听器：事务提交后，它把选中的事件映射成对外的消息、按路由发到消息中间件（RabbitMQ、Kafka 等）。它和别的监听器一样有登记行，发失败了可以补投。
+
+</Callout>
+
+## 它就是一个监听器
+
+上一篇讲的登记是「每个提交后监听器一行」。外送没有另起一套机制，它就是其中一个监听器：Modulith 的事件核心里有一个 `EventExternalizerModuleListener`，方法上贴着 `@ApplicationModuleListener`；AMQP 构件负责把它接到 RabbitMQ 上。所以：
+
+- 发布一个要外送的事件，表里就有一行属于外送器的登记；
+- 外送器方法正常返回，这一行算完成（Patra 的完成模式是删掉）；
+- 外送器抛了异常，这一行停在失败，等补投再发一次。
+
+有一点不一样：外送器把事务传播方式改成了 `SUPPORTS`，不给自己开新事务。这和「等 broker 确认时占不占数据库连接」有关，后面「等确认不占连接」那篇讲。
+
+<Structure
+  title="一个领域事件怎么变成 RabbitMQ 里的一条消息"
+  nodes={[
+    { id: "domain", label: "领域事件", sub: "评论已发表", col: 1, desc: "interaction 领域层产生的事件，字段用领域类型，只在服务内部用。事件 ID 在创建时就生成。" },
+    { id: "registry", label: "登记行", sub: "event_publication", col: 2, desc: "发布时在业务事务里记下的一行，存的是序列化后的领域事件。" },
+    { id: "externalizer", label: "外送器", sub: "选择 · 映射 · 路由", col: 3, desc: "提交后执行：先看这个事件要不要外送，再映射成集成事件，最后决定发到哪个交换机、带什么路由键。" },
+    { id: "exchange", label: "交换机", sub: "interaction.events", col: 3, row: 2, desc: "RabbitMQ 的 topic 交换机，按路由键把消息转给绑定了它的队列。" }
+  ]}
+  edges={[
+    { from: "domain", to: "registry", label: "发布" },
+    { from: "registry", to: "externalizer", label: "提交后" },
+    { from: "externalizer", to: "exchange", label: "发送" }
+  ]}
+  traces={[
+    {
+      button: "发一条评论已发表",
+      packet: "评论",
+      hops: [
+        { at: "domain", caption: "讨论子域发布「评论已发表」，事件 ID 在这时生成。" },
+        { at: "registry", caption: "同一个事务里，为外送器记一行登记；事务提交。" },
+        { at: "externalizer", caption: "外送器被选中执行：映射成 CommentPublished，路由键 comment.published。" },
+        { at: "exchange", caption: "消息进了交换机，再转给通知服务的队列；登记行删掉。" }
+      ]
+    }
+  ]}
+/>
+
+## 三步：选择、映射、路由
+
+外送器每处理一个事件，按顺序问三个问题，答案都来自一个配置：
+
+1. **选择**：这个事件要不要外送？
+2. **映射**（可选）：发出去的消息长什么样？可以原样发，也可以换成另一个对象。
+3. **路由**：发到哪个交换机、带什么路由键？
+
+配置有两种写法。注解式是在事件类上贴 `@Externalized("交换机::路由键")`；编程式是在配置类里定义一个 `EventExternalizationConfiguration` bean。Patra 只用编程式，领域层的事件类上什么都不贴：领域层不该知道自己的事件会被发到 RabbitMQ。interaction 的配置：
+
+<CodeRef at="patra-api/patra-interaction/patra-interaction-boot/src/main/java/dev/patra/interaction/config/InteractionEventsConfiguration.java@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="49-75" />
+
+```java
+@Bean
+public EventExternalizationConfiguration eventExternalizationConfiguration() {
+  return EventExternalizationConfiguration.externalizing()
+      .selectByType(EXTERNALIZED::contains)
+      .route(CommentPublishedEvent.class, event -> target(CommentPublished.ROUTING_KEY))
+      .mapping(CommentPublishedEvent.class, IntegrationEventMapper::commentPublished)
+      // ……另外四种事件，同样一条 route、一条 mapping
+      .build();
+}
+
+private static RoutingTarget target(String routingKey) {
+  return RoutingTarget.forTarget(InteractionExchange.NAME).andKey(routingKey);
+}
+```
+
+- `selectByType`：只外送集合里列出的五种领域事件。「有帮助已取消」不在里面，因为没有队列订阅它（原因见下面第三件事）。
+- `mapping`：把领域事件换成 `patra-interaction-api` 里的集成事件，只拷字段。为什么要换，「领域事件与集成事件」那篇讲过。
+- `route`：都发到 `interaction.events` 交换机，路由键就是事件类型，比如 `comment.published`。
+
+## 两种外送模式
+
+Modulith 2.1 起有两种外送模式，由 `spring.modulith.events.externalization.mode` 选：
+
+| 模式 | 怎么发 | Patra |
+|---|---|---|
+| `module-listener`（默认） | 就是上面说的那个提交后监听器 | 用这个 |
+| `outbox` | 交给专门的发件箱库（Namastack Outbox 或 JobRunr）去发 | 不用：要多引一个库来驱动，RabbitMQ 的确认也只看 nack，不管超时和退回 |
+
+## 默认不替你保证的三件事
+
+外送跑通了，不等于可靠了。Patra 接入时碰到的三件事：
+
+**1. 不等 broker 确认。** 默认模式下，RabbitMQ 外送调完发送方法就算成功，不等 broker 回确认。broker 恰好没收下，登记行也已经被当成完成删掉了，这条消息就丢了。Patra 在发送模板这一层补上了「同步等确认，没确认就抛异常」，「发送确认」那篇细讲。
+
+**2. 映射会重跑。** 登记表里存的是领域事件，映射发生在每次外送时，补投就会再映射一遍。所以：
+
+- 事件 ID 要在领域事件创建时就生成。要是在映射里生成，每次补投 ID 都不同，消费方就没法按 ID 去重。
+- 映射只拷字段，不查库、不调别的服务。查库会让补投的结果随时间变化，还会让外送拿着数据库连接等确认。
+
+**3. 发出去不等于有人收。** Patra 发送时带着 `mandatory`：没有队列绑定这个路由键，broker 会把消息退回，等确认的模板把它当失败处理，登记行留着，每分钟补投一次，永远发不出去。所以只外送真有队列订阅的事件；上线新事件时，先部署消费方把队列绑好，再部署发布方。
+
+<Callout kind="warn">
+
+还有一个小坑：`EventExternalizationConfiguration` 能配消息头，可 Modulith 2.1.2 的 RabbitMQ 默认路径会把配置的消息头丢掉（算好了却没传下去）。Patra 不用它加消息头，事件 ID 由发送模板写进 AMQP 的 `messageId`。
+
+</Callout>
+
+<Quiz
+  questions={[
+    {
+      question: "有人想省事，在 mapping 里用 UUID.randomUUID() 给集成事件生成事件 ID。一条事件第一次发送等确认超时，被补投又发了一次。通知服务会怎样？",
+      options: ["收到两条 ID 不同的消息，写两条提醒", "收到两条 ID 相同的消息，第二条被去重", "只收到一条，第一次其实没发出去"],
+      answer: "A",
+      explain: "补投会重新映射，随机 ID 每次都不同。第一次可能其实已经到了 broker，只是确认没回来，于是同一件事到了两次，ID 还不一样，消费方没法认出是重复。"
+    }
+  ]}
+/>
+
+<Transfer
+  prompt="interaction 要新外送一个领域事件「收藏夹被删除」，让通知服务清掉相关的提醒。按 Patra 现在的做法，从领域事件到上线，要改哪些地方、按什么顺序上线、有哪些容易踩的点？"
+  points={[
+    { label: "领域事件带 ID", text: "领域事件里加 UUID eventId，在创建事件时生成，不在映射里生成。" },
+    { label: "集成事件和配置", text: "在 `patra-interaction-api` 里加集成事件 record（实现 IntegrationEvent）；在 InteractionEventsConfiguration 里把它加进选择集合，补一条 route 和一条只拷字段的 mapping。" },
+    { label: "先消费方后发布方", text: "通知服务先声明队列并绑定新路由键再上线；否则消息被 broker 退回，登记行每分钟补投、永远发不出去。" },
+    { label: "消费方去重", text: "外送是至少一次，通知服务处理时按事件 ID 去重。" }
+  ]}
+/>

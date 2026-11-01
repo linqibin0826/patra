@@ -1,0 +1,175 @@
+---
+title: 事件发布登记：处理之前，先在业务事务里记一行
+summary: 提交后再处理的事件只在内存里，进程一崩就没了。Spring Modulith 的事件发布登记在发布事件的同一个事务里，为每个要处理它的监听器记一行，处理成功才算完成，没完成的留着补投。这篇讲 @ApplicationModuleListener 改变了什么、登记行记了什么、五个状态怎么走、完成了怎么清、没完成谁来管。
+type: concept
+difficulty: advanced
+tags: [spring, messaging, database]
+prerequisites: [msg-after-commit-listeners, msg-transactional-outbox]
+topics: [spring-modulith, event-delivery]
+sources:
+  - version: v0.16
+    issue: PAP-137
+    pr: 343
+personalEnv: false
+---
+
+<Diagnose
+  question="一个事件有两个监听器，都贴着 @ApplicationModuleListener。发布这个事件的事务提交之后，event_publication 表里会多出几行？"
+  options={["1 行，一个事件记一行", "2 行，每个监听器各一行", "0 行，处理失败了才写"]}
+  answer="B"
+  ifRight="对。登记记的是「这个事件还欠这个监听器处理一次」，所以一个监听器一行。往下读看这一行从写下到删掉要走过哪些状态。"
+  ifWrong="答案是 B。登记不是按事件记，是按「事件 × 监听器」记：每个要处理它的监听器各一行，在发布事件的事务里就写好了，不等处理结果。这题要先知道发件箱「先记一行再处理」的思路。"
+  suggest="msg-transactional-outbox"
+/>
+
+<Callout kind="lead">
+
+事件发布登记：发布事件时，在发布方的业务事务里，为每个要在提交后处理它的监听器记一行；监听器处理成功，这一行才算完成，没完成的留在表里，可以补投。
+
+</Callout>
+
+## 先看监听器：@ApplicationModuleListener 改了三件事
+
+Modulith 推荐的监听写法是 `@ApplicationModuleListener`。它本身只是三个 Spring 注解的组合：
+
+```java
+// Spring Modulith 2.1.2 源码：org.springframework.modulith.events.ApplicationModuleListener
+@Async
+@Transactional(propagation = Propagation.REQUIRES_NEW)
+@TransactionalEventListener
+public @interface ApplicationModuleListener {
+```
+
+可每一个都改变了监听器的行为：
+
+| 注解 | 改变了什么 | 带来的后果 |
+|---|---|---|
+| `@TransactionalEventListener` | 等发布方的事务提交后才执行 | 发布方回滚，监听器根本不执行，不会处理一件没发生的事 |
+| `@Async` | 换一条线程执行 | 请求线程不用等它，监听器慢不拖慢用户 |
+| `@Transactional(REQUIRES_NEW)` | 在自己的新事务里执行 | 监听器失败只回滚它自己，不影响已经提交的发布方 |
+
+三个加起来，正好是全景篇里那个「提交后、换线程处理」的写法。它的老问题也还在：监听器在内存里排着，进程一崩，事件就没了。事件发布登记就是来补这个洞的。
+
+## 登记什么时候写、写了什么
+
+事务里调 `publishEvent(事件)` 的那一刻，Modulith 找出所有会在提交后处理这个事件的监听器，**在当前这个业务事务里**，每个监听器写一行。这一行和业务数据一起提交、一起回滚：业务回滚了，登记行也没了，监听器也不会执行。
+
+表结构是 Modulith 定死的，Patra 用 Flyway 照着建：
+
+<CodeRef at="patra-tool/patra-tool-events/src/integrationTest/resources/db/migration/V1__create_event_publication.sql@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="3-14" />
+
+```sql
+CREATE TABLE event_publication
+(
+    id                     UUID                     NOT NULL PRIMARY KEY,
+    listener_id            TEXT                     NOT NULL,
+    event_type             TEXT                     NOT NULL,
+    serialized_event       TEXT                     NOT NULL,
+    publication_date       TIMESTAMP WITH TIME ZONE NOT NULL,
+    completion_date        TIMESTAMP WITH TIME ZONE,
+    status                 TEXT,
+    completion_attempts    INT,
+    last_resubmission_date TIMESTAMP WITH TIME ZONE
+);
+```
+
+| 列 | 记什么 |
+|---|---|
+| `listener_id` | 欠的是哪个监听器（默认是监听方法的完整签名） |
+| `event_type`、`serialized_event` | 事件的类型和序列化后的内容，补投时要靠它们把事件还原出来 |
+| `publication_date` | 什么时候发布的 |
+| `status`、`completion_date` | 处理到哪一步了、什么时候完成的 |
+| `completion_attempts`、`last_resubmission_date` | 试过几次、最后一次补投是什么时候 |
+
+<Callout kind="warn">
+
+事件是序列化后存进表里的，补投时再反序列化回来。改了事件的类名或字段、或者升级 Modulith 改了监听器的名字，表里的旧行就可能还原不了、找不到监听器。改之前先确认表里没有积压。
+
+</Callout>
+
+## 一行登记的一生：五个状态
+
+点事件按钮走一遍：
+
+<StateMachine
+  title="一行登记的五个状态"
+  subject="event_publication"
+  states={[
+    { id: "published", label: "已发布", sub: "PUBLISHED", col: 1, desc: "业务事务提交，登记行落库。监听器还没开始执行。" },
+    { id: "processing", label: "处理中", sub: "PROCESSING", col: 2, desc: "监听器开始在另一条线程里执行。" },
+    { id: "completed", label: "已完成", sub: "COMPLETED", col: 3, desc: "监听器执行成功。这一行之后怎么处理，看完成模式（下一节）。" },
+    { id: "failed", label: "失败", sub: "FAILED", col: 2, row: 2, desc: "监听器抛了异常。这一行留在表里，等补投。" },
+    { id: "resubmitted", label: "已补投", sub: "RESUBMITTED", col: 1, row: 2, desc: "补投把它领走了，排队等监听器重新执行。" }
+  ]}
+  start="published"
+  events={[
+    { id: "run", label: "监听器开始执行" },
+    { id: "ok", label: "执行成功" },
+    { id: "fail", label: "抛了异常" },
+    { id: "resubmit", label: "补投" }
+  ]}
+  transitions={[
+    { from: "published", event: "run", to: "processing", label: "执行" },
+    { from: "processing", event: "ok", to: "completed", label: "成功" },
+    { from: "processing", event: "fail", to: "failed", label: "失败" },
+    { from: "failed", event: "resubmit", to: "resubmitted", label: "领走" },
+    { from: "resubmitted", event: "run", to: "processing", label: "重新执行" }
+  ]}
+/>
+
+发件箱那篇的状态图只画了「待外送 / 失败 / 已删除」，是为了先讲清思路；实际的状态就是这五个。补投那一步还藏着一个坑：进程崩在「已补投」之后，这一行会永远卡住，后面「补投卡死」那篇专门讲。
+
+## 完成了的行怎么办：三种完成模式
+
+监听器成功之后，这一行怎么处理，由 `spring.modulith.events.completion-mode` 决定：
+
+| 模式 | 做什么 | 要注意 |
+|---|---|---|
+| `UPDATE`（默认） | 标成完成，行留在表里 | 表会一直长，要自己定期清理已完成的行，否则越来越慢 |
+| `DELETE` | 直接删掉 | 表里只剩没完成的；想查历史就查不到了 |
+| `ARCHIVE` | 挪进同结构的归档表 | 要多建一张 `event_publication_archive` |
+
+Patra 选了 `DELETE`，由事件工具模块出成默认值。理由有两条：表里只剩没发出去的事件，「表不空」就等于「有积压」，一眼看得出来；identity 外送的安全邮件事件里带着一次性的令牌链接，发完就不该在库里久留。
+
+## 没完成的行谁来管
+
+这是最容易想当然的地方：**登记表不会自己重试**。失败的行只是躺在表里，Modulith 给了三种把它们捡起来的办法，都要你自己决定用不用：
+
+| 办法 | 怎么工作 | 默认 |
+|---|---|---|
+| 补投接口 | 代码里调 `IncompleteEventPublications.resubmitIncompletePublications(过滤条件)`，把符合条件的未完成行重新交给监听器 | 要自己找地方定时调 |
+| 过期检查 | 定时把停在某个状态太久的行改成失败，好让补投捡起来 | 不配时长就不查；还要应用开着 Spring 的定时任务 |
+| 重启时重发 | 应用启动时把所有未完成的行重发一遍 | 关；多实例部署时不推荐 |
+
+Patra 的做法是 XXL-Job 每分钟跑一次补投，只捡发布超过 1 分钟、又不在发送中的行；重启时重发不开，反正一分钟内补投就会捡起来。
+
+## 哪些监听器会被登记
+
+默认情况下，**每一个**在提交后执行的监听器（贴了 `@TransactionalEventListener` 的，包括 `@ApplicationModuleListener`）都会被登记。Modulith 2.1.2 起可以用 `spring.modulith.events.registry-trigger-annotation` 只登记带某个注解的监听器。Patra 只登记带 `@ApplicationModuleListener` 的，也就是外送器，为什么这样选，「只让要外送的事件进登记表」那篇讲。
+
+<Quiz
+  questions={[
+    {
+      question: "一个监听器第一次处理时抛了异常，之后应用一直正常运行，没有任何定时任务调补投。这一行登记会怎样？",
+      options: ["一直停在失败状态，没人管", "Modulith 每隔一阵子自动重试", "过一阵子自动删掉"],
+      answer: "A",
+      explain: "登记只负责记住，不负责重试。补投接口要自己定时调，过期检查默认也不开，重启重发默认关。"
+    },
+    {
+      question: "完成模式用默认的 UPDATE，系统跑了一年。event_publication 表会是什么样？",
+      options: ["只剩没完成的几行，完成的都删了", "Modulith 每天自动清理旧行", "已完成的行越积越多，要自己清理"],
+      answer: "C",
+      explain: "UPDATE 只是把行标成完成，并不删除。选它就要自己定期清理，或者改用 DELETE、ARCHIVE。"
+    }
+  ]}
+/>
+
+<Transfer
+  prompt="另一个项目照着官方入门教程用上了 Modulith 的事件登记，所有配置都是默认的，也没有写任何补投代码。上线半年后，你被叫去看看这张表。你预计会看到哪些问题？分别该怎么改？"
+  points={[
+    { label: "表越来越大", text: "默认 UPDATE 模式下完成的行都留着，表越积越大、写入变慢。要么定期清理，要么改成 DELETE 或 ARCHIVE。" },
+    { label: "失败的行没人管", text: "没有任何补投，失败的行一直躺着，对应的事情一直没做。要找个定时任务调补投接口，或者配过期检查加重启重发。" },
+    { label: "不该登记的也登记了", text: "所有提交后执行的监听器都进了表，包括丢了也无所谓的那些。可以用 registry-trigger-annotation 只登记需要可靠处理的。" },
+    { label: "改事件要小心", text: "表里有积压的旧行时改事件类名或字段，补投就还原不了它们。改之前先确认表是空的。" }
+  ]}
+/>

@@ -1,0 +1,19 @@
+title: Spring Modulith
+summary: 从「它解决什么问题」读起：模块与边界检查、提交后监听为什么会丢、事件发布登记、外送到 RabbitMQ，最后是 Patra 用它时做的取舍和踩的坑。
+order: 9
+entries:
+  - spring-modulith-overview
+  - spring-modulith-modules-and-verify
+  - msg-in-process-events
+  - msg-after-commit-listeners
+  - msg-dual-write-problem
+  - msg-transactional-outbox
+  - spring-modulith-event-publication-registry
+  - ddd-domain-vs-integration-events
+  - spring-modulith-externalization
+  - msg-publisher-confirms
+  - msg-at-least-once-and-dedup
+  - msg-registry-trigger-annotation
+  - msg-resubmitted-stuck
+  - msg-confirm-wait-no-connection
+  - msg-why-rabbitmq
