@@ -22,7 +22,8 @@
         "schema_invalid",
         "unknown_event",
         "source_mismatch",
-        "version_rejected"
+        "version_rejected",
+        "ingest_rejected"
       ]
     },
     "reason_detail": {

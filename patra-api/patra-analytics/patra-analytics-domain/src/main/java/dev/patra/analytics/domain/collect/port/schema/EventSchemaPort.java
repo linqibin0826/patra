@@ -4,10 +4,9 @@ import dev.patra.analytics.domain.collect.exception.InvalidBatchException;
 import dev.patra.analytics.domain.collect.model.vo.CollectedEnvelope;
 import dev.patra.analytics.domain.collect.model.vo.EnvelopeCheck;
 import dev.patra.analytics.domain.collect.model.vo.EventEnrichment;
-import dev.patra.analytics.domain.collect.model.vo.RejectedEnvelope;
 import java.util.List;
 
-/// 事件格式：按 JSON Schema 拆批、逐条校验，并生成写出的 JSON（埋点方案 §2、§5）。
+/// 事件格式：按 JSON Schema 拆批、逐条校验，并生成富化事件的 JSON（埋点方案 §2；dlq 记录见 `DlqRecordPort`）。
 public interface EventSchemaPort {
 
   /// 校验批次外壳（`collect-batch`），拆出每条事件的 JSON 文本。
@@ -30,10 +29,4 @@ public interface EventSchemaPort {
   /// @return 富化事件 JSON（不含 IP 与原始 UA）
   /// @throws IllegalStateException 产物不合格（实现有 bug）
   String enrichedJson(CollectedEnvelope event, EventEnrichment enrichment);
-
-  /// 生成 dlq 记录的 JSON：原文先删 `client_ip`、`user_agent`，再截断到上限。
-  ///
-  /// @param rejected 不合格的事件
-  /// @return dlq 记录 JSON
-  String dlqJson(RejectedEnvelope rejected);
 }

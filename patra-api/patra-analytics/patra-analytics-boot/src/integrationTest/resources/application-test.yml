@@ -21,3 +21,9 @@ management:
     metrics:
       export:
         enabled: false
+
+# 入库消费者默认不启动：只有入库的集成测试（ingest 包）打开
+patra:
+  analytics:
+    ingest:
+      enabled: false

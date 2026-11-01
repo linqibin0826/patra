@@ -1,12 +1,10 @@
 package dev.patra.analytics.app.collect.usecase.collect;
 
 import dev.patra.analytics.domain.collect.model.enums.BotReason;
-import dev.patra.analytics.domain.collect.model.enums.RejectionReason;
 import dev.patra.analytics.domain.collect.model.vo.CollectedEnvelope;
 import dev.patra.analytics.domain.collect.model.vo.EnvelopeCheck;
 import dev.patra.analytics.domain.collect.model.vo.EventEnrichment;
 import dev.patra.analytics.domain.collect.model.vo.OutboundMessage;
-import dev.patra.analytics.domain.collect.model.vo.RejectedEnvelope;
 import dev.patra.analytics.domain.collect.model.vo.UserAgentInfo;
 import dev.patra.analytics.domain.collect.policy.BotClassification;
 import dev.patra.analytics.domain.collect.policy.EventTimeCorrection;
@@ -16,7 +14,10 @@ import dev.patra.analytics.domain.collect.port.rate.DeviceRatePort;
 import dev.patra.analytics.domain.collect.port.robot.RobotListPort;
 import dev.patra.analytics.domain.collect.port.schema.EventSchemaPort;
 import dev.patra.analytics.domain.collect.port.useragent.UserAgentPort;
+import dev.patra.analytics.domain.kernel.model.enums.RejectionReason;
 import dev.patra.analytics.domain.kernel.model.vo.EventName;
+import dev.patra.analytics.domain.kernel.model.vo.RejectedEnvelope;
+import dev.patra.analytics.domain.kernel.port.dlq.DlqRecordPort;
 import dev.patra.tool.cqrs.CommandHandler;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.time.Clock;
@@ -50,6 +51,7 @@ public class CollectEventsHandler
   static final String RATE_SKIPPED_METRIC = "analytics.collect.rate.rule.skipped";
 
   private final EventSchemaPort schema;
+  private final DlqRecordPort dlqRecords;
   private final UserAgentPort userAgents;
   private final RobotListPort robots;
   private final DeviceRatePort rates;
@@ -204,7 +206,7 @@ public class CollectEventsHandler
             EventName.fromWire(eventName).map(EventName::wire).orElse("unknown"))
         .increment();
     return OutboundMessage.dlq(
-        schema.dlqJson(
+        dlqRecords.dlqJson(
             RejectedEnvelope.builder()
                 .reason(reason)
                 .detail(detail)

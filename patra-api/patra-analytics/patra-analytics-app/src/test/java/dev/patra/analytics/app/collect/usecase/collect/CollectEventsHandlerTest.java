@@ -5,14 +5,11 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import dev.patra.analytics.domain.collect.exception.EventPublishUnavailableException;
 import dev.patra.analytics.domain.collect.model.enums.BotReason;
-import dev.patra.analytics.domain.collect.model.enums.EventStream;
-import dev.patra.analytics.domain.collect.model.enums.RejectionReason;
 import dev.patra.analytics.domain.collect.model.vo.CollectedEnvelope;
 import dev.patra.analytics.domain.collect.model.vo.EnvelopeCheck;
 import dev.patra.analytics.domain.collect.model.vo.EventEnrichment;
 import dev.patra.analytics.domain.collect.model.vo.GeoLocation;
 import dev.patra.analytics.domain.collect.model.vo.OutboundMessage;
-import dev.patra.analytics.domain.collect.model.vo.RejectedEnvelope;
 import dev.patra.analytics.domain.collect.model.vo.UserAgentInfo;
 import dev.patra.analytics.domain.collect.port.geolocation.GeolocationPort;
 import dev.patra.analytics.domain.collect.port.publish.EventPublishPort;
@@ -20,8 +17,12 @@ import dev.patra.analytics.domain.collect.port.rate.DeviceRatePort;
 import dev.patra.analytics.domain.collect.port.robot.RobotListPort;
 import dev.patra.analytics.domain.collect.port.schema.EventSchemaPort;
 import dev.patra.analytics.domain.collect.port.useragent.UserAgentPort;
+import dev.patra.analytics.domain.kernel.model.enums.EventStream;
+import dev.patra.analytics.domain.kernel.model.enums.RejectionReason;
 import dev.patra.analytics.domain.kernel.model.vo.EventName;
 import dev.patra.analytics.domain.kernel.model.vo.EventSource;
+import dev.patra.analytics.domain.kernel.model.vo.RejectedEnvelope;
+import dev.patra.analytics.domain.kernel.port.dlq.DlqRecordPort;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.time.Clock;
 import java.time.Instant;
@@ -51,6 +52,7 @@ class CollectEventsHandlerTest {
 
   private CollectEventsHandler handler() {
     return new CollectEventsHandler(
+        schema,
         schema,
         userAgents,
         robots,
@@ -234,7 +236,7 @@ class CollectEventsHandlerTest {
   }
 
   /// 按拆批顺序返回预设的校验结果。
-  private static final class FakeSchema implements EventSchemaPort {
+  private static final class FakeSchema implements EventSchemaPort, DlqRecordPort {
     private final Map<String, EnvelopeCheck> checks = new LinkedHashMap<>();
     private final List<EventEnrichment> enrichments = new ArrayList<>();
     private final List<String> brokenOutput = new ArrayList<>();

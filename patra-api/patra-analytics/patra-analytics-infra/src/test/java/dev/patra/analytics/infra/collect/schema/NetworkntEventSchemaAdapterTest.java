@@ -4,14 +4,14 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import dev.patra.analytics.domain.collect.exception.InvalidBatchException;
-import dev.patra.analytics.domain.collect.model.enums.RejectionReason;
 import dev.patra.analytics.domain.collect.model.vo.CollectedEnvelope;
 import dev.patra.analytics.domain.collect.model.vo.EnvelopeCheck;
 import dev.patra.analytics.domain.collect.model.vo.EventEnrichment;
 import dev.patra.analytics.domain.collect.model.vo.GeoLocation;
-import dev.patra.analytics.domain.collect.model.vo.RejectedEnvelope;
 import dev.patra.analytics.domain.collect.model.vo.UserAgentInfo;
+import dev.patra.analytics.domain.kernel.model.enums.RejectionReason;
 import dev.patra.analytics.domain.kernel.model.vo.EventName;
+import dev.patra.analytics.domain.kernel.model.vo.RejectedEnvelope;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UncheckedIOException;

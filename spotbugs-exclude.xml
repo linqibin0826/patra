@@ -345,6 +345,12 @@
     </Or>
   </Match>
 
+  <!-- Analytics 入库启动编排：持有注入的监听容器注册表，迁移成功后用它启动入库消费者，是设计意图 -->
+  <Match>
+    <Class name="dev.patra.analytics.config.IngestStartup"/>
+    <Bug pattern="EI_EXPOSE_REP2"/>
+  </Match>
+
   <!-- Gateway 代理失败处理：Advice 持有注入的全局处理器是设计意图 -->
   <Match>
     <Package name="~dev\.patra\.gateway\.error(\..*)?"/>

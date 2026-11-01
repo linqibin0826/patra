@@ -3,6 +3,7 @@ package dev.patra.analytics.collect;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.patra.analytics.infra.config.AnalyticsITPostgreSQLContainerInitializer;
+import dev.patra.tool.test.container.initializer.ClickHouseContainerInitializer;
 import dev.patra.tool.test.container.initializer.RedisContainerInitializer;
 import java.time.Duration;
 import org.junit.jupiter.api.Test;
@@ -21,6 +22,7 @@ import org.springframework.test.web.servlet.client.RestTestClient;
 @ContextConfiguration(
     initializers = {
       AnalyticsITPostgreSQLContainerInitializer.class,
+      ClickHouseContainerInitializer.class,
       RedisContainerInitializer.class
     })
 @ActiveProfiles("test")

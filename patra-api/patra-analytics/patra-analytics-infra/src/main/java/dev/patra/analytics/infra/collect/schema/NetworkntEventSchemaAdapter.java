@@ -8,14 +8,15 @@ import com.networknt.schema.dialect.Dialect;
 import com.networknt.schema.dialect.Dialects;
 import com.networknt.schema.keyword.AnnotationKeyword;
 import dev.patra.analytics.domain.collect.exception.InvalidBatchException;
-import dev.patra.analytics.domain.collect.model.enums.RejectionReason;
 import dev.patra.analytics.domain.collect.model.vo.CollectedEnvelope;
 import dev.patra.analytics.domain.collect.model.vo.EnvelopeCheck;
 import dev.patra.analytics.domain.collect.model.vo.EventEnrichment;
-import dev.patra.analytics.domain.collect.model.vo.RejectedEnvelope;
 import dev.patra.analytics.domain.collect.port.schema.EventSchemaPort;
+import dev.patra.analytics.domain.kernel.model.enums.RejectionReason;
 import dev.patra.analytics.domain.kernel.model.vo.EventName;
+import dev.patra.analytics.domain.kernel.model.vo.RejectedEnvelope;
 import dev.patra.analytics.domain.kernel.model.vo.SchemaVersion;
+import dev.patra.analytics.domain.kernel.port.dlq.DlqRecordPort;
 import dev.patra.analytics.infra.collect.support.AnalyticsResources;
 import java.time.DateTimeException;
 import java.time.Instant;
@@ -35,7 +36,7 @@ import tools.jackson.databind.node.ObjectNode;
 /// schema 的 `$id` 前缀映射到 classpath（`patra-analytics-api` 的资源），校验时不联网；`x-patra-version` 注册为注解
 /// 关键字。schema 在构造时加载一次。预检先于 schema 校验：`oneOf` 失败时只报「没有分支匹配」，分不出原因。
 @Component
-public final class NetworkntEventSchemaAdapter implements EventSchemaPort {
+public final class NetworkntEventSchemaAdapter implements EventSchemaPort, DlqRecordPort {
 
   /// dlq 记录里原文的上限（字符）
   static final int RAW_LIMIT = 16_384;

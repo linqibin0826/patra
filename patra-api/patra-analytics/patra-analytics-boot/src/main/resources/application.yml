@@ -31,7 +31,19 @@ patra:
   web:
     error:
       context-prefix: ANALYTICS
+  http-client:
+    http-interface:
+      groups:
+        # 注销清理按主键批量取账号状态（毫秒级）：超时压短，identity 卡住时这一批很快跳过
+        identity:
+          base-url: lb://patra-identity
+          connect-timeout: 1s
+          read-timeout: 2s
   analytics:
+    ingest:
+      # 入库消费者（PAP-168）；测试里默认关，只有入库的集成测试打开
+      enabled: true
+      group-id: patra-analytics-ingest
     # ip2region 离线库目录（与 identity 共用 scripts/fetch-ip2region.sh 下载的文件）；容器里由 compose 的环境变量覆盖
     ip-geolocation:
       directory: ${user.home}/.patra/data/ip2region
@@ -44,6 +56,8 @@ management:
         # mini 上 apps 容器经 extra_hosts 回到宿主机的 4318；本机开发连 mini 的同一端口
         url: http://${PATRA_INFRA_HOST:127.0.0.1}:4318/v1/metrics
         step: 30s
+        # 计时按秒导出，经 Prometheus 导出器后与其他服务一样是 *_seconds_*
+        base-time-unit: seconds
 
 # XXL-Job 执行器：管理端地址在 Nacos 公共配置 patra-common.yaml；执行器端口 = 服务端口 + 1 = 6701
 xxl:

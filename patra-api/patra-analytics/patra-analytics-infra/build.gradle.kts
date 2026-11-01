@@ -15,6 +15,11 @@ dependencies {
     api(project(":patra-tool:patra-tool-jpa"))
     // 事件格式校验：networknt 3.x 是唯一用 Jackson 3 的版本线
     implementation(libs.json.schema.validator)
+    // 入库：ClickHouse 官方客户端（HTTP 协议）
+    implementation(libs.clickhouse.client)
+    // 注销清理查 identity 的账号状态：内部接口的契约与 HTTP Interface 的错误类型；代理在 boot 里装配
+    implementation(project(":patra-api:patra-identity:patra-identity-api"))
+    implementation(project(":patra-tool:patra-tool-http-client"))
     // JSON Schema、样例、COUNTER-Robots 列表都是 api 模块的资源，只在运行时按 classpath 读，不 import 它的类
     runtimeOnly(project(":patra-api:patra-analytics:patra-analytics-api"))
     testImplementation(project(":patra-api:patra-analytics:patra-analytics-api"))

@@ -39,11 +39,11 @@ class AnalyticsArchitectureTest {
   private static final HexagonalArchitectureRules rules =
       new HexagonalArchitectureRules("dev.patra.analytics", List.of("dev.patra.tool.."));
 
-  /// 底座子域：被两个以上子域共用的东西（事件名、来源、schema 版本）。
+  /// 底座子域：被两个以上子域共用的东西（事件名、来源、schema 版本、dlq 记录、注销清理流程）。
   private static final String FOUNDATION = "kernel";
 
-  /// 声明的子域：采集（PAP-167）。入库（PAP-168）、数据产品（PAP-170）、阅读历史（PAP-169）随各自 Issue 加入。
-  private static final List<String> SUBDOMAINS = List.of(FOUNDATION, "collect");
+  /// 声明的子域：采集（PAP-167）、入库（PAP-168）。数据产品（PAP-170）、阅读历史（PAP-169）随各自 Issue 加入。
+  private static final List<String> SUBDOMAINS = List.of(FOUNDATION, "collect", "ingest");
 
   /// 子域边界规则：目前没有跨子域依赖边。
   private static final SubdomainArchitectureRules subdomainRules =

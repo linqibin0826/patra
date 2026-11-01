@@ -1,6 +1,6 @@
 package dev.patra.analytics.domain.collect.model.vo;
 
-import dev.patra.analytics.domain.collect.model.enums.RejectionReason;
+import dev.patra.analytics.domain.kernel.model.enums.RejectionReason;
 import java.util.Objects;
 
 /// 一条采集信封的校验结果。

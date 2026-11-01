@@ -3,6 +3,7 @@ package dev.patra.analytics.collect;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.patra.analytics.infra.config.AnalyticsITPostgreSQLContainerInitializer;
+import dev.patra.tool.test.container.initializer.ClickHouseContainerInitializer;
 import dev.patra.tool.test.container.initializer.KafkaContainerInitializer;
 import dev.patra.tool.test.container.initializer.RedisContainerInitializer;
 import java.time.Duration;
@@ -36,6 +37,7 @@ import tools.jackson.databind.node.ObjectNode;
 @ContextConfiguration(
     initializers = {
       AnalyticsITPostgreSQLContainerInitializer.class,
+      ClickHouseContainerInitializer.class,
       KafkaContainerInitializer.class,
       RedisContainerInitializer.class
     })

@@ -180,6 +180,7 @@
             "project": ":patra-api:patra-identity:patra-identity-api",
             "unit": "identity",
             "impacts": [
+                "analytics",
                 "gateway",
                 "identity",
                 "interaction",
@@ -508,6 +509,7 @@
             "project": ":patra-tool:patra-tool-http-client",
             "unit": "foundation",
             "impacts": [
+                "analytics",
                 "catalog",
                 "foundation",
                 "gateway",

@@ -1,4 +1,4 @@
-package dev.patra.analytics.domain.collect.model.enums;
+package dev.patra.analytics.domain.kernel.model.enums;
 
 /// 采集结果写往哪里。
 public enum EventStream {

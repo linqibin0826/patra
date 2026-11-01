@@ -1,9 +1,9 @@
 package dev.patra.analytics.infra.collect.publish;
 
 import dev.patra.analytics.domain.collect.exception.EventPublishUnavailableException;
-import dev.patra.analytics.domain.collect.model.enums.EventStream;
 import dev.patra.analytics.domain.collect.model.vo.OutboundMessage;
 import dev.patra.analytics.domain.collect.port.publish.EventPublishPort;
+import dev.patra.analytics.domain.kernel.model.enums.EventStream;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
 import java.time.Clock;

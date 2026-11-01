@@ -1,6 +1,6 @@
 package dev.patra.analytics.domain.collect.model.vo;
 
-import dev.patra.analytics.domain.collect.model.enums.EventStream;
+import dev.patra.analytics.domain.kernel.model.enums.EventStream;
 import java.util.Objects;
 
 /// 要写出的一条消息。

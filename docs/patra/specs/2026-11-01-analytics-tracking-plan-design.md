@@ -177,7 +177,7 @@
 | 字段 | 说明 |
 |---|---|
 | `received_at` | 采集端点收到的时刻 |
-| `reason_code` | 枚举：`schema_invalid`、`unknown_event`、`source_mismatch`、`version_rejected` |
+| `reason_code` | 枚举：`schema_invalid`、`unknown_event`、`source_mismatch`、`version_rejected`；`ingest_rejected`（入库时被 ClickHouse 拒绝的单条，PAP-168 加） |
 | `reason_detail` | 校验器给出的第一条错误（JSON 指针 + 说明），最长 1,000 字符 |
 | `event_name` | 原事件里的 `event_name`，读不出时为 `null` |
 | `raw` | 原事件的 JSON 文本，**先删掉 `client_ip`、`user_agent` 两个键**再存，最长 16 KiB（16,384 字符） |

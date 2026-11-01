@@ -11,3 +11,10 @@ spring:
   kafka:
     # pipeline 栈的 Kafka（PAP-165）：EXTERNAL 监听器，无认证；apps 容器经 extra_hosts 回到宿主机的 9092
     bootstrap-servers: ${PATRA_INFRA_HOST:127.0.0.1}:9092
+
+patra:
+  # pipeline 栈的 ClickHouse（PAP-165）：HTTP 接口，应用账号 patra；密码只在 ~/.patra/secrets/clickhouse.env
+  clickhouse:
+    url: http://${PATRA_INFRA_HOST:127.0.0.1}:8123
+    username: patra
+    password: ${CLICKHOUSE_PATRA_PASSWORD}
