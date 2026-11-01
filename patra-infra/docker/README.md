@@ -160,7 +160,7 @@ ssh linqibin@linqibins-mac-mini 'docker restart patra-xxl-job-admin'  # 只重�
 
 | 文件 | 内容 | 谁加载 | 缺失时 |
 |---|---|---|---|
-| `redis.env` | `REDIS_PASSWORD`，64 位十六进制 | core 栈的 redis；catalog、identity 的容器和本机进程（gateway 经 identity 查会话，不连 Redis） | compose 报出路径并拒绝执行；本机进程启动失败，报出缺的文件路径或变量名 |
+| `redis.env` | `REDIS_PASSWORD`，64 位十六进制 | core 栈的 redis；catalog、identity、analytics 的容器和本机进程（gateway 经 identity 查会话，不连 Redis） | compose 报出路径并拒绝执行；本机进程启动失败，报出缺的文件路径或变量名 |
 | `rabbitmq.env` | `RABBITMQ_PASSWORD`，64 位十六进制，RabbitMQ 账号 `patra` 的密码 | core 栈的 rabbitmq（只在首次启动时用来建账号，见「RabbitMQ」）；interaction、identity、notification 的容器和本机进程 | 同 `redis.env`；rabbitmq 的值为空时拒绝启动 |
 | `gateway.env` | `PATRA_GATEWAY_IDENTITY_ASSERTION_PRIVATE_KEY`，含私钥的 EC P-256 JWK JSON，一行 | gateway 的容器和本机进程 | 同上 |
 | `nacos-server.env` | Nacos 的 `NACOS_AUTH_TOKEN`、`NACOS_AUTH_IDENTITY_KEY`、`NACOS_AUTH_IDENTITY_VALUE`。**只放 mini** | core 栈的 nacos | compose 报出路径并拒绝执行 |
@@ -386,6 +386,8 @@ identity 的定时任务除 `emailTokenCleanupJob`（04:30）外还有 `loginRec
 interaction 的执行器 `patra-interaction`（端口 6501，不映射到宿主机）在 xxl-job-admin 的「执行器管理」里手工新建、自动注册；它的两个每日任务 `subjectReconciliationJob`（`0 30 6 * * ?`）、`deletedUserCleanupJob`（`0 0 6 * * ?`）见 `docs/patra/runbooks/v0.13-library-go-live-runbook.md`。
 
 notification 的执行器 `patra-notification`（端口 6601，不映射到宿主机）同样手工新建、自动注册；它的任务（提醒清理、注销清理、离站邮件、每日汇总）随 v0.16 各 Issue 登记，见 `docs/patra/runbooks/v0.16-notification-go-live-runbook.md`。
+
+analytics 的执行器 `patra-analytics`（端口 6701，不映射到宿主机）同样手工新建、自动注册；v0.18 采集（PAP-167）还没有任务，热读、共现、历史清理随后续 Issue 登记，见 `docs/patra/runbooks/v0.18-analytics-go-live-runbook.md`。
 
 ## 门户的公网入口（Cloudflare Tunnel）
 

@@ -1,0 +1,54 @@
+server:
+  port: 6700
+  # 解析网关注入的 X-Forwarded-*，让 OpenAPI 文档里的地址指向网关
+  forward-headers-strategy: framework
+
+spring:
+  # 数据源、Redis、Kafka 的地址与账号随环境变，在 Nacos：patra-analytics.yaml、patra-common.yaml
+  # （源文件在 patra-infra/nacos/dev/），由启动器 PatraApplication 导入
+  datasource:
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      # 阅读历史（PAP-169）起才用；采集链路不碰 PG
+      maximum-pool-size: 5
+      minimum-idle: 1
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+  flyway:
+    enabled: true
+    # 递归扫描：每个子域的脚本在 db/migration/{子域}/；本 Issue 还没有脚本
+    locations: classpath:db/migration
+  jpa:
+    open-in-view: false
+  data:
+    redis:
+      # 爬虫频率规则查 Redis：卡住时宁可跳过规则也不拖慢采集（门户调采集端点的超时是 6 秒）
+      timeout: 500ms
+      connect-timeout: 500ms
+
+patra:
+  web:
+    error:
+      context-prefix: ANALYTICS
+  analytics:
+    # ip2region 离线库目录（与 identity 共用 scripts/fetch-ip2region.sh 下载的文件）；容器里由 compose 的环境变量覆盖
+    ip-geolocation:
+      directory: ${user.home}/.patra/data/ip2region
+
+management:
+  otlp:
+    metrics:
+      export:
+        # 采集指标经 OTLP 推给 OTel Collector，再由它的 Prometheus 导出器给 Prometheus（.claude/rules/tech/observability.md）。
+        # mini 上 apps 容器经 extra_hosts 回到宿主机的 4318；本机开发连 mini 的同一端口
+        url: http://${PATRA_INFRA_HOST:127.0.0.1}:4318/v1/metrics
+        step: 30s
+
+# XXL-Job 执行器：管理端地址在 Nacos 公共配置 patra-common.yaml；执行器端口 = 服务端口 + 1 = 6701
+xxl:
+  job:
+    executor:
+      ip: ${PATRA_ADVERTISE_IP:}
+      logpath: ${XXL_JOB_EXECUTOR_LOG_PATH:${PATRA_LOG_DIR:logs}/xxl-job/patra-analytics}
+      logretentiondays: ${XXL_JOB_LOG_RETENTION_DAYS:30}

@@ -19,7 +19,7 @@
 set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 GRAPH="$SCRIPT_DIR/module-graph.json"
-ALL_UNITS='["registry","catalog","identity","interaction","notification","gateway","foundation"]'
+ALL_UNITS='["registry","catalog","identity","interaction","notification","analytics","gateway","foundation"]'
 LEARN_CHANGED=false   # 全局初始化：防环境注入假阳性 / 非布尔值炸 --argjson
 NACOS_CHANGED=false   # 同上：全局初始化
 

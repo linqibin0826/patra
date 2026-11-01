@@ -336,6 +336,15 @@
     </Or>
   </Match>
 
+  <!-- Analytics 基础设施适配器：持有注入的 JsonMapper、KafkaTemplate 等依赖是设计意图 -->
+  <Match>
+    <Package name="~dev\.patra\.analytics\.infra(\..*)?"/>
+    <Or>
+      <Bug pattern="EI_EXPOSE_REP"/>
+      <Bug pattern="EI_EXPOSE_REP2"/>
+    </Or>
+  </Match>
+
   <!-- Gateway 代理失败处理：Advice 持有注入的全局处理器是设计意图 -->
   <Match>
     <Package name="~dev\.patra\.gateway\.error(\..*)?"/>

@@ -5,11 +5,11 @@ name: patra-apps
 # 镜像 tag 由 deploy job 通过 {SVC}_IMAGE_TAG 注入；手动 compose-all.sh up apps 时回退 latest。
 #
 # env_file 按「本地变量、密钥」叠加（后者覆盖同名）：
-#   .env.common   本地变量 PATRA_INFRA_HOST、PATRA_LOG_DIR。6 个后端服务的其余配置都在 Nacos（patra-infra/nacos/dev/）
+#   .env.common   本地变量 PATRA_INFRA_HOST、PATRA_LOG_DIR。7 个后端服务的其余配置都在 Nacos（patra-infra/nacos/dev/）
 #   ${HOME}/.patra/secrets/*.env   密钥，放在仓库外（见 README「密钥」）：
-#     redis.env     Redis 密码。catalog、identity 必需（gateway 经 identity 查会话，不连 Redis）
+#     redis.env     Redis 密码。catalog、identity、analytics 必需（gateway 经 identity 查会话，不连 Redis）
 #     gateway.env   网关签身份断言的私钥。gateway 必需
-#     nacos.env     Nacos 应用账号 patra-app。6 个后端服务必需
+#     nacos.env     Nacos 应用账号 patra-app。7 个后端服务必需
 #     rabbitmq.env  RabbitMQ 账号 patra 的密码。interaction、identity、notification 必需（经 RabbitMQ 收发集成事件）
 #     mail.env      真实邮件服务商（Resend）的 SMTP 凭据。notification 可选（全站只有它发信），缺失时邮件发往 core 栈的 Mailpit
 #     <svc>.env     外部数据源密钥等。可选，缺失时跳过
@@ -121,6 +121,36 @@ services:
         required: false
     healthcheck:
       test: [ "CMD", "curl", "-fs", "http://localhost:6600/actuator/health" ]
+      <<: *app-healthcheck
+
+  analytics:
+    image: ghcr.io/linqibin0826/patra-analytics:${ANALYTICS_IMAGE_TAG:-latest}
+    container_name: patra-analytics
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          # release spec 决策 C：Yauaa 常驻约 100 MB 堆；mini 的 OrbStack 余量紧，上线后按 docker stats 复核
+          memory: 768m
+    ports: [ "6700:6700" ]
+    # Kafka 的 EXTERNAL 通告地址是 linqibins-mac-mini:9092，靠 extra_hosts 回到宿主机；XXL-Job 执行器 6701 不映射
+    extra_hosts: *infra-hosts
+    env_file:
+      - .env.common
+      - path: ${HOME}/.patra/secrets/nacos.env
+        required: true
+      # 爬虫频率规则的滑动窗口（PAP-167）
+      - path: ${HOME}/.patra/secrets/redis.env
+        required: true
+      - path: ${HOME}/.patra/secrets/analytics.env
+        required: false
+    # IP 查国家与省份的离线库：与 identity 共用 scripts/fetch-ip2region.sh 下载的那两个 xdb；缺文件起不来
+    volumes:
+      - ${HOME}/.patra/data/ip2region:/data/ip2region:ro
+    environment:
+      PATRA_ANALYTICS_IP_GEOLOCATION_DIRECTORY: /data/ip2region
+    healthcheck:
+      test: [ "CMD", "curl", "-fs", "http://localhost:6700/actuator/health" ]
       <<: *app-healthcheck
 
   identity:
