@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://patra.linqibin.dev/schemas/analytics/events/pdf_downloaded.schema.json",
+  "title": "PDF Downloaded",
+  "x-patra-version": "1-0-0",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "article_id": {
+      "$ref": "../defs.schema.json#/$defs/article_id"
+    }
+  },
+  "required": [
+    "article_id"
+  ]
+}

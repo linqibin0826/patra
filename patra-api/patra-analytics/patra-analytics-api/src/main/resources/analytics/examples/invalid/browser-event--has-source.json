@@ -1,0 +1,10 @@
+{
+  "event_id": "0193e1a2-7c4b-7d2e-9f10-000000000006",
+  "event_name": "page_viewed",
+  "schema_version": "1-0-0",
+  "created_at": "2026-11-01T08:30:10.120Z",
+  "page_path": "/",
+  "page_type": "home",
+  "properties": {},
+  "source": "client"
+}

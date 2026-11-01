@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://patra.linqibin.dev/schemas/analytics/dlq-record.schema.json",
+  "title": "events.dlq 的消息：不合格事件与原因；raw 里已删掉 client_ip 与 user_agent",
+  "x-patra-version": "1-0-0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "received_at",
+    "reason_code",
+    "reason_detail",
+    "event_name",
+    "raw",
+    "raw_truncated"
+  ],
+  "properties": {
+    "received_at": {
+      "$ref": "defs.schema.json#/$defs/timestamp"
+    },
+    "reason_code": {
+      "enum": [
+        "schema_invalid",
+        "unknown_event",
+        "source_mismatch",
+        "version_rejected"
+      ]
+    },
+    "reason_detail": {
+      "type": "string",
+      "maxLength": 1000
+    },
+    "event_name": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 64
+    },
+    "raw": {
+      "type": "string",
+      "maxLength": 16384,
+      "not": {
+        "pattern": "\"(client_ip|user_agent)\"\\s*:"
+      },
+      "description": "原事件 JSON 文本，已删掉 client_ip 与 user_agent"
+    },
+    "raw_truncated": {
+      "type": "boolean"
+    }
+  }
+}

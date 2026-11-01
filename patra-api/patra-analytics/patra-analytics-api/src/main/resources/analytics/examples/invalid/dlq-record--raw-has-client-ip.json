@@ -1,0 +1,8 @@
+{
+  "received_at": "2026-11-01T08:30:12.402Z",
+  "reason_code": "schema_invalid",
+  "reason_detail": "/properties/article_id: '0123' does not match '^[1-9][0-9]{0,18}$'",
+  "event_name": "article_viewed",
+  "raw": "{\"event_name\":\"article_viewed\",\"client_ip\":\"203.0.113.24\"}",
+  "raw_truncated": false
+}

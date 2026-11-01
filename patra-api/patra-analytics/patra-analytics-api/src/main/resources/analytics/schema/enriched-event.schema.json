@@ -1,0 +1,212 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://patra.linqibin.dev/schemas/analytics/enriched-event.schema.json",
+  "title": "③ 富化事件：Kafka events.raw 的消息、ClickHouse 明细表的一行；不含 IP 与原始 UA",
+  "x-patra-version": "1-0-0",
+  "type": "object",
+  "properties": {
+    "event_id": {
+      "$ref": "defs.schema.json#/$defs/uuid"
+    },
+    "event_name": {
+      "type": "string"
+    },
+    "schema_version": {
+      "type": "string"
+    },
+    "source": {
+      "enum": [
+        "server",
+        "client"
+      ]
+    },
+    "created_at": {
+      "$ref": "defs.schema.json#/$defs/timestamp"
+    },
+    "sent_at": {
+      "$ref": "defs.schema.json#/$defs/timestamp"
+    },
+    "device_id": {
+      "$ref": "defs.schema.json#/$defs/device_id"
+    },
+    "session_id": {
+      "$ref": "defs.schema.json#/$defs/uuid"
+    },
+    "user_id": {
+      "$ref": "defs.schema.json#/$defs/user_id"
+    },
+    "page_path": {
+      "$ref": "defs.schema.json#/$defs/page_path"
+    },
+    "page_type": {
+      "$ref": "defs.schema.json#/$defs/page_type"
+    },
+    "referrer_host": {
+      "$ref": "defs.schema.json#/$defs/referrer_host"
+    },
+    "is_synthetic": {
+      "type": "boolean"
+    },
+    "properties": {
+      "type": "object"
+    },
+    "received_at": {
+      "$ref": "defs.schema.json#/$defs/timestamp"
+    },
+    "derived_at": {
+      "$ref": "defs.schema.json#/$defs/timestamp"
+    },
+    "country_code": {
+      "oneOf": [
+        {
+          "type": "string",
+          "pattern": "^[A-Z]{2}(?![\\s\\S])",
+          "minLength": 2,
+          "maxLength": 2
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "province": {
+      "oneOf": [
+        {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 32
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "browser_family": {
+      "oneOf": [
+        {
+          "type": "string",
+          "maxLength": 64
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "os_family": {
+      "oneOf": [
+        {
+          "type": "string",
+          "maxLength": 64
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "device_class": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 32
+    },
+    "is_bot": {
+      "type": "boolean"
+    },
+    "bot_reason": {
+      "enum": [
+        "ua_list",
+        "ua_class",
+        "rate",
+        null
+      ]
+    }
+  },
+  "required": [
+    "event_id",
+    "event_name",
+    "schema_version",
+    "source",
+    "created_at",
+    "sent_at",
+    "device_id",
+    "session_id",
+    "user_id",
+    "page_path",
+    "page_type",
+    "referrer_host",
+    "is_synthetic",
+    "properties",
+    "received_at",
+    "derived_at",
+    "country_code",
+    "province",
+    "browser_family",
+    "os_family",
+    "device_class",
+    "is_bot",
+    "bot_reason"
+  ],
+  "oneOf": [
+    {
+      "properties": {
+        "source": {
+          "const": "server"
+        }
+      },
+      "$ref": "event-catalog.schema.json#/$defs/server_event"
+    },
+    {
+      "properties": {
+        "source": {
+          "const": "client"
+        }
+      },
+      "$ref": "event-catalog.schema.json#/$defs/client_event"
+    }
+  ],
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "is_bot": {
+            "const": true
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "bot_reason": {
+            "enum": [
+              "ua_list",
+              "ua_class",
+              "rate"
+            ]
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "bot_reason": {
+            "const": null
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "country_code": {
+            "const": "CN"
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "province": {
+            "const": null
+          }
+        }
+      }
+    }
+  ],
+  "unevaluatedProperties": false
+}

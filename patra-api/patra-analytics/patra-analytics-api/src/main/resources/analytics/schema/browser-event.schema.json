@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://patra.linqibin.dev/schemas/analytics/browser-event.schema.json",
+  "title": "① 浏览器批次里的单条事件；不带任何身份字段",
+  "x-patra-version": "1-0-0",
+  "type": "object",
+  "properties": {
+    "event_id": {
+      "$ref": "defs.schema.json#/$defs/uuid"
+    },
+    "event_name": {
+      "type": "string"
+    },
+    "schema_version": {
+      "type": "string"
+    },
+    "created_at": {
+      "$ref": "defs.schema.json#/$defs/timestamp"
+    },
+    "page_path": {
+      "type": "string",
+      "pattern": "^/[^?#]*(?![\\s\\S])",
+      "maxLength": 512,
+      "description": "浏览器所在页面的路径，不含查询串与片段"
+    },
+    "page_type": {
+      "$ref": "defs.schema.json#/$defs/page_type"
+    },
+    "properties": {
+      "type": "object"
+    }
+  },
+  "required": [
+    "event_id",
+    "event_name",
+    "schema_version",
+    "created_at",
+    "page_path",
+    "page_type",
+    "properties"
+  ],
+  "$ref": "event-catalog.schema.json#/$defs/client_event",
+  "unevaluatedProperties": false
+}
