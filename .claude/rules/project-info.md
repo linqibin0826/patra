@@ -15,7 +15,7 @@
 - `patra-identity` - 身份服务 (前台用户的注册、登录、会话、封禁)
 - `patra-interaction` - 社区互动服务 (文献库、收藏夹、讨论、投稿经验、提醒、有帮助；以后的关注)，每层按子域分包，子域边界由 ArchUnit 守
 - `patra-notification` - 通知服务 (站内提醒、提醒偏好与退订、邮件、实时推送)，每层按子域分包，子域边界由 ArchUnit 守
-- `patra-analytics` - 行为数据服务 (采集埋点事件写 Kafka、批量入库 ClickHouse、注销清理；计数与热读、阅读历史随 v0.18 后续 Issue)，每层按子域分包，子域边界由 ArchUnit 守
+- `patra-analytics` - 行为数据服务 (采集埋点事件写 Kafka、批量入库 ClickHouse、阅读历史、注销清理；计数与热读随 v0.18 后续 Issue)，每层按子域分包，子域边界由 ArchUnit 守
 - `patra-gateway-boot` - API 网关 (路由、认证、限流)
 
 ## 模块结构

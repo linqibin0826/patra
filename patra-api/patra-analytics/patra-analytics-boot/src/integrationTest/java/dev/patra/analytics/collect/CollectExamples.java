@@ -11,10 +11,10 @@ import tools.jackson.databind.json.JsonMapper;
 import tools.jackson.databind.node.ObjectNode;
 
 /// 采集集成测试用的样例：从 `patra-analytics-api` 的 `analytics/examples/` 读，换上新的 `event_id`。
-final class CollectExamples {
+public final class CollectExamples {
 
   /// 解析与生成 JSON
-  static final JsonMapper MAPPER = JsonMapper.builder().build();
+  public static final JsonMapper MAPPER = JsonMapper.builder().build();
 
   private CollectExamples() {}
 
@@ -22,7 +22,7 @@ final class CollectExamples {
   ///
   /// @param file `valid/` 下的文件名，或以 `invalid/` 开头的路径
   /// @return 样例
-  static ObjectNode example(String file) {
+  public static ObjectNode example(String file) {
     String path = file.startsWith("invalid/") ? file : "valid/" + file;
     try (InputStream in =
         CollectExamples.class.getClassLoader().getResourceAsStream("analytics/examples/" + path)) {
@@ -39,7 +39,7 @@ final class CollectExamples {
   ///
   /// @param events 事件
   /// @return 请求体
-  static String batch(JsonNode... events) {
+  public static String batch(JsonNode... events) {
     ObjectNode body = MAPPER.createObjectNode();
     body.putArray("events").addAll(List.of(events));
     return MAPPER.writeValueAsString(body);

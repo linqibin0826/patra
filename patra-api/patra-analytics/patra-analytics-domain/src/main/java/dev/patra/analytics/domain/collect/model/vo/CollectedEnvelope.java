@@ -6,8 +6,8 @@ import java.time.Instant;
 import java.util.Objects;
 import lombok.Builder;
 
-/// 通过校验的一条采集信封（埋点方案 §4.2）。`properties` 只在 schema 校验时看，采集链路上没有规则读它，
-/// 所以以 JSON 文本原样带过，写出时不改变字段顺序与数字写法。
+/// 通过校验的一条采集信封（埋点方案 §4.2）。`properties` 只在 schema 校验时看，以 JSON 文本原样带过，写出时不改变
+/// 字段顺序与数字写法；阅读历史要用的 `article_id` 在校验时另外解析出来。
 ///
 /// @param eventId 事件 ID（小写 UUID），去重的依据
 /// @param eventName 事件名
@@ -25,6 +25,7 @@ import lombok.Builder;
 /// @param userAgent 原始 UA，只用来解析与判爬虫，不写出
 /// @param synthetic 是否模拟器造的
 /// @param propertiesJson 事件属性的 JSON 文本
+/// @param articleId 属性里的 `article_id`；没有或超出 `long` 时为 `null`
 @Builder
 public record CollectedEnvelope(
     String eventId,
@@ -42,7 +43,8 @@ public record CollectedEnvelope(
     String clientIp,
     String userAgent,
     boolean synthetic,
-    String propertiesJson) {
+    String propertiesJson,
+    Long articleId) {
 
   /// 必填字段不能为空（可空字段见参数说明）。
   public CollectedEnvelope {

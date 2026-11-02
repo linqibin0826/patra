@@ -9,15 +9,16 @@ spring:
   datasource:
     driver-class-name: org.postgresql.Driver
     hikari:
-      # 阅读历史（PAP-169）起才用；采集链路不碰 PG
+      # 阅读历史（PAP-169）用；采集请求里同步写历史
       maximum-pool-size: 5
       minimum-idle: 1
-      connection-timeout: 30000
+      # 拿连接最多等 500 ms：PG 卡住时写历史很快失败、不拖慢采集（门户的超时是 6 秒），历史接口也快速失败
+      connection-timeout: 500
       idle-timeout: 600000
       max-lifetime: 1800000
   flyway:
     enabled: true
-    # 递归扫描：每个子域的脚本在 db/migration/{子域}/；本 Issue 还没有脚本
+    # 递归扫描：每个子域的脚本在 db/migration/{子域}/
     locations: classpath:db/migration
   jpa:
     open-in-view: false

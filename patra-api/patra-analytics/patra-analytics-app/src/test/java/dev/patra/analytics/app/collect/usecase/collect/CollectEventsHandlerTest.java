@@ -3,6 +3,8 @@ package dev.patra.analytics.app.collect.usecase.collect;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import dev.patra.analytics.domain.collect.event.ArticleRead;
+import dev.patra.analytics.domain.collect.event.ArticlesReadEvent;
 import dev.patra.analytics.domain.collect.exception.EventPublishUnavailableException;
 import dev.patra.analytics.domain.collect.model.enums.BotReason;
 import dev.patra.analytics.domain.collect.model.vo.CollectedEnvelope;
@@ -33,6 +35,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.OptionalInt;
 import org.junit.jupiter.api.Test;
+import org.springframework.context.ApplicationEventPublisher;
 
 class CollectEventsHandlerTest {
 
@@ -42,6 +45,8 @@ class CollectEventsHandlerTest {
   private final FakeRate rate = new FakeRate();
   private final FakePublisher publisher = new FakePublisher();
   private final SimpleMeterRegistry meters = new SimpleMeterRegistry();
+  private final List<Object> published = new ArrayList<>();
+  private final ApplicationEventPublisher events = published::add;
   private boolean robotListed;
   private String deviceClass = "Desktop";
 
@@ -60,7 +65,8 @@ class CollectEventsHandlerTest {
         geolocation,
         publisher,
         Clock.fixed(NOW, ZoneOffset.UTC),
-        meters);
+        meters,
+        events);
   }
 
   @Test
@@ -214,7 +220,68 @@ class CollectEventsHandlerTest {
     assertThat(meters.get("analytics.collect.rate.rule.skipped").counter().count()).isEqualTo(2.0);
   }
 
+  @Test
+  void publishes_reads_after_kafka_success() {
+    schema.valid("a", read("e1", EventName.ARTICLE_VIEWED, "884213907612315648", 39871245L));
+    schema.valid("b", envelope("e2", "d2", EventName.PAGE_VIEWED));
+
+    handler().handle(CollectEventsCommand.of("body"));
+
+    assertThat(publisher.batches).hasSize(1);
+    assertThat(published)
+        .containsExactly(
+            ArticlesReadEvent.of(
+                List.of(
+                    ArticleRead.of(
+                        884213907612315648L,
+                        39871245L,
+                        Instant.parse("2026-11-01T08:30:10.177Z"),
+                        false))));
+  }
+
+  @Test
+  void no_event_when_kafka_fails() {
+    publisher.fail = true;
+    schema.valid("a", read("e1", EventName.ARTICLE_VIEWED, "7", 9L));
+    CollectEventsHandler handler = handler();
+    CollectEventsCommand command = CollectEventsCommand.of("body");
+
+    assertThatThrownBy(() -> handler.handle(command))
+        .isInstanceOf(EventPublishUnavailableException.class);
+    assertThat(published).isEmpty();
+  }
+
+  @Test
+  void no_event_without_reads() {
+    schema.valid("a", envelope("e1", "d1", EventName.ARTICLE_VIEWED));
+    schema.valid("b", read("e2", EventName.ARTICLE_COLLECTED, "7", 9L));
+
+    handler().handle(CollectEventsCommand.of("body"));
+
+    assertThat(published).isEmpty();
+  }
+
+  @Test
+  void rejected_events_are_not_reads() {
+    schema.valid("a", read("e1", EventName.ARTICLE_VIEWED, "7", 9L));
+    schema.brokenOutput.add("e1");
+
+    handler().handle(CollectEventsCommand.of("body"));
+
+    assertThat(published).isEmpty();
+  }
+
+  private static CollectedEnvelope read(
+      String eventId, EventName name, String userId, long articleId) {
+    return envelope(eventId, "d1", name, userId, articleId);
+  }
+
   private static CollectedEnvelope envelope(String eventId, String deviceId, EventName name) {
+    return envelope(eventId, deviceId, name, null, null);
+  }
+
+  private static CollectedEnvelope envelope(
+      String eventId, String deviceId, EventName name, String userId, Long articleId) {
     return CollectedEnvelope.builder()
         .eventId(eventId)
         .eventName(name)
@@ -224,7 +291,7 @@ class CollectEventsHandlerTest {
         .sentAt(Instant.parse("2026-11-01T08:30:12.345Z"))
         .deviceId(deviceId)
         .sessionId("0193e19f-0d2a-7b11-8c3e-5a6f7b8c9d0e")
-        .userId(null)
+        .userId(userId)
         .pagePath("/")
         .pageType("home")
         .referrerHost(null)
@@ -232,6 +299,7 @@ class CollectEventsHandlerTest {
         .userAgent("Mozilla/5.0")
         .synthetic(false)
         .propertiesJson("{}")
+        .articleId(articleId)
         .build();
   }
 

@@ -27,4 +27,10 @@ class ApplicationConfigTest {
     assertThat(yaml().getProperty("spring.data.redis.timeout")).hasToString("500ms");
     assertThat(yaml().getProperty("spring.data.redis.connect-timeout")).hasToString("500ms");
   }
+
+  @Test
+  void pg_connection_wait_is_short() throws IOException {
+    assertThat(yaml().getProperty("spring.datasource.hikari.connection-timeout"))
+        .hasToString("500");
+  }
 }

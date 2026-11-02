@@ -11,7 +11,7 @@ plugins {
 dependencies {
     // 实现领域层的端口
     api(project(":patra-api:patra-analytics:patra-analytics-domain"))
-    // PostgreSQL 数据源与 Flyway（阅读历史 PAP-169 起才建表）
+    // PostgreSQL 数据源与 Flyway：阅读历史的 history schema
     api(project(":patra-tool:patra-tool-jpa"))
     // 事件格式校验：networknt 3.x 是唯一用 Jackson 3 的版本线
     implementation(libs.json.schema.validator)

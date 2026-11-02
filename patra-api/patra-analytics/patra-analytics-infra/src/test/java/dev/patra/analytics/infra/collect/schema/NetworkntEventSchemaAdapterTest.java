@@ -106,6 +106,27 @@ class NetworkntEventSchemaAdapterTest {
             });
   }
 
+  @Test
+  void article_id_is_parsed_into_envelope() {
+    assertThat(eventFrom("collect-envelope--article-viewed.json").articleId()).isEqualTo(39871245L);
+  }
+
+  @Test
+  void envelope_without_article_id_has_null() {
+    assertThat(eventFrom("collect-envelope--page-viewed.json").articleId()).isNull();
+  }
+
+  @Test
+  void oversized_article_id_is_null() {
+    String oversized =
+        example("valid", "collect-envelope--article-viewed.json")
+            .replace("\"article_id\": \"39871245\"", "\"article_id\": \"9999999999999999999\"");
+
+    assertThat(adapter.check(oversized))
+        .isInstanceOfSatisfying(
+            EnvelopeCheck.Valid.class, valid -> assertThat(valid.event().articleId()).isNull());
+  }
+
   @ParameterizedTest
   @MethodSource("validBatches")
   void split_batch_accepts_valid_batches(Path example) {
@@ -201,6 +222,10 @@ class NetworkntEventSchemaAdapterTest {
             .build();
 
     assertThat(MAPPER.readTree(adapter.dlqJson(rejected)).get("event_name").asString()).hasSize(64);
+  }
+
+  private CollectedEnvelope eventFrom(String file) {
+    return ((EnvelopeCheck.Valid) adapter.check(example("valid", file))).event();
   }
 
   private CollectedEnvelope validEvent() {

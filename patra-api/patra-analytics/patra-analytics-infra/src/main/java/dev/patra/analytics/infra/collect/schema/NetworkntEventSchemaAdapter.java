@@ -240,7 +240,24 @@ public final class NetworkntEventSchemaAdapter implements EventSchemaPort, DlqRe
         .userAgent(text(node, "user_agent"))
         .synthetic(node.get("is_synthetic").asBoolean())
         .propertiesJson(jsonMapper.writeValueAsString(node.get("properties")))
+        .articleId(articleId(node.get("properties")))
         .build();
+  }
+
+  /// 属性里的文献 ID。schema 允许 19 位十进制，超出 `long` 的不进阅读历史，事件本身照常合格。
+  ///
+  /// @param properties 事件属性
+  /// @return 文献 ID；没有或超出 `long` 时为 `null`
+  private static Long articleId(JsonNode properties) {
+    String value = text(properties, "article_id");
+    if (value == null) {
+      return null;
+    }
+    try {
+      return Long.parseLong(value);
+    } catch (NumberFormatException e) {
+      return null;
+    }
   }
 
   /// 解析 JSON；不是合法 JSON 时为空。

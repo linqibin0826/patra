@@ -1,5 +1,7 @@
 package dev.patra.analytics.app.collect.usecase.collect;
 
+import dev.patra.analytics.domain.collect.event.ArticleRead;
+import dev.patra.analytics.domain.collect.event.ArticlesReadEvent;
 import dev.patra.analytics.domain.collect.model.enums.BotReason;
 import dev.patra.analytics.domain.collect.model.vo.CollectedEnvelope;
 import dev.patra.analytics.domain.collect.model.vo.EnvelopeCheck;
@@ -28,12 +30,14 @@ import java.util.Optional;
 import java.util.OptionalInt;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
 
 /// 采集一批事件（采集 spec §4.2）：拆批 → 逐条预检与校验 → 富化（时间校正、UA、爬虫、地区）→ 合格的写
-/// `events.raw`、不合格的写 `events.dlq`，一次写出整批。
+/// `events.raw`、不合格的写 `events.dlq`，一次写出整批；写成后把这批里的文献阅读发成 {@link ArticlesReadEvent}，
+/// history 子域同步监听、写阅读历史（阅读历史 spec §4.2）。
 ///
-/// 不开事务：采集链路不写 PG。爬虫判定先看 UA，没命中才查 Redis 的频率窗口；Redis 出错跳过频率规则。
+/// 不开事务：采集链路本身不写 PG，阅读历史的写入事务归监听方。爬虫判定先看 UA，没命中才查 Redis 的频率窗口；Redis 出错跳过频率规则。
 /// 产物不合格（实现有 bug）的那条转进 dlq，不拖累同批其他事件。
 @Slf4j
 @Component
@@ -59,6 +63,7 @@ public class CollectEventsHandler
   private final EventPublishPort publisher;
   private final Clock clock;
   private final MeterRegistry meters;
+  private final ApplicationEventPublisher applicationEvents;
 
   /// 采集一批事件。
   ///
@@ -70,12 +75,13 @@ public class CollectEventsHandler
     Instant receivedAt = clock.instant();
     List<OutboundMessage> messages = new ArrayList<>(events.size());
     BatchState state = new BatchState();
+    List<ArticleRead> reads = new ArrayList<>();
     int accepted = 0;
     for (String eventJson : events) {
       Optional<OutboundMessage> raw =
           switch (schema.check(eventJson)) {
             case EnvelopeCheck.Valid(CollectedEnvelope event) ->
-                enrich(event, eventJson, receivedAt, messages, state);
+                enrich(event, eventJson, receivedAt, messages, state, reads);
             case EnvelopeCheck.Invalid invalid -> {
               messages.add(
                   reject(
@@ -93,6 +99,9 @@ public class CollectEventsHandler
       }
     }
     publisher.publish(messages);
+    if (!reads.isEmpty()) {
+      applicationEvents.publishEvent(ArticlesReadEvent.of(reads));
+    }
     return CollectEventsResult.of(accepted, events.size() - accepted);
   }
 
@@ -103,13 +112,15 @@ public class CollectEventsHandler
   /// @param receivedAt 本批收到的时刻
   /// @param messages 本批的消息（转进 dlq 时加入）
   /// @param state 本批的状态
+  /// @param reads 本批的文献阅读（合格时加入）
   /// @return 富化事件消息；转进 dlq 时为空
   private Optional<OutboundMessage> enrich(
       CollectedEnvelope event,
       String eventJson,
       Instant receivedAt,
       List<OutboundMessage> messages,
-      BatchState state) {
+      BatchState state,
+      List<ArticleRead> reads) {
     UserAgentInfo userAgent = userAgents.parse(event.userAgent());
     BotReason botReason = classify(event, userAgent, receivedAt, state).orElse(null);
     EventEnrichment enrichment =
@@ -147,6 +158,7 @@ public class CollectEventsHandler
             "event_name",
             event.eventName().wire())
         .increment();
+    ArticleRead.from(event, enrichment.derivedAt()).ifPresent(reads::add);
     return Optional.of(OutboundMessage.raw(event.deviceId(), payload));
   }
 
