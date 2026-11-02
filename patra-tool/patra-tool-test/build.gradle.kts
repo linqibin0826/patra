@@ -43,6 +43,8 @@ dependencies {
     api("org.flywaydb:flyway-database-postgresql")
     api("org.springframework.boot:spring-boot-starter-webmvc-test")
     api("org.springframework.boot:spring-boot-starter-restclient-test")
+    // @SpringBootTest 里关掉指标导出（只留内存注册表），测试不往 OTel Collector 推
+    api("org.springframework.boot:spring-boot-micrometer-metrics-test")
 
     // Spring Boot AutoConfiguration 支持
     api("org.springframework.boot:spring-boot-autoconfigure")

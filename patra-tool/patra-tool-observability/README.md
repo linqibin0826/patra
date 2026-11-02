@@ -2,7 +2,7 @@
 
 ## 能力
 
-给服务提供统一的可观测性。`ObservabilityAutoConfiguration` 装配 `ObservationRegistry` 与 `@Observed` 支持；`ObservabilityMicrometerAutoConfiguration` 桥接 OTel Agent 的 `MeterRegistry`，并提供高基数标签过滤与公共标签两个 `MeterFilter`；`ObservabilityErrorAutoConfiguration` 在类路径有 patra-tool-web 时给错误解析管道加观测拦截器。模块还自带 logback 配置 `src/main/resources/dev/patra/tool/observability/logback-patra.xml` 与 traceId/spanId 转换器。
+给服务提供统一的可观测性。`ObservabilityAutoConfiguration` 装配 `ObservationRegistry` 与 `@Observed` 支持；`ObservabilityMicrometerAutoConfiguration` 提供高基数标签过滤与公共标签两个 `MeterFilter`；`ObservabilityErrorAutoConfiguration` 在类路径有 patra-tool-web 时给错误解析管道加观测拦截器。模块带上 `micrometer-registry-otlp` 与 `spring-boot-opentelemetry`，用到它的服务都由 Boot 的 `OtlpMeterRegistry` 把指标推给 OTel Collector（Boot 4.1 缺后者会静默不导出）；不带 Micrometer Tracing，不导出链路。模块还自带 logback 配置 `src/main/resources/dev/patra/tool/observability/logback-patra.xml` 与 traceId/spanId 转换器。
 
 ## 配置（前缀 `patra.observability`）
 
@@ -39,3 +39,8 @@ patra:
 | `management.endpoints.web.exposure.include` | `health,info,metrics` |
 | `management.endpoint.health.show-details` | `when-authorized` |
 | `management.metrics.tags.application` | `${spring.application.name}` |
+| `management.otlp.metrics.export.url` | `http://${PATRA_INFRA_HOST:127.0.0.1}:4318/v1/metrics` |
+| `management.otlp.metrics.export.step` | `30s` |
+| `management.otlp.metrics.export.base-time-unit` | `seconds` |
+
+`@SpringBootTest` 里由 `patra-tool-test` 带的 `spring-boot-micrometer-metrics-test` 关掉导出，测试不推指标。

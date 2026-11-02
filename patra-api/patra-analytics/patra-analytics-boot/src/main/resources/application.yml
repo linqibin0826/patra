@@ -54,17 +54,6 @@ patra:
     ip-geolocation:
       directory: ${user.home}/.patra/data/ip2region
 
-management:
-  otlp:
-    metrics:
-      export:
-        # 采集指标经 OTLP 推给 OTel Collector，再由它的 Prometheus 导出器给 Prometheus（.claude/rules/tech/observability.md）。
-        # mini 上 apps 容器经 extra_hosts 回到宿主机的 4318；本机开发连 mini 的同一端口
-        url: http://${PATRA_INFRA_HOST:127.0.0.1}:4318/v1/metrics
-        step: 30s
-        # 计时按秒导出，经 Prometheus 导出器后与其他服务一样是 *_seconds_*
-        base-time-unit: seconds
-
 # XXL-Job 执行器：管理端地址在 Nacos 公共配置 patra-common.yaml；执行器端口 = 服务端口 + 1 = 6701
 xxl:
   job:

@@ -6,8 +6,8 @@ paths: patra-api/*/*-app/**/*.java, patra-api/*/*-infra/**/*.java, patra-api/*/*
 
 ## 核心原则
 
-1. **统一遥测管道**：Traces/Metrics/Logs 全部通过 OTel Agent → OTLP → OTel Collector
-2. **Micrometer Bridge**：Spring/Micrometer 指标通过 Agent 桥接导出到 OTel Collector
+1. **指标**：Micrometer 的 `OtlpMeterRegistry` → OTLP → OTel Collector → Prometheus，依赖与导出地址由 `patra-tool-observability` 统一给，服务不再单独加
+2. **链路与日志**：本机运行挂 OTel Agent（只导出链路与日志，指标关掉，免得重复）；容器里不挂 Agent
 3. 自定义业务指标使用 Micrometer API（`MeterRegistry`、`@Timed`、`@Counted`）
 4. 业务代码无需感知 OpenTelemetry
 
@@ -19,3 +19,4 @@ paths: patra-api/*/*-app/**/*.java, patra-api/*/*-infra/**/*.java, patra-api/*/*
 
 1. 禁止直接使用 OpenTelemetry SDK（`io.opentelemetry.api.*`）
 2. 禁止手动创建/管理 Span 生命周期
+3. 禁止给 Timer 打开 `percentiles-histogram`，除非面板真要分位数；要就只开那一个指标，并估算 Prometheus 序列数
