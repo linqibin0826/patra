@@ -88,11 +88,11 @@ Patra 后端把这三层放在三个不同的目录里，名字、位置、超�
 
 Patra 的 CI 不是对每个模块都跑三样。每个 Gradle 模块在构建时被登记它「需要跑哪些任务」，结果存成 `module-graph.json`：
 
-<CodeRef at="patra-infra/cd/module-graph.json@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="12-62" />
+<CodeRef at="patra-infra/cd/module-graph.json@8140a9d9482324670b63f00ab3c62690102196c5" lines="95-155" />
 
 看这份文件里 catalog 服务的几个模块：`catalog-domain` 只有 `check`（也就是单元测试加各类检查）；`catalog-adapter` 在 `check` 之外还要跑 `integrationTest`；`catalog-boot` 在 `check` 之外跑 `e2eTest`。
 
-整个文件 44 个模块里，22 个带 `integrationTest`，21 个只有 `check`，只有 1 个带 `e2eTest`：端到端测试在 Patra 里确实是「极少」。
+整个文件 51 个模块里，25 个只有 `check`，25 个带 `integrationTest`，带 `e2eTest` 的只有 2 个（catalog-boot 和 analytics-boot，后者 `integrationTest` 也带）：端到端测试在 Patra 里确实是「极少」。
 
 CI 把这些任务点名交给 Gradle，示意如下：
 

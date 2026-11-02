@@ -82,7 +82,7 @@ docker image inspect --format '{{.Architecture}}' <镜像>
 
 这条命令会打印镜像的架构，部署脚本拿它和 `arm64` 比较，不一致就拒绝部署。
 
-<CodeRef at="patra-infra/cd/deploy.sh@2197850b5a624ed4dbaa97df71e144c343e28baa" lines="56-59" />
+<CodeRef at="patra-infra/cd/deploy.sh@7dc80d272f808228d2fb32897c8857f0faae94ff" lines="59-62" />
 
 为什么还要多这一道？因为镜像仓库里可能还留着以前不同架构的旧镜像，回滚时要是拉回来一个，同样的问题就悄悄回来了。
 

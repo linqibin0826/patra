@@ -69,7 +69,7 @@ personalEnv: false
 
 backend 这一步值得细看。它用 **matrix（矩阵）** 把一个 job 展开成一组：
 
-<CodeRef at=".github/workflows/ci.yml@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="119-147" />
+<CodeRef at=".github/workflows/ci.yml@8140a9d9482324670b63f00ab3c62690102196c5" lines="145-173" />
 
 - `matrix.unit` 的取值来自 detect-changes 输出的单元列表。列表里有几个单元，就生成几个并行任务。
 - `fail-fast: false`：一个单元失败了，其余的继续跑完。这样一次就能看到所有出错的单元，不用修一个、再等一轮。
@@ -84,7 +84,7 @@ backend 这一步值得细看。它用 **matrix（矩阵）** 把一个 job 展�
 
 所以 Patra 另写了一个任务 `required-check`，专门做汇总，并且它的名字永远不变。分支保护只认它。
 
-<CodeRef at=".github/workflows/ci.yml@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="294-305" />
+<CodeRef at=".github/workflows/ci.yml@8140a9d9482324670b63f00ab3c62690102196c5" lines="324-335" />
 
 三个关键点：
 

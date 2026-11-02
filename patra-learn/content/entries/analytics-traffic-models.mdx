@@ -1,0 +1,242 @@
+---
+title: 造流量：Zipf、非齐次泊松与马尔可夫链
+summary: 均匀随机造出来的 1 亿条事件压不出真实问题。Patra 的流量模拟器用三个模型分别管「看哪篇」「什么时候来」「来了怎么逛」，再按份额混进爬虫和无脚本访客；灌历史和实时压测共用这一个模型，随机数可以逐字节复现。
+type: concept
+difficulty: advanced
+tags: [analytics, testing]
+prerequisites: [analytics-overview]
+topics: [analytics-pipeline]
+sources:
+  - version: v0.18
+    issue: PAP-171
+    pr: 373
+personalEnv: false
+---
+
+<Diagnose
+  question="要给行为数据管线造 1 亿条测试事件。最省事的做法是：每条事件从 20 万篇文献里均匀随机挑一篇、在 88 天里均匀随机挑一个时刻。拿这批数据去测热读榜，会看到什么？"
+  options={["前几名和第一万名的分数差不多，榜单靠运气排序", "和真实网站一样，少数文献明显领先", "数据太均匀，热读查询会直接报错"]}
+  answer="A"
+  ifRight="对。均匀随机下每篇文献的访问量都在同一个平均数附近抖动，榜单排的是噪声。这篇讲怎么按真实网站的规律造数据。"
+  ifWrong="答案是 A。均匀随机时每篇文献平均分到 500 次访问，差别只是随机抖动，榜单上谁排第一纯属运气，测不出真实网站「少数热门占大头」的样子。管线的各个部件各管什么，先看全景篇。"
+  suggest="analytics-overview"
+/>
+
+<Callout kind="lead">
+
+流量模型是一组描述「真实读者怎么访问网站」的概率规律；按它造出来的数据，热门集中、昼夜起伏、一次连看几页，和真实流量的形状一样。
+
+</Callout>
+
+## 均匀随机会把三个问题藏起来
+
+v0.18 要证明两件事：1 亿条事件在 mini 上存得下、查得动；每秒 1,000 条持续灌进来，管线扛得住。测试数据如果不像真的，这两件事都证明不了：
+
+- **热门集中**决定汇总表里一篇文献有多少行、热读榜一眼看不看得出。均匀随机时，每篇文献分到的访问都差不多。
+- **白天多、夜里少**决定某个时段的写入有多集中。均匀随机时，凌晨 3 点和上午 10 点一样忙，峰值被摊平了。
+- **一个读者连看几页**决定一个会话有多少条事件、「看过还看了」有没有东西可算。每条事件各自独立随机时，没有会话，也就没有「一起读」。
+
+业界的流量模拟（学术界的 Web 负载生成器 SURGE、各家埋点平台的压测脚本）一般都用三个模型组合，Patra 也是：
+
+| 规律 | 模型 | 管什么 |
+|---|---|---|
+| 少数热门占大头 | Zipf 分布 | 这一次看哪篇文献 |
+| 白天多夜里少、周末少 | 非齐次泊松过程 | 一个会话什么时候开始 |
+| 来一次连看几页 | 马尔可夫链 | 会话里下一页去哪 |
+
+参数全放在模块资源 `simulator/traffic-model.json` 里，命令行可以换一份。
+
+## Zipf：排第 k 名的概率和 1/k 成正比
+
+把 20 万篇文献按热度排好名次，第 k 名被抽中的概率 ∝ 1/k^s。Patra 取 s = 1.0，这是网页访问、词频这类长尾现象最常见的形状。
+
+代码很短：先算每个名次的权重 1/(k+1)^s（下标从 0 起），再交给一个「按权重抽下标」的通用抽样器。抽样器预先算好累积分布，每次抽一个 0～1 的随机数，二分查找它落在哪一格，20 万个名次也只要十几次比较。
+
+<CodeRef at="patra-api/patra-analytics/patra-analytics-simulator/src/main/java/dev/patra/analytics/simulator/model/ZipfSampler.java@8140a9d9482324670b63f00ab3c62690102196c5" lines="18-29" />
+
+```java
+  /// 各排名的 Zipf 权重（未归一化）。
+  ///
+  /// @param n 排名个数
+  /// @param s 指数
+  /// @return 权重
+  static double[] weights(int n, double s) {
+    double[] weights = new double[n];
+    for (int k = 0; k < n; k++) {
+      weights[k] = 1.0 / Math.pow(k + 1, s);
+    }
+    return weights;
+  }
+```
+
+先别往下看，凭直觉猜两个数：
+
+<Quiz
+  title="先猜再看：Zipf 有多偏"
+  questions={[
+    {
+      question: "20 万篇文献，s = 1.0。第 1 名被访问的次数，大约是第 10 名的几倍？",
+      options: ["差不多，2 倍以内", "大约 3 倍", "正好 10 倍", "上百倍"],
+      answer: "C",
+      explain: "概率 ∝ 1/k，第 1 名是 1/1，第 10 名是 1/10，比值正好 10。和总篇数无关。"
+    },
+    {
+      question: "排在前 1% 的 2,000 篇文献，合起来占全部访问的多少？",
+      options: ["六成多", "一成左右", "两成左右", "九成以上"],
+      answer: "A",
+      explain: "前 k 名的份额是 H(k)/H(N)，H 是调和数（1 + 1/2 + … + 1/k，约等于 ln k + 0.577）。H(2000)/H(200000) 约 64%。模拟器的单元测试抽 100 万次，断言这个比例落在 45%～65%。"
+    }
+  ]}
+/>
+
+几档对照（N = 20 万，s = 1.0，按调和数算）：
+
+| 前多少名 | 占全部访问 |
+|---|---|
+| 第 1 名 | 约 7.8%（1/H(N)，测试断言 1/12.783，误差 0.001 内） |
+| 前 0.1%（200 篇） | 约 46% |
+| 前 1%（2,000 篇） | 约 64% |
+| 前 10%（2 万篇） | 约 82% |
+
+另一头，排在后半段的 10 万篇加起来只分到约 5% 的访问。这就是长尾：大部分文献很少有人看，可每一篇都可能被看到。
+
+## 主题聚集：70% 的点击留在兴趣主题里
+
+只有全局 Zipf 还不够。「看过还看了」要找的是常被同一个人一起读的文献；如果每次点击都从全局独立抽，一起读的只会是热门文献的随机组合，验证不了「推荐不是随机的」。
+
+所以模拟器按期刊（`venue_id`）把文献分成主题（同刊近似同主题，没有期刊的归进一个大杂烩主题）。每个会话开头按主题总热度抽一个兴趣主题，之后检索结果和「看过还看了」里的卡片，70% 从这个主题里抽（主题内仍按 Zipf），30% 从全局抽。参数是 `topicAffinity: 0.7`。
+
+## 非齐次泊松过程：到达是随机的，平均速率随时间变
+
+「泊松过程」描述的是彼此独立、随机发生的到达：每一刻都可能有人来，谁来不影响别人来不来。「非齐次」是说平均速率不是常数，而是随时间变的一条曲线。
+
+Patra 的曲线：每小时到达率 = 日均 × 昼夜系数（北京时间的小时）× 周内系数（星期几）。昼夜系数凌晨 2～6 点最低（0.15），上午 9～11 点、下午 2～5 点两个高峰（1.8），晚上 8～10 点次高峰（1.4）；周内系数工作日 1.0、周六 0.65、周日 0.6，是学术站点的工作日特征。凌晨 3 点和上午 10 点的到达率差 12 倍。
+
+灌历史时按这条曲线抽会话的开始时刻：先按小时系数抽一个小时，再在这一小时里均匀撒一个时刻。小时内均匀，正是泊松过程的性质。
+
+<CodeRef at="patra-api/patra-analytics/patra-analytics-simulator/src/main/java/dev/patra/analytics/simulator/model/ArrivalCurve.java@8140a9d9482324670b63f00ab3c62690102196c5" lines="47-57" />
+
+```java
+  /// 在某天里抽一个会话开始时刻：按小时系数抽小时，小时内均匀（泊松过程在小时内的到达时刻是均匀的）。
+  ///
+  /// @param day 北京时间的日期
+  /// @param random 随机源
+  /// @return 开始时刻
+  public Instant sampleStart(LocalDate day, SplittableRandom random) {
+    int hour = hourSampler.sample(random);
+    long offsetMillis =
+        (long) hour * SECONDS_PER_HOUR * 1_000 + random.nextLong(SECONDS_PER_HOUR * 1_000L);
+    return day.atStartOfDay(BeijingDays.ZONE).toInstant().plusMillis(offsetMillis);
+  }
+```
+
+实时压测用的是同一个过程的另一种写法：不预先撒时刻，而是按速率逐个产生会话，相邻两个会话的间隔服从指数分布。这部分放在「开环压测」那篇讲。
+
+## 马尔可夫链：下一页只看现在在哪一页
+
+会话从入口开始，在首页、检索、文献页、读全文、文献库之间按转移概率走，走到「离开」结束。马尔可夫链的关键性质是**无记忆**：下一步去哪只取决于当前这一页，不管之前怎么走过来的。
+
+`traffic-model.json` 里的转移概率：
+
+| 当前页 | 下一步 |
+|---|---|
+| 入口 | 首页 42%、检索 30%、文献页 23%（从搜索引擎直达）、文献库 5%（只有登录用户；访客去掉这一项） |
+| 首页 | 点卡片进文献页 35%、去检索 30%、离开 35% |
+| 检索 | 点结果 55%、翻页或改条件再检 20%、离开 25% |
+| 文献页 | 读全文 35%、点相关文献 15%、回检索 20%、离开 30% |
+| 读全文 | 点相关文献 15%、回检索 25%、离开 60% |
+| 文献库 | 离开 |
+
+每到一页，按埋点方案发对应的事件：首页发页面浏览和 4～8 张卡片的曝光，检索发服务端的检索事件和结果曝光，文献页发服务端的文献浏览，读全文发 `fulltext_read`，之后 20% 下载 PDF。两页之间的停留按对数正态分布抽，中位 25 秒，读全文中位 90 秒。
+
+<Stepper
+  title="走一个会话：访客 d:7 的一次来访"
+  nodes={[
+    { id: "home", label: "首页" },
+    { id: "search", label: "检索" },
+    { id: "article", label: "文献页" },
+    { id: "fulltext", label: "读全文" },
+    { id: "exit", label: "离开" }
+  ]}
+  links={[
+    { from: "home", to: "search" },
+    { from: "search", to: "article" },
+    { from: "article", to: "fulltext" },
+    { from: "fulltext", to: "exit" }
+  ]}
+  steps={[
+    { caption: "入口按 42 / 30 / 23 抽到了首页。发 page_viewed，再发 6 张文献流卡片的 article_impressed。", focus: ["home"], tokens: [{ id: "reader", label: "d:7", at: "home" }], notes: [{ at: "home", text: "7 条事件", tone: "ok" }] },
+    { caption: "首页这一行抽到「去检索」。检索词从内置的医学词表抽，发 search_performed、page_viewed 和前 9 条结果的曝光。", focus: ["search"], links: ["home>search"], tokens: [{ id: "reader", label: "d:7", at: "search" }], notes: [{ at: "search", text: "11 条事件", tone: "ok" }] },
+    { caption: "检索这一行抽到「点结果」。先发 article_clicked，再进文献页发 article_viewed。同一会话里两次文献浏览至少隔 21 秒。", focus: ["article"], links: ["search>article"], tokens: [{ id: "reader", label: "d:7", at: "article" }], notes: [{ at: "article", text: "已看 1 篇", tone: "ok" }] },
+    { caption: "文献页这一行按 35 / 15 / 20 / 30 抽，抽到「读全文」。全文可见 40 秒后发 fulltext_read。", focus: ["fulltext"], links: ["article>fulltext"], tokens: [{ id: "reader", label: "d:7", at: "fulltext" }], notes: [{ at: "fulltext", text: "读过全文 1 篇", tone: "ok" }] },
+    { caption: "读全文这一行抽到「离开」（60%）。会话结束，一共 4 页、二十几条事件，曝光占一大半。", focus: ["exit"], links: ["fulltext>exit"], tokens: [{ id: "reader", label: "d:7", at: "exit", state: "faded" }] }
+  ]}
+  guesses={[
+    { before: 4, question: "假设 d:7 这次来已经在文献页和检索之间来回了 5 趟。现在又在文献页，下一步去读全文的概率是多少？", options: ["比 35% 低，来回多了说明没找到想看的", "还是 35%，只看当前在文献页", "比 35% 高，看得越多越可能读全文"], answer: "B", explain: "马尔可夫链无记忆：概率只由当前这一页那一行决定。真实读者当然有记忆，这是模型的简化；它够用，是因为我们要的是总体的形状，不是某一个人的心理。" }
+  ]}
+/>
+
+模型之外还有一条硬约束：真人会话里两次文献浏览至少隔 21 秒（`MIN_ARTICLE_GAP`），保证任意 5 分钟内最多 15 条。采集端点的频率规则是 5 分钟超过 30 条就判爬虫，真人离阈值远一点，才不会被误判，否则对账会偏。
+
+## 爬虫与无脚本访客按份额混进来
+
+真实流量里不全是真人。模拟器每产生一个会话，先抽一个 0～1 的数决定它是哪一类：
+
+| 类型 | 份额（占会话） | 行为 | 管线该怎么判 |
+|---|---|---|---|
+| 声明身份的爬虫 | 3% | UA 是 Googlebot、bingbot 这类，只有服务端事件，每 2～5 秒一篇，线性遍历文献池，一次 50～300 篇 | UA 命中名单，`ua_list` |
+| 伪装成浏览器的爬虫 | 1% | 普通 Chrome UA，跑脚本（有页面浏览），每 3～6 秒一篇，一次 60～200 篇 | 5 分钟超过 30 篇后标 `rate`，整个会话不进对外数字 |
+| 不跑脚本的访客 | 2% | 普通 UA，只有服务端事件，看 1～3 页 | 不是爬虫，但也不算真人会话（没有浏览器事件） |
+| 真人 | 其余 94% | 按上面的马尔可夫链走 | 真人会话 |
+
+爬虫不按热度挑文献，而是从随机起点顺着文献池往下爬；它们不存 Cookie，所以每个爬虫会话都给一台一次性设备。伪装爬虫是最考验管线的一类：它前 30 篇和真人没有区别，跨过阈值之后才会被标出来。
+
+## 两种模式共用一个模型，输出形态不同
+
+模拟器有两种模式，用的是同一套模型、同一份参数：
+
+| 模式 | 要的是 | 输出 | 爬虫谁来判 |
+|---|---|---|---|
+| 灌历史 `backfill` | 量：1 亿条铺满 88 天，测存储和查询 | 富化事件：模拟器自己填好地区、浏览器、爬虫标记，直接批量写进 ClickHouse 的 `events` | 模拟器逐条复刻采集端点的规则（`BotLabeler`） |
+| 实时压测 `live` | 速率：每秒上千条持续半小时，测整条链路 | 采集信封：带 IP 和 UA，经网关打采集端点 | 采集端点 |
+
+生成器只产出一种中性的事件，两个序列化器再把它转成这两种形态。这样两种模式造出来的流量形状一致，爬虫事件的数量和原因分布也一致。灌历史不走采集端点，是因为按每秒 1,000 条经 HTTP 灌 1 亿条要 28 小时，没必要。
+
+## 随机，但可以逐字节复现
+
+模拟器里所有随机都来自 Java 的 `SplittableRandom`，种子由（运行种子，日期，块号）混出来。灌历史把一天拆成若干块，每块就是一次写入：
+
+<CodeRef at="patra-api/patra-analytics/patra-analytics-simulator/src/main/java/dev/patra/analytics/simulator/backfill/ChunkGenerator.java@8140a9d9482324670b63f00ab3c62690102196c5" lines="44-55" />
+
+```java
+  public DayChunk generate(LocalDate day, int chunk) {
+    SplittableRandom random = new SplittableRandom(mix(seed, day.toEpochDay(), chunk));
+    long remaining = plan.sessions(day) - (long) chunk * plan.sessionsPerChunk();
+    int count = (int) Math.min(plan.sessionsPerChunk(), remaining);
+    int freshBase = populationSize + plan.chunkOrdinal(day, chunk) * plan.sessionsPerChunk();
+    List<SimSession> sessions = new ArrayList<>(count);
+    for (int i = 0; i < count; i++) {
+      sessions.add(
+          BotLabeler.label(mix.next(curve.sampleStart(day, random), random, freshBase + i)));
+    }
+    return new DayChunk(sessions);
+  }
+```
+
+同一块不管第几次生成，内容都一模一样。这带来三个好处：
+
+- **测试稳定**：单元测试用固定种子，断言不会时好时坏。
+- **能重跑**：灌到一半断了，整条命令重跑，已写过的块内容和去重令牌都没变，ClickHouse 认出是重复写入整块丢掉。
+- **真值能重建**：跳过已写的天时照样生成，只是不写入，真值照算。
+
+「选哪 1% 重发」也不靠随机数，而是看 `event_id` 的低位对 100 取余是否为 0，同一条事件每次都会被同样地选中或不选中。
+
+<Transfer
+  prompt="你要给一个外卖平台的下单接口造压测流量。上面三个模型还用得上吗？各自要换成什么参数，还要额外考虑哪些这篇没有的规律？"
+  points={[
+    { label: "热门集中", text: "商家或菜品的点单量同样是长尾，用 Zipf；再按城市、商圈分组，像主题聚集一样让一个用户的选择集中在附近的商家。" },
+    { label: "到达曲线", text: "到达率曲线换成午餐、晚餐两个尖峰，峰值比平时高得多；周末和节假日系数另调，比学术站点的起伏剧烈。" },
+    { label: "会话跳转", text: "马尔可夫链换成浏览商家、加购、结算、支付、离开；结算到支付的转化率决定写库压力。" },
+    { label: "这里没有的", text: "促销开始那一刻的瞬时洪峰不是泊松过程能描述的，要单独模拟；还有支付回调、骑手位置上报这类不由用户触发的流量。" }
+  ]}
+/>

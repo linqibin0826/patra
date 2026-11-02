@@ -1,0 +1,168 @@
+---
+title: MergeTree：数据片段、后台合并、分区与 TTL
+summary: ClickHouse 每次写入都在磁盘上生成一个新的数据片段，后台线程再把小片段合并成大片段；写得太碎，合并跟不上，就会报 TOO_MANY_PARTS 拒绝写入。这篇讲片段与合并、按天分区和 ttl_only_drop_parts、为什么「天」按北京时间切，以及 Patra 灌历史时为什么一次只写一天。
+type: concept
+difficulty: advanced
+tags: [analytics, database]
+prerequisites: [analytics-columnar-storage]
+topics: [analytics-pipeline]
+sources:
+  - version: v0.18
+    issue: PAP-168
+    pr: 373
+  - version: v0.18
+    issue: PAP-171
+    pr: 373
+  - version: v0.18
+    issue: PAP-165
+    pr: 373
+personalEnv: false
+---
+
+<Diagnose
+  question="入库消费者偷懒：每从 Kafka 收到一条事件，就往 ClickHouse 的 events 表 INSERT 一次，每秒 1000 条。ClickHouse 默认会怎样？"
+  options={["没问题：每条只有一百多字节，列存写起来很快", "没问题：ClickHouse 默认会在内存里攒着，攒够一批再统一写盘", "每次 INSERT 都在磁盘上生成一个新的数据片段，合并跟不上，很快拒绝写入"]}
+  answer="C"
+  ifRight="对。ClickHouse 怕的不是数据多，是写入次数多。往下读看片段从哪来、又怎么被合并掉。"
+  ifWrong="答案是 C。列存的数据按列压缩成整块文件，没法往已有的文件里追加一行，所以每次写入都要另起一组新文件。这题要先知道列存的数据在磁盘上长什么样，先读列式存储那篇。"
+  suggest="analytics-columnar-storage"
+/>
+
+<Callout kind="lead">
+
+MergeTree 是 ClickHouse 最核心的表引擎：每次写入生成一个排好序、不再修改的**数据片段**（part），后台线程不断把小片段归并成大片段。
+
+</Callout>
+
+## 每次写入，一个新片段
+
+上一篇讲过，列存把每一列压缩成一大块文件，中间插不进一行。所以 ClickHouse 处理一次 `INSERT` 的办法是：把这批数据按排序键排好序、分列压缩，写成一个新的目录，里面每列一个文件，外加稀疏索引的标记。这个目录就是一个数据片段，写完就不再改。
+
+片段越多，查询要打开的文件越多，元数据越多，所以 ClickHouse 在后台用合并线程把同一个分区里的小片段归并成大片段（几个已经排好序的片段，归并排序成一个更大的有序片段）。合并完，新片段接替旧片段参与查询，旧片段不再被读到。
+
+`MergeTree` 家族的几个变体，差别都在合并这一步做的额外工作：`ReplacingMergeTree` 合并时把排序键相同的行只留一行，`AggregatingMergeTree` 合并时把同一个键的聚合状态合在一起。Patra 的明细表 `events` 用前者，三张汇总表用后者。
+
+<Stepper
+  title="events 表里的片段怎么来、怎么走"
+  nodes={[
+    { id: "ingest", label: "入库消费者", sub: "一批一次 INSERT" },
+    { id: "d1", label: "分区 20261101", sub: "北京时间 11 月 1 日" },
+    { id: "d2", label: "分区 20261102", sub: "北京时间 11 月 2 日" },
+    { id: "merge", label: "后台合并", sub: "2 个线程" }
+  ]}
+  links={[
+    { from: "ingest", to: "d1" },
+    { from: "ingest", to: "d2" },
+    { from: "merge", to: "d1", label: "归并" }
+  ]}
+  steps={[
+    { caption: "11 月 1 日下午，入库消费者攒够一批事件，一次 INSERT 写进 events。这批数据全在 11 月 1 日，ClickHouse 在这个分区里生成片段 1。", focus: ["ingest", "d1"], links: ["ingest>d1"], tokens: [{ id: "p1", label: "片段 1", at: "d1" }], notes: [{ at: "d1", text: "活跃片段 1 个" }] },
+    { caption: "一秒后又一批，又一次 INSERT：片段 2。片段 1 一个字节都没动，新数据只能另起一个片段。", focus: ["ingest", "d1"], links: ["ingest>d1"], tokens: [{ id: "p1", label: "片段 1", at: "d1" }, { id: "p2", label: "片段 2", at: "d1" }], notes: [{ at: "d1", text: "活跃片段 2 个", tone: "wait" }] },
+    { caption: "后台合并线程把片段 1、2 归并排序成一个更大的片段 1_2。新片段接替它们参与查询，旧的两个不再被读到。", focus: ["merge", "d1"], links: ["merge>d1"], tokens: [{ id: "p1", label: "片段 1", at: "d1", state: "faded" }, { id: "p2", label: "片段 2", at: "d1", state: "faded" }, { id: "m", label: "片段 1_2", at: "d1" }], notes: [{ at: "d1", text: "活跃片段 1 个", tone: "ok" }] },
+    { caption: "零点前后的一批：一部分事件在 23:59，一部分在 00:00。分区按天切，这一次 INSERT 在两个分区里各生成一个片段。", focus: ["ingest", "d1", "d2"], links: ["ingest>d1", "ingest>d2"], tokens: [{ id: "m", label: "片段 1_2", at: "d1" }, { id: "p3", label: "片段 3", at: "d1" }, { id: "p4", label: "片段 4", at: "d2" }], notes: [{ at: "d1", text: "活跃片段 2 个", tone: "wait" }, { at: "d2", text: "活跃片段 1 个" }] },
+    { caption: "如果一次 INSERT 里塞了 88 天的数据，events 就一口气多出 88 个片段，分布在 88 个分区里。合并只有 2 个线程，要在 88 个分区之间来回跑；每批都这样写，片段增长得比合并快，ClickHouse 最终报 TOO_MANY_PARTS，拒绝写入。", focus: ["ingest", "merge"], notes: [{ at: "merge", text: "跟不上", tone: "bad" }] }
+  ]}
+  guesses={[
+    { before: 4, question: "下一批事件跨过了零点：一部分是 23:59，一部分是 00:00。这一次 INSERT 会在 events 里生成几个片段？", options: ["1 个，一次 INSERT 就是一个片段", "2 个，两个分区各一个", "0 个，先进内存缓冲，等合并时再落盘"], answer: "B", explain: "一个片段只属于一个分区。一次写入碰到几个分区，就生成几个片段。" }
+  ]}
+/>
+
+这就是 ClickHouse 怕小批量写入的原因：它的成本按「写入次数 × 碰到的分区数」算，不按数据量算。业界的做法都是攒批：Patra 的入库消费者攒满 5 万条或满 1 秒写一批，而且**一批只发一次 INSERT**，不按 Kafka 的分区拆成三次，否则片段就是三倍。
+
+合并本身也吃资源。Patra 的 ClickHouse 跑在 2 GB 的容器里，后台合并的并行数压到了 2，单次合并最大产出 1 GB 的片段：
+
+<CodeRef at="patra-infra/docker/clickhouse/config.d/patra.xml@8140a9d9482324670b63f00ab3c62690102196c5" lines="43-48" />
+
+```xml
+  <!-- 后台合并：写入压力大时合并最吃内存，限制并行数和单次合并的大小（最大 1 GB 一个数据片段） -->
+  <background_pool_size>2</background_pool_size>
+  <background_merges_mutations_concurrency_ratio>2</background_merges_mutations_concurrency_ratio>
+  <merge_tree>
+    <merge_max_block_size>1024</merge_max_block_size>
+    <max_bytes_to_merge_at_max_space_in_pool>1073741824</max_bytes_to_merge_at_max_space_in_pool>
+```
+
+想看现场，查 `system.parts`（每个片段一行，`active` 表示是否还参与查询）和 `system.part_log`（每次写入生成了什么片段、每次合并合了哪些）。Patra 特地保留了 `part_log` 7 天，就是为了看 `TOO_MANY_PARTS` 的现场。
+
+## 分区：按天切，按北京时间
+
+分区是比片段更粗的一层：同一个分区的片段才会互相合并，不同分区的片段永远不会合在一起。分区键决定数据怎么分组存放：
+
+<CodeRef at="patra-api/patra-analytics/patra-analytics-infra/src/main/resources/clickhouse/V1__events.sql@8140a9d9482324670b63f00ab3c62690102196c5" lines="30-34" />
+
+```sql
+) ENGINE = ReplacingMergeTree
+PARTITION BY toYYYYMMDD(derived_at, 'Asia/Shanghai')
+ORDER BY (event_name, toDate(derived_at, 'Asia/Shanghai'), article_id, person_id, event_id)
+TTL toDateTime(derived_at) + INTERVAL 90 DAY DELETE
+SETTINGS non_replicated_deduplication_window = 1000, ttl_only_drop_parts = 1;
+```
+
+三处值得停下来看：
+
+- **按天分区**：明细保留 90 天，就是 90 个分区，一个分区一天。分区太细（比如按小时）会让片段数成倍增加，太粗（比如按年）则过期时丢不掉。
+- **「天」按北京时间**：`derived_at` 存的是 UTC，切天时显式指定 `Asia/Shanghai`。读者都在国内，日活、留存、热读里的「一天」要和读者的一天对得上；要是按 UTC 切，北京时间早上 8 点之前的事件会被算进前一天。分区和所有汇总表的 `day` 都这样切。分区键决定数据在磁盘上怎么放，写进去之后再想改，只能把整张表重写一遍。
+- **TTL 与 `ttl_only_drop_parts`**：事件 90 天后删除。默认的 TTL 删除要在合并时逐行检查、把过期的行剔掉、重写片段；开了 `ttl_only_drop_parts = 1`，只有片段里**所有**行都过期了才处理，而且是把整个片段直接扔掉。按天分区让一个片段里的数据都在同一天，到期时整个分区一起扔，不用重写任何数据。
+
+<Quiz
+  title="你猜会怎样"
+  questions={[
+    {
+      question: "假如 events 不分区，只靠 TTL 删 90 天前的数据，同时开着 ttl_only_drop_parts。会怎样？",
+      options: ["和按天分区一样，每天准时丢掉一天的数据", "合并会把不同日期的数据揉进同一个片段，片段里总有没过期的行，过期数据迟迟删不掉", "ClickHouse 拒绝建表：开 ttl_only_drop_parts 必须分区", "TTL 失效，数据永远不删"],
+      answer: "B",
+      explain: "ttl_only_drop_parts 只扔「全部行都过期」的片段。没有分区时，合并会把几天、几十天的数据合进一个大片段，只要里面还有一行没过期，整个片段就留着。分区把每天的数据隔开，才让「整片扔」可行。"
+    }
+  ]}
+/>
+
+## 灌历史：一次写入只放一天
+
+流量模拟器要往 ClickHouse 直接灌 88 天、1 亿多条历史事件。这时上面的规则全部变成了硬约束：
+
+- **一次写入只放一天（北京时间）的数据**：一次写入跨 88 天，events 就一口气多出 88 个片段，分布在 88 个分区里，两个合并线程顾不过来。只写一天，每次写入只落在一个分区里，前一天的分区写完就不再有新片段，合并可以收尾。
+- **按顺序写，写完一次再写下一次**：并发写只会让片段增长得更快。
+- **一块约 25 万行**：一天的数据再拆成若干块，每块一次写入，带一个由运行号、参数指纹、日期、块号组成的去重令牌，重跑同一块时 ClickHouse 认得出来（讲批量写入与去重令牌的那篇会展开）。
+- **跨午夜的会话**：落在第二天的事件单独留着，等第二天开写时作为第一次写入（块号写 `spill`）。
+
+模拟器的主循环就是这几条规则的直译：
+
+<CodeRef at="patra-api/patra-analytics/patra-analytics-simulator/src/main/java/dev/patra/analytics/simulator/backfill/BackfillRunner.java@8140a9d9482324670b63f00ab3c62690102196c5" lines="116-136" />
+
+```java
+      for (LocalDate day : plan.days()) {
+        if (!counted.contains(day)) {
+          break;
+        }
+        boolean write = params.fromDay() == null || !day.isBefore(params.fromDay());
+        if (!spill.isEmpty()) {
+          List<String> lines = spill;
+          insert(write, () -> lines.iterator(), token(day, "spill"));
+        }
+        List<String> nextSpill = new ArrayList<>();
+        for (int chunk = 0; chunk < plan.chunks(day); chunk++) {
+          writeChunk(day, chunk, write, nextSpill);
+        }
+        List<String> copies = pendingCopies.remove(day);
+        if (copies != null) {
+          tally.resent(copies.size());
+          insert(write, copies::iterator, token(day, "dup"));
+        }
+        if (write) {
+          sink.afterDay(day);
+        }
+```
+
+`sink.afterDay(day)` 在每天写完后查一次 `system.parts`，打印 `events` 的活跃片段数，用来盯着合并跟不跟得上。按这个节奏，1.0232 亿条用了约 15 分钟灌完。
+
+三张汇总表的建表语句里没有 `PARTITION BY`，每次写入在它们那里只各生成一个片段；片段数的压力主要在分了区的 `events` 上。
+
+<Transfer
+  prompt="一个新同事要给 Patra 加一张「每分钟请求数」的监控表，打算 PARTITION BY toStartOfMinute(ts)，保留 7 天，由一个定时任务每 10 秒写一次。按这篇的道理，你会提醒他什么？"
+  points={[
+    { label: "分区太细", text: "按分钟分区，7 天就是一万多个分区；合并只在分区内进行，片段永远合不到一起。按天分区就够了。" },
+    { label: "写入太频繁", text: "每 10 秒写一次，一天八千多个片段，再乘上每次碰到的分区数。能攒批就攒批，比如攒满一分钟或若干行再写。" },
+    { label: "TTL 配整片扔", text: "按天分区加 ttl_only_drop_parts，过期时整个分区直接扔，不用逐行重写。" },
+    { label: "时区", text: "「每天」按谁的时间切要想清楚；分区键写进去就改不了。" }
+  ]}
+/>

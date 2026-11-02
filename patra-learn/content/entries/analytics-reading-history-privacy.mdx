@@ -1,0 +1,220 @@
+---
+title: 阅读历史：清空了，就要真的空
+summary: 阅读历史是用户自己看、自己删的数据，和匿名统计分成两套。Patra 把它存在 PostgreSQL，在采集事件的同一次请求里同步写入；清空、单条删除之后晚到的事件，靠清空时刻和删除记录挡住。默认开启，关掉只停后续，12 个月自动清理，注销时清空。
+type: decision
+difficulty: practice
+tags: [analytics, database, security]
+prerequisites: [analytics-device-and-session, db-transactions]
+topics: [analytics-pipeline]
+sources:
+  - version: v0.18
+    issue: PAP-169
+    pr: 373
+personalEnv: false
+---
+
+<Diagnose
+  question="清空阅读历史要做两件事：删掉这个人的全部历史行，记下清空的时刻。两步放在同一个事务里。删完行、还没记时刻时服务崩了，重启后看到的是？"
+  options={["历史行删掉了，清空时刻没记上", "历史行删掉了，清空时刻也记上了", "历史行都还在，清空时刻也没记上"]}
+  answer="C"
+  ifRight="对。同一个事务里的两步要么一起生效，要么一起撤销。往下读会讲为什么清空时刻和删行一样重要。"
+  ifWrong="答案是 C。事务没提交就崩了，已经执行的删除也会回滚，两样都回到清空之前。这题考的是事务的原子性，先读事务那篇会更顺。"
+  suggest="db-transactions"
+/>
+
+## 背景：用户自己的数据，和统计不是一回事
+
+v0.18 给登录用户加了「阅读历史」：打开过哪些文献、最近一次是什么时候、有没有读过全文。产品规则（release spec 2.1）：
+
+- 只记登录用户的文献详情浏览与全文阅读（下载 PDF 也算读过全文）。
+- **默认开启**，隐私政策里写明；关闭后不再记录，已有的保留。
+- 可以单条删除、一键清空；12 个月后自动清理；注销账号时清空。
+
+同一次浏览，ClickHouse 里也有一条事件，用来算「N 人看过」。这两者是**两层数据**：个人历史是这个用户自己的，匿名统计是全站的。关闭记录、删除、清空只动前者，浏览量照常累计。
+
+<Quiz
+  title="你猜会怎样"
+  questions={[
+    {
+      question: "C 在设置里关掉了「阅读记录」，然后打开了文献 X。X 的「看过」人数会算上 C 吗？",
+      options: ["会：统计和个人历史是两套数据，关掉的只是历史", "不会：用户关掉记录，就不该再出现在任何数字里", "要看 C 有没有登录：登录了才不统计"],
+      answer: "A",
+      explain: "事件照样写进 Kafka、进 ClickHouse，计数照常 +1；只是不再写进 C 的个人历史。这一点由数据流天然保证：写历史发生在事件写进 Kafka 之后，入库和历史互不读取。"
+    }
+  ]}
+/>
+
+这个拆法是业界通行的（YouTube 的「暂停观看记录」也只停个人记录）。但它要求两套数据**各存各的、各删各的**，于是有两个问题要回答：历史存哪；什么时候写。
+
+## 存哪：PostgreSQL，不从 ClickHouse 查
+
+阅读历史要按人倒序翻页、按（用户，文献）删一行、按人清空，全是按行修改和点查。这正是 PostgreSQL 擅长、ClickHouse 不擅长的（「列式存储：为什么行为数据放 ClickHouse」讲过原因）。而且两边的保留期也不一样：ClickHouse 的事件明细留 90 天，历史留 12 个月。
+
+所以 `patra-analytics` 有自己的 PostgreSQL 库，历史单独一个 schema。代价是同一次浏览在两边各存一份，删除也各管各的；好处是「清空历史不影响浏览量」自然成立。
+
+## 什么时候写：三个选项
+
+<DecisionOptions
+  options={[
+    { name: "直接查 ClickHouse 明细当历史", summary: "不另存，历史页按用户 ID 查事件明细表。", pros: "只存一份，不用同步。", cons: "按行删除和翻页正撞上 ClickHouse 的短板；明细 90 天就过期；删一条历史等于删统计数据，两层数据混在一起。" },
+    { name: "PostgreSQL，另起一个 Kafka 消费者写", summary: "第二个消费组读 events.raw，把文献浏览写进历史表。", pros: "采集端点不多一次数据库写入；历史出故障完全不影响采集。", cons: "消费有延迟。清空历史后，还在 Kafka 里排队的打开会被写回来，刚清空的历史又冒出一条；要防就得记下每个人的清空、删除时间逐条比对。" },
+    { name: "PostgreSQL，采集时同步写", summary: "采集端点把一批事件写进 Kafka 成功后，在同一次请求里把其中的文献浏览写进历史表。", pros: "写完才返回，历史和请求同步；不多一个要部署、要盯滞后的消费者。", cons: "采集端点多一次 PostgreSQL 写入；写失败只是这次没记上。", chosen: true }
+  ]}
+/>
+
+<Callout kind="lead" label="选了什么">
+
+存 PostgreSQL，采集时同步写（release spec 决策 B，用户 11/02 定）。阅读历史是用户自己看、自己删的东西，「清空了就真的空了」比拆出一个独立消费者更重要。
+
+</Callout>
+
+代码上，采集和历史是两个子域，采集用例不直接调历史的代码：它在 Kafka 写成之后发一个进程内事件 `ArticlesReadEvent`，历史子域用同步的 `@EventListener` 接住。同步监听和发布方在同一个线程里执行，效果等同于直接调用，写完历史才返回 202。
+
+<Sequence
+  title="一次「C 打开了文献 X」怎么进历史"
+  actors={[
+    { id: "portal", label: "门户" },
+    { id: "collect", label: "采集用例" },
+    { id: "kafka", label: "Kafka" },
+    { id: "history", label: "历史监听器" },
+    { id: "pg", label: "PostgreSQL", sub: "history" }
+  ]}
+  messages={[
+    { from: "portal", to: "collect", label: "一批事件", caption: "门户服务端发来一批事件，其中有一条 article_viewed，带着 C 的用户 ID。" },
+    { from: "collect", to: "kafka", label: "写 events.raw", caption: "校验、富化后整批写进 Kafka。" },
+    { from: "kafka", to: "collect", label: "写成", dashed: true, caption: "Kafka 确认写成。写失败的话返回 503，后面的步骤都不发生，这一批也不进历史。" },
+    { from: "collect", to: "history", label: "ArticlesReadEvent", caption: "同一个线程里发出进程内事件，只含登录、非合成的三种阅读事件。" },
+    { from: "history", to: "pg", label: "查开关、清空时刻、删除记录", caption: "开事务、限时 500 毫秒，查出这批用户的设置和删除记录，过滤掉不该写的。" },
+    { from: "history", to: "pg", label: "upsert 历史", caption: "剩下的按（用户，文献）一条语句写入：每人每篇一行。" },
+    { from: "collect", to: "portal", label: "202", caption: "历史写完才返回。写历史失败也只记日志，照样 202。" }
+  ]}
+  summary={{ caption: "历史和统计在 Kafka 之后分叉：统计走 Kafka 进 ClickHouse，历史在这次请求里写进 PostgreSQL。" }}
+/>
+
+事件里的用户 ID 能信，是因为采集端点只在内网可达：公网的浏览器事件先到门户，门户按服务端会话补上用户 ID，浏览器发来的批次里不允许带任何身份字段。采集端点以后若要对公网开放，写历史前必须先改成从可信来源取用户。
+
+## 晚到的事件：清空时刻与删除记录
+
+同步写消掉了队列的延迟，但事件晚到还有别的来源：浏览器每隔几秒才把「读了全文」攒成一批发出；客户端失败后会重试（比如流量模拟器）。所以第二个选项的那套比对，第三个选项最后也要做，只是要挡的窗口短得多。
+
+<Stepper
+  title="清空之后，一条晚到的「读了全文」"
+  nodes={[
+    { id: "browser", label: "C 的浏览器", sub: "攒批上报" },
+    { id: "collector", label: "采集端点" },
+    { id: "pg", label: "阅读历史", sub: "PostgreSQL" }
+  ]}
+  links={[
+    { from: "browser", to: "collector" },
+    { from: "collector", to: "pg" }
+  ]}
+  steps={[
+    { caption: "例：10:00:00，C 的全文区可见累计满 10 秒。浏览器把「读了全文」放进待发的一批，还没发出。", focus: ["browser"], tokens: [{ id: "late", label: "全文 10:00:00", at: "browser" }], notes: [{ at: "pg", text: "历史 · 有 X" }] },
+    { caption: "10:00:02，C 点了「清空历史」。一个事务里删掉他的全部历史行，并记下清空时刻。", focus: ["pg"], tokens: [{ id: "late", label: "全文 10:00:00", at: "browser" }], notes: [{ at: "pg", text: "0 行 · cleared_at 10:00:02", tone: "ok" }] },
+    { caption: "10:00:05，那一批才发到采集端点，写进 Kafka。它的事件时间仍是 10:00:00。", focus: ["browser", "collector"], links: ["browser>collector"], tokens: [{ id: "late", label: "全文 10:00:00", at: "collector" }], notes: [{ at: "pg", text: "0 行 · cleared_at 10:00:02" }] },
+    { caption: "历史监听器比较：10:00:00 不晚于清空时刻 10:00:02，这一条丢掉，记一个 erased 指标。", focus: ["pg"], links: ["collector>pg"], tokens: [{ id: "late", label: "全文 10:00:00", at: "pg", state: "dropped" }], notes: [{ at: "pg", text: "仍是 0 行", tone: "ok" }] },
+    { caption: "10:01:00，C 又打开了文献 Y。它晚于清空时刻，照常记下。", focus: ["browser", "collector", "pg"], links: ["browser>collector", "collector>pg"], tokens: [{ id: "next", label: "打开 Y 10:01:00", at: "pg" }], notes: [{ at: "pg", text: "1 行 · Y", tone: "ok" }] }
+  ]}
+  guesses={[
+    { before: 4, question: "这条事件发生在清空之前、到达在清空之后。历史监听器会怎样处理它？", options: ["写进去：它是清空之后才收到的", "丢掉：它的事件时间不晚于清空时刻", "先存起来，等 C 下次打开历史页时问他"], answer: "B", explain: "比的是事件发生的时间（校正后的 derived_at），不是收到的时间。清空之前发生的打开不再进历史，清空之后的照常记；正好等于清空时刻的也丢掉。" }
+  ]}
+/>
+
+规则落在两张小表上：
+
+<CodeRef at="patra-api/patra-analytics/patra-analytics-infra/src/main/resources/db/migration/history/V20261102100000__create_history_schema.sql@8140a9d9482324670b63f00ab3c62690102196c5" lines="18-32" />
+
+```sql
+-- 改过开关或清空过历史的人才有一行；没有行 = 开着、没清空过
+CREATE TABLE history.recording_setting (
+    user_id            BIGINT      PRIMARY KEY,
+    recording_enabled  BOOLEAN     NOT NULL,
+    cleared_at         TIMESTAMPTZ,              -- 最近一次清空的时刻；没清空过为 NULL
+    updated_at         TIMESTAMPTZ NOT NULL
+);
+
+-- 单条删除的记录：挡住删除之前发生、删除之后才到的事件；2 天后由过期清理删掉
+CREATE TABLE history.deleted_entry (
+    user_id     BIGINT      NOT NULL,
+    article_id  BIGINT      NOT NULL,
+    deleted_at  TIMESTAMPTZ NOT NULL,
+    PRIMARY KEY (user_id, article_id)
+);
+```
+
+- **清空**记 `cleared_at`（服务端时钟），存在设置表里，不过期。
+- **单条删除**在删掉那一行的同一个事务里写一条删除记录。之后这一篇事件时间不晚于 `deleted_at` 的丢掉；之后真的再打开（时间更晚），照常记、重新出现在最上面。
+- **删除记录只留 2 天**：采集端点会校正事件时间，比收到时刻早 24 小时以上的按收到时刻算，那就是一次「新」的打开。所以 2 天后删除记录不再起作用，由每天的清理任务删掉。
+
+监听器里的过滤：
+
+<CodeRef at="patra-api/patra-analytics/patra-analytics-app/src/main/java/dev/patra/analytics/app/history/listener/ReadingHistoryListener.java@8140a9d9482324670b63f00ab3c62690102196c5" lines="81-93" />
+
+```java
+    for (ReadingRecord record : merged) {
+      RecordingSetting setting =
+          byUser.getOrDefault(record.userId(), RecordingSetting.defaults(record.userId()));
+      Instant deletedAt = deletions.get(record.key());
+      if (!setting.enabled()) {
+        disabled++;
+      } else if (!setting.accepts(record.readAt())
+          || (deletedAt != null && !record.readAt().isAfter(deletedAt))) {
+        erased++;
+      } else {
+        kept.add(record);
+      }
+    }
+```
+
+没有设置行的人用 `RecordingSetting.defaults`：开着、没清空过。`accepts` 要求事件时间严格晚于 `cleared_at`。
+
+这套比对有一个已知的漏洞：事件时间最多能比收到时刻晚 5 分钟，客户端时钟严重偏快时，极少数清空前的打开可能漏网，不另处理。
+
+## 其他几处取舍
+
+| 取舍 | 做法 | 为什么 |
+|---|---|---|
+| 默认开，关掉只停后续 | 设置表只存改过开关或清空过的人；关掉写 `false`，已有的历史保留 | 照 YouTube「暂停观看记录」的做法；隐私政策写明默认开启 |
+| 记哪些事件 | 只记登录、非合成的文献浏览、全文阅读、PDF 下载；被判为爬虫的照记 | 那是这个账号自己的历史，爬虫标记只用在对外数字上；模拟器的用户在 identity 里不存在，注销清理永远删不掉它们 |
+| 每人每篇一行 | 同一批里先在 Java 里按（用户，文献）合并，再按键排序后一条 `INSERT ... ON CONFLICT DO UPDATE` 写入，时间取 `GREATEST`、全文取「或」 | 一条语句里同一个键出现两次 PostgreSQL 会报错；排序让并发请求按同一顺序加锁、不死锁；`GREATEST` 让晚到的旧事件不把时间往回改 |
+| 慢也算失败 | 拿连接、每条语句、锁等待各限 500 毫秒，超时跳过这批 | 写历史不能把采集拖过门户的 6 秒超时；代价是那次打开没进历史，再打开一次就补上 |
+| 保留 12 个月 | 每天 06:40 删 12 个日历月以前的行，每批 1 万行一个短事务；接口再按时间过滤一次 | 不会长时间锁表；跑清理之前的那一天也不会多出来 |
+| 注销清空 | 接入注销清理流程，一个事务里删掉这批用户在三张表里的行 | identity 确认已注销的才删 |
+| 不存用户名 | 表里只有 `user_id` 和文献 ID，标题、刊名由门户按 ID 向 catalog 批量取 | 项目规则：用户名只存 identity；改名不用回刷，catalog 改标题也不用回刷 |
+| 不存 IP | 分析事件只存省级地区，IP 用完即丢；历史表里没有任何地址信息 | 个保法的最小必要；医生的阅读轨迹可能暴露科研方向，按接近敏感处理（规划时的保守解读，不是法律意见） |
+
+「慢也算失败」的限时用的是只在当前事务里生效的 `SET LOCAL`：
+
+<CodeRef at="patra-api/patra-analytics/patra-analytics-infra/src/main/java/dev/patra/analytics/infra/history/persistence/ReadingHistoryRepositoryAdapter.java@8140a9d9482324670b63f00ab3c62690102196c5" lines="28-34" />
+
+```java
+  /// 两条 `SET LOCAL`：只在当前事务里生效，提交或回滚后连接回到默认值。
+  @Override
+  @Transactional(propagation = Propagation.MANDATORY)
+  public void limitStatementTime() {
+    jdbc.sql("SET LOCAL statement_timeout = '500ms'").update();
+    jdbc.sql("SET LOCAL lock_timeout = '500ms'").update();
+  }
+```
+
+## 代价
+
+<Callout kind="cost">
+
+- **采集端点多了一次数据库写入**：最坏情况下写历史占 1 秒多（拿连接加两次查询加写入），只在 Kafka 和 PostgreSQL 同时很慢时才会碰到门户的 6 秒超时，那时门户本来就会丢掉这一批。
+- **写失败就丢**：历史写失败不重试，这次打开不进历史。对个人历史可以接受，换成要求不丢的数据就不行了。
+- **同一次浏览存两份**：ClickHouse 和 PostgreSQL 的删除各管各的，注销时两边都要清。
+- **开关的毫秒级窗口**：用户关掉记录的那一刻正好有一批在写，这一批可能还会写进去，不另加锁。
+- **什么时候该重新考虑**：采集量大到同步写数据库成了瓶颈，或者采集端点要对公网开放、用户 ID 不再可信时。
+
+</Callout>
+
+<Transfer
+  prompt="Patra 以后要做「搜索历史」：用户能看到自己搜过什么，能删一条、能清空、能关掉。按这篇的思路，你会怎么设计？"
+  points={[
+    { label: "两层分开", text: "个人搜索历史和全站的检索统计（无结果率、热门检索词）分开存，删个人的不动统计。" },
+    { label: "存哪、何时写", text: "按人翻页、按行删除，放 PostgreSQL；在采集「检索」事件的同一次请求里同步写，失败只丢这一次。" },
+    { label: "挡晚到", text: "清空记清空时刻，删一条记删除记录，事件时间不晚于它们的丢掉；删除记录的保留期按事件时间最多能早多久来定。" },
+    { label: "默认与保留", text: "默认开关、关掉只停后续、自动清理的期限、注销时清空，都要写进隐私政策。检索词可能比读过的文献更敏感，可以考虑更短的保留期。" }
+  ]}
+/>

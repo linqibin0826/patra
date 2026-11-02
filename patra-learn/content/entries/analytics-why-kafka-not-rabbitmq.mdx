@@ -1,0 +1,127 @@
+---
+title: 行为事件的缓冲用 Kafka，不复用 RabbitMQ
+summary: Patra 已经有 RabbitMQ 在送提醒，v0.18 的行为事件却另起了一个单节点 Kafka。原因是行为事件要的是「先存着、能重读、按保留期清理」的日志，不是「取走就删」的队列；RabbitMQ Streams 也考虑过。这篇还讲单节点 KRaft 怎么配、保留 2 天加磁盘上限，以及为什么不设认证、生产环境该开哪三层安全。
+type: decision
+difficulty: practice
+tags: [analytics, messaging]
+prerequisites: [analytics-kafka-log, msg-why-rabbitmq]
+topics: [analytics-pipeline]
+sources:
+  - version: v0.18
+    issue: PAP-165
+    pr: 373
+personalEnv: false
+---
+
+<Diagnose
+  question="Patra 已经有一个 RabbitMQ 在送提醒。行为事件要一个缓冲，有两条要求：一、ClickHouse 停几个小时，事件不丢；二、入库代码出了 bug，能倒回去把已经入过库的事件再入一遍。直接复用 RabbitMQ 的普通队列，哪一条做不到？"
+  options={["第一条：消费者停了，队列里的消息会过期丢掉", "第二条：消息被确认之后就删了，倒不回去", "两条都做不到：RabbitMQ 只能存在内存里"]}
+  answer="B"
+  ifRight="对。持久化的队列能替停机的消费者存着消息，可消息一旦被 ack 就删了，没法重读。往下读看 Patra 还比较了什么、最后怎么配。"
+  ifWrong="答案是 B。持久化队列在消费者停机时会一直存着消息，第一条做得到；但 ack 之后消息就删掉，没有「倒回去」这回事。这题考的是 Kafka 的偏移量和 RabbitMQ 的 ack 的区别，先读 Kafka 那篇。"
+  suggest="analytics-kafka-log"
+/>
+
+## 背景
+
+v0.18 要把行为数据的整条管线建起来。采集端点收下事件后，要先放进一个缓冲，再由入库消费者批量写进 ClickHouse。缓冲要满足：
+
+- **ClickHouse 停机或变慢时，采集照常收，事件不丢**。这是放缓冲的初衷。
+- **能重读**。入库逻辑改了、出了 bug，要能把一段时间内的事件重新入一遍；以后加新的消费方，也要读同一批事件。
+- **量大**。真实访客几乎为零，但流量模拟器要灌进亿级事件、跑实时压测，缓冲本身不能成为瓶颈。
+- **磁盘有上限**。压测不能把 mini 的磁盘写满。
+
+当时的现状：v0.16 起 RabbitMQ 已经在跑，送的是提醒这类业务通知（「为什么换成 RabbitMQ」那篇讲过选它的理由）。最省事的做法当然是接着用它。
+
+## 选项
+
+<DecisionOptions
+  options={[
+    { name: "复用 RabbitMQ 的普通队列", summary: "给行为事件建一个队列，入库消费者从里面取。", pros: "不用新装中间件；交换机、ack、死信都已经会用。", cons: "消息被确认就删，不能重读；多一个消费方就要多一个队列、多复制一份消息；它是为「交给一个人办」设计的，不是为留着一段时间的大批量数据设计的。" },
+    { name: "RabbitMQ Streams", summary: "RabbitMQ 自带的只追加日志，也能按偏移量重读。", pros: "还是同一个 RabbitMQ，不用新部署一套中间件。", cons: "ClickHouse 没有对应的接入，生态也弱；Kafka 表引擎、Kafka Connect 这类现成的下游方案都是围着 Kafka 建的。" },
+    { name: "单节点 Kafka（KRaft）", summary: "另起一个 Kafka，按保留期和磁盘上限清理。", pros: "只追加的日志就是它的本行，读过不删、多个消费组各读各的；行为数据与日志管线几乎都用它，资料和下游接入最多。", cons: "多一个中间件要学、要运维；JVM 进程，要给它 1 GB 内存。", chosen: true }
+  ]}
+/>
+
+RabbitMQ Streams 这条值得多说一句：后来 Patra 的入库并没有用 ClickHouse 的 Kafka 表引擎，而是自己写了批量消费者（讲入库消费者选型的那篇会展开）。但做这个决定时，Kafka 表引擎和 Kafka Connect 都是认真比较过的选项；选了 Streams，这些选项一开始就不存在了。下游方案多，是给后面的决定留余地。
+
+## 选择
+
+<Callout kind="lead" label="选了什么">
+
+行为事件的缓冲用单节点 Kafka（KRaft 模式），不复用 RabbitMQ。决定性的理由是**两种东西的模型不同**：RabbitMQ 是邮局，消息取走就没了，适合业务通知；Kafka 是只追加的日志本，按保留期一直留着、多个消费者各读各的、能倒回去重读，正是行为数据要的。
+
+</Callout>
+
+两个中间件各管各的：提醒继续走 RabbitMQ，行为事件走 Kafka。
+
+## 单节点怎么配
+
+mini 是一台机器，Kafka 跑单节点：同一个进程既当控制器（管元数据）又当 broker，不需要 ZooKeeper。
+
+- **内存**：堆 512 MB，容器上限 1 GB。堆外还有元空间、线程栈、网络缓冲，以及 Kafka 重度依赖的页缓存，留给上限兜住。
+- **两个 topic**：`events.raw`（采集端点收下的事件，3 个分区）、`events.dlq`（校验没通过的事件，留着排查，1 个分区）。
+- **保留 2 天，同时设磁盘上限**：按时间清理防止旧数据无限堆积，按大小清理防止压测把磁盘写满。「5 GB」按整个 Kafka 算，两个 topic 合计最坏约 4.4 GiB（怎么算见 Kafka 那篇）。
+- **关掉自动建 topic**：写错 topic 名直接报错，不会悄悄建出一个没有大小上限的新 topic，把前面那笔磁盘账算漏。
+
+<CodeRef at="patra-infra/docker/docker-compose.pipeline.yaml@8140a9d9482324670b63f00ab3c62690102196c5" lines="83-90" />
+
+```yaml
+      # topic 只由 kafka-init 按 kafka/init-topics.sh 建：写错名字直接报错，不会悄悄建出一个没有上限的 topic
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+      # 超出上限的部分要等「清理检查」发现、再等「删除延迟」才真正删掉文件，这段时间的写入量就是超出上限的量。
+      # 默认 5 分钟 + 1 分钟，本机不限速压测（约 390 MB/s）时峰值多出一倍多；缩到 30 秒 + 5 秒
+      KAFKA_LOG_RETENTION_CHECK_INTERVAL_MS: 30000
+      KAFKA_LOG_SEGMENT_DELETE_DELAY_MS: 5000
+      # 堆 512 MB（决策 D）；堆外的元空间、线程栈、网络缓冲和页缓存靠下面 1 GB 的容器上限兜住
+      KAFKA_HEAP_OPTS: -Xms512m -Xmx512m
+```
+
+Kafka 和 ClickHouse 放在一个独立的 compose 子栈（`pipeline`）里：内存紧张时一条命令就能整栈停掉、腾出约 3 GB，不影响核心服务。这个栈手动部署、不进 CD：CD 管的是自己构建的镜像，有状态的中间件不该跟着每次推送重启。
+
+## 不设认证
+
+Kafka 的端口只在 tailnet 与局域网里可达，不进公网入口，Patra 这一版没有给它设任何认证（PLAINTEXT）。
+
+<Quiz
+  title="你猜会怎样"
+  questions={[
+    {
+      question: "同样只在内网可达，Patra 的 RabbitMQ 设了账号密码，Kafka 却不设。区别在哪？",
+      options: ["Kafka 不支持认证，只能靠网络隔离", "RabbitMQ 默认就要求密码，Kafka 默认不要求，各用默认值", "RabbitMQ 的消息里有安全邮件的一次性令牌链接，Kafka 的事件里只有各种 ID 和省级地区", "Kafka 的数据只留 2 天，泄露了也没关系"],
+      answer: "C",
+      explain: "该不该加认证，看消息里有什么。提醒消息带着能直接登录或改密码的一次性链接，被人读到就出事；行为事件里只有用户 ID、设备 ID、文献 ID、省级地区，没有令牌和密码，IP 和原始 UA 在采集端点就丢掉了。Kafka 本身完全支持认证，见下表。"
+    }
+  ]}
+/>
+
+这个取舍只对这一版成立。业界的生产环境，Kafka 的安全分三层，三层都开：
+
+| 层 | 管什么 | 怎么开 |
+|---|---|---|
+| 加密（TLS） | 链路上的数据不被偷看 | 监听器协议从 `PLAINTEXT` 换成 `SASL_SSL`，broker 配证书，客户端信任 CA |
+| 认证（SASL） | 证明「你是谁」 | 常用 `SCRAM-SHA-512`，账号存在 KRaft 元数据里；每个服务一个账号，例如采集端点用 `analytics-collector` |
+| 授权（ACL） | 规定「你能做什么」 | 开 KRaft 的 `StandardAuthorizer`，`allow.everyone.if.no.acl.found=false`，再按最小权限授：采集端点只能写 `events.raw` 与 `events.dlq`，入库消费者只能读 `events.raw`、只能用自己的消费组 |
+
+三层是递进的：只加密不认证，谁都能连上来写；只认证不授权，任何一个服务的账号泄露，整个 Kafka 都能读写。
+
+## 代价
+
+<Callout kind="cost">
+
+- **多一个中间件**：topic、分区、偏移量、消费组、段文件清理、KRaft、两个地址，这一版都要从头学；出了问题要会查。
+- **内存预算吃紧**：ClickHouse 2 GB + Kafka 1 GB + 新的 analytics 服务 0.75 GB，按上限算 mini 上留给其他容器的余量只剩约 0.6 GB。所以 Kafka 和 ClickHouse 单独成栈，紧张时能整栈停掉。
+- **单节点没有高可用**：Kafka 挂了，采集端点返回 503，门户直接丢弃这批事件。这一版接受这个代价：事件明细丢了可以用模拟器再生成，真实访客也几乎为零。
+- **不设认证只在当前条件下成立**：事件里一旦出现令牌、邮箱这类敏感字段，或者端口暴露的范围变大，就要按上表把三层都开起来。
+
+</Callout>
+
+<Transfer
+  prompt="假设 Patra 搬到公司的云上：Kafka 跑在一个全公司内网都能访问的集群里，事件里还新增了用户的邮箱。这个决策里哪些部分还成立，哪些要重做？"
+  points={[
+    { label: "Kafka 本身仍然成立", text: "行为事件要能存着、能重读、多个消费方各读各的，这个需求没变，选 Kafka 的理由还在。" },
+    { label: "安全三层都要开", text: "端口暴露的范围变大、消息里有个人信息：开 TLS 加密、SASL 认证，每个服务一个账号，再用 ACL 只给最小权限。" },
+    { label: "先问邮箱该不该进事件", text: "埋点只收必要的字段；能用用户 ID 关联的，就别把邮箱写进每一条事件。Patra 的事件连用户名都不存。" },
+    { label: "单节点改多节点", text: "有真实用户之后丢事件不再能接受：多 broker、副本数大于 1，acks=all 才真正等到多个副本写入。" }
+  ]}
+/>

@@ -58,7 +58,7 @@ GitHub Actions 是 GitHub 提供的自动化平台。它有四个核心概念，
 
 Patra 的 ci.yml 订阅了四种事件：
 
-<CodeRef at=".github/workflows/ci.yml@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="6-18" />
+<CodeRef at=".github/workflows/ci.yml@8140a9d9482324670b63f00ab3c62690102196c5" lines="6-18" />
 
 | 事件 | 含义 |
 |---|---|
@@ -71,7 +71,7 @@ Patra 的 ci.yml 订阅了四种事件：
 
 detect-changes 是最简单的一个 job，通过它能认出一个 job 的所有部件：
 
-<CodeRef at=".github/workflows/ci.yml@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="28-45" />
+<CodeRef at=".github/workflows/ci.yml@8140a9d9482324670b63f00ab3c62690102196c5" lines="31-48" />
 
 - `runs-on`：这个 job 去哪种机器上跑。
 - `timeout-minutes`：超过这个时间就强行终止，防止卡死一直占着机器。
@@ -93,7 +93,7 @@ detect-changes 是最简单的一个 job，通过它能认出一个 job 的所�
 - `needs`：声明一个 job 要等另一些 job 完成才开工。没有 `needs` 的 job 之间同时开工。
 - `concurrency`：同一组里同一时间只留一个。Patra 的写法是：同一个 PR 又推送新提交时，**取消**还在跑的旧检查，反正它检查的是过时的代码；但推送到 main 的那次不取消。
 
-<CodeRef at=".github/workflows/ci.yml@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="15-17" />
+<CodeRef at=".github/workflows/ci.yml@8140a9d9482324670b63f00ab3c62690102196c5" lines="15-17" />
 
 <Quiz
   questions={[

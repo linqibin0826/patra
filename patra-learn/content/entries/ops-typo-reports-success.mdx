@@ -59,15 +59,15 @@ personalEnv: false
 
 第一道：开工之前校验入参。清单必须是非空的字符串数组；每个名字必须在 `services.json` 里。有一个不认识，一个字都不部署，用退出码 2 退出（和部署失败的 1 区分开）。
 
-<CodeRef at="patra-infra/cd/deploy.sh@2197850b5a624ed4dbaa97df71e144c343e28baa" lines="97-103" />
+<CodeRef at="patra-infra/cd/deploy.sh@7dc80d272f808228d2fb32897c8857f0faae94ff" lines="114-120" />
 
 第二道：部署的顺序只取 `services.json` 里的条目顺序，不再有第二份名单。请求里的服务只要在 `services.json` 里，就一定会被部署。
 
-<CodeRef at="patra-infra/cd/deploy.sh@2197850b5a624ed4dbaa97df71e144c343e28baa" lines="105-113" />
+<CodeRef at="patra-infra/cd/deploy.sh@7dc80d272f808228d2fb32897c8857f0faae94ff" lines="122-130" />
 
 这两条都有单元测试守着：混进一个打错的名字，断言脚本以 2 退出、没有执行任何部署；传非法的 JSON，同样被拒绝；请求的服务按 `services.json` 的顺序部署，一个不漏。
 
-<CodeRef at="patra-infra/cd/deploy.test.sh@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="113-138" />
+<CodeRef at="patra-infra/cd/deploy.test.sh@7dc80d272f808228d2fb32897c8857f0faae94ff" lines="119-144" />
 
 <Quiz
   title="考考自己"

@@ -110,7 +110,7 @@ Patra 的六个后端服务各有一个这样的启动类，长得几乎一样�
 
 Patra 的后端服务在 Docker 容器里跑。容器的「底座」写在 Dockerfile 里：
 
-<CodeRef at="patra-infra/docker/service.Dockerfile@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="21" />
+<CodeRef at="patra-infra/docker/service.Dockerfile@8140a9d9482324670b63f00ab3c62690102196c5" lines="21" />
 
 ```dockerfile
 FROM eclipse-temurin:25-jre
@@ -118,7 +118,7 @@ FROM eclipse-temurin:25-jre
 
 `jre` 是 Java Runtime Environment，Java 运行环境：里面有 JVM，但没有编译器。容器根本没法编译代码，它只拿到 jar、只负责跑。启动命令在同一个文件的最后一行：
 
-<CodeRef at="patra-infra/docker/service.Dockerfile@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="57" />
+<CodeRef at="patra-infra/docker/service.Dockerfile@8140a9d9482324670b63f00ab3c62690102196c5" lines="57" />
 
 ```dockerfile
 ENTRYPOINT ["java", "-XX:MaxRAMPercentage=75.0", "-DJM.LOG.PATH=/app/logs/nacos", "-DJM.SNAPSHOT.PATH=/app", "-jar", "app.jar"]

@@ -1,0 +1,146 @@
+---
+title: 对账差了 26 行：零点之后才被标记的伪装爬虫
+summary: 对账查询在 GROUP BY 之前按 first_day 过滤 session_quality，一个 23:58 开始、零点之后才被频率规则标记的伪装爬虫，那一行爬虫标记被滤掉了，会话被当成真人。聚合表里同一个键可能有好几行没合并的部分结果，条件要写在聚合之后。
+type: pitfall
+difficulty: practice
+tags: [analytics, database]
+prerequisites: [analytics-truth-reconciliation, analytics-bot-detection]
+topics: [analytics-pipeline]
+sources:
+  - version: v0.18
+    issue: PAP-171
+    pr: 373
+personalEnv: false
+---
+
+<Diagnose
+  question="session_quality 里某个会话有两行还没合并：(first_day = D 日, has_bot = 0) 和 (first_day = D+1 日, has_bot = 1)。查询写成 WHERE first_day BETWEEN D-1 AND D，再 GROUP BY session_id HAVING max(has_bot) = 0。这个会话会怎样？"
+  options={["被排除：第二行的 has_bot 是 1", "查询报错：同一个会话有两个 first_day", "通过，被当成真人会话"]}
+  answer="C"
+  ifRight="对。WHERE 在分组之前逐行生效，D+1 那一行先被滤掉了，剩下的一行 has_bot 是 0。这篇讲这件事在对账里怎么发生的。"
+  ifWrong="答案是 C。WHERE 先逐行过滤，first_day 为 D+1 的那行不在范围内，被扔掉了；分组时只剩 has_bot = 0 的那一行，HAVING 放行。爬虫怎么被频率规则标记、为什么标记有先有后，先读爬虫识别那篇。"
+  suggest="analytics-bot-detection"
+/>
+
+## 坑
+
+<Callout kind="lead" label="坑在哪">
+
+对一张「同一个键有好几行部分结果」的聚合表，在 GROUP BY 之前用 WHERE 按聚合列过滤，会把同一个键的一部分行先扔掉，聚合出来的是残缺的结果。
+
+</Callout>
+
+## 一个真实的例子
+
+v0.18 在 mini 上灌完 1 亿条后对账，读过全文人数误差 0，看过人数误差 0.001%：有 26 行对不上。原因是对账查询的 bug，不是管线算错了。
+
+事情是这样的：一个伪装成浏览器的爬虫 23:58 开始访问。它用普通 Chrome UA、跑脚本，前 30 篇和真人没有区别；要等 5 分钟内超过 30 篇，采集端点的频率规则才开始给它的事件标 `rate`，而那已经过了零点。于是这个会话的事件分成了两段：零点前的没有爬虫标记，零点后的有。
+
+「真人会话」靠 `session_quality` 判定。它是物化视图写的一张聚合表，每批写入的事件各自汇成一行：
+
+<CodeRef at="patra-api/patra-analytics/patra-analytics-infra/src/main/resources/clickhouse/V4__session_quality.sql@8140a9d9482324670b63f00ab3c62690102196c5" lines="1-17" />
+
+```sql
+-- 会话特征（入库设计 §5.4）：真人会话 = 有浏览器事件且没有爬虫事件，在查询时判定；长期保留。
+CREATE TABLE IF NOT EXISTS session_quality (
+    session_id    UUID,
+    has_client    SimpleAggregateFunction(max, UInt8),
+    has_bot       SimpleAggregateFunction(max, UInt8),
+    first_day     SimpleAggregateFunction(min, Date)
+) ENGINE = AggregatingMergeTree
+ORDER BY session_id
+SETTINGS non_replicated_deduplication_window = 1000;
+
+CREATE MATERIALIZED VIEW IF NOT EXISTS session_quality_mv TO session_quality AS
+SELECT
+    session_id,
+    source = 'client' AS has_client,
+    toUInt8(is_bot) AS has_bot,
+    toDate(derived_at, 'Asia/Shanghai') AS first_day
+FROM events;
+```
+
+这个爬虫会话在表里就有了两类行：零点前的事件写出 `first_day = D`、`has_bot = 0`，零点后的事件写出 `first_day = D+1`、`has_bot = 1`。对账查询按天跑，查 D 日时是这样写的：
+
+<CodeRef at="patra-api/patra-analytics/patra-analytics-simulator/src/main/java/dev/patra/analytics/simulator/truth/Reconciler.java@8140a9d9482324670b63f00ab3c62690102196c5" lines="26-42" />
+
+```java
+  private static final String ACTUAL_SQL =
+      """
+      SELECT article_id,
+             toUInt32(uniqExactIf(person_id, v = 1)) AS viewers,
+             toUInt32(uniqExactIf(person_id, ft = 1)) AS fulltext_readers
+      FROM (
+          SELECT article_id, session_id, person_id, max(viewed) AS v, max(fulltext) AS ft
+          FROM article_session_reads
+          WHERE day = {d:Date} AND is_synthetic = 1 AND {run}
+          GROUP BY article_id, session_id, person_id)
+      WHERE session_id IN (
+          SELECT session_id FROM session_quality
+          WHERE first_day BETWEEN {d:Date} - 1 AND {d:Date}
+          GROUP BY session_id HAVING max(has_client) = 1 AND max(has_bot) = 0)
+      GROUP BY article_id
+      HAVING viewers > 0
+      """;
+```
+
+`WHERE first_day BETWEEN {d:Date} - 1 AND {d:Date}` 只查前一天到当天的行，而且在 `GROUP BY` 之前生效。D+1 那行爬虫标记被滤掉，分组时这个会话只剩 `has_bot = 0` 的行，于是被当成了真人会话。真值那边按整个会话套规则，会话里有 `rate` 事件，整个不算，两边就差出了这几行。照这个机制推：它零点前打开过的每篇文献，在 D 日都会多算 1 个人；模拟器里的伪装爬虫只打开文献页、不读全文，所以只有「看过」受影响，这也和读过全文误差为 0 对得上。
+
+## 为什么
+
+`AggregatingMergeTree` 不在写入时把同一个键的行合成一行。每批写入各自落成一个数据片段，片段里每个会话一行部分结果；后台合并片段时，才按列上声明的函数把同一个 `session_id` 的行合起来：`has_bot` 取 max，`first_day` 取 min。合并之前，一个会话有几行、每行的 `first_day` 各是多少，取决于它的事件分在了几批里。
+
+所以 `first_day` 这一列在合并前不是「会话的第一天」，只是「这一批里这个会话的第一天」。WHERE 按这个部分值逐行筛，筛掉的可能正是带着关键信息的那一行。合并之后反而没事：两行合成 `first_day = D`、`has_bot = 1`，落在范围内，会话被正确排除。查询对不对取决于后台有没有合并完，这是最难发现的那种 bug。
+
+<Params
+  title="动手：这个爬虫会话会不会被当成真人"
+  guess={{ question: "假设后台已经把这个会话的两行合并成了一行，同一条对账查询（日期条件仍写在 WHERE 里）会怎样？", options: ["被正确排除", "仍被当成真人会话"], answer: "A", explain: "合并后只有一行：first_day 取 min 是 D，has_bot 取 max 是 1。这一行在日期范围内，HAVING max(has_bot) = 0 不成立，会话被排除。bug 只在没合并时出现。" }}
+  controls={[
+    { type: "switch", id: "merged", label: "后台已把两行合并成一行", default: false },
+    { type: "switch", id: "having", label: "日期条件改到聚合之后（HAVING min(first_day) …）", default: false }
+  ]}
+  cases={[
+    { when: { merged: true }, results: [{ label: "参与分组的行", value: "(D, has_bot = 1)", tone: "ok" }, { label: "max(has_bot)", value: "1", tone: "ok" }], verdict: { tone: "ok", head: "被排除，但只是碰巧。", text: "合并时机由 ClickHouse 自己定，查询不能指望它已经合并。" } },
+    { when: { having: true }, results: [{ label: "参与分组的行", value: "两行都在", tone: "ok" }, { label: "min(first_day) / max(has_bot)", value: "D / 1", tone: "ok" }], verdict: { tone: "ok", head: "被排除。", text: "先分组、合出整个会话的值，再按日期筛，和合没合并无关。" } },
+    { results: [{ label: "参与分组的行", value: "只剩 (D, has_bot = 0)", tone: "bad" }, { label: "max(has_bot)", value: "0", tone: "bad" }], verdict: { tone: "bad", head: "被当成了真人会话。", text: "D+1 那行在分组前就被 WHERE 扔掉了，爬虫标记跟着丢了。" } }
+  ]}
+/>
+
+<Callout kind="insight" label="怎么认出它">
+
+按上面的机制，这类 bug 的样子是：不一致的行很少、误差极小（这次是 0.001%），ClickHouse 只会比真值多、不会少，只出现在爬虫会碰到的口径上（这次只有「看过」）。碰到这种「方向一致、量极小」的差，先怀疑「某个会话本该被排除却没被排除」，把多出来的那几行对应的会话找出来，看它们是不是跨过了午夜。
+
+</Callout>
+
+## 线上查询为什么不受影响
+
+同样的 `session_quality` 也被线上用来判真人会话，可线上的查询没有踩这个坑：
+
+- **计数接口**（「N 人看过」）根本不按日期过滤 `session_quality`，只按会话 ID 取这几篇文献涉及的会话，同一个会话的所有行都参与分组。
+- **热读与看过还看了**按 `first_day` 只设下限（窗口起点再往前一天），不设上限。会话的爬虫标记只会出现在它后来的事件里，晚于窗口起点的行全都保留，标记丢不了。
+
+对账查询之所以会踩，是它为了按天控制内存加了上限，正好切掉了会话「后面」的那一行。
+
+## 怎么避开
+
+对聚合表做判定，要先把同一个键的行聚合完，再按聚合后的值筛。WHERE 里只放对一个键的所有行都成立的条件，最常见的就是按键本身筛：
+
+- **按会话 ID 限定范围**：像计数接口那样，先从当天的 `article_session_reads` 取出涉及的会话 ID，`session_quality` 只按 `session_id IN (…)` 过滤再分组。范围照样收窄，同一个会话的所有行都在。
+- **日期条件挪到聚合之后**：写成 `HAVING min(first_day) BETWEEN {d:Date} - 1 AND {d:Date} AND max(has_client) = 1 AND max(has_bot) = 0`。结果对，但 WHERE 里没了范围，要分组的会话变多，对账这种有 1 GiB 上限的查询要和上一条配合用。
+- **只设下限**：像热读那样只写 `first_day >=`，会话后面的行都参与分组。
+
+<Callout kind="warn">
+
+`FINAL` 也能在查询时把同一个键的行先合并再筛，结果是对的，可它要在查询时现做合并，大表上很慢、很吃内存；对账这种按天跑、每条查询有 1 GiB 上限的场景，先按会话 ID 收窄范围更合适。另外，改查询时要顺带构造一个跨午夜才被标记的会话写成测试，这种情况靠随机数据很难稳定碰到。
+
+</Callout>
+
+<Transfer
+  prompt="一张 SummingMergeTree 表按 user_id 累计每个用户的消费金额 total，每笔订单写入一行。你要查累计消费超过 1000 元的用户，有人写成 SELECT user_id, sum(total) FROM t WHERE total > 1000 GROUP BY user_id。会出什么问题？怎么改？"
+  points={[
+    { label: "漏掉的用户", text: "合并前一个用户有很多行，每行只是一笔订单的金额；WHERE total > 1000 逐行筛，消费多笔小额、单笔都不到 1000 的用户整个被漏掉。" },
+    { label: "结果还会算少", text: "就算留下来的用户，也只加了单笔超过 1000 的那几行，累计金额偏小。" },
+    { label: "随合并漂移", text: "后台合并后行变少、每行金额变大，同一条查询结果会变，越晚查漏得越少，很难复现。" },
+    { label: "改法", text: "先聚合再筛：SELECT user_id, sum(total) AS s FROM t GROUP BY user_id HAVING s > 1000。" }
+  ]}
+/>

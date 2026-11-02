@@ -1,0 +1,189 @@
+---
+title: 入库自己写批量消费者，不用 Kafka 表引擎或 Kafka Connect
+summary: 把 Kafka 里的行为事件写进 ClickHouse，业界常见三种做法：ClickHouse 的 Kafka 表引擎、Kafka Connect 的 ClickHouse Sink、自己写消费者。Patra 选了自己写：一批最多 5 万条或等满 1 秒、写成后手动提交偏移量、消费滞后自己算；投递语义是至少一次加去重，不是恰好一次。
+type: decision
+difficulty: practice
+tags: [analytics, messaging]
+prerequisites: [analytics-kafka-log, analytics-mergetree-parts]
+topics: [analytics-pipeline]
+sources:
+  - version: v0.18
+    issue: PAP-168
+    pr: 373
+personalEnv: false
+---
+
+<Diagnose
+  question="一个 Kafka 消费者把一批事件写进了 ClickHouse，还没来得及提交偏移量，进程就崩了。重启之后，这批事件会怎样？"
+  options={["这批事件丢了，因为消费者崩溃时它们还在内存里", "Kafka 知道这批已经写过，会自动从下一批开始", "这批事件至少有一部分会被再读出来、再写一次"]}
+  answer="C"
+  ifRight="对。Kafka 只认已提交的偏移量，没提交就从上次提交处重读。这篇讲 Patra 为什么接受这种重复、自己写消费者。"
+  ifWrong="答案是 C。消费组从上次提交的偏移量往后读，写成了却没提交的那批会被重读一遍。Kafka 不知道你写没写库，它只记偏移量。这题考的是消费组与偏移量，先读 Kafka 那篇。"
+  suggest="analytics-kafka-log"
+/>
+
+## 背景：事件在 Kafka 里，要批量进 ClickHouse
+
+v0.18 的行为数据管线里，采集端点把校验、富化过的事件写进 Kafka 的 `events.raw`，坏事件写进 `events.dlq`。下一步要有人把它们读出来，写进 ClickHouse 的明细表 `events`。
+
+这一步有几条硬约束：
+
+- **只能批量写**。ClickHouse 每写一次，就在每张受影响的表上各多一个数据片段（part）；写得太碎，后台合并跟不上，会报 `TOO_MANY_PARTS`。一条一写是不行的。
+- **不能丢**。ClickHouse 停机或变慢时，事件要能在 Kafka 里等着（`events.raw` 保留 2 天），恢复后补齐。
+- **出问题要看得见**。卡在哪、落后多少、哪条坏数据被拒，要能在指标和日志里查到。
+- **机器小**。所有服务跑在作者家里的一台 mini 上，内存很紧。
+
+## 选项
+
+业界把 Kafka 接到 ClickHouse，常见三种做法：
+
+<DecisionOptions
+  options={[
+    { name: "Kafka 表引擎 + 物化视图", summary: "ClickHouse 自己当消费者：建一张 ENGINE = Kafka 的表，物化视图从它读、写进真正的表。", pros: "不用写代码，也不用多部署服务。", cons: "至少一次；写成功和提交偏移量之间崩溃会重复。消费线程在 ClickHouse 后台，偏移量、错误、重试都藏在内部，失败只出现在 ClickHouse 日志里；坏消息的处理能力弱。" },
+    { name: "Kafka Connect + ClickHouse Sink", summary: "另起一套 Connect 集群，由官方 Sink 插件负责写入。", pros: "可以开「恰好一次」：每批的偏移量范围记在 ClickHouse 的 KeeperMap 里，重试时按范围认出是同一批。", cons: "要多部署一套 JVM 服务（Connect worker），mini 的内存扛不住。" },
+    { name: "自己写消费者", summary: "在 patra-analytics 里用 spring-kafka 批量拉取，自己写 ClickHouse。", pros: "批次大小、重试、坏消息、指标全在自己手里，出问题能查。", cons: "代码要自己写、自己测；投递语义是至少一次，重复要靠去重兜底。", chosen: true }
+  ]}
+/>
+
+三种做法顺利的时候看不出差别，差别出在「写成功了、偏移量还没提交」那一刻崩溃：
+
+<Compare
+  title="写成功、提交偏移量之前崩溃，三种做法各会怎样"
+  failureLabel="在「写进 ClickHouse」之后、「提交偏移量」之前崩溃"
+  variants={[
+    { label: "Kafka 表引擎", steps: ["ClickHouse 后台线程从 Kafka 拉一批", "物化视图把这批写进 events", "提交偏移量"], results: [{ label: "events", value: "这批一份", tone: "ok" }], verdict: { tone: "ok", head: "顺利。", text: "不用写一行代码，事件就进了表。" }, failure: { after: 2, results: [{ label: "events", value: "这批写了两次", tone: "bad" }, { label: "哪里能看到", value: "只有 ClickHouse 日志", tone: "wait" }], verdict: { tone: "bad", head: "重复，而且不好查。", text: "重启后从上次提交处重读，这批再写一遍；整个过程在 ClickHouse 内部，应用这边没有指标。" } } },
+    { label: "Kafka Connect（恰好一次）", steps: ["Connect worker 拉一批", "查 KeeperMap：这段偏移量写过没有", "写进 ClickHouse，同时记下这段偏移量", "提交偏移量"], results: [{ label: "events", value: "这批一份", tone: "ok" }], verdict: { tone: "ok", head: "顺利。", text: "写入和「记下这批的偏移量」是一件事。" }, failure: { after: 3, results: [{ label: "events", value: "这批一份", tone: "ok" }, { label: "代价", value: "多一套 Connect 集群", tone: "wait" }], verdict: { tone: "ok", head: "不重复。", text: "重读同一段偏移量时，先查到它写过，直接跳过。" } } },
+    { label: "自己写（Patra）", steps: ["spring-kafka 拉一批：最多 5 万条，或等满 1 秒", "整批一次写入，带批次去重令牌", "写成后手动提交偏移量"], results: [{ label: "events", value: "这批一份", tone: "ok" }], verdict: { tone: "ok", head: "顺利。", text: "每秒最多一批，片段数受控。" }, failure: { after: 2, results: [{ label: "events", value: "可能有一部分重复", tone: "wait" }, { label: "对外数字", value: "不受影响", tone: "ok" }], verdict: { tone: "ok", head: "有重复，但被兜住。", text: "重读时批次边界可能变了，令牌对不上，会写出部分重复；明细表按 event_id 去重、汇总表只存 max / min，对外的人数不变。" } } }
+  ]}
+/>
+
+## 选择
+
+<Callout kind="lead" label="选了什么">
+
+自己写批量消费者。决定性的理由是**看得见、管得住**：批次多大、失败怎么重试、坏消息去哪、落后多少，都在应用代码里，有指标、有测试；Connect 虽然能做到恰好一次，但 mini 养不起一套额外的 JVM 集群。
+
+</Callout>
+
+### 「恰好一次」是怎么做到的：只讲原理，不部署
+
+Kafka Connect 的恰好一次，核心是把「写入」和「记下这批的偏移量」做成同一件事：ClickHouse 收到一批时，先看这段偏移量范围是不是已经写过，写过就跳过。
+
+Patra 的批次去重令牌是同一个思路的轻量版：令牌就是这批的偏移量范围，ClickHouse 在去重窗口内认出同一个令牌，就丢弃这一批。区别有两条：窗口有限（记最近 1,000 次写入）；崩溃后重新拉取时，批次边界可能和上次不一样，令牌就对不上了。所以 Patra 是**至少一次 + 去重**，不是恰好一次，重复靠下游两道去重兜底（见「批量写入与块令牌去重」那篇）。
+
+### 消费者怎么设
+
+<CodeRef at="patra-api/patra-analytics/patra-analytics-adapter/src/main/java/dev/patra/analytics/adapter/ingest/config/IngestListenerConfiguration.java@8140a9d9482324670b63f00ab3c62690102196c5" lines="38-58" />
+
+```java
+    Map<String, Object> config = new HashMap<>(bootConsumerFactory.getConfigurationProperties());
+    config.put(ConsumerConfig.GROUP_ID_CONFIG, groupId);
+    config.put(ConsumerConfig.MAX_POLL_RECORDS_CONFIG, 50_000);
+    config.put(ConsumerConfig.FETCH_MIN_BYTES_CONFIG, 1_048_576);
+    config.put(ConsumerConfig.FETCH_MAX_WAIT_MS_CONFIG, 1_000);
+    config.put(ConsumerConfig.MAX_PARTITION_FETCH_BYTES_CONFIG, 16_777_216);
+    config.put(ConsumerConfig.FETCH_MAX_BYTES_CONFIG, 67_108_864);
+    config.put(ConsumerConfig.MAX_POLL_INTERVAL_MS_CONFIG, 600_000);
+    config.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
+    config.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, false);
+    ConcurrentKafkaListenerContainerFactory<String, String> factory =
+        new ConcurrentKafkaListenerContainerFactory<>();
+    factory.setConsumerFactory(
+        new DefaultKafkaConsumerFactory<>(
+            config, new StringDeserializer(), new StringDeserializer()));
+    factory.setBatchListener(true);
+    factory.setConcurrency(1);
+    factory.getContainerProperties().setAckMode(AckMode.MANUAL);
+    ExponentialBackOff backOff = new ExponentialBackOff(INITIAL_BACKOFF_MS, 2.0);
+    backOff.setMaxInterval(MAX_BACKOFF_MS);
+    factory.setCommonErrorHandler(new DefaultErrorHandler(backOff));
+```
+
+逐条看它们为什么这样设：
+
+| 设置 | 值 | 为什么 |
+|---|---|---|
+| `max.poll.records` | 50,000 | 一批最多 5 万条 |
+| `fetch.min.bytes` / `fetch.max.wait.ms` | 1 MiB / 1000 ms | broker 攒够 1 MiB 或等满 1 秒才返回：流量小时也是每秒一批，不会一条一批 |
+| `max.partition.fetch.bytes` / `fetch.max.bytes` | 16 MiB / 64 MiB | 默认每个分区一次只拉 1 MiB，拉不到 5 万条 |
+| `max.poll.interval.ms` | 600,000 | 一批的写入（包括被拒时的二分重写）要在 10 分钟内完成，否则消费组认为它死了、触发重平衡 |
+| `enable.auto.commit` + `AckMode.MANUAL` | 关 + 手动 | 写成功才提交；写失败不提交，下次重来 |
+| `auto.offset.reset` | `earliest` | 新的消费组从头读，Kafka 里已有的 2 天不丢 |
+| 并发 | 1 | 单实例，`events.raw` 的 3 个分区由一个线程轮流拉 |
+| 错误处理 | 指数退避，1 秒起、上限 30 秒、不限次数 | ClickHouse 恢复前，消费就停在原地等 |
+
+「写成才提交」落在监听方法里，就是先交给入库用例，用例正常返回才 `acknowledge()`：
+
+<CodeRef at="patra-api/patra-analytics/patra-analytics-adapter/src/main/java/dev/patra/analytics/adapter/ingest/mq/EventIngestListener.java@8140a9d9482324670b63f00ab3c62690102196c5" lines="68-80" />
+
+```java
+  private void ingest(
+      EventStream stream, List<ConsumerRecord<String, String>> records, Acknowledgment ack) {
+    if (!records.isEmpty()) {
+      String topicId = topicIds.topicId(records.getFirst().topic());
+      commandBus.handle(
+          IngestBatchCommand.of(
+              stream,
+              records.stream()
+                  .map(r -> IngestRecord.of(topicId, r.partition(), r.offset(), r.value()))
+                  .toList()));
+    }
+    ack.acknowledge();
+  }
+```
+
+写入抛异常时，`acknowledge()` 根本走不到；错误处理器按退避用内存里的同一批重新调用这个方法。
+
+### 消费滞后自己算
+
+「落后多少」是入库最重要的指标。Kafka 客户端自带一个 `records-lag-max`，但它是在拉取时采样的：ClickHouse 宕机、消费停住不拉取的那段时间，这个值变成 NaN，正好在最需要的时候看不到。
+
+所以 Patra 每 30 秒用 AdminClient 直接对比「消费组已提交的偏移量」和「分区末端的偏移量」：
+
+<CodeRef at="patra-api/patra-analytics/patra-analytics-infra/src/main/java/dev/patra/analytics/infra/ingest/topic/KafkaIngestLagGauge.java@8140a9d9482324670b63f00ab3c62690102196c5" lines="87-90" />
+
+```java
+      for (TopicPartition partition : partitions) {
+        OffsetAndMetadata done = committed.get(partition);
+        long position = done != null ? done.offset() : earliest.getOrDefault(partition, 0L);
+        long lag = Math.max(0, latest.getOrDefault(partition, position) - position);
+```
+
+已提交偏移量只在写成后才前进，所以消费停住时，末端照样往前走，差值就一直涨，面板上一眼能看出来。
+
+<Quiz
+  questions={[
+    {
+      question: "ClickHouse 宕机了一个小时。这一个小时里，入库消费者在做什么？",
+      options: ["停在原地按退避重试同一批，不提交偏移量，事件在 Kafka 里等着", "跳过写不进去的批次继续往后读，等 ClickHouse 恢复后再回头补", "把写不进去的事件全部转进 events.dlq，免得 Kafka 被写满"],
+      answer: "A",
+      explain: "连不上属于「重试会好」的失败：不提交偏移量，错误处理器按 1 秒到 30 秒的退避无限重试同一批。Kafka 保留 2 天，一个小时的事件都还在，恢复后接着写。只有 ClickHouse 明确拒收的坏数据才进 dlq 表。"
+    },
+    {
+      question: "ClickHouse 宕机期间，面板上的消费滞后会怎样？",
+      options: ["变成空白，因为消费者不拉取就算不出滞后", "保持宕机前的值不动，恢复后才更新", "一直往上涨，因为已提交偏移量不动、末端还在前进"],
+      answer: "C",
+      explain: "Patra 的滞后是「末端 − 已提交」，靠 AdminClient 定时查，和消费者拉不拉取无关。客户端自带的 records-lag-max 才会在这时变成 NaN。"
+    }
+  ]}
+/>
+
+## 代价
+
+<Callout kind="cost">
+
+- **代码要自己写、自己测**：令牌、二分定位坏行、退避重试、滞后指标，另外两种做法里，这部分活由 ClickHouse 或 Connect 插件承担。
+- **只有至少一次**：崩在写成和提交之间，会写出部分重复，必须有下游去重兜底：明细表 `ReplacingMergeTree` 按 `event_id` 去重、数条数一律 `uniqExact(event_id)`、汇总表只存 `max` / `min`。
+- **单实例单线程**：`events.raw` 的 3 个分区由一个线程轮流拉、一次写一批，入库的吞吐上限就由这一个线程决定。
+
+</Callout>
+
+<Transfer
+  prompt="换个场景：公司已经有一套运维良好的 Kafka Connect 集群，要把计费事件写进 ClickHouse，财务要求每一笔都不多不少。你还会自己写消费者吗？为什么？"
+  points={[
+    { label: "约束变了", text: "Patra 否决 Connect 是因为多一套 JVM 集群 mini 养不起；集群已经在、有人运维，这条理由就不成立了。" },
+    { label: "恰好一次是硬需求", text: "计费数据重复就是多收钱，「至少一次 + 查询时去重」不够，Connect 按偏移量范围认出同一批的做法正好对口。" },
+    { label: "看得见的问题要另补", text: "用 Connect 也要能看到滞后、错误和被拒的消息，可以接 Connect 自己的指标和死信配置。" },
+    { label: "汇总也要幂等", text: "即使写入恰好一次，下游的物化视图和查询仍然按幂等的方式设计，多一道保险。" }
+  ]}
+/>

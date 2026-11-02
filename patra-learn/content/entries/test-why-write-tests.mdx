@@ -66,7 +66,7 @@ void should_advance_and_set() {
 
 Patra 不靠人记得去跑测试。每个合并到 `main` 的 Pull Request（一次「请把我的改动合进去」的申请）都会触发 CI（持续集成：一台云上的机器自动把测试跑一遍）。
 
-<CodeRef at=".github/workflows/ci.yml@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="1-12" />
+<CodeRef at=".github/workflows/ci.yml@8140a9d9482324670b63f00ab3c62690102196c5" lines="1-12" />
 
 读开头几行注释就能看出：CI 先判断这次改了哪部分（`detect-changes`），再只跑受影响的那部分测试，最后汇总成一个叫 `required-check` 的检查。它是分支保护唯一要求必须通过的检查：红了，就合并不了。
 

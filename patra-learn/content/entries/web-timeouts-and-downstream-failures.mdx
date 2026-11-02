@@ -34,11 +34,11 @@ personalEnv: false
 
 注意：Patra 网关的读超时是**空闲超时**，不是总时长。只要下游每隔一会儿还在发数据，连接就不会断。所以一个很大的文件慢慢下载，只要不停，几个小时都不会被掐断。
 
-<CodeRef at="patra-api/patra-gateway-boot/src/main/resources/application.yml@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="33-44" />
+<CodeRef at="patra-api/patra-gateway-boot/src/main/resources/application.yml@8140a9d9482324670b63f00ab3c62690102196c5" lines="33-44" />
 
 不同的调用目标，超时可以不同。网关每个带令牌的请求都要先向 identity 查一次会话，这一跳对所有请求都在等，所以给得很短：
 
-<CodeRef at="patra-api/patra-gateway-boot/src/main/resources/application.yml@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="152-158" />
+<CodeRef at="patra-api/patra-gateway-boot/src/main/resources/application.yml@8140a9d9482324670b63f00ab3c62690102196c5" lines="164-170" />
 
 连接 1 秒，读 2 秒。identity 一旦卡住，几秒内请求就变成 503，而不是让所有人一起挂着。
 

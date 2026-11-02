@@ -1,0 +1,201 @@
+---
+title: 开环压测与 coordinated omission：压测工具不能跟着服务一起变慢
+summary: 闭环压测里，服务一慢，工具发得也慢，压力自己降下来，慢请求也少记了，这叫 coordinated omission。Patra 的模拟器按开环发压：会话按指数间隔到达、一个会话一个虚拟线程，在途上限满了就排队并把排队时间算进延迟，开跑前先补上已经在进行的会话。
+type: concept
+difficulty: advanced
+tags: [analytics, testing]
+prerequisites: [analytics-traffic-models, web-timeouts-and-downstream-failures]
+topics: [analytics-pipeline]
+sources:
+  - version: v0.18
+    issue: PAP-171
+    pr: 373
+personalEnv: false
+---
+
+<Diagnose
+  question="一个压测工具固定开 100 个用户，每个用户发一个请求、等到响应再发下一个。服务平时 50 毫秒响应，压测中途卡顿，每个请求变成 2 秒。工具这时每秒发出的请求数会怎样？"
+  options={["不变，还是 100 个用户在发", "翻倍，用户会重试", "掉到原来的约四十分之一"]}
+  answer="C"
+  ifRight="对。每个用户都在等响应，响应变慢 40 倍，发出的速率就掉 40 倍。这篇讲为什么这会让压测结果失真，以及 Patra 怎么避开。"
+  ifWrong="答案是 C。每个用户要等上一个响应回来才发下一个，平时一秒能发 20 个，现在一秒只能发半个。请求发出去后要等多久、慢了会怎样，是读懂这篇的前提。"
+  suggest="web-timeouts-and-downstream-failures"
+/>
+
+<Callout kind="lead">
+
+开环压测按设定的速率产生新请求，不管服务响应快慢；服务跟不上时请求堆积、延迟上升，问题暴露出来。闭环压测则让工具等服务，服务一慢，压力和测量一起缩水。
+
+</Callout>
+
+## 两种发压方式，平时看不出区别
+
+压测工具产生请求有两种方式：
+
+- **闭环**（closed loop）：固定 N 个虚拟用户，每个发一个请求、等到响应、再发下一个。JMeter 默认的线程组就是这样。
+- **开环**（open loop）：按设定的速率产生新的用户或请求，到点就发，不看上一个回没回来。
+
+服务健康的时候，两种方式发出的速率和测到的延迟几乎一样。差别只在服务变慢的时候才出现：
+
+<Compare
+  title="服务中途变慢 40 倍，两种压测各看到什么"
+  failureLabel="在第 2 步之后服务开始变慢"
+  variants={[
+    { label: "闭环：100 个用户轮流发", steps: ["100 个虚拟用户就位", "每人发一个请求，等响应回来", "收到响应后再发下一个", "按收到的响应统计延迟"], results: [{ label: "发出速率", value: "每秒 2,000 个", tone: "ok" }, { label: "p99 延迟", value: "约 50 毫秒", tone: "ok" }], verdict: { tone: "ok", head: "健康时看起来一切正常。", text: "服务健康时两种方式没有区别。" }, failure: { after: 2, results: [{ label: "发出速率", value: "掉到每秒 50 个", tone: "bad" }, { label: "p99 延迟", value: "只记到少数慢请求", tone: "bad" }], verdict: { tone: "bad", head: "压力和测量一起缩水。", text: "用户都卡在等响应，本该在卡顿期间发出的请求根本没发，也就没有被记下来。报告里慢请求的占比被严重低估。" } } },
+    { label: "开环：按速率产生请求", steps: ["设定目标速率：每秒 2,000 个", "到点就产生新请求，不等上一个", "请求发给服务，响应回来就记", "按每个请求从计划发出到收到响应统计延迟"], results: [{ label: "发出速率", value: "每秒 2,000 个", tone: "ok" }, { label: "p99 延迟", value: "约 50 毫秒", tone: "ok" }], verdict: { tone: "ok", head: "健康时看起来一切正常。", text: "服务健康时两种方式没有区别。" }, failure: { after: 2, results: [{ label: "发出速率", value: "仍是每秒 2,000 个", tone: "ok" }, { label: "p99 延迟", value: "飙到数秒并持续上涨", tone: "bad" }], verdict: { tone: "ok", head: "问题暴露出来了。", text: "请求照样按速率到来，服务处理不完就堆积，延迟曲线一路往上。这正是真实用户会遇到的情况。" } } }
+  ]}
+/>
+
+## coordinated omission：工具和服务「商量好」少记了
+
+闭环的问题业界叫 **coordinated omission**（协同遗漏）：工具在等服务的那段时间里，本该发出的请求一个都没发，于是也没有被测量。工具和服务像是商量好了，把最难看的那段数据一起略掉。
+
+举个算账的例子：服务卡住 10 秒，闭环工具的 100 个用户每人只记下 1 个「10 秒」的慢请求，一共 100 个；可按原来的速率，这 10 秒里本该有 2 万个请求到来，每个都要排在卡顿后面。报告里慢请求是 100 个，真实用户感受到的是 2 万个。
+
+真实网站是开环的：读者不会因为你的服务慢了就晚点来。所以 Patra 的模拟器在实时压测时用开环。
+
+## 会话按指数间隔到达
+
+模拟器的发压单位是**会话**而不是单个请求：一个读者来访，按马尔可夫链走完几页，每页按真实的停留时间睡一会儿再发下一批事件（造流量那篇讲过模型）。会话的到达是泊松过程，速率 λ（会话/秒）= 目标事件速率 ÷ 每会话平均事件数；平均数在启动时用固定种子抽 1 万个会话（含爬虫）实测。
+
+泊松过程里相邻两次到达的间隔服从指数分布，抽样的写法是 `-ln(1 - U) / λ`，U 是 0～1 的均匀随机数。每到一个时刻，就起一个虚拟线程去重放这个会话：
+
+<CodeRef at="patra-api/patra-analytics/patra-analytics-simulator/src/main/java/dev/patra/analytics/simulator/live/LiveRunner.java@8140a9d9482324670b63f00ab3c62690102196c5" lines="173-192" />
+
+```java
+  /// 一级速率：按指数分布的间隔产生会话，到点就起一个虚拟线程。
+  ///
+  /// @param step 速率与时长
+  /// @param random 随机源
+  private void arrive(RateStep step, SplittableRandom random) {
+    double lambda = step.eventsPerSecond() / meanEvents;
+    long end = System.nanoTime() + step.length().toNanos();
+    long next = System.nanoTime();
+    while (true) {
+      next += (long) (-Math.log(1 - random.nextDouble()) / lambda * NANOS_PER_SECOND);
+      if (next >= end) {
+        return;
+      }
+      long wait = next - System.nanoTime();
+      if (wait > 0) {
+        LockSupport.parkNanos(wait);
+      }
+      start(random.split());
+    }
+  }
+```
+
+注意 `next += …`：下一个到达时刻是在**计划时间线**上累加的，不是「现在 + 间隔」。
+
+<Quiz
+  title="你猜"
+  questions={[
+    {
+      question: "调度线程某一次被操作系统耽搁，晚醒了 300 毫秒。这之后的会话到达会怎样？",
+      options: ["整体往后推 300 毫秒，之后照原间隔继续", "已经到点的会话立刻接连发出，之后回到原计划", "已经过期的几个会话被直接跳过不发"],
+      answer: "B",
+      explain: "next 是在计划时间线上累加的，晚醒以后算出的 wait 是负数，不再睡，直接 start，直到追上计划。总的到达数和速率都不受影响。如果写成「现在 + 间隔」，每次耽搁都会让后面整体后移，速率悄悄变低，这就又是一种闭环。"
+    }
+  ]}
+/>
+
+每个会话一个虚拟线程：会话大部分时间在睡（两页之间中位 25 秒），平台线程一个要占约 1 MB 栈，成千上万个同时睡的会话撑不住；虚拟线程睡着时不占平台线程，成本低到可以一个会话一个。会话内部，每批事件睡到「会话开始时刻 + 计划偏移」再发：上一个请求回来得晚了，下一批到点就马上发，不会把后面的计划整体推迟。
+
+## 在途上限：满了就排队，排队时间算进延迟
+
+开环也不能无限并发。客户端的连接、端口、内存都有限，所以同时在途的请求数有个上限（默认 512），用一个公平的信号量实现：拿到许可才发，发完归还，拿不到就排队。
+
+关键是**计时从哪里开始**：
+
+<CodeRef at="patra-api/patra-analytics/patra-analytics-simulator/src/main/java/dev/patra/analytics/simulator/live/CollectorClient.java@8140a9d9482324670b63f00ab3c62690102196c5" lines="67-97" />
+
+```java
+  public SendOutcome send(String body, int eventCount) {
+    int lastStatus = -1;
+    for (int attempt = 1; attempt <= maxAttempts; attempt++) {
+      long start = System.nanoTime();
+      int status;
+      String response = "";
+      try {
+        permits.acquire();
+        try {
+          HttpResponse<String> reply =
+              http.send(
+                  HttpRequest.newBuilder(endpoint)
+                      .timeout(requestTimeout)
+                      .header("Content-Type", "application/json")
+                      .POST(HttpRequest.BodyPublishers.ofString(body))
+                      .build(),
+                  HttpResponse.BodyHandlers.ofString());
+          status = reply.statusCode();
+          response = reply.body();
+        } finally {
+          permits.release();
+        }
+      } catch (IOException e) {
+        status = -1;
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+        stats.uncertain(eventCount);
+        return new SendOutcome.Failed(-1, "被中断");
+      }
+      stats.request(status, System.nanoTime() - start, eventCount);
+      lastStatus = status;
+```
+
+`start` 在 `permits.acquire()` **之前**取。服务变慢时，512 个许可都被慢请求占着，新请求在信号量上排队；这段排队时间计进了延迟。如果把计时挪到拿到许可之后，在途上限本身就成了一个隐藏的闭环：服务一慢，「真正发出去」的速率被上限卡住，测到的延迟只是服务处理那一段，排队的痛苦被藏了起来，coordinated omission 又回来了。
+
+其余的发送规则：
+
+- 503、其他 5xx、超时、连接错误按指数退避重试（200 毫秒起翻倍，封顶 5 秒，最多 5 次），请求体不变，`event_id` 也不变，重复由管线去重。
+- 400、413 这类 4xx 不重试，直接记失败：合成事件被拒说明模拟器自己造错了。
+- 重试用尽仍没拿到 202 的事件记为「结果不明」：超时的请求可能其实被服务收下了，对账时要单独处理（见真值对账那篇）。
+
+## 预热：开跑前补上已经在进行的会话
+
+开环还有一个启动问题。真实网站任何时刻都有一批「进行到一半」的会话；而压测从零在线开始，开头只有刚到达的会话在发第一批事件，要等最长的会话走完一轮，在线会话的数量和进度分布才稳定下来。声明身份的爬虫一个会话最多 300 篇、每篇最多隔 5 秒，最长约 25 分钟。模拟器的设计文档里记了一个实现阶段的现象：在作者的笔记本上试跑、不预热时，头几秒的速率只有目标的约 15%。这是本机试跑时的观察，不是在 mini 上压测的实测结果。
+
+所以开跑前先预热：按第一级速率，在过去 30 分钟里按泊松过程补上「已经开始」的会话，每个会话只发还没到期的请求。已经过去的请求不发，也不进真值。
+
+<CodeRef at="patra-api/patra-analytics/patra-analytics-simulator/src/main/java/dev/patra/analytics/simulator/live/LiveRunner.java@8140a9d9482324670b63f00ab3c62690102196c5" lines="200-217" />
+
+```java
+  private void warmUp(RateStep first, SplittableRandom random) {
+    Instant now = clock.instant();
+    long count = Math.round(first.eventsPerSecond() / meanEvents * WARMUP_WINDOW.toSeconds());
+    int alive = 0;
+    for (long i = 0; i < count; i++) {
+      SplittableRandom child = random.split();
+      Instant start = now.minusMillis(child.nextLong(WARMUP_WINDOW.toMillis()));
+      Person human = online.acquire(child);
+      SimSession session = mix.next(start, child, online.nextFreshIndex(), human);
+      if (session.events().stream().noneMatch(e -> !e.sentAt().isBefore(now))) {
+        online.release(human);
+        continue;
+      }
+      alive++;
+      launch(session, human, child, true);
+    }
+    LOG.log(System.Logger.Level.INFO, "预热：补上 {0} 个进行中的会话", alive);
+  }
+```
+
+开始时刻在过去 30 分钟里均匀撒（泊松过程在一段时间里的到达时刻是均匀的），已经全部发完的会话直接丢掉，剩下的就是「此刻还在线」的那些。这样第一秒起，在线会话的数量与进度就和稳态一样。`--no-warm-up` 可以关掉。
+
+还有两处细节也是为了不把收尾混进结果：开始与停止产生会话的时刻写进 `latency.json`，报告的速率只在这个窗口里算；停发后最多等 5 分钟让在线会话走完，到点还没走完的就地截断，已送达的部分照常进真值。
+
+## 新鲜度：落后多少秒，而不是落后多少条
+
+压测要回答「管线跟不跟得上」。入库消费者自己报的消费滞后是「落后多少**条**」，可对读者有意义的是「落后多少**秒**」：一次浏览要过多久才反映到计数上。
+
+所以模拟器每 30 秒查一次 ClickHouse，算**新鲜度**：`now()` 减去本次运行最新一条事件的 `received_at`（采集端点收到它的时刻），也就是「收到之后多久能在 ClickHouse 里查到」。v0.18 的判定是峰值不超过 10 秒、不持续上涨；同一次采样还记下 `events` 等四张表的活跃片段数和进行中的合并数，用来看小批量写入有没有把片段数顶上去。
+
+<Transfer
+  prompt="你要压测一个登录接口，目标是每秒 500 次登录。手头的工具是 JMeter，默认线程组是「N 个线程循环发」。你会怎么改，才能得到开环的结果？看报告时要特别注意什么？"
+  points={[
+    { label: "按速率产生请求", text: "改用按到达速率调度的方式（如 JMeter 的 Arrivals / Open Model 线程组、k6 的 constant-arrival-rate），到点就发，不等上一个响应。" },
+    { label: "延迟从计划时刻算", text: "确认延迟是从计划发出的时刻算起，排队、等连接的时间都要算进去；只算从真正发出到收到响应，又会把排队藏起来。" },
+    { label: "并发上限够大", text: "预分配的虚拟用户或连接数要远大于「速率 × 正常延迟」，否则服务一慢就被上限卡住，退化成闭环；工具报告里出现「虚拟用户不足」时结果不可信。" },
+    { label: "看曲线不只看平均", text: "看 p99 延迟随时间的曲线是不是持续上涨，以及实际发出速率有没有低于目标；平均值会把堆积掩盖掉。" }
+  ]}
+/>

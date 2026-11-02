@@ -90,7 +90,7 @@ no matching manifest for linux/arm64/v8
 
 **第二层，让将来的错能被发现。** 部署脚本拿到镜像之后，先核对它的芯片架构，不是 arm64 就拒绝部署：
 
-<CodeRef at="patra-infra/cd/deploy.sh@2197850b5a624ed4dbaa97df71e144c343e28baa" lines="56-59" />
+<CodeRef at="patra-infra/cd/deploy.sh@7dc80d272f808228d2fb32897c8857f0faae94ff" lines="59-62" />
 
 ```bash
 assert_arm64() { # $1=img:tag
@@ -101,13 +101,13 @@ assert_arm64() { # $1=img:tag
 
 它在主流程里紧跟在「镜像就位」后面，不过就不会往下 `compose up`：
 
-<CodeRef at="patra-infra/cd/deploy.sh@2197850b5a624ed4dbaa97df71e144c343e28baa" lines="116-118" />
+<CodeRef at="patra-infra/cd/deploy.sh@7dc80d272f808228d2fb32897c8857f0faae94ff" lines="133-135" />
 
 为什么本机原生构建之后还要这道断言？因为镜像不一定是刚刚本机打的。回滚时，如果本地没有旧镜像，会从 GHCR 把历史归档拉回来，而那里面躺着修复之前打的 x86 镜像。没有断言，回滚就可能把这次事故的主角重新请回来。
 
 这条规则还有一个单元测试守着：用假的 Docker 把架构伪装成 amd64，断言部署脚本不执行 `up`。
 
-<CodeRef at="patra-infra/cd/deploy.test.sh@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="104-111" />
+<CodeRef at="patra-infra/cd/deploy.test.sh@7dc80d272f808228d2fb32897c8857f0faae94ff" lines="110-117" />
 
 <Quiz
   title="考考自己"

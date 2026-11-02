@@ -9,11 +9,11 @@ personalEnv: false
 ---
 
 <Diagnose
-  question="catalog-api 模块里有一个接口，identity 和 interaction 两个服务都依赖它。你只改了这个接口里的一行，CI 的后端测试会跑哪些服务？"
-  options={["只跑 catalog，改动就在它自己的目录里", "六个服务全跑，保险起见全部测一遍", "跑 catalog、identity、interaction 这三个"]}
+  question="catalog-api 模块里有一个接口，identity、interaction、analytics 三个服务都依赖它。你只改了这个接口里的一行，CI 的后端测试会跑哪些服务？"
+  options={["只跑 catalog，改动就在它自己的目录里", "七个服务全跑，保险起见全部测一遍", "跑 catalog、identity、interaction、analytics 这四个"]}
   answer="C"
   ifRight="对。改一个被别人依赖的模块，所有依赖它的服务都可能受影响，所以都要测。这份“谁依赖谁”的地图就是这一篇的主角。"
-  ifWrong="答案是 C。只测 catalog 会漏掉依赖它的服务；六个全测又浪费。正确的是顺着依赖关系找出受影响的那几个：catalog、identity、interaction。"
+  ifWrong="答案是 C。只测 catalog 会漏掉依赖它的服务；七个全测又浪费。正确的是顺着依赖关系找出受影响的那几个：catalog、identity、interaction、analytics。"
   suggest="ops-ci-pipeline"
 />
 
@@ -44,7 +44,7 @@ Patra 多做了一步：**开考之前，先算这次到底改了什么，只考
 
 输出的 JSON 里最重要的几个字段：
 
-- `backend_units`：要测的后端单元列表（registry、catalog、identity、interaction、notification、gateway，外加一个 foundation 单元，代表底层公共模块）。
+- `backend_units`：要测的后端单元列表（registry、catalog、identity、interaction、notification、analytics、gateway，外加一个 foundation 单元，代表底层公共模块）。
 - `portal_changed` 与 `learn_changed`：前端门户、学习站要不要测。
 - `docs_only`：是不是只改了文档。
 - `coverage_mode`：要不要聚合覆盖率，全量时才做。
@@ -72,13 +72,13 @@ echo "README.md" | bash patra-infra/cd/detect-changes.sh classify
     {
       label: "改 catalog-api 里的代码",
       steps: ["改动的文件：catalog-api 模块里的 Java 文件", "脚本按文件路径找到所属模块", "再查模块图：谁依赖这个模块"],
-      results: [{ label: "backend_units", value: "catalog、identity、interaction", tone: "wait" }, { label: "portal_changed", value: "false", tone: "ok" }],
-      verdict: { tone: "ok", head: "顺着依赖测。", text: "只测三个受影响的单元，其余三个服务不测。" }
+      results: [{ label: "backend_units", value: "analytics、catalog、identity、interaction", tone: "wait" }, { label: "portal_changed", value: "false", tone: "ok" }],
+      verdict: { tone: "ok", head: "顺着依赖测。", text: "只测四个受影响的单元，其余三个服务不测。" }
     },
     {
       label: "改 Gradle 构建脚本",
       steps: ["改动的文件：build-logic 下的构建文件", "脚本认出这是全局影响的地基", "放大成全量"],
-      results: [{ label: "backend_units", value: "全部 7 个单元", tone: "bad" }, { label: "full_run", value: "true", tone: "bad" }],
+      results: [{ label: "backend_units", value: "全部 8 个单元", tone: "bad" }, { label: "full_run", value: "true", tone: "bad" }],
       verdict: { tone: "bad", head: "全员重考。", text: "构建脚本决定每个服务怎么编译、怎么打包，动了它不能只测一个房间。" }
     },
     {
@@ -96,7 +96,7 @@ echo "README.md" | bash patra-infra/cd/detect-changes.sh classify
 
 “改了一个文件，哪些单元受影响”靠的是 `module-graph.json`。它是从 Gradle 的依赖关系自动导出的一张地图，每个模块一条记录：
 
-<CodeRef at="patra-infra/cd/module-graph.json@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="24-40" />
+<CodeRef at="patra-infra/cd/module-graph.json@8140a9d9482324670b63f00ab3c62690102196c5" lines="107-120" />
 
 - `dir`：这个模块在仓库里的目录。文件按**最长路径前缀**匹配到它。
 - `impacts`：这个模块改了，会波及哪些单元。

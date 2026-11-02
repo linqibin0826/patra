@@ -1,0 +1,220 @@
+---
+title: 计数现查加缓存，排名算好放快照
+summary: 「N 人看过」要 1 分钟内更新，热读和看过还看了每小时、每天变一次就够。Patra 让计数现查 ClickHouse、前面挡一层 Redis 60 秒缓存；排名由定时任务算好，在一个事务里整表替换进 PostgreSQL 快照，页面只读快照。
+type: decision
+difficulty: practice
+tags: [analytics, redis, database]
+prerequisites: [analytics-replacing-mergetree-uniqexact, ddd-cqrs-read-side]
+topics: [analytics-pipeline]
+sources:
+  - version: v0.18
+    issue: PAP-170
+    pr: 373
+personalEnv: false
+---
+
+<Diagnose
+  question="首页每秒几百个请求，每个都要一份「按近 14 天全部阅读算出的前 14 名」。这份榜单每小时变一次就够。你会怎么给页面？"
+  options={["每次请求现查 ClickHouse，保证榜单永远最新", "每次请求把近 14 天的明细拉进 Java 里排序", "定时算好存成一张读表，请求只按主键读它"]}
+  answer="C"
+  ifRight="对。算一次很贵、又不需要很新的东西，就提前算好放进一张专门给读用的表。往下读会讲计数为什么反而不这么做，以及这张表怎么整体换新。"
+  ifWrong="答案是 C。榜单每小时才变一次，每个请求都重算一遍是在重复做同一件贵事。把结果算好放进一张只供读的表，正是读写分开里「读端按页面要的样子存」的思路，先读那篇会更顺。"
+  suggest="ddd-cqrs-read-side"
+/>
+
+## 背景：两类数字，对「新」的要求不一样
+
+v0.18 给门户三类数据：每篇文献的「N 人看过」「N 人读过全文」，首页的「热读」，文献页的「看过这篇的人还看了」。它们都来自 ClickHouse 里的行为数据，但性质差得很远：
+
+| | 计数 | 热读、看过还看了 |
+|---|---|---|
+| 要多新 | B 读完 1 分钟内 +1 | 每小时 / 每天变一次就够 |
+| 算一次的代价 | 一屏 14 篇、最多 100 篇按主键取，毫秒级 | 扫近 14 天的全部阅读、排序、两两配对，秒级 |
+| 谁扛在线请求 | ClickHouse 按主键查 + Redis 挡住重复请求 | PostgreSQL 快照表，按主键读几十行 |
+
+还有一条硬约束：**ClickHouse 擅长「一次扫几千万行算一个结果」，不擅长「每秒几百个小查询」**。它的每个查询都要起一套并行执行，内存和线程的开销是按查询算的，小查询一多就吃不消。
+
+所以这一版的应用层分成了两条路（release spec 决策 G）。
+
+## 选择
+
+<Callout kind="lead" label="选了什么">
+
+计数现查 ClickHouse 的汇总表，前面挡一层 Redis，同一篇 60 秒内只查一次；排名由定时任务算好，整表替换进 PostgreSQL 快照，页面请求根本不碰 ClickHouse。
+
+</Callout>
+
+决定性的理由是**新鲜度和代价的组合**：计数便宜但要新，缓存 60 秒刚好是「1 分钟内更新」的上限；排名贵但不必新，干脆一小时算一次。
+
+## 计数：先查 Redis，没有再查 ClickHouse
+
+这种「读时先看缓存，没有再查数据源、查完写回缓存」的做法叫 **cache-aside**，是业界最常见的缓存用法。Patra 的计数是一次处理一批文献：
+
+<Stepper
+  title="一屏 14 篇文献的计数怎么取"
+  nodes={[
+    { id: "portal", label: "门户", sub: "一屏 14 篇" },
+    { id: "analytics", label: "patra-analytics", sub: "计数接口" },
+    { id: "redis", label: "Redis", sub: "60 秒缓存" },
+    { id: "ch", label: "ClickHouse", sub: "汇总表" }
+  ]}
+  links={[
+    { from: "portal", to: "analytics" },
+    { from: "analytics", to: "redis" },
+    { from: "analytics", to: "ch" }
+  ]}
+  steps={[
+    { caption: "门户一次请求带上这一屏的 14 个文献 ID。", focus: ["portal", "analytics"], links: ["portal>analytics"] },
+    { caption: "一次 MGET 取 14 个键。10 个命中，4 个没有。", focus: ["analytics", "redis"], links: ["analytics>redis"], notes: [{ at: "redis", text: "命中 10 · 未命中 4", tone: "wait" }] },
+    { caption: "没命中的 4 篇合成一条 ClickHouse 查询，而不是查 4 次。", focus: ["analytics", "ch"], links: ["analytics>ch"], notes: [{ at: "ch", text: "1 条查询 · 4 篇", tone: "wait" }] },
+    { caption: "ClickHouse 返回 3 行：第 4 篇没人看过，结果里没有它。", focus: ["ch"], notes: [{ at: "ch", text: "返回 3 行" }] },
+    { caption: "用一次管道把 4 个键都写回，每个 60 秒过期。没人看过的那篇写成 0:0。", focus: ["analytics", "redis"], links: ["analytics>redis"], notes: [{ at: "redis", text: "写回 4 个键 · 含 0:0", tone: "ok" }] },
+    { caption: "60 秒内再有人打开这一屏：14 个键全命中，ClickHouse 一次都没碰。", focus: ["portal", "redis"], links: ["portal>analytics", "analytics>redis"], notes: [{ at: "redis", text: "命中 14", tone: "ok" }, { at: "ch", text: "0 次查询", tone: "ok" }] }
+  ]}
+  guesses={[
+    { before: 5, question: "第 4 篇没人看过，ClickHouse 结果里没有它。写回缓存时怎么处理它？", options: ["也写一个 0:0，同样 60 秒过期", "不写：没有数据就不占缓存", "写 0:0 并且永不过期：反正没人看"], answer: "A", explain: "不写的话，冷门文献每次都会穿过缓存打到 ClickHouse，业界叫缓存穿透；而 Patra 的大部分文献正是没人看过的。永不过期也不行：有人读了它，数字就再也不会变。" }
+  ]}
+/>
+
+写回那一段：
+
+<CodeRef at="patra-api/patra-analytics/patra-analytics-infra/src/main/java/dev/patra/analytics/infra/insight/stats/CachingReaderStatsDecorator.java@8140a9d9482324670b63f00ab3c62690102196c5" lines="100-121" />
+
+```java
+  private void writeBack(List<Long> misses, Map<Long, ReaderStats> loaded) {
+    try {
+      redis.executePipelined(
+          (RedisCallback<Object>)
+              connection -> {
+                for (Long id : misses) {
+                  ReaderStats s = loaded.getOrDefault(id, ReaderStats.none(id));
+                  connection
+                      .stringCommands()
+                      .setEx(
+                          key(id).getBytes(StandardCharsets.UTF_8),
+                          TTL.toSeconds(),
+                          (s.viewers() + ":" + s.fulltextReaders())
+                              .getBytes(StandardCharsets.UTF_8));
+                }
+                return null;
+              });
+    } catch (DataAccessException e) {
+      log.warn("写计数缓存失败：{}", e.getMessage());
+      meters.counter(METER, "result", "error").increment();
+    }
+  }
+```
+
+`getOrDefault(id, ReaderStats.none(id))` 就是「没查到的也写 `0:0`」。另外几个细节：
+
+- **60 秒就是「1 分钟内更新」的来源**：最坏情况是刚缓存完 B 就读了，要等这 60 秒过去。本人刚看过不会立刻 +1，门户的设计已经按这一点来。
+- **键里带口径**：`analytics:insight:stats:real:{文献ID}`，`real` 表示排除合成事件；开发时打开「包含合成事件」后换成 `all`，切换开关不会读到另一种口径的旧缓存。
+- **两种故障，两种处理**：Redis 出错时整次绕过缓存直接查 ClickHouse，只记一个 `error` 指标——缓存不能让 Redis 故障拖垮计数；ClickHouse 不可用时计数接口返回 503，门户少显示「看过」那几项。
+
+计数接口还顺带返回「在不在热读榜」，那是从 PostgreSQL 的热读快照按 ID 查的，不缓存。
+
+## 排名：算好，整张换掉
+
+热读每小时第 5 分钟、看过还看了每天 04:30，由 XXL-Job 定时任务算好写进 PostgreSQL 的快照表。页面读的就是这张表：这正是读写分开里的读模型，只不过它的「写」是一个定时任务整批产出的。
+
+每次算完都要把整张快照换成新的。换法有三种：
+
+<DecisionOptions
+  options={[
+    { name: "一个事务里 DELETE 全表 + 批量 INSERT", summary: "删掉旧行、插入新行、记下计算时间，三步一起提交。", pros: "提交前读者一直看到旧快照，提交后一下子全是新的；读的一方不受影响；实现最简单。", cons: "删掉的旧行成了死行，要等 autovacuum 回收；共现快照在合成数据灌满时约百万行。", chosen: true },
+    { name: "一个事务里 TRUNCATE + 批量 INSERT", summary: "用 TRUNCATE 清表，再插入新行。", pros: "清表瞬间完成，不留死行。", cons: "TRUNCATE 要拿排他锁，事务提交前所有读这张表的请求都会被卡住。" },
+    { name: "版本切换", summary: "新快照写成新版本，切一个指针指向它，再删旧版本。", pros: "可以随时退回上一版。", cons: "退回上一版这一版用不上；每次读还要多关联一次指针表。" }
+  ]}
+/>
+
+DELETE 方案能让读者不受影响，靠的是 PostgreSQL 的多版本并发控制（MVCC）：一行被删除后，在删除它的事务提交之前，其他事务看到的仍是这一行的旧版本。所以写快照的那几秒里，首页读到的是完整的旧快照，不会读到「删了一半」的样子。
+
+<Quiz
+  title="你猜会怎样"
+  questions={[
+    {
+      question: "如果把 DELETE 换成 TRUNCATE（同样放在事务里），写快照的那几秒里，首页的请求会怎样？",
+      options: ["照常读到旧快照，和 DELETE 没有区别", "被卡住，一直等到写快照的事务提交才返回", "读到一张空表，直到新行插完才恢复"],
+      answer: "B",
+      explain: "TRUNCATE 拿的是最强的排他锁，连普通的 SELECT 都要排队等它释放；DELETE 只锁被删的行，不挡读。快照越大、插入越久，卡住的请求越多。"
+    }
+  ]}
+/>
+
+热读快照的写入：
+
+<CodeRef at="patra-api/patra-analytics/patra-analytics-infra/src/main/java/dev/patra/analytics/infra/insight/persistence/HotReadingSnapshotRepositoryAdapter.java@8140a9d9482324670b63f00ab3c62690102196c5" lines="13-34" />
+
+```java
+/// `HotReadingSnapshotRepository` 的原生 SQL 实现：`DELETE` 全表 + `unnest` 批量插入，要求调用方的事务。
+///
+/// 不用 `TRUNCATE`：它要拿排他锁，提交前读这张表的页面请求都会被卡住；`DELETE` 下读者一直看到旧快照。
+@Component
+@RequiredArgsConstructor
+public class HotReadingSnapshotRepositoryAdapter implements HotReadingSnapshotRepository {
+
+  private final JdbcClient jdbc;
+
+  /// 整表替换并记下计算时间。
+  ///
+  /// @param entries 新快照的全部行
+  /// @param computedAt 计算时间
+  @Override
+  @Transactional(propagation = Propagation.MANDATORY)
+  public void replace(List<HotReadingEntry> entries, Instant computedAt) {
+    jdbc.sql("DELETE FROM insight.hot_reading").update();
+    for (int from = 0; from < entries.size(); from += SnapshotRuns.CHUNK) {
+      insert(entries.subList(from, Math.min(from + SnapshotRuns.CHUNK, entries.size())));
+    }
+    SnapshotRuns.record(jdbc, SnapshotRuns.HOT_READING, computedAt, entries.size());
+  }
+```
+
+`Propagation.MANDATORY` 要求调用方已经开好事务，没有事务就直接报错，防止有人绕开事务单独调它。插入每 5,000 行一条 `INSERT ... SELECT FROM unnest(...)`，几百万行也只有几百条语句。
+
+## 任务失败时，旧快照原样保留
+
+整表替换还有一个好处：失败很好处理。任务的步骤是「ClickHouse 算候选 → 向 catalog 核对 → 拼出快照 → 写快照」，远程调用全在事务外面，事务里只有写快照这一步：
+
+<CodeRef at="patra-api/patra-analytics/patra-analytics-app/src/main/java/dev/patra/analytics/app/insight/usecase/hot/RefreshHotReadingHandler.java@8140a9d9482324670b63f00ab3c62690102196c5" lines="54-66" />
+
+```java
+      LocalDate today = LocalDate.now(clock.withZone(BEIJING));
+      List<HotReadingCandidate> candidates =
+          signals.hotCandidates(today, HotReadingRule.CANDIDATE_LIMIT);
+      Set<Long> eligible =
+          catalog.eligibleAmong(candidates.stream().map(HotReadingCandidate::articleId).toList());
+      List<HotReadingCandidate> ranked =
+          candidates.stream().filter(c -> eligible.contains(c.articleId())).toList();
+      List<Long> latest =
+          ranked.size() < HotReadingRule.PAGE_SIZE
+              ? catalog.latestIds(HotReadingRule.LATEST_FETCH)
+              : List.of();
+      List<HotReadingEntry> board = HotReadingRule.board(ranked, latest);
+      transactions.executeWithoutResult(status -> snapshots.replace(board, clock.instant()));
+```
+
+ClickHouse 或 catalog 失败，异常在走到最后一行之前就抛出去了，快照一行没动；写快照时 PostgreSQL 出错，事务回滚，同样是旧快照。调度中心把这次标红，下一个小时（共现是第二天）再算。整表替换天然幂等，重复跑也没关系。
+
+首页因此不依赖 ClickHouse 和 catalog：它们出问题时，「热读」照常有内容，只是停在上一次成功的样子。快照表旁边的 `insight.snapshot_run` 记着每种快照最近一次成功的时间，接口把它作为 `computedAt` 返回。
+
+## 代价
+
+<Callout kind="cost">
+
+- **同一个口径实现了两遍**：「看过的人」在物化视图（计数用）和定时任务（热读用）里各写了一次，所以要有测试守住两边一致：同一批事件，热读的近 7 天人数要等于计数接口的看过人数。
+- **数字不是实时的**：计数最多旧 60 秒，热读最多晚一小时，看过还看了最多晚一天。
+- **死行**：每次 DELETE 都留下一整张表的死行，靠 autovacuum 回收；真实数据下只有几行，合成数据灌满时共现快照约百万行。
+- **什么时候该重新考虑**：排名要求做到分钟级更新，或者计数的访问量大到 60 秒缓存也挡不住时，要换成增量计算或者把计数也预算出来。
+
+</Callout>
+
+<Transfer
+  prompt="产品提出：读者刚看完一篇，刷新页面就要看到「看过」+1。按现在的结构，你会怎么改？每种改法的代价是什么？"
+  points={[
+    { label: "缓存只是一段", text: "60 秒 TTL 是延迟的主要来源，但不是全部：事件还要经过 Kafka、入库消费者攒批、物化视图，才进汇总表。只删缓存做不到立刻。" },
+    { label: "缩短 TTL", text: "TTL 越短，打到 ClickHouse 的小查询越多，正好撞上它不擅长的事。" },
+    { label: "主动失效", text: "采集到这篇的阅读后删掉它的缓存键，下次请求重新查；但如果数据还没入库，查到的仍是旧数，反而又缓存了 60 秒。" },
+    { label: "门户先显示", text: "更常见的做法是本人那一次由页面自己乐观地加一，真实数字照旧按 1 分钟更新；或者干脆接受「本人不会立刻 +1」。" }
+  ]}
+/>

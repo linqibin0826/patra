@@ -1,0 +1,192 @@
+---
+title: 热读：让旧的阅读慢慢变轻
+summary: 首页「热读」要回答「最近大家在读什么」。Patra 把近 14 天的每次阅读按 3 天半衰期打折再加总，读全文算 3 倍，每人每天每篇只算一次；近 7 天至少 3 个人读过才上榜，不够一页时用最新收录补位并明确标出。
+type: concept
+difficulty: advanced
+tags: [analytics, backend]
+prerequisites: [analytics-replacing-mergetree-uniqexact]
+topics: [analytics-pipeline]
+sources:
+  - version: v0.18
+    issue: PAP-170
+    pr: 373
+personalEnv: false
+---
+
+<Diagnose
+  question="同一个人今天把同一篇文献刷新了 5 次，又在另一个标签页里打开了一次。算这篇的热读分数时，这个人今天对它贡献几次阅读？"
+  options={["1 次：同一个人同一天对同一篇只算一行", "6 次：每次打开都是一条事件，都要算上", "2 次：两个标签页是两个会话，各算一次"]}
+  answer="A"
+  ifRight="对。热读数的是「人」，不是请求。往下读会讲在这一行之上怎么按时间打折、怎么定上榜门槛。"
+  ifWrong="答案是 A。明细表里确实有 6 条事件，但热读先按（文献，人，天）合并成一行，刷新多少次都不加分。这题考的是「按人去重」，先读讲重复行与 uniqExact 的那篇会更顺。"
+  suggest="analytics-replacing-mergetree-uniqexact"
+/>
+
+<Callout kind="lead">
+
+热读分数 = 近 14 天里每一次阅读的分量之和；一次阅读的分量随时间指数衰减，每过 3 天减半。
+
+</Callout>
+
+## 只数人数为什么不行
+
+「热读」要回答的是**最近**大家在读什么。最容易想到的两种算法都有毛病：
+
+- **数总共多少人读过**：一篇两年前的综述攒了几千个读者，永远压在榜首，新文献上不去。这是「最多人读」，不是「最近在读」。
+- **只数最近 7 天的人数**：好一些，但 7 天是一道悬崖。6 天前的一次阅读和今天的一样重，到第 8 天却突然一分不值；榜单每天零点会集体跳一次。
+
+两者的共同问题是：时间要么不算，要么一刀切。想要的是「越近越重、越远越轻，而且平滑地变轻」。
+
+## 业界的骨架：分数乘一个随时间变小的系数
+
+社区网站的热榜大多是同一个骨架：一个「有多少人认可」的量，乘以（或除以）一个随时间变大的东西。
+
+| 做法 | 大致公式 | 时间怎么起作用 |
+|---|---|---|
+| Hacker News | （票数 − 1）÷（发帖后小时数 + 2）的 1.8 次方 | 分母随时间变大，分数一直往下掉 |
+| Reddit | log10（净票数）+ 发帖时刻 ÷ 45000 | 新帖自带更高的底分，旧帖靠票数也追不上 |
+| Patra | Σ 每次阅读的分量 × 0.5 ^（距今天数 ÷ 3） | 每次阅读各自衰减，3 天减半 |
+
+学术站没有公开的热读公式，Patra 用的是这个骨架里最直观的一种：**指数衰减**，参数用「半衰期」表达。半衰期 3 天的意思是：今天的一次阅读算 1，3 天前的算 0.5，6 天前的算 0.25。
+
+## 一次阅读值多少分
+
+一行（一个人、一天、一篇）的分量是：
+
+```
+（这一天读了全文 ? 3 : 1）× 0.5 ^（距今天数 ÷ 3）
+```
+
+「读了全文」指这个人这一天对这篇有过全文阅读（全文区可见累计 10 秒以上）或下载了 PDF。读全文比只看摘要花的力气多得多，所以算 3 倍。
+
+先猜，再拖滑块：
+
+<Params
+  title="动手试试：一次阅读的分量"
+  guess={{ question: "3 天前有人读了全文，今天有人只看了摘要。这两次阅读，哪一次分量大？", options: ["今天只看摘要的大：越新越重，新鲜压过一切", "一样大：3 天的衰减正好抵掉全文的 3 倍", "3 天前读全文的大：1.5 对 1"], answer: "C", explain: "3 天前的分量减半成 0.5，乘上全文的 3 倍是 1.5；今天只看摘要是 1。衰减和权重是相乘的，要两个一起看。" }}
+  controls={[
+    { type: "slider", id: "days", label: "这次阅读发生在", min: 0, max: 14, step: 1, default: 0, unit: " 天前" }
+  ]}
+  cases={[
+    { when: { days: [0, 0] }, results: [{ label: "只看摘要的一次", value: "1 × 1 = 1.00", tone: "ok" }, { label: "读了全文的一次", value: "3 × 1 = 3.00", tone: "ok" }, { label: "算进近 7 天人数吗", value: "算", tone: "ok" }], verdict: { tone: "ok", head: "还在近 7 天里。", text: "这次阅读既加分，也算进上榜门槛的人数。" } },
+    { when: { days: [1, 1] }, results: [{ label: "只看摘要的一次", value: "1 × 0.5^(1/3) = 0.79", tone: "ok" }, { label: "读了全文的一次", value: "3 × 0.5^(1/3) = 2.38", tone: "ok" }, { label: "算进近 7 天人数吗", value: "算", tone: "ok" }], verdict: { tone: "ok", head: "还在近 7 天里。", text: "这次阅读既加分，也算进上榜门槛的人数。" } },
+    { when: { days: [2, 2] }, results: [{ label: "只看摘要的一次", value: "1 × 0.5^(2/3) = 0.63", tone: "ok" }, { label: "读了全文的一次", value: "3 × 0.5^(2/3) = 1.89", tone: "ok" }, { label: "算进近 7 天人数吗", value: "算", tone: "ok" }], verdict: { tone: "ok", head: "还在近 7 天里。", text: "这次阅读既加分，也算进上榜门槛的人数。" } },
+    { when: { days: [3, 3] }, results: [{ label: "只看摘要的一次", value: "1 × 0.5^(3/3) = 0.50", tone: "ok" }, { label: "读了全文的一次", value: "3 × 0.5^(3/3) = 1.50", tone: "ok" }, { label: "算进近 7 天人数吗", value: "算", tone: "ok" }], verdict: { tone: "ok", head: "还在近 7 天里。", text: "这次阅读既加分，也算进上榜门槛的人数。" } },
+    { when: { days: [4, 4] }, results: [{ label: "只看摘要的一次", value: "1 × 0.5^(4/3) = 0.40", tone: "ok" }, { label: "读了全文的一次", value: "3 × 0.5^(4/3) = 1.19", tone: "ok" }, { label: "算进近 7 天人数吗", value: "算", tone: "ok" }], verdict: { tone: "ok", head: "还在近 7 天里。", text: "这次阅读既加分，也算进上榜门槛的人数。" } },
+    { when: { days: [5, 5] }, results: [{ label: "只看摘要的一次", value: "1 × 0.5^(5/3) = 0.31", tone: "ok" }, { label: "读了全文的一次", value: "3 × 0.5^(5/3) = 0.94", tone: "ok" }, { label: "算进近 7 天人数吗", value: "算", tone: "ok" }], verdict: { tone: "ok", head: "还在近 7 天里。", text: "这次阅读既加分，也算进上榜门槛的人数。" } },
+    { when: { days: [6, 6] }, results: [{ label: "只看摘要的一次", value: "1 × 0.5^(6/3) = 0.25", tone: "ok" }, { label: "读了全文的一次", value: "3 × 0.5^(6/3) = 0.75", tone: "ok" }, { label: "算进近 7 天人数吗", value: "算", tone: "ok" }], verdict: { tone: "ok", head: "还在近 7 天里。", text: "这次阅读既加分，也算进上榜门槛的人数。" } },
+    { when: { days: [7, 9] }, results: [{ label: "只看摘要的一次", value: "0.20 → 0.12（第 7～9 天）", tone: "wait" }, { label: "读了全文的一次", value: "0.60 → 0.38（第 7～9 天）", tone: "wait" }, { label: "算进近 7 天人数吗", value: "不算", tone: "wait" }], verdict: { tone: "bad", head: "只剩一点分量。", text: "它还在 14 天窗口里，照样加分；但已经滑出近 7 天，不再帮这篇凑够上榜的 3 个人。" } },
+    { when: { days: [10, 13] }, results: [{ label: "只看摘要的一次", value: "0.10 → 0.05（第 10～13 天）", tone: "wait" }, { label: "读了全文的一次", value: "0.30 → 0.15（第 10～13 天）", tone: "wait" }, { label: "算进近 7 天人数吗", value: "不算", tone: "wait" }], verdict: { tone: "bad", head: "只剩一点分量。", text: "它还在 14 天窗口里，照样加分；但已经滑出近 7 天，不再帮这篇凑够上榜的 3 个人。" } },
+    { when: { days: [14, 14] }, results: [{ label: "只看摘要的一次", value: "0（不算）", tone: "bad" }, { label: "读了全文的一次", value: "0（不算）", tone: "bad" }, { label: "算进近 7 天人数吗", value: "不算", tone: "bad" }], verdict: { tone: "bad", head: "窗口外。", text: "热读只取今天和之前 13 天，{days}的阅读已经不参与计算。" } },
+    { results: [{ label: "这一次的分量", value: "拖动滑块看看" }], verdict: { tone: "ok", text: "拖动滑块看看。" } }
+  ]}
+/>
+
+有一个性质让「天」按整天算就够了，不必精确到小时：**同一时刻，所有阅读一起变老**。
+
+例：文献 A 今天被 3 个人看了摘要，得 3 分；文献 B 6 天前被 4 个人读了全文，得 4 × 3 × 0.25 = 3 分。两篇一样热。明天如果谁都没再读，A 变成 3 × 0.79 = 2.38，B 也变成 2.38，还是一样。衰减对每一行乘的是同一个系数，名次只会因为**新的阅读**而变。
+
+## 每人每天每篇只算一行
+
+分量是按「行」算的，一行是（文献，人，北京时间的一天）。同一个人同一天对同一篇打开、刷新、读全文、收藏多少次，都合并成一行；这一天里有过一次全文阅读或 PDF 下载，这一行就算「读了全文」。
+
+这样做挡掉了两种虚高：一个人反复刷新刷不上去；一个人连续几天天天来读，每天也只贡献一行，而且越早的那几行越轻。
+
+「人」沿用计数的口径：登录用户按账号，访客按设备；只算真人会话里的阅读（会话里有浏览器事件、没有任何一条被标为爬虫），模拟器造的合成事件默认排除。
+
+## 上榜门槛：近 7 天至少 3 个人
+
+分数排出来之后还有一道门槛：**今天和之前 6 天里，读过这篇的不同人数 ≥ 3** 才能上榜。分数相同时，近 7 天人数多的在前，再相同按文献 ID 小的在前。
+
+门槛的作用是不让一两个人就把一篇文献顶上首页。注意它和分数用的窗口不一样：分数看 14 天，门槛只看 7 天。这会带来一个不太直观的结果：
+
+<Quiz
+  title="你猜会怎样"
+  questions={[
+    {
+      question: "接着上面的例子：A 今天被 3 个人看了摘要，B 6 天前被 4 个人读了全文，之后都没人再读。今天两篇都是 3 分、都在榜上。明天呢？",
+      options: ["两篇都在，分数都变成 2.38，名次并列", "只有 A 在：B 的 4 个读者滑出了近 7 天，凑不够 3 人", "只有 B 在：读全文的分量重，衰减得也慢"],
+      answer: "B",
+      explain: "明天 B 的那 4 行变成了 7 天前，还在 14 天窗口里，分数照样是 2.38；但近 7 天读过它的人数变成 0，过不了门槛。A 的 3 个读者是昨天读的，仍在近 7 天里。分数和门槛是两把尺子。"
+    }
+  ]}
+/>
+
+所以榜上的文献一定是「这一周还有至少 3 个人在读」的；更早的阅读只负责在这些文献之间拉开分数。
+
+## 不够一页时补位，而且标出来
+
+首页「热读」一页 14 篇。Patra 现在真实访客很少，能过门槛的文献常常不到 14 篇。这时用「最新收录」补齐，但**补位的不冒充热读**：
+
+- 快照表里每行有 `ranked` 列，补位的是 `false`，分数和人数为空。
+- 接口里补位的 `source` 是 `LATEST`、没有名次，另给 `rankedTotal`（榜上一共几篇），门户据此写「只有 N 篇」的说明。
+- 检索结果上的「近期热读」标记只认上榜的前 100 名，补位的不算。
+
+要是榜单里混进去不够格的文献又不说明，「热读」这两个字就失去了意义。
+
+## 为什么从明细表 events 算
+
+计数接口查的是汇总表 `article_session_reads`，热读却回到明细表 `events` 去算，原因有两个：
+
+1. **扫的量固定**。`events` 按天分区，「近 14 天」正好裁到 14 个分区；`article_session_reads` 的排序键是（文献，会话，…），日期不在前面，而且这张表长期保留、越来越大，按日期过滤要扫全表。
+2. **要每条事件的时间**。看过还看了要取一个人当天「最先读的 20 篇」，汇总表里没有这个信息。热读和共现共用同一段取数逻辑。
+
+代价是「看过的人」这个口径在物化视图（计数）和定时任务（热读）里各实现了一次，所以测试专门覆盖了两边一致：同一批事件，热读算出的近 7 天人数要等于计数接口的看过人数。判定真人会话时，`session_quality` 也按 `first_day` 先过滤到近 14 天再分组，守住单条查询的内存上限。
+
+## 在 Patra 里
+
+规则的常量放在领域层：
+
+<CodeRef at="patra-api/patra-analytics/patra-analytics-domain/src/main/java/dev/patra/analytics/domain/insight/policy/HotReadingRule.java@8140a9d9482324670b63f00ab3c62690102196c5" lines="15-28" />
+
+```java
+  /// 窗口：今天与之前 13 天。
+  public static final int WINDOW_DAYS = 14;
+
+  /// 上榜门槛的窗口：今天与之前 6 天。
+  public static final int ELIGIBLE_DAYS = 7;
+
+  /// 上榜门槛：近 7 天不同读者数。
+  public static final int MIN_READERS = 3;
+
+  /// 读全文的分量是只看摘要的几倍。
+  public static final int FULLTEXT_WEIGHT = 3;
+
+  /// 半衰期（天）。
+  public static final int HALF_LIFE_DAYS = 3;
+```
+
+分数在 ClickHouse 里一条查询算完。前面共用的 `reads` 已经把阅读合并成每人每天每篇一行，这里只做加权求和与门槛：
+
+<CodeRef at="patra-api/patra-analytics/patra-analytics-infra/src/main/java/dev/patra/analytics/infra/insight/signal/ClickHouseReadingSignalAdapter.java@8140a9d9482324670b63f00ab3c62690102196c5" lines="51-66" />
+
+```java
+  /// 热读：每人每天每篇一行，分量 =（全文 ? 3 : 1）× 0.5 ^ (距今天数 / 3)；近 7 天不同人数 ≥ 3 才上榜。
+  private static final String HOT =
+      READS.replace(
+              "{aggregate}", "max(event_name IN ('fulltext_read', 'pdf_downloaded')) AS fulltext")
+          + """
+          SELECT article_id,
+                 sum(if(fulltext, {weight:UInt8}, 1)
+                     * pow(0.5, dateDiff('day', day, toDate({today:String})) / {halfLife:UInt8})) AS score,
+                 toUInt32(uniqExactIf(person_id, day >= toDate({today:String}) - {eligibleBack:UInt8}))
+                   AS readers_7d
+          FROM reads
+          GROUP BY article_id
+          HAVING readers_7d >= {minReaders:UInt8}
+          ORDER BY score DESC, readers_7d DESC, article_id ASC
+          LIMIT {limit:UInt32}
+          """;
+```
+
+这条查询取前 150 名（给撤稿、软删留余量）。每小时第 5 分钟的定时任务拿到候选后，向 catalog 核对去掉撤稿、软删、已不存在的文献，留前 100 名；不足 14 篇时再向 catalog 要 28 篇最新收录，去掉已上榜的补齐，整表写进 PostgreSQL 快照。首页请求只读快照，不碰 ClickHouse。
+
+<Transfer
+  prompt="Patra 以后要给讨论区加「热帖」。按这篇的思路，你会怎么定规则？哪些参数要换？"
+  points={[
+    { label: "半衰期", text: "讨论的节奏比论文快得多，半衰期可能要按小时算，而不是 3 天；「天」按整天切也不够细了。" },
+    { label: "去重单位", text: "仍然按人去重：每人每帖每个时间段只算一次，刷新刷不上去。" },
+    { label: "权重", text: "回复、点有帮助比打开看一眼花的力气多，可以像全文一样给更高的倍数。" },
+    { label: "门槛与补位", text: "近期至少几个不同的人参与才上榜；不够一页时补位要标出来，不能把冷帖冒充成热帖。" }
+  ]}
+/>

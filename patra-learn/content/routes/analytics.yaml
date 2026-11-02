@@ -1,0 +1,27 @@
+title: 行为数据
+summary: 从「一个浏览量背后有哪些问题」读起：埋点方案、设备与会话、爬虫识别、Kafka 缓冲、ClickHouse 列存与物化视图、去重计数、热读与看过还看了、阅读历史的隐私设计，最后用流量模拟器灌出 1 亿条事件、拿真值对账。
+order: 10
+entries:
+  - analytics-overview
+  - analytics-tracking-plan
+  - analytics-device-and-session
+  - analytics-event-envelope-schema
+  - analytics-bot-detection
+  - analytics-kafka-log
+  - analytics-columnar-storage
+  - analytics-mergetree-parts
+  - analytics-batch-insert-dedup-token
+  - analytics-materialized-views
+  - analytics-replacing-mergetree-uniqexact
+  - analytics-hot-reading-decay
+  - analytics-co-reading-cosine
+  - analytics-traffic-models
+  - analytics-open-loop-load-test
+  - analytics-truth-reconciliation
+  - analytics-collector-accept-and-go
+  - analytics-why-kafka-not-rabbitmq
+  - analytics-ingest-own-consumer
+  - analytics-inactive-parts-disk-dip
+  - analytics-counts-live-rankings-snapshot
+  - analytics-reading-history-privacy
+  - analytics-reconcile-midnight-crawler

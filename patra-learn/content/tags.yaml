@@ -29,3 +29,5 @@
   label: Docker
 - slug: ci-cd
   label: CI/CD
+- slug: analytics
+  label: 行为数据

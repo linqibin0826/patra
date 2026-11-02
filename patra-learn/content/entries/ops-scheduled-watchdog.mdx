@@ -29,7 +29,7 @@ Patra 的答案朴素到近乎笨：**每天定点巡一圈**。
 
 GitHub Actions 的定时触发器叫 `schedule`，时间用 cron 表达式写。巡检的配置是：
 
-<CodeRef at=".github/workflows/runner-watchdog.yml@53ec4388b912746d0fa15961b512897279bd4ae2" lines="15-18" />
+<CodeRef at=".github/workflows/runner-watchdog.yml@b5bc770efb72049c1b6a7996f8a86cb99c359732" lines="15-18" />
 
 ```yaml
 on:
@@ -105,7 +105,7 @@ gh workflow run runner-watchdog.yml
 
 云端那个任务只做一件事：
 
-<CodeRef at=".github/workflows/runner-watchdog.yml@53ec4388b912746d0fa15961b512897279bd4ae2" lines="26-34" />
+<CodeRef at=".github/workflows/runner-watchdog.yml@b5bc770efb72049c1b6a7996f8a86cb99c359732" lines="26-34" />
 
 它调用 GitHub 的接口列出仓库里注册过的 runner，挑出名字叫 `macmini` 的，读它的状态。`online` 放行，其他情况当场失败。报错文案分两种：离线是机器掉线了；查不到则是注册记录已经被平台删除，需要重装（另一篇专门讲）。
 
@@ -115,7 +115,7 @@ gh workflow run runner-watchdog.yml
 
 canary 在部署机上依次做四项检查，每一项对着一种「悄悄坏」的死法：
 
-<CodeRef at=".github/workflows/runner-watchdog.yml@53ec4388b912746d0fa15961b512897279bd4ae2" lines="36-65" />
+<CodeRef at=".github/workflows/runner-watchdog.yml@b5bc770efb72049c1b6a7996f8a86cb99c359732" lines="36-78" />
 
 | 检查 | 防的是 |
 |---|---|
@@ -126,7 +126,7 @@ canary 在部署机上依次做四项检查，每一项对着一种「悄悄坏�
 
 每项失败的提示文案都写明了该做什么，告警即行动指南。
 
-版本检查用的是严格不等号：最新版一出就告警，不等 30 天的倒计时走完。它不是事故，只是行动信号：找个空闲时段重跑一遍安装脚本就升级完了。
+版本检查按「落后了几天」算：从第一个比当前版本新的正式版（不算预发布版）发布那天起计时。不足 20 天，只在运行记录里打一条 warning，这次巡检仍然是绿的，也不会发通知；满 20 天才算失败，离 GitHub 的 30 天期限还留着 10 天升级。落后本身不是事故，只是行动信号：找个空闲时段重跑一遍安装脚本就升级完了。
 
 ## 巡检失败了，谁来知道
 

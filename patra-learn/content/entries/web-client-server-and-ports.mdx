@@ -42,7 +42,7 @@ personalEnv: false
 
 Patra 的后端服务各占一个端口，登记在部署清单里：
 
-<CodeRef at="patra-infra/cd/services.json@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="3-79" />
+<CodeRef at="patra-infra/cd/services.json@8140a9d9482324670b63f00ab3c62690102196c5" lines="3-91" />
 
 点一点下面的方块，看每个程序占哪个端口、干什么。
 
@@ -57,7 +57,8 @@ Patra 的后端服务各占一个端口，登记在部署清单里：
     { id: "catalog", label: "catalog", sub: "端口 6300", col: 1, row: 2, desc: "目录服务：文献、期刊、机构的数据。" },
     { id: "identity", label: "identity", sub: "端口 6400", col: 2, row: 2, desc: "身份服务：注册、登录、会话。" },
     { id: "interaction", label: "interaction", sub: "端口 6500", col: 3, row: 2, desc: "社区互动：文献库、收藏夹、讨论。" },
-    { id: "notification", label: "notification", sub: "端口 6600", col: 4, row: 2, desc: "通知服务：站内提醒、邮件、实时推送。" }
+    { id: "notification", label: "notification", sub: "端口 6600", col: 4, row: 2, desc: "通知服务：站内提醒、邮件、实时推送。" },
+    { id: "analytics", label: "analytics", sub: "端口 6700", col: 1, row: 3, desc: "行为数据服务：记录谁看了哪篇文献，算出浏览量、近期热读和阅读历史。" }
   ]}
 />
 
