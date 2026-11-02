@@ -182,6 +182,18 @@ describe("阅读历史页", () => {
     expect(screen.queryByRole("heading", { name: "还没有阅读历史" })).toBeNull();
   });
 
+  it("删光已加载的条目后接着取下一页失败：不停在骨架上，提示并可重试", async () => {
+    respond({ "": { ...PAGE_1, items: [PAGE_1.items[1] as HistoryEntry] }, c2: 502 });
+    vi.mocked(deleteHistoryEntry).mockResolvedValue({ ok: true });
+    const user = render();
+    await user.click(await screen.findByRole("button", { name: "从阅读历史删除：VITAMINS trial" }));
+    expect(await screen.findByText("没能加载更早的记录。")).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "还没有阅读历史" })).toBeNull();
+    respond({ "": PAGE_1, c2: PAGE_2 });
+    await user.click(screen.getByRole("button", { name: "重试" }));
+    expect(await screen.findByRole("region", { name: "10 月 30 日 周五" })).toBeInTheDocument();
+  });
+
   it("删掉最后一条：焦点到空状态的按钮（「清空历史」此时不可用）", async () => {
     respond({ "": { ...PAGE_1, items: [PAGE_1.items[1] as HistoryEntry], nextCursor: null } });
     vi.mocked(deleteHistoryEntry).mockResolvedValue({ ok: true });

@@ -45,8 +45,8 @@ export function ReadingHistoryView() {
   const items = pages.flatMap((page) => page.items);
   const recordingEnabled = pages[0]?.recordingEnabled ?? true;
   const signedOut = history.error instanceof SignedOutError;
-  /// 删光了已加载的条目、后面还有：接着取下一页，不显示空状态
-  const refilling = items.length === 0 && history.hasNextPage;
+  /// 删光了已加载的条目、后面还有：接着取下一页，不显示空状态。取失败了就不再算补页，改显示失败提示与重试
+  const refilling = items.length === 0 && history.hasNextPage && !history.isFetchNextPageError;
 
   useEffect(() => {
     if (refilling && !history.isFetchingNextPage && !history.isFetchNextPageError) {
@@ -98,6 +98,19 @@ export function ReadingHistoryView() {
     }
   }
 
+  const loadMoreFailed = (
+    <p role="alert" className="flex items-center gap-2 text-xs text-status-danger">
+      没能加载更早的记录。
+      <button
+        type="button"
+        onClick={() => void history.fetchNextPage()}
+        className="font-medium text-link hover:text-link-hover"
+      >
+        重试
+      </button>
+    </p>
+  );
+
   return (
     <div className="mx-auto max-w-[880px] px-gutter pt-10 pb-30 max-md:pt-6">
       <div className="flex items-end justify-between gap-6 max-md:flex-col max-md:items-start">
@@ -146,6 +159,8 @@ export function ReadingHistoryView() {
               </button>
             }
           />
+        ) : items.length === 0 && history.isFetchNextPageError ? (
+          <div className="flex justify-center py-10">{loadMoreFailed}</div>
         ) : items.length === 0 ? (
           cleared ? (
             <HistoryEmpty
@@ -221,16 +236,7 @@ export function ReadingHistoryView() {
             ))}
             <div className="mt-7 flex flex-col items-center gap-4">
               {history.isFetchNextPageError ? (
-                <p role="alert" className="flex items-center gap-2 text-xs text-status-danger">
-                  没能加载更早的记录。
-                  <button
-                    type="button"
-                    onClick={() => void history.fetchNextPage()}
-                    className="font-medium text-link hover:text-link-hover"
-                  >
-                    重试
-                  </button>
-                </p>
+                loadMoreFailed
               ) : history.hasNextPage ? (
                 <button
                   type="button"
