@@ -1,0 +1,163 @@
+---
+title: 行为数据的隐私与合规：告知与同意、最小化、删除、保留期
+summary: 行为数据里没有名字，不等于没有个人信息：设备 ID、IP 都能把记录对到一个人身上。业界围绕四件事处理它：采集前告知、需要时取得同意；只收必要的，IP 能不存就不存；用户要求或注销时删得干净；每类数据只留必要的时间。这篇对照 GDPR、ePrivacy 与个人信息保护法的条文和各家工具的做法，看 Patra 是怎么处理的。不构成法律意见。
+type: concept
+difficulty: advanced
+tags: [analytics, security]
+prerequisites: [analytics-tracking-plan, analytics-device-and-session]
+topics: [analytics-pipeline]
+sources:
+  - version: v0.18
+    issue: PAP-164
+    pr: 373
+personalEnv: false
+---
+
+<Diagnose
+  question="Patra 的行为事件里不存 IP、不存用户名，只有设备 ID 和用户 ID。按 GDPR 的思路，这些事件还算个人数据吗？"
+  options={["不算：没有名字和 IP，已经是匿名数据", "只有登录用户的事件算，访客的事件不算", "算：设备 ID 这类标识符能把记录对到一个人，属于假名化数据"]}
+  answer="C"
+  ifRight="对。去掉名字只是假名化，标识符还在，就还能对到人。这篇从这一点出发，讲告知与同意、最小化、删除和保留期。"
+  ifWrong="答案是 C。设备 Cookie 那篇讲过，设备 ID 的作用就是认出「这是同一个访客」；能认出同一个人，就不是匿名。GDPR 的鉴于条款明说，假名化后的数据只要借助额外信息还能对到人，仍是个人数据。"
+  suggest="analytics-device-and-session"
+/>
+
+<Callout kind="lead">
+
+行为数据的合规围绕四件事：采集前告知、需要时取得同意；只收实现目的所必需的；该删的时候删得干净；每类数据只保留必要的时间。
+
+</Callout>
+
+下面引的是法规原文和监管机构、工具厂商的公开文档，讲的是业界怎么理解和落地这些要求；Patra 的做法是规划时的判断，不是法律意见。
+
+## 先分清：去掉名字，不等于匿名
+
+GDPR 第 30 条鉴于条款说，人可能通过设备和协议提供的在线标识符被关联起来，举的例子就包括 IP 地址和 cookie 标识符；第 26 条鉴于条款说，假名化后的数据只要借助额外信息还能对到一个自然人，就仍应视为可识别的个人信息，而真正的匿名信息不在条例管辖范围内（据 [GDPR 鉴于条款第 30 条](https://gdpr-info.eu/recitals/no-30/)、[第 26 条](https://gdpr-info.eu/recitals/no-26/)）。
+
+个人信息保护法用的是两个词（[条文原文](https://www.cac.gov.cn/2021-08/20/c_1631050028355286.htm)）：
+
+- 第四条：个人信息「不包括匿名化处理后的信息」。
+- 第七十三条：**去标识化**是处理后「在不借助额外信息的情况下无法识别特定自然人」；**匿名化**是处理后「无法识别特定自然人且不能复原」。
+
+Patra 的事件去掉了用户名和 IP，但留着设备 ID 和用户 ID，后者在 identity 里能对回账号。按上面的定义，这是去标识化（假名化），不是匿名化，个人信息的规矩照样适用。
+
+还有一层：第二十八条列举的敏感个人信息里有「医疗健康」「行踪轨迹」。浏览记录不在列举里，但医生读了哪些文献，可能暴露他的科研方向和健康关注，所以 release spec 决策 J 把它按「接近敏感」保守处理。
+
+## 告知与同意：两套法律，两种重心
+
+**欧盟这边，cookie 同意来自 ePrivacy 指令第 5(3) 条。** 在用户终端设备上存信息或读取已存的信息，原则上要先取得同意；例外只有两种：纯粹为了完成通信传输，或者为了提供用户明确要求的服务所严格必需（欧洲数据保护委员会 EDPB 的指南脚注里引了这段原文，见 [EDPB Guidelines 2/2023](https://www.edpb.europa.eu/our-work-tools/documents/public-consultations/2023/guidelines-22023-technical-scope-art-53-eprivacy_en)）。这份指南还认为：网页分发一段 JavaScript、让浏览器把标识符发回来，本身就构成第 5(3) 条说的「读取」；至于什么情况落进例外，指南明说不做判断，要结合各成员国的转化立法和本国监管机构的指引逐案看。
+
+同意本身怎么才算数，GDPR 第 4 条第 11 项的定义是：自由给出、具体、知情、明确，并通过声明或清楚的肯定性动作表示（据 [GDPR 第 4 条](https://gdpr-info.eu/art-4-gdpr/)）。这就是为什么欧洲网站的 cookie 横幅要让人主动点「同意」。
+
+分析用的 cookie 能不能免同意，各国监管机构说法不同。法国的 CNIL 给了一组豁免条件，要同时满足：告知用户、允许用户拒绝、只用于受众测量和 A/B 测试、不和其他处理交叉比对、只在单个站点或应用内使用、IP 地址截掉最后一个字节、追踪器寿命不超过 13 个月；它还说大多数大型受众测量产品无论怎么配置都不在豁免范围内（据 [CNIL 关于网站分析的说明](https://www.cnil.fr/en/sheet-ndeg16-use-analytics-your-websites-and-applications)）。这是法国一国的做法，不是整个欧盟的统一规则。
+
+**国内这边，个人信息保护法的重心是告知和合法性基础。**
+
+- 第十三条列了七种可以处理个人信息的情形，第一种是「取得个人的同意」，其余包括履行合同所必需、履行法定职责所必需等。
+- 第十四条：基于同意处理的，同意要「在充分知情的前提下自愿、明确作出」。
+- 第十七条：处理前要以显著方式、清晰易懂的语言告知处理者的名称和联系方式，处理目的、方式、个人信息种类、保存期限，以及个人行使权利的方式和程序。
+
+**Patra 的做法**：不弹 cookie 同意框。release spec 第 3 节 K 写的理由是「国内法规不强制；只用第一方 cookie，在隐私政策里列明」，这是规划时的判断。告知靠新增的隐私政策页：按 release spec 2.1，它要写清采集了什么、用来做什么、两层数据的区别、怎么关闭和删除、保留多久、只用第一方 cookie、不用第三方统计，正好对着第十七条的那几项（隐私政策页在前端 PR 里实现）。
+
+## 最小化：IP 能不存就不存
+
+两部法律都有这条原则。个人信息保护法第六条：收集个人信息应当限于实现处理目的的最小范围，不得过度收集。GDPR 第 5 条第 1 款 (c) 项：个人数据要「adequate, relevant and limited to what is necessary」（据 [GDPR 第 5 条](https://gdpr-info.eu/art-5-gdpr/)）。
+
+行为数据里最典型的最小化对象是 IP。各家处理方式不一样：
+
+- **GA4**：Google 的帮助文档说，GA4 不记录也不存储 IP 地址，所以不再需要 IP 遮盖（据 [GA4 IP 说明](https://support.google.com/analytics/answer/2763052?hl=en)）。
+- **Matomo**：可以把 IP 的后一到三段遮掉，比如 198.51.100.123 遮成 198.51.100.0、198.51.0.0 或 198.0.0.0（据 [Matomo IP 匿名化](https://matomo.org/faq/general/how-does-ip-address-anonymisation-work-in-matomo/)）。
+- **Plausible**：不用 cookie，用「每日盐 + 站点域名 + IP + UA」算一个哈希来数当天的独立访客，盐每 24 小时轮换并删除，不存原始 IP 和 UA（据 [Plausible 数据政策](https://plausible.io/data-policy)）。
+
+<Compare
+  title="IP 的四种处理：能认出谁，还剩下什么"
+  variants={[
+    { label: "原样存 IP", steps: ["采集时拿到访客 IP", "原样写进明细表"], results: [{ label: "明细里还有 IP", value: "有，完整", tone: "bad" }, { label: "能算地区", value: "随时能重新查", tone: "ok" }, { label: "跨天认出同一个人", value: "IP 不变时能", tone: "wait" }], verdict: { tone: "bad", head: "最省事，留下的最多。", text: "IP 本身就是在线标识符，存下来就要按个人信息管，泄露了影响也最大。" } },
+    { label: "截断末段", steps: ["采集时拿到访客 IP", "遮掉最后一段或几段", "写进明细表"], results: [{ label: "明细里还有 IP", value: "只剩前几段", tone: "wait" }, { label: "能算地区", value: "粗粒度可以", tone: "ok" }, { label: "跨天认出同一个人", value: "难，同网段的人混在一起", tone: "wait" }], verdict: { tone: "ok", head: "Matomo、CNIL 的思路。", text: "保留一点地理信息，大幅降低认出个人的可能；CNIL 的豁免条件之一就是截掉最后一个字节。" } },
+    { label: "每日盐哈希", steps: ["采集时拿到 IP 和 UA", "和当天的盐、站点域名一起算哈希", "只存哈希，盐 24 小时后删除"], results: [{ label: "明细里还有 IP", value: "没有", tone: "ok" }, { label: "能算地区", value: "处理时顺带算，之后不能再算", tone: "wait" }, { label: "跨天认出同一个人", value: "不能，第二天哈希就变了", tone: "bad" }], verdict: { tone: "ok", head: "Plausible 的思路。", text: "当天的独立访客数得出来，留存这类跨天指标算不了。" } },
+    { label: "只存省份（Patra）", steps: ["门户把 IP 放进采集信封", "采集端点查 ip2region 得到国家和省份", "IP 丢弃，只把国家码和省份写进事件"], results: [{ label: "明细里还有 IP", value: "没有", tone: "ok" }, { label: "能算地区", value: "只到省级，查完不能再细", tone: "wait" }, { label: "跨天认出同一个人", value: "能，但靠的是设备 Cookie，不是 IP", tone: "wait" }], verdict: { tone: "ok", head: "不存 IP，认人另走一条路。", text: "要算 7 日留存就得认出跨天的同一个人，Patra 用持久的设备 ID 和用户 ID 做这件事，代价是注销时要删。" } }
+  ]}
+/>
+
+Patra 这边，IP 和原始 UA 只出现在门户发给采集端点的采集信封里：IP 用来查省级地区（国家不是中国时省份为空），UA 用来解析浏览器、系统、设备类别和判爬虫，算完就丢；落盘的富化事件和 dlq 记录里都没有这两个字段（事件信封那篇细讲过）。
+
+认人这件事，release spec 决策 A 在「持久标识」和 Plausible 式「每天换一个匿名 ID」之间选了前者：「7 日留存」要认出第一天来的人第 7 天有没有回来，每天换 ID 做不到。选了持久标识，就欠下了下一节的删除义务。
+
+## 删除：注销之后，删到哪一层
+
+GDPR 第 17 条给了数据主体请求删除的权利，适用情形包括数据对原目的不再必要、撤回同意且没有其他法律依据等，同时列了若干例外（据 [GDPR 第 17 条](https://gdpr-info.eu/art-17-gdpr/)）。个人信息保护法第四十七条要求处理者在五种情形下主动删除，处理者没删的，个人有权请求删除，其中包括处理目的已实现或不再必要、停止提供产品或服务或保存期限已届满、个人撤回同意。
+
+Patra 的注销清理是一个每天跑的定时任务：按用户 ID 分批，向 identity 查账号状态，**只有 identity 明确返回「已注销」的才删**，没返回的不删（省略不等于已注销），identity 不可用就跳过这一批、次日再跑。删除时一批用户一条语句：
+
+<CodeRef at="patra-api/patra-analytics/patra-analytics-infra/src/main/java/dev/patra/analytics/infra/ingest/store/ClickHouseEventStoreAdapter.java@8140a9d9482324670b63f00ab3c62690102196c5" lines="89-103" />
+
+```java
+  /// 一批用户一条语句地轻量删除：`events` 的排序键里没有 `user_id`，每条删除都扫全表，逐个用户删会扫上百遍。
+  ///
+  /// @param userIds 用户 ID
+  @Override
+  public void deleteUsers(List<Long> userIds) {
+    if (userIds.isEmpty()) {
+      return;
+    }
+    String ids = userIds.stream().map(String::valueOf).collect(Collectors.joining(", "));
+    String persons = userIds.stream().map(id -> "'u:" + id + "'").collect(Collectors.joining(", "));
+    execute("DELETE FROM events WHERE user_id IN (" + ids + ")");
+    execute("DELETE FROM dlq_events WHERE user_id IN (" + ids + ")");
+    execute("DELETE FROM article_session_reads WHERE person_id IN (" + persons + ")");
+    execute("DELETE FROM daily_person_activity WHERE user_id IN (" + ids + ")");
+  }
+```
+
+几个值得注意的地方：
+
+- **不只删明细，汇总也删。** `article_session_reads`（文献 × 会话）和 `daily_person_activity`（每人每天）虽然是汇总表，但里面存着 `person_id` 或 `user_id`，还是个人信息。删掉之后，对外的「N 人看过」会少掉这些人，这是删除权的本意，按 release spec 要在隐私政策里写明。
+- **`daily_person_activity` 最后删。** 它是找「有哪些用户要删」的来源，先删了它，中途失败的话，其他表的残留就再也找不到了。
+- **`session_quality` 不删。** 这张表不含用户信息。
+- **设备 ID 产生的匿名数据不删。** 同一个人登录前用设备 ID 产生的记录（`person_id` 是 `d:` 开头），无法认定那台设备只属于他，所以不删（入库设计 §6），同样要在隐私政策里写明。
+- **阅读历史另删。** 阅读历史在 PostgreSQL 里，注销时由 `history` 子域按同一套流程清空。
+
+<Quiz
+  questions={[
+    {
+      question: "B 注销了账号。第二天清理任务跑完，下面哪一项还会留在 ClickHouse 里？",
+      options: ["B 登录前用设备 ID 浏览时产生的记录（`person_id` 是 `d:` 开头）", "`article_session_reads` 里 `person_id` 是 `u:` 加 B 的用户 ID 的行", "`events` 里 `user_id` 是 B 的那些明细"],
+      answer: "A",
+      explain: "按用户 ID 能找到的都删了，包括汇总表里以 `u:` 开头的行；登录前的设备记录无法认定只属于 B，不删。"
+    },
+    {
+      question: "为什么清理任务只删 identity 明确返回「已注销」的用户，而不是「identity 查不到的就删」？",
+      options: ["因为 ClickHouse 的删除语句一次只能删一个用户", "因为 identity 没返回不等于已注销，可能只是这次没查到或服务出了问题，误删无法挽回", "因为查不到的用户都是爬虫，留着也不影响对外数字"],
+      answer: "B",
+      explain: "删除不可逆，宁可晚一天删，也不能把还在用的人的数据删掉。identity 不可用时整批跳过，次日重跑，删除本身是幂等的。"
+    }
+  ]}
+/>
+
+## 保留期：每类数据各留多久
+
+个人信息保护法第十九条：除法律、行政法规另有规定外，保存期限应当为实现处理目的所必要的最短时间。GDPR 第 5 条第 1 款 (e) 项也要求可识别形式的保存不超过必要时间，为统计等目的、在采取适当保护措施的前提下可以更长。
+
+工具层面的例子：GA4 的用户级数据保留期标准版只能选 2 个月或 14 个月（据 [GA4 数据保留](https://support.google.com/analytics/answer/7667196?hl=en)）；CNIL 的豁免条件里，追踪器寿命不超过 13 个月。
+
+Patra 按用途分层定（release spec 决策 J、入库设计）：
+
+| 数据 | 保留 | 为什么这么长 |
+|---|---|---|
+| Kafka `events.raw`、`events.dlq` | 2 天，另有磁盘上限 | 只是缓冲，ClickHouse 停机时能等一阵就够 |
+| ClickHouse 事件明细 | 90 天，表 TTL 到期整个分区丢弃 | spec 没写具体理由；它决定明细最多能回看多远，原样保存的检索词也跟着只留 90 天 |
+| 每人每天活跃 `daily_person_activity` | 400 天 | 够看一年的同比，留存从这里算 |
+| 其他汇总 | 长期 | 「N 人看过」按人长期去重，要一直累计 |
+| 个人阅读历史 | 12 个月 | 用户自己看的数据，定时任务清理 |
+
+注意「汇总长期保留」不等于「匿名所以可以一直留」：汇总表里还带着人的标识，所以注销时要删到它们。
+
+<Transfer
+  prompt="假设 Patra 决定向欧盟的读者开放，并希望在欧盟境内也合规地统计「N 人看过」。按这篇的四件事，哪些做法要重新评估？"
+  points={[
+    { label: "同意", text: "设备 Cookie 和浏览器上报属于 ePrivacy 第 5(3) 条的存储与读取，要看能不能落进「严格必需」的例外，或者所在国监管机构有没有类似 CNIL 的分析豁免；落不进就要先取得同意，没同意的访客不发设备 Cookie。" },
+    { label: "最小化", text: "对照 CNIL 这类豁免条件逐条检查：只用于本站统计、不交叉比对、追踪器寿命不超过 13 个月；Patra 的设备 Cookie 是 400 天，就是要改的地方。" },
+    { label: "删除与访问", text: "GDPR 下用户还能请求删除和访问；设备 ID 产生的数据不删的理由要重新论证，可能要提供按设备删除的办法。" },
+    { label: "找专业意见", text: "这些都只是按条文和公开指引列出的检查项，真要开放，要请熟悉欧盟数据保护法的律师看具体做法。" }
+  ]}
+/>

@@ -1,0 +1,398 @@
+---
+title: 上手练习一：在 ClickHouse 里查热门、作息、爬虫和「看过还看了」
+summary: 四道动手题，每道先猜结果的形状，再看参考 SQL 和 2026-11-02 在 mini 上跑出来的真实结果：一周看过人数前 10、一天按小时的页面浏览、爬虫占多少、某篇文献的「看过还看了」。数据是流量模拟器造的 1 亿条事件，有几处结果反映的是模型而不是真实用户，题里会指出来。
+type: concept
+difficulty: practice
+tags: [analytics, database]
+prerequisites: [analytics-metrics-pv-uv, analytics-replacing-mergetree-uniqexact]
+topics: [analytics-pipeline]
+sources:
+  - version: v0.18
+    issue: PAP-171
+    pr: 373
+personalEnv: false
+---
+
+<Diagnose
+  question="要数 2026-10-28 这一天 page_viewed 发生了多少次。明细表 events 里可能还有没被后台合并掉的重复行（同一条事件写进去两次）。下面哪种写法数得准？"
+  options={["`count()`：每行就是一条事件，过滤出 page_viewed 再数行数", "`uniqExact(session_id)`：一个会话只算一次，重复写进来的行自然被去掉", "`uniqExact(event_id)`：重复行的 event_id 一模一样，按它去重才是真实次数"]}
+  answer="C"
+  ifRight="对。本篇每道题都会碰到「按什么去重」：数次数按 event_id，数人按 person_id。往下读，先猜再看结果。"
+  ifWrong="答案是 C。ReplacingMergeTree 只在后台合并时才去重，合并之前同一条事件可能有两行，count() 会多数；按会话去重数的是会话数，不是次数。这题考的是重复行怎么数，先读讲 ReplacingMergeTree 与 uniqExact 的那篇。"
+  suggest="analytics-replacing-mergetree-uniqexact"
+/>
+
+<Callout kind="lead">
+
+这篇是动手练习：四个产品上真会被问到的问题，每题先猜结果长什么样，再写 SQL、看真实结果，最后把结果和前面讲过的机制对上。所有查询都是只读的 `SELECT`。
+
+</Callout>
+
+## 开始之前：怎么连、为什么不会改坏数据
+
+ClickHouse 有一个 HTTP 接口（8123 端口），把 SQL 存成文件 `query.sql`，用 curl 发过去就能跑：
+
+```bash
+curl -u "patra:$CLICKHOUSE_PATRA_PASSWORD" \
+  'http://<mini 的地址>:8123/?database=patra_analytics&readonly=1' \
+  --data-binary @query.sql
+```
+
+密码从环境变量 `CLICKHOUSE_PATRA_PASSWORD` 读，存密码的文件不进仓库。`<mini 的地址>` 换成你自己机器的地址。
+
+为什么要在地址里带 `readonly=1`？因为 `patra` 这个账号本身是能写的，它是 analytics 服务和模拟器共用的应用账号：
+
+<CodeRef at="patra-infra/docker/clickhouse/users.d/patra.xml@8140a9d9482324670b63f00ab3c62690102196c5" lines="35-49" />
+
+```xml
+    <patra>
+      <password from_env="CLICKHOUSE_PATRA_PASSWORD"/>
+      <networks>
+        <ip>::/0</ip>
+      </networks>
+      <profile>default</profile>
+      <quota>default</quota>
+      <grants>
+        <query>GRANT ALL ON patra_analytics.*</query>
+        <!-- 运维视图：数据片段数与磁盘占用、每次写入与合并、慢查询（PAP-168/171/172 用） -->
+        <query>GRANT SELECT ON system.parts</query>
+        <query>GRANT SELECT ON system.part_log</query>
+        <query>GRANT SELECT ON system.query_log</query>
+      </grants>
+    </patra>
+```
+
+`GRANT ALL` 意味着手一抖写了个 `DELETE`，它真会执行。`readonly=1` 是 ClickHouse 的一个会话设置：带上它，这次请求里只允许读，`INSERT`、`ALTER`、`DROP`、`DELETE` 一律被拒绝，连改其他设置都不行。练习时养成习惯：**权限给得宽的账号，靠会话设置把自己锁成只读**。
+
+同一个文件里的 `default` 配置还给每条查询设了上限：最多 2 个线程、1 GiB 内存。所以下面有的查询要跑十几秒，日期范围别随手放大到几个月。
+
+<Callout kind="warn">
+
+这里的数据是流量模拟器按模型造的 1 亿条事件（`is_synthetic = 1`），不是真实用户。数据范围是北京时间 2026-08-06 到 11-02，下面用的样本周是 10-26（周一）到 11-01（周日），样本日是 10-28（周三）。结果是 2026-11-02 北京时间 18:50 左右跑的。有些结果的「形状」来自模型的参数，题里会指出来；真实产品的数字不会这么整齐。
+
+</Callout>
+
+两道题要用到同一个口径：**真人会话**。汇总表 `session_quality` 每个会话一行（合并前可能几行），记着这个会话有没有浏览器事件（`has_client`）、有没有被标过爬虫（`has_bot`）。真人会话 = 有浏览器事件、且一次都没被标过爬虫。查询里的写法是：
+
+```sql
+SELECT session_id FROM session_quality
+WHERE first_day >= toDate('2026-10-26') - 1
+GROUP BY session_id
+HAVING max(has_client) = 1 AND max(has_bot) = 0
+```
+
+注意 `first_day` 只设了下限、没设上限：一个 23:58 开始、过了零点才被频率规则标记的爬虫会话，第二天那行「被标过爬虫」也会被算进来。这正是「对账差了 26 行：零点之后才被标记的伪装爬虫」那篇里踩过的坑，这里的写法是对的。往前多放一天，是为了把前一天晚上开始、跨进样本周的会话也带上。
+
+## 第 1 题：这一周，看过人数最多的 10 篇文献
+
+**要查什么**：10-26 到 11-01 这一周，看过人数最多的 10 篇文献，按人去重、只数真人会话。
+
+**为什么值得查**：这是「热门」最朴素的定义。门户上每篇文献的「N 人看过」用的是同一张汇总表、同一条真人会话规则，只是门户数的是全部时间，这里只数一周。
+
+<Quiz
+  title="先猜"
+  questions={[
+    {
+      question: "这 10 篇的看过人数，形状最像哪一种？",
+      options: ["第 2 名大约是第 1 名的一半多，往后越降越缓，第 10 名不到第 1 名的七分之一", "前 10 名彼此差不多，第 10 名也有第 1 名的八九成，热门文献之间拉不开差距", "第 1 名一枝独秀，第 2 名就只剩第 1 名的十分之一，后面几名都只有零头"],
+      answer: "A",
+      explain: "第 1 名 19,178 人，第 2 名 10,768，第 3 名 7,694，第 10 名 2,512。这是典型的长尾：排名越靠前，人数掉得越快。原因见下文。"
+    }
+  ]}
+/>
+
+**提示**：用汇总表 `article_session_reads`（每篇文献 × 每个会话一行，记着看过没有、读过全文没有），按 `day` 卡一周；`session_id` 要落在上面那个真人会话子查询里；数人用 `uniqExact(person_id)`。
+
+**参考答案**：
+
+```sql
+SELECT article_id, uniqExact(person_id) AS viewers
+FROM article_session_reads
+WHERE day BETWEEN '2026-10-26' AND '2026-11-01' AND is_synthetic AND viewed = 1
+  AND session_id IN (
+      SELECT session_id FROM session_quality
+      WHERE first_day >= toDate('2026-10-26') - 1
+      GROUP BY session_id
+      HAVING max(has_client) = 1 AND max(has_bot) = 0)
+GROUP BY article_id ORDER BY viewers DESC, article_id LIMIT 10
+FORMAT PrettyCompactMonoBlock
+```
+
+**实际结果**（约 1 秒，整理成表）：
+
+| 名次 | article_id | viewers |
+|---|---|---|
+| 1 | 352303052028567773 | 19,178 |
+| 2 | 352303094940492771 | 10,768 |
+| 3 | 352303012803436586 | 7,694 |
+| 4 | 352303012832797306 | 5,865 |
+| 5 | 352303128708834552 | 4,679 |
+| 6 | 352303012807631012 | 3,922 |
+| 7 | 352303072496771954 | 3,588 |
+| 8 | 352303094936298022 | 3,056 |
+| 9 | 352303052032762860 | 2,699 |
+| 10 | 352303128708836088 | 2,512 |
+
+文献 ID 是 catalog 里公开的文献 ID。
+
+**怎么读**：
+
+- **为什么是 `uniqExact(person_id)` 而不是 `count()`**：同一个人一周里可能在好几个会话里看同一篇，`article_session_reads` 在合并前还可能有重复行。按人去重，两种重复一起去掉。这是讲 ReplacingMergeTree 与 uniqExact 那篇的规矩在汇总表上的用法。
+- **为什么只要 1 秒**：它没碰 1 亿行的明细表，读的是物化视图在写入时就汇总好的表（讲物化视图那篇）。
+- **长尾的形状来自模型**：模拟器挑文献按 Zipf 分布抽，指数是 1.0（`traffic-model.json` 的 `zipfExponent`），理论上第 2 名约是第 1 名的一半、第 3 名约三分之一。实测比这平一些，大致是因为同一个人反复看同一篇只算一次，而且七成的挑选是按读者自己的兴趣主题（造流量那篇讲过）。真实产品的热门分布通常也是长尾，但具体有多陡要看真实数据，这里的数字只说明模型。
+
+## 第 2 题：一天里每个小时的访问量
+
+**要查什么**：10-28（周三）每个小时（北京时间）有多少次页面浏览，排除爬虫。
+
+**为什么值得查**：访问的作息决定了很多工程决定：定时任务放在几点跑、压测要模拟多高的峰、告警阈值白天和夜里该不该一样。
+
+<Quiz
+  title="先猜"
+  questions={[
+    {
+      question: "这一天按小时画出来，形状最像哪一种？",
+      options: ["白天是一整块平台，从早上 9 点平到傍晚 6 点，晚上直接落到接近零", "上午 10 点、下午 3 点各一个高峰，中午 12 点落下一截，晚上 8～9 点还有一个小峰", "一个大高峰在晚上 9 点前后，上班时间的访问量反而只有晚上的一半"],
+      answer: "B",
+      explain: "两个工作时段的高峰、午饭时的低谷、晚上的小峰，凌晨 3～5 点最低。这条曲线是模拟器照一组昼夜系数造出来的，下文对照。"
+    }
+  ]}
+/>
+
+**提示**：明细表 `events`，`event_name = 'page_viewed'`，`NOT is_bot`；按 `toHour(derived_at, 'Asia/Shanghai')` 分组，数次数用 `uniqExact(event_id)`。`bar()` 能在终端里画一根字符条，看形状很方便。
+
+**参考答案**：
+
+```sql
+SELECT toHour(derived_at, 'Asia/Shanghai') AS hour, uniqExact(event_id) AS page_views,
+       bar(page_views, 0, 12000, 30) AS chart
+FROM events
+WHERE toYYYYMMDD(derived_at, 'Asia/Shanghai') = 20261028
+  AND is_synthetic AND NOT is_bot AND event_name = 'page_viewed'
+GROUP BY hour ORDER BY hour
+FORMAT PrettyCompactMonoBlock
+```
+
+**实际结果**（整理成表，省略了 `chart` 那一列字符条）：
+
+| 时 | page_views | 时 | page_views | 时 | page_views |
+|---|---|---|---|---|---|
+| 0 | 2,654 | 8 | 6,150 | 16 | 9,770 |
+| 1 | 1,697 | 9 | 9,520 | 17 | 7,324 |
+| 2 | 1,014 | 10 | 10,014 | 18 | 4,967 |
+| 3 | 945 | 11 | 8,752 | 19 | 6,039 |
+| 4 | 804 | 12 | 5,457 | 20 | 7,551 |
+| 5 | 714 | 13 | 6,127 | 21 | 7,458 |
+| 6 | 1,481 | 14 | 9,581 | 22 | 5,555 |
+| 7 | 3,014 | 15 | 10,128 | 23 | 3,766 |
+
+**怎么读**：把它和模拟器的昼夜系数放在一起看。数组下标就是小时，0 点 0.5，凌晨 2～5 点 0.15，9～10 点和 14～16 点 1.8，中午 12 点 1.0，20～21 点 1.4：
+
+<CodeRef at="patra-api/patra-analytics/patra-analytics-simulator/src/main/resources/simulator/traffic-model.json@8140a9d9482324670b63f00ab3c62690102196c5" lines="8-33" />
+
+```json
+  "hourly": [
+    0.5,
+    0.3,
+    0.15,
+    0.15,
+    0.15,
+    0.15,
+    0.3,
+    0.6,
+    1.1,
+    1.8,
+    1.8,
+    1.6,
+    1.0,
+    1.2,
+    1.8,
+    1.8,
+    1.8,
+    1.4,
+    0.9,
+    1.1,
+    1.4,
+    1.4,
+    1.0,
+    0.7
+  ],
+```
+
+形状和系数一一对得上：两个 1.8 的时段是两座峰，12 点的 1.0 是午间低谷，20～21 点的 1.4 是晚间小峰。这就是造流量那篇讲的非齐次泊松：会话到达的速率随时间变，系数乘在速率上。
+
+细看还有一处不完全贴合：凌晨 2～5 点系数都是 0.15，实测却从 1,014 一路降到 714。系数管的是**会话什么时候开始**，一个会话会接着浏览好几页，前一个小时开始的会话有一部分页面落在下一个小时，所以紧跟在高系数后面的几个小时会被「拖」高一点。这是推断，读者可以自己按会话开始时间再查一遍来验证。
+
+两个容易写错的地方：
+
+- **一定要写时区**。`derived_at` 存的是 UTC，`toHour(derived_at)` 不带时区，整条曲线会平移 8 小时，峰值跑到凌晨。分区、汇总表里的「天」都按北京时间切（MergeTree 那篇讲过），按小时看也要一致。
+- **真实产品不会这么规整**。这里每个工作日都是同一组系数，真实的作息会被节假日、开学、投稿截止日这些事打乱。
+
+## 第 3 题：爬虫占了多少
+
+**要查什么**：10-28 这一天的全部事件里，被标成爬虫的占多少，按原因拆开。
+
+**为什么值得查**：爬虫不排除，页面浏览、热门榜都会被抬高；而且要看清爬虫主要是被哪条规则抓到的，规则失效时才知道该去哪里查。
+
+<Quiz
+  title="先猜"
+  questions={[
+    {
+      question: "模拟器里，声明自己身份的爬虫占会话的 3%，伪装成浏览器的爬虫占 1%。这一天被标成爬虫的事件，占全部事件的多少？",
+      options: ["约 4%，和爬虫会话所占的比例差不多，一个会话就是一个会话", "约 10%，爬虫比真人翻得多一些，但多不了太多", "接近 30%，爬虫会话只是少数，却贡献了将近三成的事件"],
+      answer: "C",
+      explain: "被标成爬虫的事件是 21.11% 加 8.13%，接近三成。爬虫一次会话要抓几十到几百篇，真人一次只看几页。"
+    }
+  ]}
+/>
+
+**提示**：这次**不**加 `NOT is_bot`。按 `if(is_bot, bot_reason, '（不是爬虫）')` 分组；次数用 `uniqExact(event_id)`，会话数用 `uniqExact(session_id)`；百分比用窗口函数 `sum(events) OVER ()` 算总数。
+
+**参考答案**：
+
+```sql
+SELECT if(is_bot, bot_reason, '（不是爬虫）') AS reason,
+       uniqExact(event_id) AS events,
+       round(100 * events / sum(events) OVER (), 2) AS pct,
+       uniqExact(session_id) AS sessions
+FROM events
+WHERE toYYYYMMDD(derived_at, 'Asia/Shanghai') = 20261028 AND is_synthetic
+GROUP BY reason ORDER BY events DESC
+FORMAT PrettyCompactMonoBlock
+```
+
+**实际结果**（整理成表）：
+
+| reason | events | pct | sessions |
+|---|---|---|---|
+| （不是爬虫） | 922,461 | 70.76 | 51,742 |
+| `ua_list` | 275,207 | 21.11 | 1,578 |
+| `rate` | 105,971 | 8.13 | 535 |
+
+**怎么读**：
+
+- **会话少、事件多**。爬虫会话加起来只有约 4%，和模拟器设定的 3% + 1% 大致对得上；可它们贡献了近 30% 的事件，因为模拟器里一个声明身份的爬虫会话抓 50～300 篇，伪装爬虫 60～200 篇（`traffic-model.json` 的 `crawlers`），真人会话最多 25 页。
+- **两条规则各抓一类**。`ua_list` 是 UA 命中 COUNTER-Robots 名单，抓的是老实报名字的爬虫；`rate` 是 Redis 滑动窗口里同一设备 5 分钟看了超过 30 篇，抓的是伪装成浏览器的（爬虫识别那篇）。
+- **会话数有重叠**。`rate` 会话在被标记之前的那些事件没有被标，算在「不是爬虫」那一行里，所以三行的会话数不能直接相加。第一行的 51,742 个会话里就混着这 535 个会话的开头部分，这也是为什么后面几道题要用「真人会话」整个会话一起排除，而不是逐条看 `is_bot`。讲指标的那几篇里，同一天的 UV 比日活多出 531 人，大致就是这部分伪装爬虫被标记之前的浏览。
+- **顺手核对**：第一行的 51,742 个会话，和讲 PV、UV 时那条查询里同一天的会话数是同一个数。两条不同的查询对上了，说明口径一致。
+
+## 第 4 题：看过这篇的人，还看了什么
+
+**要查什么**：这一周看过第 1 题里第 3 名（`352303012803436586`）的人，同一天还看了哪些文献；按余弦相似度排出前 8。
+
+**为什么值得查**：这就是文献页上「看过这篇的人还看了」的原型。手写一遍，才看得清余弦相似度到底在做什么、做不到什么。
+
+<Quiz
+  title="先猜"
+  questions={[
+    {
+      question: "用余弦相似度排出来的前 8 名，会是什么样的文献？",
+      options: ["和它同一个主题、平时没什么人看的冷门文献，余弦把热门的优势完全抵消了", "随机散落的文献，相似度彼此差不多，看不出任何规律，因为样本太少", "几乎只有它自己那个主题的文献，其他主题的一篇都排不进前 8", "几乎全是这一周看过人数前 10 里的热门文献，余弦也没能把它们压下去"],
+      answer: "D",
+      explain: "前 8 名全是第 1 题前 10 里的文献。余弦只是压低热门的优势，不是消除；而模拟器里有三成的挑选是按全局热度抽的，热门文献和谁都一起被读。"
+    }
+  ]}
+/>
+
+**提示**：先从 `article_session_reads` 取出这一周真人会话里的「（文献，人，天）」三元组；同一人同一天看过的文献算一组。数和 X 同组出现过的人数（`co_readers`，至少 3 人），再除以 √(读 X 的人数 × 读 Y 的人数)。
+
+**参考答案**：
+
+```sql
+WITH
+    352303012803436586 AS x,
+    reads AS (
+        SELECT DISTINCT article_id, person_id, day
+        FROM article_session_reads
+        WHERE day BETWEEN '2026-10-26' AND '2026-11-01' AND is_synthetic AND viewed = 1
+          AND session_id IN (
+              SELECT session_id FROM session_quality
+              WHERE first_day >= toDate('2026-10-26') - 1
+              GROUP BY session_id HAVING max(has_client) = 1 AND max(has_bot) = 0)
+    ),
+    x_baskets AS (SELECT person_id, day FROM reads WHERE article_id = x),
+    co AS (
+        SELECT r.article_id AS y, uniqExact(r.person_id) AS co_readers
+        FROM reads AS r
+        INNER JOIN x_baskets AS b ON r.person_id = b.person_id AND r.day = b.day
+        WHERE r.article_id != x
+        GROUP BY y HAVING co_readers >= 3
+    ),
+    n AS (SELECT article_id, uniqExact(person_id) AS readers FROM reads GROUP BY article_id)
+SELECT co.y AS article_id, co.co_readers, ny.readers AS readers_y,
+       round(co.co_readers / sqrt((SELECT readers FROM n WHERE article_id = x) * ny.readers), 4) AS cosine
+FROM co INNER JOIN n AS ny ON ny.article_id = co.y
+ORDER BY cosine DESC, co_readers DESC LIMIT 8
+FORMAT PrettyCompactMonoBlock
+```
+
+**实际结果**（整理成表；「第 1 题名次」是对照第 1 题补的一列）：
+
+| article_id | co_readers | readers_y | cosine | 第 1 题名次 |
+|---|---|---|---|---|
+| 352303052028567773 | 689 | 19,178 | 0.0567 | 1 |
+| 352303094940492771 | 368 | 10,768 | 0.0404 | 2 |
+| 352303012832797306 | 208 | 5,865 | 0.031 | 4 |
+| 352303128708834552 | 176 | 4,679 | 0.0293 | 5 |
+| 352303072496771954 | 134 | 3,588 | 0.0255 | 7 |
+| 352303128708836088 | 104 | 2,512 | 0.0237 | 10 |
+| 352303012807631012 | 129 | 3,922 | 0.0235 | 6 |
+| 352303094936298022 | 105 | 3,056 | 0.0217 | 8 |
+
+**怎么读**：
+
+- **先验算一行**。第一行：689 ÷ √(7,694 × 19,178) ≈ 0.0567。7,694 是读 X（第 3 名）的人数，19,178 是读第 1 名的人数。
+- **余弦确实在压热门**。按一起读的人数排，第 6 名本该是 `352303012807631012`（129 人）；余弦把它排到了 `352303128708836088`（104 人）后面，因为前者一周有 3,922 人看，后者只有 2,512 人，分母更大。这就是「看过还看了」那篇讲的：除以热度，把「谁都会顺手看一眼」的那部分扣掉。
+- **但只是压低，不是消除**。前 8 名还是清一色的热门。模拟器每次挑文献有 30% 按全局 Zipf 抽（另外 70% 按读者的兴趣主题），热门文献在全局里占比极高，几乎和每篇文献都同组出现过。真实产品里，「谁都看的那几篇」也会这样挤进推荐，所以线上任务除了余弦，还靠门槛和补位规则兜着。
+
+<Callout kind="warn">
+
+这条是**手写的简化版**，和线上算「看过还看了」的任务口径不一样，不要拿它的数去和门户上的推荐对。
+
+</Callout>
+
+线上任务的查询在 `ClickHouseReadingSignalAdapter` 里，关键的几行：
+
+<CodeRef at="patra-api/patra-analytics/patra-analytics-infra/src/main/java/dev/patra/analytics/infra/insight/signal/ClickHouseReadingSignalAdapter.java@8140a9d9482324670b63f00ab3c62690102196c5" lines="68-86" />
+
+```java
+  /// 共现（一片）：同一人同一天为一组、取当天最先读的 20 篇；只展开 X 落在这一片的有序配对；
+  /// 相似度 = 一起读的人数 / √(读 X 的人数 × 读 Y 的人数)，人数都在截断后的组里数。
+  private static final String CO_READING =
+      READS.replace("{aggregate}", "min(derived_at) AS first_at")
+          + """
+          , baskets AS (
+              SELECT person_id,
+                     arraySlice(arrayMap(t -> t.2, arraySort(groupArray((first_at, article_id)))),
+                                1, {groupLimit:UInt8}) AS items
+              FROM reads GROUP BY person_id, day),
+          readers AS (
+              SELECT a AS article_id, uniqExact(person_id) AS n
+              FROM baskets ARRAY JOIN items AS a GROUP BY a),
+          pairs AS (
+              SELECT p.1 AS x, p.2 AS y, uniqExact(person_id) AS co
+              FROM baskets
+              ARRAY JOIN arrayFlatten(arrayMap(a -> arrayMap(b -> (a, b), arrayFilter(b -> b != a, items)),
+                         arrayFilter(a -> cityHash64(a) % {shards:UInt16} = {shard:UInt16}, items))) AS p
+              GROUP BY x, y HAVING co >= {minCoReaders:UInt8})
+```
+
+| | 本题的简化版 | 线上任务 |
+|---|---|---|
+| 数据从哪来 | 汇总表 `article_session_reads` | 明细表 `events` |
+| 时间窗口 | 一周（7 天） | 今天往前共 14 天 |
+| 每组几篇 | 不限 | 同一人同一天只取最先读的 20 篇 |
+| 读者人数在哪数 | 全部阅读 | 截断后的组里 |
+| 怎么跑 | 只算一篇 X | 全部文献一起算，按文献 ID 分 8 片逐片查，守住内存 |
+
+相同的是：同人同天为一组、至少 3 人、余弦公式、真人会话的判定（`first_day` 同样只设下限）。
+
+<Transfer
+  prompt="产品经理问：上周（10-26～11-01）用手机的读者最爱看哪 10 篇，和整体的前 10 一样吗？你打算从第 1 题的 SQL 改起。要改哪里，哪些地方要特别小心？"
+  points={[
+    { label: "汇总表里没有设备列", text: "article_session_reads 只有文献、会话、人、天，没有 device_class。要回到明细表 events 按 device_class = 'Phone' 过滤（或者先从 events 取出手机会话再关联），扫的数据多得多，日期一定要卡住分区。" },
+    { label: "真人会话照旧", text: "爬虫照样要整会话排除，session_quality 的 first_day 仍然只设下限，不然零点后才被标记的爬虫会漏进来。" },
+    { label: "按人去重", text: "数人用 uniqExact(person_id)，不用 count()；明细表里的重复行和同一人的多个会话都要去掉。" },
+    { label: "结论只说明模型", text: "数据是合成的，手机和电脑的读者看什么由模拟器的参数决定。查出来一样或不一样，都只能说明模型，不能当成真实读者的偏好。" }
+  ]}
+/>

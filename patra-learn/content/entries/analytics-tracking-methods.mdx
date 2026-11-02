@@ -1,0 +1,160 @@
+---
+title: 代码埋点、全埋点、可视化埋点：事件是怎么被记下来的
+summary: 同样是记下「读者点了这张卡片」，可以在代码里调一行上报（代码埋点），可以让 SDK 自动把所有点击都记下来（全埋点），也可以事后在页面上圈选哪些点击算数（可视化埋点）；事件还可以从浏览器发，也可以从服务端发。这篇讲业界这几种做法各自怎么工作、适合什么，以及 Patra 为什么只用代码埋点、并把一半事件放在门户服务端发。
+type: concept
+difficulty: basic
+tags: [analytics, frontend]
+prerequisites: [analytics-tracking-plan]
+topics: [analytics-pipeline]
+sources:
+  - version: v0.18
+    issue: PAP-164
+    pr: 373
+personalEnv: false
+---
+
+<Diagnose
+  question="前端已经接了一个会自动记录所有按钮点击的 SDK。运营提了三个需求，哪一个靠这份自动记录最难直接满足？"
+  options={["统计首页「热读」标签按钮每天被点了多少次", "统计首页每天被打开了多少次，按日期画一条曲线", "按被点的是哪篇文献、它排在列表第几位，拆开看文献卡片的点击"]}
+  answer="C"
+  ifRight="对。自动记录能知道「点了哪个元素」，却不知道这个元素背后是哪篇文献、排第几位，这些是业务含义，要有人告诉它。这篇讲几种记录方式各自能拿到什么。"
+  ifWrong="答案是 C。按钮点击和页面打开都是 SDK 能自己看到的；可「这张卡片是哪篇文献、排第几位」是业务含义，SDK 看不出来，要在埋点方案里定成事件属性，再由代码带上。埋点方案那篇讲过：会变的值放属性里。"
+  suggest="analytics-tracking-plan"
+/>
+
+<Callout kind="lead">
+
+埋点方式指事件「怎么被记下来」：代码埋点是开发者在代码里显式上报，全埋点是 SDK 自动采集所有基础交互，可视化埋点是在全埋点数据之上、到页面上圈选出有业务意义的事件。
+
+</Callout>
+
+埋点方案回答「记什么、怎么算」，埋点方式回答「谁、在哪一行代码里把它记下来」。两件事分开：同一份方案，可以用不同方式落地。
+
+## 代码埋点：在事件发生的地方调一行上报
+
+最直接的做法：在事件发生的那一行代码里调用 SDK 的上报方法，把事件名和属性一起交出去。各家都有这一档，叫法不同：GrowingIO 的「埋点 SDK」除了访问之类的少量事件外，其余事件都要开发者调埋点 API（据 [GrowingIO Android SDK 文档](https://github.com/growingio/growingio-sdk-android-autotracker/wiki)）；Amplitude 叫 precision tracking，说它按「你的业务需要」定事件和属性（据 [Amplitude Autocapture 文档](https://amplitude.com/docs/data/autocapture)）；GA4 把这一类分成「推荐事件」（名字和参数是 Google 预先定好的，但要你自己实现）和「自定义事件」，并建议只在没有现成事件可用时才自定义（据 [GA4 事件分类](https://support.google.com/analytics/answer/9322688?hl=en)）。
+
+好处是**精确**：什么时候发、带哪些属性，全由代码决定。「卡片 50% 可见、连续 1 秒才算曝光」这种口径，只有代码写得出来。代价是**每加一个事件都要改代码、发版**，埋点多了维护成本也跟着涨。
+
+## 全埋点：先全部采下来，事后再挑
+
+全埋点（也叫无埋点、自动采集，英文 autocapture）反过来：SDK 一接上，就自动记下页面浏览和常见控件的点击，不用为每个事件写代码。
+
+各家自动采什么，官方文档都写得很具体：
+
+| 工具 | 自动采集的内容 | 出处 |
+|---|---|---|
+| 神策 Web 全埋点 | 页面浏览 `$pageview`、元素点击 `$WebClick`、视区停留 `$WebStay` 三种；点击默认只采 `a`、`input`、`button`、`textarea` 四种元素 | [神策 Web 全埋点文档](https://manual.sensorsdata.cn/sa/docs/tech_sdk_client_web_all_use/v0300) |
+| GrowingIO 无埋点 SDK | 自动采集点击、页面浏览等基础行为，是埋点 SDK 的超集 | [GrowingIO Android SDK 文档](https://github.com/growingio/growingio-sdk-android-autotracker/wiki) |
+| PostHog autocapture | 网页上的页面浏览、离开，`a`、`button`、`form`、`input` 等元素的点击与表单提交，还有「怒点」「死点」等 | [PostHog autocapture 文档](https://posthog.com/docs/product-analytics/autocapture) |
+| Mixpanel Autocapture | 页面浏览、滚动、表单交互、元素点击、来源归因、怒点与死点；事件名统一以 `$mp_` 开头 | [Mixpanel Autocapture 文档](https://docs.mixpanel.com/docs/tracking-methods/autocapture) |
+| GA4 增强型衡量 | `page_view`、滚到约 90% 深度的 `scroll`、外链点击、从网址参数（如 `q`）识别的 `view_search_results`、文件下载、表单开始与提交等 | [GA4 增强型衡量](https://support.google.com/analytics/answer/9216061?hl=en) |
+
+好处是**快和全**：上线第一天就有数据，事后想分析某个按钮，数据早就在了。代价有三条，官方文档里都能找到影子：
+
+- **只知道元素，不知道业务。** SDK 看得到「点了一个 `button`，文字是『收藏』」，看不到「这是第几篇文献」。PostHog 给的办法是在 HTML 元素上加 `data-ph-capture-attribute-*` 属性，把商品 ID 这类信息挂到自动采集的点击上，这其实又回到了改代码。
+- **量大、噪声多。** 神策的文档直说全埋点「通常事件量会比较大，控件难以区分」；Mixpanel 建议开了之后盯着事件量。
+- **敏感信息要防。** PostHog 和 Mixpanel 默认都不采表单里填的值、不采密码框；Mixpanel 还明确说处理高度敏感数据（如健康信息）的站点不建议开 Autocapture。
+
+关键业务事件，各家都不建议只靠全埋点：PostHog 的最佳实践专门提醒，很多团队依赖自动采集，结果漏了一个像样的「注册成功」事件，建议显式埋（据 [PostHog 产品分析最佳实践](https://posthog.com/docs/product-analytics/best-practices)）。Amplitude 也说两种方式配合用，多数团队两样都开。
+
+## 可视化埋点：在全埋点的数据上圈选
+
+全埋点采回来一大堆点击，哪些有业务意义？可视化埋点让产品、运营在页面上直接点选元素、保存成一个事件，不用研发发版。神策叫「可视化全埋点」，文档说它的分析效力等同于神策的「虚拟事件」，也就是在已采集的数据上做的一层定义（据 [神策可视化全埋点文档](https://manual.sensorsdata.cn/sa/docs/visual_auto_track/v0300)）。Amplitude 的同类功能叫 visual labeling。
+
+两点容易误解：
+
+- 它不是一种独立的采集方式，**数据还是全埋点采的**，圈选只是给已有数据起名字、划范围。
+- 神策的可视化全埋点**支持自定义属性**，比如把搜索框内容、商品价格这类页面元素定义成属性；但文档也提醒两件事：App 版本升级后部分事件定义可能失效，不再统计；定义成本低，容易定义得一团乱，要规范命名。
+
+三种方式放在一起比，差别在「加一个新事件要做什么」和「页面改版之后会怎样」：
+
+<Compare
+  title="三种埋点方式：加一个「文献卡片点击」事件"
+  variants={[
+    { label: "代码埋点", steps: ["在埋点方案里定好事件名和属性", "在卡片的点击处理里调一行上报，带上文献 ID、列表类型、位置", "测试通过后随版本发布"], results: [{ label: "要不要改代码发版", value: "要", tone: "wait" }, { label: "能不能带上文献 ID、位置", value: "能，想带什么带什么", tone: "ok" }, { label: "页面改版之后", value: "上报调用还在，照常发", tone: "ok" }], verdict: { tone: "ok", head: "最精确，也最费人。", text: "口径和属性完全由代码决定，代价是每个事件都要研发参与。" } },
+    { label: "全埋点", steps: ["接入 SDK，打开自动采集", "所有卡片点击自动记成一种通用点击事件", "分析时按元素的标签、文字或选择器把卡片点击筛出来"], results: [{ label: "要不要改代码发版", value: "不用为这个事件单独改", tone: "ok" }, { label: "能不能带上文献 ID、位置", value: "默认不能，要在 HTML 上另加属性", tone: "wait" }, { label: "页面改版之后", value: "原始点击照采，按元素筛的口径要复核", tone: "wait" }], verdict: { tone: "ok", head: "快，但只认得元素。", text: "上线就有数据，可业务含义要靠事后筛选或额外标注补上。" } },
+    { label: "可视化埋点", steps: ["前提：已经开着全埋点", "运营进入圈选模式，在页面上点选文献卡片，保存成一个事件", "需要的话把页面上的元素定义成属性"], results: [{ label: "要不要改代码发版", value: "不用，运营自己就能定义", tone: "ok" }, { label: "能不能带上文献 ID、位置", value: "页面上看得到的元素可以定义成属性", tone: "wait" }, { label: "页面改版之后", value: "神策文档以 App 为例提醒：版本升级后部分定义可能失效", tone: "bad" }], verdict: { tone: "ok", head: "不靠研发，但要有人管。", text: "定义快、成本低，也因此容易乱；页面一变，要回头检查定义还准不准。" } }
+  ]}
+/>
+
+<Quiz
+  questions={[
+    {
+      question: "一个团队开着全埋点，又用可视化埋点圈了 200 个事件。前端做了一次大改版之后，最需要先检查什么？",
+      options: ["服务端事件有没有因为改版而重复上报", "圈选出来的事件定义还能不能对上新页面上的元素", "代码埋点的事件名有没有因为改版被自动改掉"],
+      answer: "B",
+      explain: "圈选事件是在全埋点数据上按元素定义的，元素一变定义就可能对不上；神策文档就以 App 为例提醒过，版本升级后部分定义可能失效。代码埋点的事件名写死在代码里，不会被改版自动改动。"
+    },
+    {
+      question: "GA4 能自动产生 `view_search_results` 事件。它是怎么知道「这一页是检索结果页」的？",
+      options: ["从网址里的检索参数（如 `q`、`search`）识别出来", "读取页面上检索框里用户输入的文字", "要求开发者在检索页调用一次上报方法"],
+      answer: "A",
+      explain: "增强型衡量按网址参数判断是不是检索结果页，所以是自动的；反过来，检索参数不叫这些名字的站点就认不出来。这正是全埋点的特点：靠通用约定猜，猜不到的还得自己埋。"
+    }
+  ]}
+/>
+
+## 另一条轴：事件从浏览器发，还是从服务端发
+
+上面三种说的是「怎么记」，还有一个独立的问题：「在哪里记」。
+
+- **客户端埋点**：浏览器或 App 里的 SDK 上报。只有它知道纯前端发生的事：卡片露出了多久、正文停留了几秒、用户点了「复制」。
+- **服务端埋点**：后端在处理请求时上报。PostHog 的最佳实践说得很直接：「Backend analytics are more reliable than frontend analytics」，因为很多用户的浏览器会禁用或拦截追踪，前端事件发不出去；它建议能在服务端记的尽量在服务端记，关键事件前后端都记。
+
+浏览器事件被拦截器挡掉，业界常见的缓解办法是走自己域名下的路径：PostHog 的文档建议用反向代理，把事件经你自己的域名转发过去，被拦的可能就小了。
+
+还有一层是**信任**：浏览器里的脚本谁都能改，服务端处理请求这件事伪造不了。所以「谁真正知道这件事发生了」和「谁的话可信」一起决定由谁发。
+
+## 在 Patra 里：只用代码埋点，一半事件从服务端发
+
+按 Patra 的埋点方案，10 个事件全部是代码埋点，没有用全埋点或可视化埋点。前 5 个（`article_viewed`、`search_performed`、`pdf_downloaded`、`export_completed`、`article_collected`）由门户服务端在处理请求时发；后 5 个（`page_viewed`、`article_impressed`、`article_clicked`、`fulltext_read`、`citation_copied`）只有浏览器知道，由浏览器发，但不直接打采集服务，而是先发到门户自己域名下的一个路径，由门户补上设备、会话和登录身份再转发（release spec 决策 F；门户这一侧的埋点在前端 PR 里实现）。这和上一节的业界做法一一对应：能在服务端记的放服务端，浏览器事件走第一方路径。
+
+为什么不用全埋点？对照 Patra 的口径就看得出来：
+
+- **口径是定死的规则。** 曝光要「50% 可见、连续 1 秒、标签页在前台」，全文要「正文占视口一半、累计 10 秒」。自动采集的点击、滚动没法表达这种规则。
+- **属性是业务含义。** 每条曝光都要带上是哪篇文献、在哪个列表、排第几位，而且多一个字段都不行：
+
+<CodeRef at="patra-api/patra-analytics/patra-analytics-api/src/main/resources/analytics/schema/events/article_impressed.schema.json@8140a9d9482324670b63f00ab3c62690102196c5" lines="6-28" />
+
+```json
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "article_id": {
+      "$ref": "../defs.schema.json#/$defs/article_id"
+    },
+    "list_type": {
+      "$ref": "../defs.schema.json#/$defs/list_type"
+    },
+    "list_id": {
+      "$ref": "../defs.schema.json#/$defs/uuid"
+    },
+    "position": {
+      "type": "integer",
+      "minimum": 1
+    }
+  },
+  "required": [
+    "article_id",
+    "list_type",
+    "list_id",
+    "position"
+  ]
+```
+
+`list_type` 是 `search`、`feed_hot`、`related` 这类枚举，`position` 从 1 数起。这些都是 SDK 自己看不出来的信息，正是开头诊断题里那个「按文献、按位置拆」的需求。
+
+- **事件少。** 首批只有 10 个事件，代码埋点的维护成本不高；全埋点「先全采、再挑」的优势在事件多、需求常变时才明显。
+
+代价也写清楚：想临时看某个没埋的按钮被点了多少次，Patra 只能先改埋点方案、改代码、发版，没有「数据早就在了」这回事。
+
+<Transfer
+  prompt="你接手一个电商 App：运营每周都要临时看新活动页上各个按钮的点击，研发排期很紧；同时公司要精确统计「下单成功」和「支付成功」。你会怎么组合埋点方式？哪些事件放客户端、哪些放服务端？"
+  points={[
+    { label: "活动页用全埋点加圈选", text: "按钮多、需求常变，开全埋点让数据先采着，运营用可视化方式圈选；改版后要回头检查圈选定义。" },
+    { label: "交易事件用代码埋点", text: "下单、支付是关键事件，口径要精确、属性要带订单号和金额，用代码显式上报，不靠自动采集。" },
+    { label: "交易事件放服务端", text: "下单、支付在后端确认才算数，服务端发更可靠、也不会被前端拦截或伪造；纯前端的曝光、停留留在客户端。" },
+    { label: "两边别重复计数", text: "同一件事前后端都记时，用不同的事件名区分，或约定只有一边进指标。" }
+  ]}
+/>

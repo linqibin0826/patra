@@ -1,0 +1,16 @@
+title: 数据指标与埋点实务
+summary: 管线搭好之后，公司里每天用它做什么：PV/UV、日活月活、留存与漏斗怎么定义、怎么查；代码埋点、全埋点与主流工具怎么选，自建还是买；埋点治理、数据质量与隐私合规。每个指标都在 1 亿条合成数据上真跑一遍，最后两组练习照着做。
+order: 11
+entries:
+  - analytics-metrics-overview
+  - analytics-metrics-pv-uv
+  - analytics-metrics-dau-mau
+  - analytics-tracking-methods
+  - analytics-tools-landscape
+  - analytics-metrics-retention-cohort
+  - analytics-metrics-funnel
+  - analytics-tracking-governance
+  - analytics-privacy-compliance
+  - analytics-build-vs-buy
+  - analytics-practice-clickhouse
+  - analytics-practice-parts-and-kafka

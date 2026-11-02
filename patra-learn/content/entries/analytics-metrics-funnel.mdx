@@ -1,0 +1,211 @@
+---
+title: 漏斗与转化率：windowFunnel 返回的是「走到第几步」
+summary: 漏斗把一串有先后的步骤排起来，数走到每一步的有多少。这篇讲业界定义漏斗的三个选择（按人还是按会话、转化窗口多长、步骤要不要按顺序），再用 ClickHouse 的 windowFunnel 跑一遍 Patra 2026-10-28 的检索漏斗：它返回每个会话走到第几步，要自己从下往上累加成漏斗。最后看检索无结果率与点击率，以及合成数据里第 3 步到第 4 步为什么一个都没流失。
+type: concept
+difficulty: advanced
+tags: [analytics, database]
+prerequisites: [analytics-metrics-pv-uv]
+topics: [analytics-pipeline]
+sources:
+  - version: v0.18
+    issue: PAP-171
+    pr: 373
+personalEnv: false
+---
+
+<Diagnose
+  question="B 上午开了一个会话，检索了但没点任何结果；下午隔了几个小时又开了一个会话，检索后点开了一篇文献。按会话算「检索 → 点击」漏斗，B 贡献了几次尝试、几次成功？"
+  options={["1 次尝试、1 次成功：按人合起来看，他最后点开了", "2 次尝试、2 次成功：两个会话里他都检索过", "2 次尝试、1 次成功：每个会话单独算一次"]}
+  answer="C"
+  ifRight="对。按会话算，每个会话各进一次漏斗，上午那次没走完，下午那次走完了。这篇讲漏斗怎么定义、怎么用 windowFunnel 算。"
+  ifWrong="答案是 C。按会话算，两次会话各算一次进入漏斗；上午那次停在检索，下午那次点开了。换成按人算才是 1 次尝试、1 次成功。这题要先分清数次数、数会话、数人，先读 PV 与 UV 那篇。"
+  suggest="analytics-metrics-pv-uv"
+/>
+
+<Callout kind="lead">
+
+漏斗把一串有先后顺序的步骤排起来，数走到每一步的有多少；相邻两步的比例叫**转化率**，没走下去的叫**流失**。
+
+</Callout>
+
+## 定义一个漏斗要做三个选择
+
+「访问 → 检索 → 点结果 → 看文献 → 读全文」这几个字还不是一个漏斗。Mixpanel 的漏斗文档把要定的东西讲得很清楚（[Mixpanel 文档：Funnels Advanced](https://docs.mixpanel.com/docs/reports/funnels/funnels-advanced)）：
+
+- **按什么计数**：按人（Uniques，每人在所选时间里只进一次漏斗）、按次数（Totals，走完或超时后可以重新进入）、按会话（Sessions，每个会话各进一次）。
+- **转化窗口**：从做完第一步开始，给多长时间走完全部步骤。Mixpanel 默认 7 天，最长可以设到 366 天。
+- **顺序**：默认要求按指定顺序走，中间夹着别的事件没关系；也可以设成任意顺序都算。
+
+三个选择都会改变数字。同一份数据，按人算的转化率通常比按会话算的高：一个人试了三次才成功，按人算是一次成功，按会话算是三次里成功一次。
+
+Patra 的检索漏斗选的是：**按会话、30 分钟窗口、按顺序**。按会话是因为想看的是「一次检索有没有帮读者找到东西」；30 分钟和会话的切法一致。
+
+## 用 windowFunnel 算
+
+ClickHouse 有一个专门的聚合函数 `windowFunnel(window)(timestamp, cond1, cond2, …)`。它在窗口内找能按顺序满足的条件链，返回**连续满足的条件的最大个数**，也就是走到第几步；窗口从满足第一个条件算起（[ClickHouse 文档：Parametric aggregate functions](https://clickhouse.com/docs/sql-reference/aggregate-functions/parametric-functions)）。窗口的单位跟着时间戳的类型走，下面用 `toDateTime` 把时间截到秒，所以 `1800` 就是 30 分钟。
+
+```sql
+SELECT level, count() AS sessions
+FROM (
+    SELECT session_id,
+           windowFunnel(1800)(
+               toDateTime(derived_at),
+               event_name = 'page_viewed',
+               event_name = 'search_performed',
+               event_name = 'article_clicked' AND JSONExtractString(properties, 'list_type') = 'search',
+               event_name = 'article_viewed',
+               event_name = 'fulltext_read') AS level
+    FROM events
+    WHERE toYYYYMMDD(derived_at, 'Asia/Shanghai') = 20261028
+      AND is_synthetic AND NOT is_bot
+    GROUP BY session_id
+)
+GROUP BY level ORDER BY level
+FORMAT PrettyCompactMonoBlock
+```
+
+五个条件就是五步：页面浏览、检索、点了**检索结果**里的卡片（首页推荐、相关文献的点击不算）、文献页、读全文。里层每个会话得到一个 `level`，外层数每个 `level` 有多少会话。
+
+2026-11-02 在 mini 上跑出来（10-28，合成数据）：
+
+| `level` | 会话数 | 意思 |
+|---|---|---|
+| 0 | 1,109 | 连第 1 步都没走到 |
+| 1 | 25,012 | 停在访问 |
+| 2 | 9,253 | 停在检索 |
+| 3 | 不出现 | 没有会话停在「点了结果」 |
+| 4 | 9,202 | 停在文献页 |
+| 5 | 7,166 | 读了全文 |
+
+这张表还不是漏斗。`level = 2` 的 9,253 个会话是「走到第 2 步就停了」，不是「走到第 2 步的会话」。走到第 2 步的，还包括后来走到第 3、4、5 步的那些。
+
+## 从下往上累加成漏斗
+
+<Stepper
+  title="把「停在第几步」累加成漏斗"
+  nodes={[
+    { id: "s1", label: "访问" },
+    { id: "s2", label: "检索" },
+    { id: "s3", label: "点检索结果" },
+    { id: "s4", label: "文献页" },
+    { id: "s5", label: "读全文" }
+  ]}
+  links={[
+    { from: "s1", to: "s2" },
+    { from: "s2", to: "s3" },
+    { from: "s3", to: "s4" },
+    { from: "s4", to: "s5" }
+  ]}
+  steps={[
+    { caption: "从最后一步开始：level 5 的 7,166 个会话走完了全部五步，走到读全文的就是它们。", focus: ["s5"], notes: [{ at: "s5", text: "7,166", tone: "ok" }] },
+    { caption: "走到文献页的 = 停在文献页的 9,202 + 走得更远的 7,166。", focus: ["s4"], links: ["s4>s5"], notes: [{ at: "s4", text: "16,368" }, { at: "s5", text: "7,166", tone: "ok" }] },
+    { caption: "level 3 是 0：没有会话停在「点了结果」。走到这一步的，全都接着走到了文献页，所以和文献页一样多。", focus: ["s3"], links: ["s3>s4"], notes: [{ at: "s3", text: "16,368", tone: "wait" }, { at: "s4", text: "16,368" }, { at: "s5", text: "7,166", tone: "ok" }] },
+    { caption: "走到检索的 = 停在检索的 9,253 + 上面的 16,368。", focus: ["s2"], links: ["s2>s3"], notes: [{ at: "s2", text: "25,621" }, { at: "s3", text: "16,368" }, { at: "s4", text: "16,368" }, { at: "s5", text: "7,166", tone: "ok" }] },
+    { caption: "走到访问的 = 停在访问的 25,012 + 上面的 25,621。level 0 的 1,109 个会话连第一步都没满足，不进漏斗。", focus: ["s1"], links: ["s1>s2"], notes: [{ at: "s1", text: "50,633" }, { at: "s2", text: "25,621" }, { at: "s3", text: "16,368" }, { at: "s4", text: "16,368" }, { at: "s5", text: "7,166", tone: "ok" }] }
+  ]}
+  guesses={[
+    { before: 3, question: "level 3 一个会话都没有。累加之后，走到「点检索结果」这一步的会话有多少？", options: ["16,368：没人停在这一步，走到这里的都走到了文献页", "0：level 3 是 0，说明这一步没有人走到", "9,202：只能算停在文献页的那些会话"], answer: "A", explain: "level 是「最远走到第几步」。level 3 为 0 只说明没人停在第 3 步，走到第 3 步的会话全都继续走到了第 4、5 步，所以和文献页一样是 16,368。" }
+  ]}
+/>
+
+累加后的漏斗：
+
+| 步骤 | 走到这一步的会话 |
+|---|---|
+| 访问 | 50,633 |
+| 检索 | 25,621 |
+| 点检索结果 | 16,368 |
+| 文献页 | 16,368 |
+| 读全文 | 7,166 |
+
+读法：访问的会话里大约一半做过检索；检索过的会话，多数点开了结果；进了文献页的会话，不到一半读了全文。`level` 为 0 的 1,109 个会话这一天里没有满足第一步（没有页面浏览事件），不进漏斗；它们具体是哪些会话，这条查询看不出来。
+
+<Quiz
+  questions={[
+    {
+      question: "一个会话的 windowFunnel 返回 4。累加成漏斗时，它算进哪几步？",
+      options: ["只算第 4 步：它的 level 就是 4", "第 1 到第 4 步都算：它依次走过了前 4 步", "第 4 步和第 5 步：它已经过了第 3 步"],
+      answer: "B",
+      explain: "返回 4 表示在窗口内按顺序满足了前 4 个条件，最远走到第 4 步。所以它在第 1、2、3、4 步里各算一次，第 5 步不算。累加时从下往上加，正是这个意思。"
+    }
+  ]}
+/>
+
+## 为什么第 3 步到第 4 步一个都没流失
+
+真实产品里，点了卡片却没看到文献页的情况一定有：页面加载太慢用户点了返回、网络断了、文献页报错、点击事件发出去了但页面请求没到服务端。点击到落地之间的流失，是排查前端性能和稳定性的重要线索。
+
+这份合成数据里这一步没有任何流失，原因在模拟器生成文献页的代码：
+
+<CodeRef at="patra-api/patra-analytics/patra-analytics-simulator/src/main/java/dev/patra/analytics/simulator/model/SessionGenerator.java@8140a9d9482324670b63f00ab3c62690102196c5" lines="206-217" />
+
+```java
+    if (draft.cards.isEmpty()) {
+      article = pool.sampleGlobal(random);
+      referrer = model.referrers().get(random.nextInt(model.referrers().size()));
+    } else {
+      Card card = draft.cards.get(random.nextInt(draft.cards.size()));
+      article = card.articleIndex();
+      Map<String, Object> click = cardProperties(card);
+      draft.add(SimEventName.ARTICLE_CLICKED, draft.t.minusMillis(50), click, article);
+    }
+    draft.newPage(articlePath(article), PageType.ARTICLE);
+    draft.referrer = referrer;
+    draft.add(SimEventName.ARTICLE_VIEWED, draft.t, articleProperties(article), article);
+```
+
+点击事件只在「要进文献页」时生成，比文献页事件早 50 毫秒，紧接着一定写一条 `article_viewed`。模型里点击和打开是绑在一起的，第 3 步到第 4 步自然不会有人掉队。这是合成数据要明说的局限：这一步的转化率是 100%，是因为模型这样写，不是因为产品做得好。查询本身照样有用：上线后同一条查询跑在真实数据上，这一步就会出现流失。
+
+## 检索无结果率与点击率
+
+漏斗看的是一串步骤，检索还有两个单独的指标：
+
+```sql
+SELECT
+    uniqExactIf(event_id, event_name = 'search_performed')                                              AS searches,
+    uniqExactIf(event_id, event_name = 'search_performed' AND JSONExtractInt(properties, 'result_count') = 0) AS zero_result,
+    round(100 * zero_result / searches, 1)                                                                AS zero_pct,
+    uniqExactIf(event_id, event_name = 'article_impressed' AND JSONExtractString(properties, 'list_type') = 'search') AS impressions,
+    uniqExactIf(event_id, event_name = 'article_clicked'   AND JSONExtractString(properties, 'list_type') = 'search') AS clicks,
+    round(100 * clicks / impressions, 1)                                                                  AS ctr_pct
+FROM events
+WHERE toYYYYMMDD(derived_at, 'Asia/Shanghai') = 20261028
+  AND is_synthetic AND NOT is_bot
+FORMAT PrettyCompactMonoBlock
+```
+
+10-28 的结果：检索 45,536 次，无结果 3,307 次，**无结果率 7.3%**；检索结果曝光 352,824 次，点击 22,901 次，**点击率 6.5%**。
+
+- **无结果率**：读者搜了却什么都没找到的比例。它高，说明数据缺了、分词不对，或者读者用的词和库里的词对不上；下一步是看无结果的检索词具体是哪些。
+- **点击率**的分母是**曝光**，不是检索次数。按埋点方案，一张卡片至少一半在屏幕里、连续 1 秒才算一次曝光，所以点击率回答的是「读者真正看到的结果里，点了多少」。
+
+模拟器设定的无结果率是 8%，实测是 7.3%，这个差多半来自翻页：
+
+<CodeRef at="patra-api/patra-analytics/patra-analytics-simulator/src/main/java/dev/patra/analytics/simulator/model/SessionGenerator.java@8140a9d9482324670b63f00ab3c62690102196c5" lines="169-180" />
+
+```java
+    boolean nextPage =
+        afterSearch
+            && draft.resultCount > draft.searchPage * RESULTS_PER_PAGE
+            && random.nextBoolean();
+    if (nextPage) {
+      draft.searchPage++;
+    } else {
+      draft.searchPage = 1;
+      draft.query = model.searchTerms().get(random.nextInt(model.searchTerms().size()));
+      draft.resultCount =
+          random.nextDouble() < model.zeroResultRate() ? 0 : random.nextInt(20, 5_001);
+    }
+```
+
+8% 只作用在新的检索上；翻页也会发一条 `search_performed`（埋点方案规定翻页算一次新检索），而只有结果多于一页时才可能翻页，翻页那次一定有结果。有结果的检索被翻页多算了一些，无结果率就被摊薄到 8% 以下。这也是口径问题：如果产品想要的是「多少次输入新检索词时什么都没找到」，查询就该排除翻页（只数 `page = 1` 的检索）。
+
+<Transfer
+  prompt="产品想看另一个漏斗：首页推荐 → 点推荐卡片 → 文献页 → 读全文。你会按人还是按会话、窗口多长？windowFunnel 的条件怎么写？在这份合成数据上跑，哪一步的转化率你会提前打个问号？"
+  points={[
+    { label: "按会话、30 分钟", text: "想看的是一次首页推荐有没有把人带到文献，按会话最直接；窗口和会话切法一致，用 30 分钟。" },
+    { label: "条件写清来源", text: "第 1 步是首页的 page_viewed（page_type 为 home），第 2 步是 article_clicked 且 list_type 是首页推荐的那几种，不能把检索结果的点击混进来。" },
+    { label: "自己累加", text: "windowFunnel 返回最远走到第几步，按 level 计数后要从下往上累加，才得到每一步的会话数。" },
+    { label: "点击到文献页会是 100%", text: "模拟器里点击和打开文献页绑在一起生成，这一步在合成数据上不会有流失，结论要等真实数据。" }
+  ]}
+/>
