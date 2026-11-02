@@ -65,6 +65,7 @@ function Calendar({
       locale={zhCN}
       weekStartsOn={1}
       captionLayout="dropdown"
+      reverseYears
       showOutsideDays
       fixedWeeks
       className={cn("text-fg-1", className)}

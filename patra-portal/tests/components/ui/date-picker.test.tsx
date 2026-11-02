@@ -120,6 +120,16 @@ describe("DatePicker：日历", () => {
     expect(screen.getByRole("combobox", { name: "选择月份" })).toHaveTextContent("12 月");
   });
 
+  it("年份下拉从今年倒排", async () => {
+    const user = userEvent.setup();
+    render(<Harness value="2026-03-08" />);
+    await openCalendar(user);
+    await user.click(screen.getByRole("combobox", { name: "选择年份" }));
+    const years = within(await screen.findByRole("listbox")).getAllByRole("option");
+    expect(years[0]).toHaveTextContent("2026 年");
+    expect(years.at(-1)).toHaveTextContent("1990 年");
+  });
+
   it("用年份下拉跳到 2023 年", async () => {
     const user = userEvent.setup();
     render(<Harness value="2026-03-08" />);

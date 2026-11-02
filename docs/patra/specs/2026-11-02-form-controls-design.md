@@ -4,6 +4,7 @@
 - Issue：PAP-177（v0.18 Analytics）
 - 画布（定稿）：https://claude.ai/artifact/VtzM2PxTBdz4GJuMSCAWY3
 - 分支：`feat/v0.18-analytics-web`
+- 状态：已实施（2026-11-02）
 
 ## 为什么做
 
