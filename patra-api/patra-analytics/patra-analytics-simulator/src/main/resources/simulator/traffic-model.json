@@ -1,0 +1,591 @@
+{
+  "zipfExponent": 1.0,
+  "maxArticles": 200000,
+  "devices": 300000,
+  "registeredUsers": 30000,
+  "registeredActivityFactor": 3.0,
+  "activityParetoAlpha": 1.5,
+  "hourly": [
+    0.5,
+    0.3,
+    0.15,
+    0.15,
+    0.15,
+    0.15,
+    0.3,
+    0.6,
+    1.1,
+    1.8,
+    1.8,
+    1.6,
+    1.0,
+    1.2,
+    1.8,
+    1.8,
+    1.8,
+    1.4,
+    0.9,
+    1.1,
+    1.4,
+    1.4,
+    1.0,
+    0.7
+  ],
+  "weekday": [
+    1.0,
+    1.0,
+    1.0,
+    1.0,
+    1.0,
+    0.65,
+    0.6
+  ],
+  "entry": {
+    "home": 0.42,
+    "search": 0.3,
+    "article": 0.23,
+    "library": 0.05
+  },
+  "transitions": {
+    "home": {
+      "article": 0.35,
+      "search": 0.3,
+      "exit": 0.35
+    },
+    "search": {
+      "article": 0.55,
+      "search": 0.2,
+      "exit": 0.25
+    },
+    "article": {
+      "fulltext": 0.35,
+      "article": 0.15,
+      "search": 0.2,
+      "exit": 0.3
+    },
+    "fulltext": {
+      "article": 0.15,
+      "search": 0.25,
+      "exit": 0.6
+    },
+    "library": {
+      "exit": 1.0
+    }
+  },
+  "dwellMedianSeconds": 25,
+  "fulltextDwellMedianSeconds": 90,
+  "dwellSigma": 0.8,
+  "maxPages": 25,
+  "topicAffinity": 0.7,
+  "actions": {
+    "pdfAfterFulltext": 0.2,
+    "citationAfterFulltext": 0.05,
+    "collectAfterFulltext": 0.05,
+    "exportInLibrary": 0.4
+  },
+  "lists": {
+    "feedMin": 4,
+    "feedMax": 8,
+    "searchMin": 5,
+    "searchMax": 12,
+    "related": 6,
+    "relatedSeenRate": 0.5
+  },
+  "crawlers": {
+    "declared": {
+      "share": 0.03,
+      "minPages": 50,
+      "maxPages": 300,
+      "minIntervalSeconds": 2,
+      "maxIntervalSeconds": 5
+    },
+    "stealth": {
+      "share": 0.01,
+      "minPages": 60,
+      "maxPages": 200,
+      "minIntervalSeconds": 3,
+      "maxIntervalSeconds": 6
+    },
+    "noscript": {
+      "share": 0.02,
+      "minPages": 1,
+      "maxPages": 3,
+      "minIntervalSeconds": 10,
+      "maxIntervalSeconds": 60
+    }
+  },
+  "zeroResultRate": 0.08,
+  "regions": [
+    {
+      "countryCode": "CN",
+      "province": "北京市",
+      "ips": [
+        "123.125.81.6",
+        "114.247.50.2",
+        "202.106.0.20"
+      ],
+      "weight": 9.7895
+    },
+    {
+      "countryCode": "CN",
+      "province": "上海市",
+      "ips": [
+        "202.96.209.5",
+        "116.228.111.118",
+        "58.247.0.10"
+      ],
+      "weight": 8.8105
+    },
+    {
+      "countryCode": "CN",
+      "province": "广东省",
+      "ips": [
+        "202.96.128.86",
+        "113.108.239.1",
+        "183.6.50.10"
+      ],
+      "weight": 11.7474
+    },
+    {
+      "countryCode": "CN",
+      "province": "江苏省",
+      "ips": [
+        "218.2.2.2",
+        "221.228.32.13",
+        "58.240.57.33"
+      ],
+      "weight": 8.8105
+    },
+    {
+      "countryCode": "CN",
+      "province": "浙江省",
+      "ips": [
+        "202.101.172.35",
+        "60.191.124.236",
+        "115.236.9.1"
+      ],
+      "weight": 7.8316
+    },
+    {
+      "countryCode": "CN",
+      "province": "山东省",
+      "ips": [
+        "202.102.128.68",
+        "60.208.111.1"
+      ],
+      "weight": 5.8737
+    },
+    {
+      "countryCode": "CN",
+      "province": "四川省",
+      "ips": [
+        "61.139.2.69",
+        "125.69.82.1"
+      ],
+      "weight": 4.8947
+    },
+    {
+      "countryCode": "CN",
+      "province": "湖北省",
+      "ips": [
+        "202.103.24.68",
+        "58.49.1.1"
+      ],
+      "weight": 4.8947
+    },
+    {
+      "countryCode": "CN",
+      "province": "河南省",
+      "ips": [
+        "222.88.88.88",
+        "61.163.1.1"
+      ],
+      "weight": 3.9158
+    },
+    {
+      "countryCode": "CN",
+      "province": "湖南省",
+      "ips": [
+        "222.246.129.80",
+        "58.20.1.1"
+      ],
+      "weight": 3.4263
+    },
+    {
+      "countryCode": "CN",
+      "province": "福建省",
+      "ips": [
+        "218.85.157.99",
+        "59.56.1.1"
+      ],
+      "weight": 2.9368
+    },
+    {
+      "countryCode": "CN",
+      "province": "陕西省",
+      "ips": [
+        "218.30.19.40",
+        "61.134.1.4"
+      ],
+      "weight": 2.9368
+    },
+    {
+      "countryCode": "CN",
+      "province": "辽宁省",
+      "ips": [
+        "219.149.6.99",
+        "59.46.1.1"
+      ],
+      "weight": 2.9368
+    },
+    {
+      "countryCode": "CN",
+      "province": "安徽省",
+      "ips": [
+        "61.132.163.68",
+        "60.166.1.1"
+      ],
+      "weight": 2.4474
+    },
+    {
+      "countryCode": "CN",
+      "province": "天津市",
+      "ips": [
+        "219.150.32.132",
+        "60.29.1.1"
+      ],
+      "weight": 1.9579
+    },
+    {
+      "countryCode": "CN",
+      "province": "重庆市",
+      "ips": [
+        "61.128.128.68",
+        "113.204.1.1"
+      ],
+      "weight": 1.9579
+    },
+    {
+      "countryCode": "CN",
+      "province": "河北省",
+      "ips": [
+        "202.99.160.68",
+        "121.28.1.1"
+      ],
+      "weight": 1.9579
+    },
+    {
+      "countryCode": "CN",
+      "province": "云南省",
+      "ips": [
+        "222.172.200.68"
+      ],
+      "weight": 0.9789
+    },
+    {
+      "countryCode": "CN",
+      "province": "黑龙江省",
+      "ips": [
+        "219.147.198.230"
+      ],
+      "weight": 0.9789
+    },
+    {
+      "countryCode": "CN",
+      "province": "吉林省",
+      "ips": [
+        "202.98.0.68"
+      ],
+      "weight": 0.9789
+    },
+    {
+      "countryCode": "CN",
+      "province": "广西",
+      "ips": [
+        "202.103.225.68"
+      ],
+      "weight": 0.9789
+    },
+    {
+      "countryCode": "CN",
+      "province": "江西省",
+      "ips": [
+        "202.101.224.69"
+      ],
+      "weight": 0.9789
+    },
+    {
+      "countryCode": "CN",
+      "province": "山西省",
+      "ips": [
+        "202.99.192.66"
+      ],
+      "weight": 0.9789
+    },
+    {
+      "countryCode": "US",
+      "province": null,
+      "ips": [
+        "8.8.8.8",
+        "4.2.2.2"
+      ],
+      "weight": 2
+    },
+    {
+      "countryCode": "GB",
+      "province": null,
+      "ips": [
+        "81.2.69.142",
+        "212.58.244.20"
+      ],
+      "weight": 1
+    },
+    {
+      "countryCode": "DE",
+      "province": null,
+      "ips": [
+        "85.214.132.117",
+        "194.25.2.129"
+      ],
+      "weight": 0.8
+    },
+    {
+      "countryCode": "JP",
+      "province": null,
+      "ips": [
+        "210.130.1.1",
+        "133.242.0.3"
+      ],
+      "weight": 0.7
+    },
+    {
+      "countryCode": "SG",
+      "province": null,
+      "ips": [
+        "165.21.83.88",
+        "203.116.1.78"
+      ],
+      "weight": 0.5
+    },
+    {
+      "countryCode": null,
+      "province": null,
+      "ips": [
+        "198.51.100.7",
+        "198.51.100.42"
+      ],
+      "weight": 2
+    }
+  ],
+  "userAgents": [
+    {
+      "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36",
+      "browserFamily": "Chrome",
+      "osFamily": "Mac OS",
+      "deviceClass": "Desktop",
+      "crawler": false,
+      "weight": 14
+    },
+    {
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36",
+      "browserFamily": "Chrome",
+      "osFamily": "Windows NT",
+      "deviceClass": "Desktop",
+      "crawler": false,
+      "weight": 22
+    },
+    {
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36 Edg/141.0.0.0",
+      "browserFamily": "Edge",
+      "osFamily": "Windows NT",
+      "deviceClass": "Desktop",
+      "crawler": false,
+      "weight": 10
+    },
+    {
+      "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15",
+      "browserFamily": "Safari",
+      "osFamily": "Mac OS",
+      "deviceClass": "Desktop",
+      "crawler": false,
+      "weight": 8
+    },
+    {
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:144.0) Gecko/20100101 Firefox/144.0",
+      "browserFamily": "Firefox",
+      "osFamily": "Windows NT",
+      "deviceClass": "Desktop",
+      "crawler": false,
+      "weight": 3
+    },
+    {
+      "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:144.0) Gecko/20100101 Firefox/144.0",
+      "browserFamily": "Firefox",
+      "osFamily": "Mac OS",
+      "deviceClass": "Desktop",
+      "crawler": false,
+      "weight": 2
+    },
+    {
+      "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36",
+      "browserFamily": "Chrome",
+      "osFamily": "Linux",
+      "deviceClass": "Desktop",
+      "crawler": false,
+      "weight": 2
+    },
+    {
+      "userAgent": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.6 Mobile/15E148 Safari/604.1",
+      "browserFamily": "Safari",
+      "osFamily": "iOS",
+      "deviceClass": "Phone",
+      "crawler": false,
+      "weight": 12
+    },
+    {
+      "userAgent": "Mozilla/5.0 (iPad; CPU OS 18_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.6 Mobile/15E148 Safari/604.1",
+      "browserFamily": "Safari",
+      "osFamily": "iOS",
+      "deviceClass": "Tablet",
+      "crawler": false,
+      "weight": 3
+    },
+    {
+      "userAgent": "Mozilla/5.0 (Linux; Android 15; Pixel 9) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36",
+      "browserFamily": "Chrome",
+      "osFamily": "Android",
+      "deviceClass": "Phone",
+      "crawler": false,
+      "weight": 3
+    },
+    {
+      "userAgent": "Mozilla/5.0 (Linux; Android 14; V2309A) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36",
+      "browserFamily": "Chrome",
+      "osFamily": "Android",
+      "deviceClass": "Phone",
+      "crawler": false,
+      "weight": 6
+    },
+    {
+      "userAgent": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 MicroMessenger/8.0.60(0x18003c2f) NetType/WIFI Language/zh_CN",
+      "browserFamily": "WeChat",
+      "osFamily": "iOS",
+      "deviceClass": "Phone",
+      "crawler": false,
+      "weight": 7
+    },
+    {
+      "userAgent": "Mozilla/5.0 (Linux; Android 14; 23127PN0CC Build/UKQ1.230804.001; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/130.0.6723.103 Mobile Safari/537.36 XWEB/1300333 MMWEBSDK/20241103 MMWEBID/2585 MicroMessenger/8.0.55.2780(0x28003737) WeChat/arm64 Weixin NetType/WIFI Language/zh_CN ABI/arm64",
+      "browserFamily": "WeChat",
+      "osFamily": "Android",
+      "deviceClass": "Phone",
+      "crawler": false,
+      "weight": 6
+    },
+    {
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36 QIHU 360SE",
+      "browserFamily": "Qihoo 360 Safe Browser",
+      "osFamily": "Windows NT",
+      "deviceClass": "Desktop",
+      "crawler": false,
+      "weight": 2
+    },
+    {
+      "userAgent": "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)",
+      "browserFamily": "Googlebot",
+      "osFamily": "Google Cloud",
+      "deviceClass": "Robot",
+      "crawler": true,
+      "weight": 1
+    },
+    {
+      "userAgent": "Mozilla/5.0 (compatible; bingbot/2.0; +http://www.bing.com/bingbot.htm)",
+      "browserFamily": "Bingbot",
+      "osFamily": "Microsoft Cloud",
+      "deviceClass": "Robot",
+      "crawler": true,
+      "weight": 1
+    },
+    {
+      "userAgent": "Mozilla/5.0 (compatible; Baiduspider/2.0; +http://www.baidu.com/search/spider.html)",
+      "browserFamily": "Baiduspider",
+      "osFamily": "Cloud",
+      "deviceClass": "Robot",
+      "crawler": true,
+      "weight": 1
+    },
+    {
+      "userAgent": "Mozilla/5.0 (Linux; Android 6.0.1; Nexus 5X Build/MMB29P) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)",
+      "browserFamily": "Googlebot",
+      "osFamily": "Google Cloud",
+      "deviceClass": "Robot Mobile",
+      "crawler": true,
+      "weight": 1
+    }
+  ],
+  "referrers": [
+    "www.google.com",
+    "www.baidu.com",
+    "cn.bing.com"
+  ],
+  "searchTerms": [
+    "sepsis",
+    "septic shock",
+    "heart failure",
+    "atrial fibrillation",
+    "type 2 diabetes",
+    "insulin resistance",
+    "hypertension",
+    "stroke",
+    "acute kidney injury",
+    "covid-19",
+    "long covid",
+    "influenza vaccine",
+    "breast cancer",
+    "lung cancer",
+    "immunotherapy",
+    "car-t",
+    "crispr",
+    "gut microbiome",
+    "alzheimer disease",
+    "parkinson disease",
+    "depression",
+    "anxiety",
+    "obesity",
+    "glp-1 receptor agonist",
+    "statin",
+    "aspirin",
+    "antibiotic resistance",
+    "tuberculosis",
+    "hiv",
+    "hepatitis b",
+    "pneumonia",
+    "asthma",
+    "copd",
+    "rheumatoid arthritis",
+    "osteoporosis",
+    "chronic pain",
+    "opioid",
+    "anesthesia",
+    "icu delirium",
+    "mechanical ventilation",
+    "ecmo",
+    "machine learning",
+    "deep learning radiology",
+    "randomized controlled trial",
+    "meta-analysis",
+    "systematic review",
+    "cohort study",
+    "biomarker",
+    "troponin",
+    "procalcitonin",
+    "脓毒症",
+    "心力衰竭",
+    "糖尿病",
+    "高血压",
+    "肺癌",
+    "免疫治疗",
+    "抑郁症",
+    "阿尔茨海默病"
+  ]
+}

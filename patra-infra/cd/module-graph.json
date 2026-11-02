@@ -53,7 +53,8 @@
             ],
             "tasks": [
                 "check",
-                "integrationTest"
+                "integrationTest",
+                "e2eTest"
             ]
         },
         {
@@ -70,6 +71,18 @@
         {
             "dir": "patra-api/patra-analytics/patra-analytics-infra",
             "project": ":patra-api:patra-analytics:patra-analytics-infra",
+            "unit": "analytics",
+            "impacts": [
+                "analytics"
+            ],
+            "tasks": [
+                "check",
+                "integrationTest"
+            ]
+        },
+        {
+            "dir": "patra-api/patra-analytics/patra-analytics-simulator",
+            "project": ":patra-api:patra-analytics:patra-analytics-simulator",
             "unit": "analytics",
             "impacts": [
                 "analytics"

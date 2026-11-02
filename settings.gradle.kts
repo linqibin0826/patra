@@ -110,6 +110,7 @@ includeAt(":patra-api:patra-analytics:patra-analytics-app", "patra-api/patra-ana
 includeAt(":patra-api:patra-analytics:patra-analytics-infra", "patra-api/patra-analytics/patra-analytics-infra")
 includeAt(":patra-api:patra-analytics:patra-analytics-adapter", "patra-api/patra-analytics/patra-analytics-adapter")
 includeAt(":patra-api:patra-analytics:patra-analytics-boot", "patra-api/patra-analytics/patra-analytics-boot")
+includeAt(":patra-api:patra-analytics:patra-analytics-simulator", "patra-api/patra-analytics/patra-analytics-simulator")
 mapParent(":patra-api:patra-analytics", "patra-api/patra-analytics")
 
 // ==================== patra-api / Gateway ====================

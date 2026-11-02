@@ -1,0 +1,29 @@
+# 测试里不连 Nacos
+spring:
+  cloud:
+    discovery:
+      enabled: false
+    nacos:
+      discovery:
+        enabled: false
+    service-registry:
+      auto-registration:
+        enabled: false
+
+# 测试里不起 XXL-Job 执行器
+xxl:
+  job:
+    enabled: false
+
+# 测试里不往 OTel Collector 推指标
+management:
+  otlp:
+    metrics:
+      export:
+        enabled: false
+
+# 入库消费者默认不启动：只有入库的集成测试（ingest 包）打开
+patra:
+  analytics:
+    ingest:
+      enabled: false

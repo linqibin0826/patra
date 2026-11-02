@@ -233,7 +233,7 @@ TTL day + INTERVAL 400 DAY DELETE;
 
 `ingest` 子域的实现（`IngestUserDataCleanupGateway`）：
 
-- 找用户：日活表 `daily_person_activity` 的 `user_id`，并上 `article_session_reads` 里 `person_id` 以 `u:` 开头的用户，取游标之后最小的一批（明细表只留 90 天，日活表 400 天，文献 × 会话汇总长期保留：只看日活表，400 天前活跃过的用户注销时汇总里的记录永远找不到）。（PAP-168 终审补）
+- 找用户：日活表 `daily_person_activity` 的 `user_id`，并上 `article_session_reads` 里 `person_id` 以 `u:` 开头的用户，取游标之后最小的一批（明细表只留 90 天，日活表 400 天，文献 × 会话汇总长期保留：只看日活表，400 天前活跃过的用户注销时汇总里的记录永远找不到）。（PAP-168 终审补）流量模拟器的合成用户（ID ≥ 9×10¹⁸）不找：identity 里查不到，每天白查几万个（PAP-171 补）。
 - 删数据：**一批用户一条语句**（`WHERE user_id IN (...)`）：`events` 的排序键里没有 `user_id`，每条删除都要扫全表，逐个用户删会扫上百遍。顺序是 `events`、`dlq_events`、`article_session_reads`（`WHERE person_id IN ('u:…', …)`）、最后 `daily_person_activity`——它是找用户的唯一来源，先删了它，中途失败的话其他表的残留就再也找不到了。用轻量删除（`DELETE FROM`），立即对查询不可见，后台合并时真正删掉。`session_quality` 不含用户信息，不删。
 - ClickHouse 没有事务，不包 `TransactionOperations`；中途失败任务标红，次日重跑时按同样顺序再删一遍（删除是幂等的）。
 - 因此底座的 `UserDataCleanupGateway` 是「按一批用户删」（`deleteAllOf(List<Long> userIds)`），与 notification 的「按单个用户」不同；PAP-169 的阅读历史按同一接口实现。
