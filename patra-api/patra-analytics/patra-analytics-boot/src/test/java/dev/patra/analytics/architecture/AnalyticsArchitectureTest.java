@@ -42,9 +42,9 @@ class AnalyticsArchitectureTest {
   /// 底座子域：被两个以上子域共用的东西（事件名、来源、schema 版本、dlq 记录、注销清理流程）。
   private static final String FOUNDATION = "kernel";
 
-  /// 声明的子域：采集（PAP-167）、入库（PAP-168）、阅读历史（PAP-169）。数据产品（PAP-170）随它的 Issue 加入。
+  /// 声明的子域：采集（PAP-167）、入库（PAP-168）、阅读历史（PAP-169）、数据产品（PAP-170：计数、热读、看过还看了）。
   private static final List<String> SUBDOMAINS =
-      List.of(FOUNDATION, "collect", "ingest", "history");
+      List.of(FOUNDATION, "collect", "ingest", "history", "insight");
 
   /// 子域边界规则：history 订阅 collect 的阅读事件（`ArticlesReadEvent`）。
   private static final SubdomainArchitectureRules subdomainRules =

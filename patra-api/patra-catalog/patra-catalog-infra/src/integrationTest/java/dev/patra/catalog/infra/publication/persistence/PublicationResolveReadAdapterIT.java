@@ -102,6 +102,28 @@ class PublicationResolveReadAdapterIT {
   }
 
   @Test
+  @DisplayName("撤稿：发表类型 D016441 或全文原因 RETRACTED 算撤稿；撤稿声明 D016440 不算")
+  void should_flag_retracted_by_publication_type_or_fulltext_reason() {
+    Long byType = persist(publication("Retracted by type", "30000001", 2018));
+    Long byFulltext = persist(publication("Retracted by PMC", "30000002", 2018));
+    Long normal = persist(publication("Normal", "30000003", 2018));
+    Long notice = persist(publication("Retraction notice", "30000004", 2018));
+    flush();
+    insertType(byType, "D016441", "Retracted Publication");
+    insertType(notice, "D016440", "Retraction of Publication");
+    insertFulltext(byFulltext, "RETRACTED");
+    insertFulltext(normal, null);
+
+    Map<Long, PublicationResolveReadModel> byId =
+        index(adapter.findByIds(List.of(byType, byFulltext, normal, notice)));
+
+    assertThat(byId.get(byType).retracted()).isTrue();
+    assertThat(byId.get(byFulltext).retracted()).isTrue();
+    assertThat(byId.get(normal).retracted()).isFalse();
+    assertThat(byId.get(notice).retracted()).isFalse();
+  }
+
+  @Test
   @DisplayName("空入参返回空列表")
   void should_return_empty_without_query_for_empty_input() {
     assertThat(adapter.findByIds(List.of())).isEmpty();
@@ -126,6 +148,32 @@ class PublicationResolveReadAdapterIT {
     em.getEntityManager()
         .createNativeQuery("UPDATE cat_publication SET deleted_at = now() WHERE id = :id")
         .setParameter("id", id)
+        .executeUpdate();
+  }
+
+  /// 直接插一条 MeSH 发表类型。
+  private void insertType(Long publicationId, String typeId, String value) {
+    em.getEntityManager()
+        .createNativeQuery(
+            "INSERT INTO cat_publication_type (id, publication_id, type_id, type_value,"
+                + " vocabulary_source) VALUES (:id, :pub, :typeId, :value, 'MESH')")
+        .setParameter("id", SnowflakeIdGenerator.getId())
+        .setParameter("pub", publicationId)
+        .setParameter("typeId", typeId)
+        .setParameter("value", value)
+        .executeUpdate();
+  }
+
+  /// 直接插一条全文记录；原因为空时是正常的已解析全文。
+  private void insertFulltext(Long publicationId, String unavailableReason) {
+    em.getEntityManager()
+        .createNativeQuery(
+            "INSERT INTO cat_publication_fulltext (id, publication_id, pmcid, status,"
+                + " unavailable_reason) VALUES (:id, :pub, 'PMC1', :status, :reason)")
+        .setParameter("id", SnowflakeIdGenerator.getId())
+        .setParameter("pub", publicationId)
+        .setParameter("status", unavailableReason == null ? "PARSED" : "UNAVAILABLE")
+        .setParameter("reason", unavailableReason)
         .executeUpdate();
   }
 

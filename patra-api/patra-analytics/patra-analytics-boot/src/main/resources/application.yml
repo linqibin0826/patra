@@ -40,6 +40,11 @@ patra:
           base-url: lb://patra-identity
           connect-timeout: 1s
           read-timeout: 2s
+        # 热读、共现任务按 100 个一批核对文献；看过还看了请求时取同主题邻居（毫秒级，结果缓存 6 小时）
+        catalog:
+          base-url: lb://patra-catalog
+          connect-timeout: 1s
+          read-timeout: 2s
   analytics:
     ingest:
       # 入库消费者（PAP-168）；测试里默认关，只有入库的集成测试打开

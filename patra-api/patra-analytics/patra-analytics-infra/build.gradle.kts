@@ -19,6 +19,8 @@ dependencies {
     implementation(libs.clickhouse.client)
     // 注销清理查 identity 的账号状态：内部接口的契约与 HTTP Interface 的错误类型；代理在 boot 里装配
     implementation(project(":patra-api:patra-identity:patra-identity-api"))
+    // 热读与看过还看了向 catalog 核对文献、取最新收录与同主题邻居（PAP-170）：内部接口的契约；代理在 boot 里装配
+    implementation(project(":patra-api:patra-catalog:patra-catalog-api"))
     implementation(project(":patra-tool:patra-tool-http-client"))
     // JSON Schema、样例、COUNTER-Robots 列表都是 api 模块的资源，只在运行时按 classpath 读，不 import 它的类
     runtimeOnly(project(":patra-api:patra-analytics:patra-analytics-api"))
@@ -35,6 +37,8 @@ dependencies {
     implementation("io.micrometer:micrometer-core")
     // 集成测试的 Redis / Kafka 容器初始化器
     integrationTestImplementation(project(":patra-tool:patra-tool-test"))
+    // catalog-api 带来 jakarta.validation API，@Validated 的配置项就要有校验实现；生产由 boot 的 web 模块带（同 interaction-infra）
+    integrationTestImplementation("org.springframework.boot:spring-boot-starter-validation")
     // boot 集成测试的 PG 容器初始化器
     testFixturesImplementation(project(":patra-tool:patra-tool-test"))
 }

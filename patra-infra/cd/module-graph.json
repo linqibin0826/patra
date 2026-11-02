@@ -96,6 +96,7 @@
             "project": ":patra-api:patra-catalog:patra-catalog-api",
             "unit": "catalog",
             "impacts": [
+                "analytics",
                 "catalog",
                 "identity",
                 "interaction"

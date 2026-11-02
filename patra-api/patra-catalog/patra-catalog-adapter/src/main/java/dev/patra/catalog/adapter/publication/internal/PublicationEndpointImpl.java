@@ -63,6 +63,7 @@ public class PublicationEndpointImpl implements PublicationEndpoint {
         .journal(found.venueName())
         .year(found.publicationYear())
         .publishedDate(found.publishedDate())
+        .retracted(found.retracted())
         .build();
   }
 }

@@ -27,6 +27,8 @@ dependencies {
     // identity 内部接口的代理（注销清理取账号状态）：infra 对 identity-api、http-client 是 implementation，传不到这里
     implementation(project(":patra-tool:patra-tool-http-client"))
     implementation(project(":patra-api:patra-identity:patra-identity-api"))
+    // catalog 内部接口的代理（热读与看过还看了核对文献、取最新收录与同主题邻居，PAP-170）
+    implementation(project(":patra-api:patra-catalog:patra-catalog-api"))
     // 入库启动编排：ClickHouse 建好表后才启动监听容器（KafkaListenerEndpointRegistry）
     implementation("org.springframework.kafka:spring-kafka")
     // 身份断言验签 → CurrentUserPort：阅读历史的接口要知道是谁在操作
@@ -39,6 +41,8 @@ dependencies {
     testImplementation("org.springframework.kafka:spring-kafka")
     // 入库集成测试直接查 ClickHouse
     testImplementation(libs.clickhouse.client)
+    // 计数集成测试查 Redis 里缓存的过期时间（infra 对 Redis 是 implementation，传不到这里）
+    testImplementation("org.springframework.data:spring-data-redis")
     // 阅读历史流程测试用测试私钥签身份断言
     testImplementation(testFixtures(project(":patra-tool:patra-tool-security")))
 }

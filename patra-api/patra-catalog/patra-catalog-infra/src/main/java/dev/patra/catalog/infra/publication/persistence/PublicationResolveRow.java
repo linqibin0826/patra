@@ -47,4 +47,9 @@ public interface PublicationResolveRow {
   ///
   /// @return `deleted_at IS NOT NULL`
   Boolean getDeleted();
+
+  /// 是否撤稿文献：PubMed 发表类型含 `D016441`，或全文不可用原因为 `RETRACTED`。
+  ///
+  /// @return 撤稿为 true
+  Boolean getRetracted();
 }

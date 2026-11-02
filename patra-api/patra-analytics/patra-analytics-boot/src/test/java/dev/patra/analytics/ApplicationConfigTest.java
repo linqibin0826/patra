@@ -29,6 +29,14 @@ class ApplicationConfigTest {
   }
 
   @Test
+  void catalog_client_times_out_fast() throws IOException {
+    assertThat(yaml().getProperty("patra.http-client.http-interface.groups.catalog.base-url"))
+        .hasToString("lb://patra-catalog");
+    assertThat(yaml().getProperty("patra.http-client.http-interface.groups.catalog.read-timeout"))
+        .hasToString("2s");
+  }
+
+  @Test
   void pg_connection_wait_is_short() throws IOException {
     assertThat(yaml().getProperty("spring.datasource.hikari.connection-timeout"))
         .hasToString("500");
