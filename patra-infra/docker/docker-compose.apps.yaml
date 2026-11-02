@@ -131,8 +131,9 @@ services:
     deploy:
       resources:
         limits:
-          # release spec 决策 C：Yauaa 常驻约 100 MB 堆；mini 的 OrbStack 余量紧，上线后按 docker stats 复核
-          memory: 768m
+          # release spec 决策 C 原定 768m；11/02 上线后实测空闲即用到 751 MiB（全是进程内存，堆按上限 75% 涨到
+          # 约 576 MiB，堆外还有 Yauaa 等一百多 MiB），压测与大批入库会被 OOM 杀掉，提到 1g
+          memory: 1g
     ports: [ "6700:6700" ]
     # Kafka 的 EXTERNAL 通告地址是 linqibins-mac-mini:9092，靠 extra_hosts 回到宿主机；XXL-Job 执行器 6701 不映射
     extra_hosts: *infra-hosts
