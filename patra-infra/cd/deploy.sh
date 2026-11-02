@@ -15,11 +15,13 @@
 #   5. 部署后验证：运行容器镜像 == 期望 tag（防 up 静默落到旧镜像）
 #   6. 自动回滚：某服务不健康 → 回滚该服务到 last-good 并复检；整体仍 exit 1
 #   7. 服务级 last-good 记录：每个服务验证通过即记录（不等整批）
+#   8. 清理旧镜像：每个服务只留最近 KEEP_IMAGES 个 tag、latest 与 last-good
+#      （每次部署多一个 sha tag，不清理 mini 磁盘会被吃满）
 #
 # 元数据来自同目录 services.json（healthMatch 缺省=仅要求 HTTP 成功）。
 # 测试注入点（deploy.test.sh 用，均带生产默认值）：
 #   SERVICES_FILE / COMPOSE_DIR / LAST_GOOD_DIR / DOCKER / CURL
-#   HEALTH_RETRIES / HEALTH_INTERVAL / PULL_BACKOFFS
+#   HEALTH_RETRIES / HEALTH_INTERVAL / PULL_BACKOFFS / KEEP_IMAGES
 # ============================================================================
 set -euo pipefail
 
@@ -35,6 +37,7 @@ CURL="${CURL:-curl}"
 HEALTH_RETRIES="${HEALTH_RETRIES:-30}"
 HEALTH_INTERVAL="${HEALTH_INTERVAL:-5}"
 PULL_BACKOFFS="${PULL_BACKOFFS:-30 60 120}"
+KEEP_IMAGES="${KEEP_IMAGES:-3}"
 
 meta() { # $1=svc $2=field → 值（字段缺省输出空）
   jq -r --arg s "$1" --arg f "$2" '.services[] | select(.name==$s) | .[$f] // empty' "$SERVICES_FILE"
@@ -94,6 +97,20 @@ rollback() { # $1=svc → 0 已回滚且健康
   ensure_image "$img" "$lg" && up_service "$1" "$lg" && wait_healthy "$1"
 }
 
+prune_old_tags() { # $1=svc：只留最近 KEEP_IMAGES 个 tag、latest 与 last-good，更旧的删掉
+  # 删掉的 tag 回滚时由 ensure_image 从 GHCR 回源；容器正在用的镜像 docker rmi 会拒绝，不会误删
+  local img recent lg t
+  img="$(meta "$1" image)"
+  lg="$(cat "$LAST_GOOD_DIR/last-good-$1" 2>/dev/null || true)"
+  recent="$($DOCKER images "$img" --format '{{.Tag}}' | grep -vx latest | head -n "$KEEP_IMAGES" || true)"
+  for t in $($DOCKER images "$img" --format '{{.Tag}}'); do
+    [ "$t" = latest ] && continue
+    [ "$t" = "$lg" ] && continue
+    echo "$recent" | grep -qxF "$t" && continue
+    $DOCKER rmi "$img:$t" >/dev/null 2>&1 || true
+  done
+}
+
 # ---- 入参校验：拒绝非法列表与未知服务名（防 dispatch 手滑打错服务名后"假成功"）----
 echo "$SERVICES_JSON" | jq -e 'type == "array" and length > 0 and all(.[]; type == "string")' >/dev/null 2>&1 \
   || { echo "✗ SERVICES_JSON 必须是非空的服务名字符串数组，实际: $SERVICES_JSON"; exit 2; }
@@ -130,6 +147,7 @@ for svc in $ORDER; do
   fi
 done
 
+for svc in $(echo "$SERVICES_JSON" | jq -r '.[]'); do prune_old_tags "$svc"; done
 $DOCKER image prune -f >/dev/null 2>&1 || true
 if [ "$fail" = 0 ]; then
   echo "✓ 全部部署成功:${deployed} (tag=${TAG})"

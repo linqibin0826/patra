@@ -9,6 +9,8 @@
 #   场景6 按 services.json 的条目顺序部署：请求的服务一个不漏，identity 先于 gateway
 #   场景7 interaction 在 services.json 里：请求它就部署，排在 catalog 之后
 #   场景8 notification 先于发事件的 identity、interaction 部署（消费方先声明队列与绑定）
+#   场景9 部署后每个服务只留最近 3 个 tag 与 latest，更旧的删掉
+#   场景10 回滚后正在跑的 last-good 即使不在最近 3 个里也保留
 # 运行：bash patra-infra/cd/deploy.test.sh
 # ============================================================================
 # shellcheck disable=SC2016  # 断言用单引号是有意的：延迟到 check() 内 eval 时才展开
@@ -19,12 +21,13 @@ PASS=0; FAIL=0
 setup() { # 每场景独立沙箱；导出全部 stub 控制变量与 deploy.sh 注入点
   TMP="$(mktemp -d)"
   export STUB_LOG="$TMP/calls.log" STUB_IMAGES="$TMP/images" \
-         STUB_ARCH="$TMP/arch" STUB_HEALTHY="$TMP/healthy" STUB_STATE="$TMP/state"
+         STUB_ARCH="$TMP/arch" STUB_HEALTHY="$TMP/healthy" STUB_STATE="$TMP/state" \
+         STUB_TAGS="$TMP/tags"
   export SERVICES_FILE="$SCRIPT_DIR/services.json"
   export LAST_GOOD_DIR="$TMP/last-good" COMPOSE_DIR="$TMP"
   export HEALTH_RETRIES=2 HEALTH_INTERVAL=0 PULL_BACKOFFS="0"
   mkdir -p "$STUB_STATE" "$LAST_GOOD_DIR" "$TMP/bin"
-  : > "$STUB_LOG"; : > "$STUB_IMAGES"; : > "$STUB_HEALTHY"
+  : > "$STUB_LOG"; : > "$STUB_IMAGES"; : > "$STUB_HEALTHY"; : > "$STUB_TAGS"
   echo arm64 > "$STUB_ARCH"
 
   cat > "$TMP/bin/docker" <<'EOF'
@@ -43,6 +46,9 @@ case "$1" in
       prune) exit 0 ;;
     esac ;;
   pull) echo "$2" >> "$STUB_IMAGES" ;;
+  # images <repo> --format {{.Tag}}：按 STUB_TAGS 的行序（新→旧）列出该仓库的 tag
+  images) grep "^$2:" "$STUB_TAGS" | sed "s#^$2:##" ;;
+  rmi) grep -vxF "$2" "$STUB_TAGS" > "$STUB_TAGS.new"; mv "$STUB_TAGS.new" "$STUB_TAGS" ;;
   compose)
     # compose ... up -d <svc>：从环境变量取 tag，记录为该服务当前运行 tag
     svc="${!#}"
@@ -160,6 +166,26 @@ check "场景8 notification 先于 identity、interaction 部署" 0 "$rc" \
   '[ "$(cat "$LAST_GOOD_DIR/last-good-identity")" = newsha ]' \
   '[ "$(cat "$LAST_GOOD_DIR/last-good-interaction")" = newsha ]' \
   '[ "$(cat "$LAST_GOOD_DIR/last-good-notification")" = newsha ]'
+
+# ---- 场景9：部署后只留最近 3 个 tag 与 latest，更旧的删掉 ----
+setup
+echo "ghcr.io/linqibin0826/patra-catalog:newsha" >> "$STUB_IMAGES"
+echo newsha >> "$STUB_HEALTHY"
+for t in latest newsha s4 s3 s2 s1; do echo "ghcr.io/linqibin0826/patra-catalog:$t" >> "$STUB_TAGS"; done
+bash "$SCRIPT_DIR/deploy.sh" newsha '["catalog"]' > "$TMP/out" 2>&1; rc=$?
+check "场景9 只留最近 3 个 tag 与 latest" 0 "$rc" \
+  '[ "$(sed "s#.*:##" "$STUB_TAGS" | xargs)" = "latest newsha s4 s3" ]'
+
+# ---- 场景10：回滚后正在跑的 last-good 即使不在最近 3 个里也保留 ----
+setup
+echo oldsha > "$LAST_GOOD_DIR/last-good-catalog"
+echo "ghcr.io/linqibin0826/patra-catalog:newsha" >> "$STUB_IMAGES"
+echo "ghcr.io/linqibin0826/patra-catalog:oldsha" >> "$STUB_IMAGES"
+echo oldsha >> "$STUB_HEALTHY"   # 新 tag 不健康，回滚到 oldsha
+for t in newsha s3 s2 s1 oldsha; do echo "ghcr.io/linqibin0826/patra-catalog:$t" >> "$STUB_TAGS"; done
+bash "$SCRIPT_DIR/deploy.sh" newsha '["catalog"]' > "$TMP/out" 2>&1; rc=$?
+check "场景10 回滚后保留正在跑的 last-good" 1 "$rc" \
+  '[ "$(sed "s#.*:##" "$STUB_TAGS" | xargs)" = "newsha s3 s2 oldsha" ]'
 
 echo "----"
 echo "PASS=$PASS FAIL=$FAIL"
