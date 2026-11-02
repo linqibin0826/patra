@@ -22,6 +22,8 @@ entries:
   - analytics-why-kafka-not-rabbitmq
   - analytics-ingest-own-consumer
   - analytics-inactive-parts-disk-dip
+  - analytics-load-test-network-bottleneck
+  - analytics-kafka-gc-pause-kraft-fence
   - analytics-counts-live-rankings-snapshot
   - analytics-reading-history-privacy
   - analytics-reconcile-midnight-crawler
