@@ -59,7 +59,7 @@ class ReportWriterTest {
     Files.writeString(
         live.resolve("parts.csv"),
         """
-        time,events_active_parts,max_parts_in_partition,asr_parts,sq_parts,dpa_parts,merges_running,freshness_seconds
+        time,events_active_parts,max_parts_in_partition,asr_parts,sq_parts,dpa_parts,merges_finished,freshness_seconds
         2026-11-02T02:00:30Z,40,12,30,30,20,1,1.5
         2026-11-02T02:01:00Z,55,18,31,31,21,2,3.25
         """);
@@ -83,11 +83,33 @@ class ReportWriterTest {
         .contains("1,200 条/秒")
         .contains("p50 12 ms · p95 40 ms · p99 95 ms")
         .contains("新鲜度峰值 3.25 秒")
-        .contains("events 活跃片段最多 55 个，单分区最多 18 个")
+        .contains("events 活跃片段最多 55 个，单分区最多 18 个；每个采样间隔完成的合并最多 2 次")
         .contains("| 1 | 0.00% |")
         .contains("| 2 | 0.40% |")
         .contains("容器内存（人工填写")
         .contains("一次真实浏览多久反映到计数上：（人工填写）");
+  }
+
+  @Test
+  void parts_without_merge_counts_still_report_freshness() throws IOException {
+    Path live = temp.resolve("run-004");
+    Files.createDirectories(live);
+    summary("live", 4, 72_000, 700, Map.of("2026-11-02", 72_000L))
+        .write(live.resolve("summary.json"), MAPPER);
+    Files.writeString(
+        live.resolve("parts.csv"),
+        """
+        time,events_active_parts,max_parts_in_partition,asr_parts,sq_parts,dpa_parts,merges_finished,freshness_seconds
+        2026-11-02T02:00:30Z,40,12,30,30,20,,1.1
+        2026-11-02T02:01:00Z,55,15,31,31,21,,0.4
+        """);
+    StringWriter out = new StringWriter();
+
+    ReportWriter.write(List.of(live), List.of(), LocalDate.of(2026, 11, 3), out);
+
+    assertThat(out.toString())
+        .contains("新鲜度峰值 1.1 秒")
+        .contains("events 活跃片段最多 55 个，单分区最多 15 个；合并次数没有取到");
   }
 
   private static RunSummary summary(

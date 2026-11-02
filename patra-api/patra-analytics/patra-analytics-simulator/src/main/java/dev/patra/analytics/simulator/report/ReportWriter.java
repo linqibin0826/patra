@@ -228,17 +228,19 @@ public final class ReportWriter {
   private static void parts(StringBuilder md, Path dir) {
     List<String[]> rows = csv(dir.resolve("parts.csv"));
     if (rows.isEmpty()) {
-      md.append("- 新鲜度与片段：没有 parts.csv（压测时没给 `--clickhouse-url`）\n");
+      md.append("- 新鲜度与片段：没有数据（压测时没给 `--clickhouse-url`，或每次采样都失败）\n");
       return;
     }
     List<Double> freshness = new ArrayList<>();
     long maxParts = 0;
     long maxInPartition = 0;
-    long maxMerges = 0;
+    long maxMerges = -1;
     for (String[] row : rows) {
       maxParts = Math.max(maxParts, Long.parseLong(row[1]));
       maxInPartition = Math.max(maxInPartition, Long.parseLong(row[2]));
-      maxMerges = Math.max(maxMerges, Long.parseLong(row[6]));
+      if (!row[6].isEmpty()) {
+        maxMerges = Math.max(maxMerges, Long.parseLong(row[6]));
+      }
       double value = Double.parseDouble(row[7]);
       if (value >= 0) {
         freshness.add(value);
@@ -263,9 +265,9 @@ public final class ReportWriter {
         .append(maxParts)
         .append(" 个，单分区最多 ")
         .append(maxInPartition)
-        .append(" 个；同时进行的合并最多 ")
-        .append(maxMerges)
-        .append(" 个\n");
+        .append(" 个；")
+        .append(maxMerges < 0 ? "合并次数没有取到" : "每个采样间隔完成的合并最多 " + maxMerges + " 次")
+        .append("\n");
   }
 
   /// Prometheus 导出的消费滞后（条）。
@@ -275,7 +277,7 @@ public final class ReportWriter {
   private static void lag(StringBuilder md, Path dir) {
     List<String[]> rows = csv(dir.resolve("lag.csv"));
     if (rows.isEmpty()) {
-      md.append("- 消费滞后（条）：没有 lag.csv（压测时没给 `--prometheus-url`）\n");
+      md.append("- 消费滞后（条）：没有数据（压测时没给 `--prometheus-url`，或导出失败、Prometheus 里没有这个指标）\n");
       return;
     }
     double max = rows.stream().mapToDouble(r -> Double.parseDouble(r[2])).max().orElse(0);

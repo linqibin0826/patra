@@ -205,10 +205,12 @@ FROM (
     GROUP BY article_id, session_id, person_id)
 WHERE session_id IN (
     SELECT session_id FROM session_quality
-    WHERE first_day BETWEEN {d:Date} - 1 AND {d:Date}
+    WHERE first_day BETWEEN {d:Date} - 1 AND {d:Date} + 1
     GROUP BY session_id HAVING max(has_client) = 1 AND max(has_bot) = 0)
 GROUP BY article_id
 ```
+
+- **会话特征看前一天到次日**：`session_quality` 每次写入各产生一行、后台合并前不汇总。跨午夜的会话如果在次日那次写入里才被标为爬虫（伪装爬虫过了午夜才跨过频率阈值），只看到当天就会把它在前一天误算成真人；`d + 1` 把次日那行也纳入判定（PAP-171 全量对账 26 行不一致即此原因，实施后改定）。
 
 - **误差** = Σ|ClickHouse − 真值| ÷ Σ真值，看过、读过全文各算一个；用绝对差之和，正负不会互相抵消。**≤ 1% 判通过**（D10）。
 - 同时输出：每天的两边合计、不一致的行数与前 10 行；**写入了多少行 vs 去重后多少条**——写入行数（含 1% 重发）取模拟器自己记的已确认数，去重后条数按天各算 `uniqExact(event_id)` 再求和（每天一个分区，同一事件的重发落在同一天；对 1 亿个 UUID 一次性 `uniqExact` 要几 GB 内存，会撞上 1 GiB 上限）。不用 `count() − uniqExact`：`ReplacingMergeTree` 后台合并会把重复行合掉，差值随时间降到 0，不是稳定的证据。去重有效的证据是「写入行数比去重后多 1%，而对账误差仍 ≤ 1%」。
@@ -248,7 +250,7 @@ live --run 2 --seed 7 --rate 1200 --duration 30m --articles articles.txt \
   - 202 响应里的 `rejected` 必须为 0，不为 0 记错误日志与计数（合成事件不该进 dlq）。
 - **到达窗口**：开始与停止产生会话的时刻写进 `latency.json`，报告的速率只在这个窗口里算，不把停发后的收尾算进去（实施时补）。
 - **每秒统计** `live-stats.csv`：发出 / 确认 / 失败的事件数，各状态码请求数，延迟 p50 / p95 / p99（对数分桶直方图），在线会话数，在途请求数。控制台每 10 秒打一行。
-- **parts 采样**（给了 `--clickhouse-url` 时）每 30 秒记 `events` 等四张表的活跃片段数、最大单分区片段数、进行中的合并数 → `parts.csv`。
+- **parts 采样**（给了 `--clickhouse-url` 时）每 30 秒记 `events` 等四张表的活跃片段数、最大单分区片段数、这 30 秒里完成的合并次数 → `parts.csv`。合并次数取自 `system.part_log`（`patra` 账号读不了 `system.merges`），单独查：查不到时只空这一列，片段数与新鲜度照记（实施后改定）。
 - **滞后**：入库的 `analytics.ingest.lag` 是「落后多少**条**」，D9 要的是「落后多少**秒**」。所以 parts 采样同时测**新鲜度**：`now() − 本运行最新一条事件的 received_at`（采集端点收到它的时刻），即「收到之后多久能在 ClickHouse 里查到」，每 30 秒一个点，D9 的「峰值 ≤ 10 秒、不持续上涨」按它判。给了 `--prometheus-url` 时，结束后再按运行时间段导出 `analytics.ingest.lag`（Prometheus 里带 Collector 前缀）→ `lag.csv`，作条数维度的佐证。
 - **结束**：到时长后停止产生新会话，等在线会话走完（上限 5 分钟）；到上限还没走完的会话就地截断、不再发送，已送达的部分照常进真值，再写真值与汇总——否则它们会在汇总写完后继续往管线里送事件，对账对不上（实施时补）。`--ramp` 可分级加压（如 `500,1000,1500,2000` 每级 5 分钟），用来找瓶颈。
 
