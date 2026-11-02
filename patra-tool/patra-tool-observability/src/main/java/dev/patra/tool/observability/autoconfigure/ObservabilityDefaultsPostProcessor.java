@@ -27,7 +27,13 @@ public final class ObservabilityDefaultsPostProcessor implements EnvironmentPost
           "logging.config", "classpath:dev/patra/tool/observability/logback-patra.xml",
           "management.endpoints.web.exposure.include", "health,info,metrics",
           "management.endpoint.health.show-details", "when-authorized",
-          "management.metrics.tags.application", "${spring.application.name}");
+          "management.metrics.tags.application", "${spring.application.name}",
+          // 指标经 OTLP 推给 OTel Collector；mini 上 apps 容器经 extra_hosts 回到宿主机的 4318，本机开发连 mini
+          "management.otlp.metrics.export.url",
+              "http://${PATRA_INFRA_HOST:127.0.0.1}:4318/v1/metrics",
+          "management.otlp.metrics.export.step", "30s",
+          // 计时按秒导出，经 Prometheus 导出器后是 *_seconds_*
+          "management.otlp.metrics.export.base-time-unit", "seconds");
 
   /// 测试日志配置的约定文件名，存在时让位。
   static final String TEST_LOGBACK = "logback-test.xml";

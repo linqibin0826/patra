@@ -36,7 +36,7 @@ assert_field "$F" '.full_run' 'false' "registry-api 非全量"
 
 echo "== 场景 5：catalog-api 契约扇出 =="
 F="patra-api/patra-catalog/patra-catalog-api/src/main/java/X.java"
-assert_field "$F" '.backend_units' '["catalog","identity","interaction"]' "catalog-api 扇出 consumers"
+assert_field "$F" '.backend_units' '["analytics","catalog","identity","interaction"]' "catalog-api 扇出 consumers"
 
 echo "== 场景 6：全局 path → 全量；foundation 模块 → 扇出（非全量）=="
 assert_field "build-logic/src/main/kotlin/x.gradle.kts" '.full_run' 'true' "build-logic 全量"

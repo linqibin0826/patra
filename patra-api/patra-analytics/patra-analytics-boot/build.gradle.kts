@@ -22,8 +22,6 @@ dependencies {
     implementation(project(":patra-tool:patra-tool-openapi"))
     // XXL-Job 执行器（执行器端口 = 服务端口 + 1 = 6701）
     implementation(libs.xxl.job)
-    // 指标经 OTLP 推给 OTel Collector（.claude/rules/tech/observability.md）
-    implementation("io.micrometer:micrometer-registry-otlp")
     // identity 内部接口的代理（注销清理取账号状态）：infra 对 identity-api、http-client 是 implementation，传不到这里
     implementation(project(":patra-tool:patra-tool-http-client"))
     implementation(project(":patra-api:patra-identity:patra-identity-api"))

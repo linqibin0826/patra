@@ -78,4 +78,25 @@ class ObservabilityDefaultsPostProcessorTest {
     assertThat(env.getProperty("management.metrics.tags.application")).isEqualTo("patra-x");
     assertThat(env.getProperty("logging.file.path")).isEqualTo("/var/log/patra");
   }
+
+  @Test
+  void should_export_metrics_to_collector_on_infra_host() {
+    StandardEnvironment env = new StandardEnvironment();
+    env.getPropertySources()
+        .addFirst(new MapPropertySource("test", Map.of("PATRA_INFRA_HOST", "linqibins-mac-mini")));
+    processor.postProcessEnvironment(env, new SpringApplication());
+    assertThat(env.getProperty("management.otlp.metrics.export.url"))
+        .isEqualTo("http://linqibins-mac-mini:4318/v1/metrics");
+    assertThat(env.getProperty("management.otlp.metrics.export.step")).isEqualTo("30s");
+    assertThat(env.getProperty("management.otlp.metrics.export.base-time-unit"))
+        .isEqualTo("seconds");
+  }
+
+  @Test
+  void should_fall_back_to_localhost_collector_without_infra_host() {
+    StandardEnvironment env = new StandardEnvironment();
+    processor.postProcessEnvironment(env, new SpringApplication());
+    assertThat(env.getProperty("management.otlp.metrics.export.url"))
+        .isEqualTo("http://127.0.0.1:4318/v1/metrics");
+  }
 }
