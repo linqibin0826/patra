@@ -104,6 +104,15 @@ includeAt(":patra-api:patra-notification:patra-notification-adapter", "patra-api
 includeAt(":patra-api:patra-notification:patra-notification-boot", "patra-api/patra-notification/patra-notification-boot")
 mapParent(":patra-api:patra-notification", "patra-api/patra-notification")
 
+includeAt(":patra-api:patra-analytics:patra-analytics-api", "patra-api/patra-analytics/patra-analytics-api")
+includeAt(":patra-api:patra-analytics:patra-analytics-domain", "patra-api/patra-analytics/patra-analytics-domain")
+includeAt(":patra-api:patra-analytics:patra-analytics-app", "patra-api/patra-analytics/patra-analytics-app")
+includeAt(":patra-api:patra-analytics:patra-analytics-infra", "patra-api/patra-analytics/patra-analytics-infra")
+includeAt(":patra-api:patra-analytics:patra-analytics-adapter", "patra-api/patra-analytics/patra-analytics-adapter")
+includeAt(":patra-api:patra-analytics:patra-analytics-boot", "patra-api/patra-analytics/patra-analytics-boot")
+includeAt(":patra-api:patra-analytics:patra-analytics-simulator", "patra-api/patra-analytics/patra-analytics-simulator")
+mapParent(":patra-api:patra-analytics", "patra-api/patra-analytics")
+
 // ==================== patra-api / Gateway ====================
 includeAt(":patra-api:patra-gateway-boot", "patra-api/patra-gateway-boot")
 

@@ -1,0 +1,20 @@
+patra.config-source.service: patra-analytics.yaml
+
+spring:
+  datasource:
+    # 阅读历史（PAP-169）起才建表；库要先在 mini 的 PG 里手工建好（v0.18 runbook）
+    url: jdbc:postgresql://${PATRA_INFRA_HOST:127.0.0.1}:15432/patra_analytics
+  data:
+    # Redis 的 host、port、username 在公共配置；密码只写在用到它的服务文件里（值在 ~/.patra/secrets/redis.env）
+    redis:
+      password: ${REDIS_PASSWORD}
+  kafka:
+    # pipeline 栈的 Kafka（PAP-165）：EXTERNAL 监听器，无认证；apps 容器经 extra_hosts 回到宿主机的 9092
+    bootstrap-servers: ${PATRA_INFRA_HOST:127.0.0.1}:9092
+
+patra:
+  # pipeline 栈的 ClickHouse（PAP-165）：HTTP 接口，应用账号 patra；密码只在 ~/.patra/secrets/clickhouse.env
+  clickhouse:
+    url: http://${PATRA_INFRA_HOST:127.0.0.1}:8123
+    username: patra
+    password: ${CLICKHOUSE_PATRA_PASSWORD}

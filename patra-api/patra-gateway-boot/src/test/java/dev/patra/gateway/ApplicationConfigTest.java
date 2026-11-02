@@ -101,6 +101,37 @@ class ApplicationConfigTest {
     assertThat(yaml.getProperty("patra.gateway.push.max-connections")).hasToString("500");
   }
 
+  @Test
+  @DisplayName("analytics 路由按 /patra-analytics/** 去前缀转发，Scalar 列出它的文档")
+  void should_route_analytics_and_list_its_docs() throws IOException {
+    PropertySource<?> yaml =
+        new YamlPropertySourceLoader()
+            .load("application.yml", new ClassPathResource("application.yml"))
+            .getFirst();
+    List<Object> routeIds =
+        IntStream.range(0, 20)
+            .mapToObj(i -> yaml.getProperty(ROUTES + "[" + i + "].id"))
+            .filter(Objects::nonNull)
+            .toList();
+
+    int analytics = routeIds.indexOf("patra-analytics");
+    assertThat(analytics).isNotNegative();
+    assertThat(yaml.getProperty(ROUTES + "[" + analytics + "].uri"))
+        .hasToString("lb://patra-analytics");
+    assertThat(yaml.getProperty(ROUTES + "[" + analytics + "].predicates[0]"))
+        .hasToString("Path=/patra-analytics/**");
+    assertThat(yaml.getProperty(ROUTES + "[" + analytics + "].filters[0]"))
+        .hasToString("StripPrefix=1");
+    assertThat(propertyNames("application.yml"))
+        .anySatisfy(name -> assertThat(name).contains("scalar").endsWith(".url"));
+    List<Object> scalarUrls =
+        IntStream.range(0, 20)
+            .mapToObj(i -> yaml.getProperty("scalar.sources[" + i + "].url"))
+            .filter(Objects::nonNull)
+            .toList();
+    assertThat(scalarUrls).contains("/patra-analytics/v3/api-docs");
+  }
+
   /// 读出 classpath 上一份 YAML 的全部属性名，多文档合在一起。
   ///
   /// @param resource classpath 上的文件名

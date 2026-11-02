@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://patra.linqibin.dev/schemas/analytics/browser-batch.schema.json",
+  "title": "① 浏览器批次的外壳：门户第一方路径只校验它，单条事件由采集端点按 collect-envelope 逐条校验",
+  "x-patra-version": "1-0-0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "sent_at",
+    "events"
+  ],
+  "properties": {
+    "sent_at": {
+      "$ref": "defs.schema.json#/$defs/timestamp"
+    },
+    "events": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 50,
+      "items": {
+        "type": "object"
+      }
+    }
+  }
+}

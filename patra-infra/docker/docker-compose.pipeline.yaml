@@ -1,0 +1,127 @@
+name: patra-pipeline
+
+# 行为数据管线（v0.18）：Kafka 缓冲事件、ClickHouse 存明细与汇总。
+# 独立成栈：内存紧张时 `compose-all.sh down pipeline` 一次腾出约 3 GB，不影响 core 的服务。
+# 手动部署，不进 CD（见 docs/patra/specs/2026-11-01-analytics-infra-design.md 第 7 节）。
+# 只在 tailnet 与局域网内可达，不进 Cloudflare Tunnel。
+
+services:
+  clickhouse:
+    image: clickhouse/clickhouse-server:26.8.36.3
+    container_name: patra-clickhouse
+    hostname: patra-clickhouse
+    restart: unless-stopped
+    env_file:
+      # 两个账号的密码放在仓库外（见 README「密钥」「ClickHouse」）。缺失时 compose 拒绝执行。
+      # 这里不能出现 CLICKHOUSE_USER / CLICKHOUSE_PASSWORD：镜像入口脚本会据此改掉 default 账号
+      - path: ${HOME}/.patra/secrets/clickhouse.env
+        required: true
+      - path: ${HOME}/.patra/secrets/clickhouse-grafana.env
+        required: true
+    environment:
+      TZ: Asia/Shanghai
+    ports:
+      - "8123:8123"   # HTTP 接口：应用、Grafana、curl
+      - "9000:9000"   # 原生 TCP：clickhouse client
+    volumes:
+      - ${HOME}/.patra/docker/clickhouse/data:/var/lib/clickhouse
+      - ${HOME}/.patra/docker/clickhouse/logs:/var/log/clickhouse-server
+      # 低内存配置、账号、建库脚本（建库只在数据目录为空时执行）
+      - ./clickhouse/config.d/patra.xml:/etc/clickhouse-server/config.d/patra.xml:ro
+      - ./clickhouse/users.d/patra.xml:/etc/clickhouse-server/users.d/patra.xml:ro
+      - ./clickhouse/initdb:/docker-entrypoint-initdb.d:ro
+    ulimits:
+      # 官方 compose 样例的值，默认的打开文件数上限太小会报 Too many open files
+      nofile:
+        soft: 262144
+        hard: 262144
+    deploy:
+      resources:
+        limits:
+          # 和 clickhouse/config.d/patra.xml 的 max_server_memory_usage_to_ram_ratio 一起看
+          memory: 2g
+    healthcheck:
+      # /ping 不要账号，就绪时返回 Ok.
+      test: [ "CMD-SHELL", "wget -qO- http://127.0.0.1:8123/ping | grep -q Ok" ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+  kafka:
+    # mini 用 JVM 版（才能按 release spec 决策 D 设堆）；测试容器用同版本的 apache/kafka-native，
+    # 版本号以 .github/workflows/ci.yml 的 KAFKA_VERSION 为准，CI 核对这里、kafka-init 和 KafkaContainerInitializer
+    image: apache/kafka:4.3.2
+    container_name: patra-kafka
+    hostname: patra-kafka
+    restart: unless-stopped
+    environment:
+      # 单节点 KRaft：同一个进程既当控制器（管元数据）又当 broker，不需要 ZooKeeper。
+      # 集群 ID 在数据目录第一次格式化时写入，之后每次启动都要对得上，不要改（不是密钥）
+      CLUSTER_ID: _prxjFG5Q7ikA914AcQqnA
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@patra-kafka:9093
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      # 两个对客户端的监听器，通告地址不同（spec 2.4 节）：
+      #   INTERNAL  patra-net 上按容器名直连：kafka-init、健康检查
+      #   EXTERNAL  经宿主机 9092：MacBook 上的进程（MagicDNS），apps 栈的容器（extra_hosts 指回宿主机）
+      # 控制器端口 9093 只在容器内，不映射（宿主机 9093 是 alertmanager）
+      KAFKA_LISTENERS: INTERNAL://:29092,EXTERNAL://:9092,CONTROLLER://:9093
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://patra-kafka:29092,EXTERNAL://${PATRA_INFRA_HOST:-linqibins-mac-mini}:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_LOG_DIRS: /var/lib/kafka/data
+      # 单节点：内部 topic 只能有 1 个副本；消费位点 topic 默认 50 个分区，单节点用不上，减到 3
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_OFFSETS_TOPIC_NUM_PARTITIONS: 3
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_SHARE_COORDINATOR_STATE_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_SHARE_COORDINATOR_STATE_TOPIC_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      # topic 只由 kafka-init 按 kafka/init-topics.sh 建：写错名字直接报错，不会悄悄建出一个没有上限的 topic
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+      # 超出上限的部分要等「清理检查」发现、再等「删除延迟」才真正删掉文件，这段时间的写入量就是超出上限的量。
+      # 默认 5 分钟 + 1 分钟，本机不限速压测（约 390 MB/s）时峰值多出一倍多；缩到 30 秒 + 5 秒
+      KAFKA_LOG_RETENTION_CHECK_INTERVAL_MS: 30000
+      KAFKA_LOG_SEGMENT_DELETE_DELAY_MS: 5000
+      # 堆 512 MB（决策 D）；堆外的元空间、线程栈、网络缓冲和页缓存靠下面 1 GB 的容器上限兜住
+      KAFKA_HEAP_OPTS: -Xms512m -Xmx512m
+      TZ: Asia/Shanghai
+    ports:
+      - "9092:9092"
+    volumes:
+      # 镜像以 uid 1000 运行，目录由 scripts/init-volumes.sh 建好
+      - ${HOME}/.patra/docker/kafka/data:/var/lib/kafka/data
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+    healthcheck:
+      # 命令行工具每次都起一个 JVM，堆压到 64 MB（不覆盖会沿用上面的 512 MB），间隔放宽到 30 秒
+      test: [ "CMD-SHELL", "KAFKA_HEAP_OPTS=-Xmx64m /opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server patra-kafka:29092 >/dev/null 2>&1" ]
+      interval: 30s
+      timeout: 20s
+      retries: 5
+      start_period: 30s
+
+  kafka-init:
+    # 建 topic、写保留策略，跑完退出。每次 up pipeline 都会重跑，幂等（见 kafka/init-topics.sh）
+    image: apache/kafka:4.3.2
+    container_name: patra-kafka-init
+    restart: "no"
+    depends_on:
+      kafka:
+        condition: service_healthy
+    environment:
+      KAFKA_HEAP_OPTS: -Xmx128m
+    entrypoint: [ "bash", "/opt/patra/init-topics.sh" ]
+    volumes:
+      - ./kafka/init-topics.sh:/opt/patra/init-topics.sh:ro
+
+networks:
+  default:
+    # 各子栈独立 project，共享外部网络 patra-net（由 scripts/compose-all.sh 首次创建）
+    name: patra-net
+    external: true

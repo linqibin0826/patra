@@ -16,9 +16,12 @@ docker/
 ├── docker-compose.observability.yaml # project patra-observability：otel/prom/loki/tempo/grafana
 ├── docker-compose.jobs.yaml         # project patra-jobs：xxl-job-admin + mysql-ops + 路由边车
 ├── docker-compose.tailnet.yaml      # project patra-tailnet：tailscale 共享网关
+├── docker-compose.pipeline.yaml     # project patra-pipeline：clickhouse + kafka + kafka-init（v0.18 行为数据）
 ├── .env                              # mysql-ops 凭据等环境变量
 ├── .env.secret                       # TS_AUTHKEY 等真实密钥（gitignore，不入库）
 ├── rabbitmq/conf.d/                  # RabbitMQ 的内存与磁盘水位，只读挂进容器
+├── clickhouse/                       # ClickHouse 的低内存配置、账号、建库脚本，只读挂进容器
+├── kafka/init-topics.sh              # kafka-init 边车执行：建 topic、写保留策略
 ├── secrets/                          # 密钥模板（*.example）；真文件在仓库外的 ~/.patra/secrets/
 └── README.md                         # 本文件
 ```
@@ -80,11 +83,12 @@ cp patra-infra/docker/.env.secret.example patra-infra/docker/.env.secret
 # 编辑 .env.secret，把 TS_AUTHKEY 填成真实值（tskey-auth-...）
 
 # 4c. (MacBook) 把密钥文件复制到 Mac mini：与 MacBook 上的是同一份，生成方法见下文「密钥」。
-#     目录由第 4 步建好；缺了这几个文件，core 栈的 redis、nacos、rabbitmq 和整个 apps 栈都起不来。
+#     目录由第 4 步建好；缺了这几个文件，core 栈的 redis、nacos、rabbitmq、pipeline 栈的 clickhouse 和整个 apps 栈都起不来。
 #     mail.env 可选：没有它通知服务的邮件进 core 栈的 Mailpit；接真实服务商时按 secrets/mail.env.example 在 mini 上放一份
 scp -p ~/.patra/secrets/redis.env ~/.patra/secrets/rabbitmq.env ~/.patra/secrets/gateway.env \
-  ~/.patra/secrets/nacos.env ~/.patra/secrets/nacos-push.env linqibin@linqibins-mac-mini:.patra/secrets/
-# 4d. (Mac mini) 生成只放 mini 的 nacos-server.env、nacos-admin.env，命令见 secrets/ 下对应的 *.example。
+  ~/.patra/secrets/nacos.env ~/.patra/secrets/nacos-push.env ~/.patra/secrets/clickhouse.env \
+  linqibin@linqibins-mac-mini:.patra/secrets/
+# 4d. (Mac mini) 生成只放 mini 的 nacos-server.env、nacos-admin.env、clickhouse-grafana.env，命令见 secrets/ 下对应的 *.example。
 #     管理员密码另存一份到密码管理器
 
 # 4e. (Mac mini) 下载 identity 查 IP 属地用的 ip2region 数据（两个 xdb，约 46 MB，到 ~/.patra/data/ip2region/）。
@@ -156,13 +160,15 @@ ssh linqibin@linqibins-mac-mini 'docker restart patra-xxl-job-admin'  # 只重�
 
 | 文件 | 内容 | 谁加载 | 缺失时 |
 |---|---|---|---|
-| `redis.env` | `REDIS_PASSWORD`，64 位十六进制 | core 栈的 redis；catalog、identity 的容器和本机进程（gateway 经 identity 查会话，不连 Redis） | compose 报出路径并拒绝执行；本机进程启动失败，报出缺的文件路径或变量名 |
+| `redis.env` | `REDIS_PASSWORD`，64 位十六进制 | core 栈的 redis；catalog、identity、analytics 的容器和本机进程（gateway 经 identity 查会话，不连 Redis） | compose 报出路径并拒绝执行；本机进程启动失败，报出缺的文件路径或变量名 |
 | `rabbitmq.env` | `RABBITMQ_PASSWORD`，64 位十六进制，RabbitMQ 账号 `patra` 的密码 | core 栈的 rabbitmq（只在首次启动时用来建账号，见「RabbitMQ」）；interaction、identity、notification 的容器和本机进程 | 同 `redis.env`；rabbitmq 的值为空时拒绝启动 |
 | `gateway.env` | `PATRA_GATEWAY_IDENTITY_ASSERTION_PRIVATE_KEY`，含私钥的 EC P-256 JWK JSON，一行 | gateway 的容器和本机进程 | 同上 |
 | `nacos-server.env` | Nacos 的 `NACOS_AUTH_TOKEN`、`NACOS_AUTH_IDENTITY_KEY`、`NACOS_AUTH_IDENTITY_VALUE`。**只放 mini** | core 栈的 nacos | compose 报出路径并拒绝执行 |
 | `nacos-admin.env` | Nacos 管理员密码 `NACOS_ADMIN_PASSWORD`。**只放 mini**，另存密码管理器 | `nacos-init.sh`、`nacos-verify.sh` | 脚本说明缺哪个变量并退出 |
 | `nacos.env` | 应用账号 `NACOS_USERNAME=patra-app`、`NACOS_PASSWORD` | 6 个后端服务的容器和本机进程；两个 Nacos 脚本 | 同 `redis.env` |
 | `nacos-push.env` | 推送账号 `NACOS_PUSH_USERNAME=patra-push`、`NACOS_PUSH_PASSWORD` | 两个 Nacos 脚本；PAP-75 的推送 | 脚本说明缺哪个变量并退出 |
+| `clickhouse.env` | `CLICKHOUSE_PATRA_PASSWORD`，64 位十六进制，ClickHouse 应用账号 `patra` 的密码 | pipeline 栈的 clickhouse（每次启动读，见「ClickHouse」）；patra-analytics 的容器和本机进程 | compose 报出路径并拒绝执行 |
+| `clickhouse-grafana.env` | `CLICKHOUSE_GRAFANA_PASSWORD`，ClickHouse 只读账号 `grafana` 的密码。**只放 mini** | pipeline 栈的 clickhouse；observability 栈的 grafana（ClickHouse 数据源） | 同上 |
 | `mail.env` | 真实邮件服务商（Resend）的 SMTP 凭据：`PATRA_MAIL_HOST` / `PORT` / `USERNAME` / `PASSWORD` / `AUTH` / `SSL` / `STARTTLS` / `FROM`。**只放 mini**（本机要走真实服务商时再放一份） | notification 的容器和本机进程（v0.16 起全站只有它发信） | 跳过：邮件发往 core 栈的 Mailpit |
 | `<服务>.env` | 该服务的外部数据源密钥，例如 catalog 的 `SCOPUS_API_KEY`、`PROXY_AUTH_KEY`、`PROXY_AUTH_PWD` | 对应服务的容器和本机进程 | 跳过 |
 
@@ -186,6 +192,7 @@ docker inspect -f '{{range .Config.Env}}{{println .}}{{end}}' patra-gateway | cu
 umask 077 && mkdir -p ~/.patra/secrets
 printf 'REDIS_PASSWORD=%s\n' "$(openssl rand -hex 32)" > ~/.patra/secrets/redis.env
 printf 'RABBITMQ_PASSWORD=%s\n' "$(openssl rand -hex 32)" > ~/.patra/secrets/rabbitmq.env
+printf 'CLICKHOUSE_PATRA_PASSWORD=%s\n' "$(openssl rand -hex 32)" > ~/.patra/secrets/clickhouse.env
 
 K="$(mktemp -u ~/.patra/secrets/key.XXXXXX)"   # 任务要求私钥文件事先不存在
 ./gradlew -q :patra-tool:patra-tool-security:generateIdentityAssertionKey -PkeyOut="$K" \
@@ -196,7 +203,7 @@ printf 'NACOS_USERNAME=patra-app\nNACOS_PASSWORD=%s\n' "$(openssl rand -hex 24)"
 printf 'NACOS_PUSH_USERNAME=patra-push\nNACOS_PUSH_PASSWORD=%s\n' "$(openssl rand -hex 24)" > ~/.patra/secrets/nacos-push.env
 ```
 
-`nacos-server.env`、`nacos-admin.env` 在 mini 上生成，命令见 `secrets/` 下对应的模板。
+`nacos-server.env`、`nacos-admin.env`、`clickhouse-grafana.env` 在 mini 上生成，命令见 `secrets/` 下对应的模板。
 
 公钥不是机密，只有一处：Nacos 公共配置 `patra-infra/nacos/dev/patra-common.yaml` 的 `patra.security.identity-assertion.public-keys`，值用单引号包住。identity 和 gateway 都从这里读。
 
@@ -205,7 +212,8 @@ printf 'NACOS_PUSH_USERNAME=patra-push\nNACOS_PUSH_PASSWORD=%s\n' "$(openssl ran
 ```bash
 ssh linqibin@linqibins-mac-mini 'umask 077 && mkdir -p ~/.patra/secrets && chmod 700 ~/.patra/secrets'
 scp -p ~/.patra/secrets/redis.env ~/.patra/secrets/rabbitmq.env ~/.patra/secrets/gateway.env \
-  ~/.patra/secrets/nacos.env ~/.patra/secrets/nacos-push.env linqibin@linqibins-mac-mini:.patra/secrets/
+  ~/.patra/secrets/nacos.env ~/.patra/secrets/nacos-push.env ~/.patra/secrets/clickhouse.env \
+  linqibin@linqibins-mac-mini:.patra/secrets/
 ```
 
 ### 改了密钥文件之后
@@ -324,6 +332,51 @@ docker logs --tail 200 patra-rabbitmq
 | 发送卡住、健康检查 unhealthy | 触发了内存或磁盘告警，先看 `check_local_alarms` 和 Overview |
 | 从 MacBook 连不上 | `nc -zv linqibins-mac-mini 5672`，不通再按「故障排查」查 tailscale |
 
+## ClickHouse
+
+v0.18 起存行为数据的列式数据库：patra-analytics 把 Kafka 里的事件批量写进来，汇总后给计数、热读和运营面板用（v0.18 release spec 决策 E、G）。设计见 `docs/patra/specs/2026-11-01-analytics-infra-design.md`。
+
+- **镜像**：`clickhouse/clickhouse-server:26.8.36.3`（LTS：每年 3 月、8 月的版本支持一年）。版本以 `.github/workflows/ci.yml` 的 `CLICKHOUSE_IMAGE` 为准，CI 检查这里和测试容器 `ClickHouseContainerInitializer` 都和它一致。
+- **端口**：`8123` 是 HTTP 接口（应用、Grafana、curl）；`9000` 是原生 TCP（`clickhouse client`）。只在 tailnet 与局域网内可达。
+- **库与账号**：库 `patra_analytics`（首次启动时由 `clickhouse/initdb/` 建，表由 patra-analytics 管）。`patra` 读写这个库；`grafana` 只读，Grafana 数据源用它。两个账号都能读 `system.parts`、`system.part_log`、`system.query_log`。镜像自带的 `default` 只能在容器里用：`docker exec patra-clickhouse clickhouse-client`。
+- **密码**：`clickhouse/users.d/patra.xml` 里写的是 `from_env`，ClickHouse 每次启动从容器环境变量读，变量来自 `clickhouse.env`、`clickhouse-grafana.env`。所以改密码只要改文件、重建容器，不用进库里改。变量名不能叫 `CLICKHOUSE_PASSWORD`：镜像入口脚本看到它会把 `default` 改成这个密码并放开网络访问。
+- **内存**：容器上限 2 GB，`clickhouse/config.d/patra.xml` 照 Altinity 的低内存样例缩了缓存、并发和后台合并，自身用量上限是容器上限的 0.75。每条查询最多 1 GiB，聚合与排序超过 512 MiB 落盘。本机实测空闲约 100～180 MiB，写 1 亿行再做 `uniqExact` 聚合峰值 742 MiB。
+- **磁盘**：剩余空间低于 22 GB 时拒绝写入与合并（报 `NOT_ENOUGH_SPACE`），守住 runner 看门狗的 20 GB 红线；事件在 Kafka 里最多留 2 天，腾出空间后消费者接着写。服务日志降到 information、3 个 100 MB；系统日志只留 `query_log`、`part_log`（7 天）和 `crash_log`。
+
+```bash
+# 进库（default 账号，只在容器里能用）
+docker exec -it patra-clickhouse clickhouse-client
+# 每张表的数据片段数与磁盘占用：片段数一直涨，说明写入批次太小、合并跟不上
+docker exec patra-clickhouse clickhouse-client -q "SELECT table, count() parts, formatReadableSize(sum(bytes_on_disk)) size FROM system.parts WHERE active AND database = 'patra_analytics' GROUP BY table"
+# 最近的慢查询
+docker exec patra-clickhouse clickhouse-client -q "SELECT event_time, query_duration_ms, formatReadableSize(memory_usage), substring(query, 1, 80) FROM system.query_log WHERE type = 'QueryFinish' ORDER BY query_duration_ms DESC LIMIT 10"
+```
+
+## Kafka
+
+v0.18 起行为事件的缓冲：采集端点写进来，入库消费者批量读出写进 ClickHouse；ClickHouse 停机或变慢时事件留在这里，不丢（release spec 决策 D）。
+
+- **镜像**：mini 用 `apache/kafka:4.3.2`（JVM 版，堆 512 MB、容器上限 1 GB）；测试容器用同版本的 `apache/kafka-native`（只建议测试用）。版本以 `ci.yml` 的 `KAFKA_VERSION` 为准，CI 核对两边。
+- **KRaft 单节点**：不需要 ZooKeeper，同一个进程既管元数据又收发消息。集群 ID 写死在 compose 的 `CLUSTER_ID`，数据目录第一次格式化时记下，之后每次启动都要对得上，**不要改**（改了会报 `Invalid cluster.id` 起不来）。
+- **两个地址**：客户端先连引导地址，broker 再告诉它「以后连哪」（通告地址）。`EXTERNAL` 监听 9092、通告 `linqibins-mac-mini:9092`，MacBook 上的进程和 apps 栈的容器（`extra_hosts` 指回宿主机）都用它；`INTERNAL` 监听 29092、通告 `patra-kafka:29092`，只给 `patra-net` 上的 kafka-init 和健康检查用。控制器端口 9093 只在容器里（宿主机 9093 是 alertmanager）。
+- **没有认证**（PLAINTEXT）：只在 tailnet 与局域网内可达，不要加进 Cloudflare Tunnel 或路由器的端口转发。事件里没有令牌或密码。生产环境的开法（TLS + SASL/SCRAM + ACL）见 spec 4.2 节。
+- **topic 只由 kafka-init 建**：关闭了自动建 topic，往不存在的 topic 写会报错。`kafka/init-topics.sh` 定义了 `events.raw`（3 个分区）和 `events.dlq`（1 个分区），每次 `compose-all.sh up pipeline` 都会重跑：不存在就建，保留策略写回脚本里的值，分区数只增不减（改小会报错退出）。
+- **磁盘上限**：两个 topic 都保留 2 天，并按大小清理。`retention.bytes` 是每个分区的上限，且只删写满关闭的段文件，所以最坏占用是 `分区数 ×（retention.bytes + segment.bytes）`：`events.raw` 3.75 GiB、`events.dlq` 0.625 GiB。超出的部分要等清理检查（30 秒一次）发现、再等删除延迟（5 秒）才删掉，这段时间里写进来的量会暂时超出上限。本机不限速写 7 GiB（约 500 MB/s）时 `events.raw` 峰值 8.46 GiB，约 35 秒后回落并稳定在 3.67 GiB。
+
+```bash
+K='docker exec -e KAFKA_HEAP_OPTS=-Xmx128m patra-kafka /opt/kafka/bin'
+# topic 与保留策略
+$K/kafka-topics.sh --bootstrap-server patra-kafka:29092 --describe --topics-with-overrides
+# 每个分区的磁盘占用
+du -sh ~/.patra/docker/kafka/data/events.*
+# 消费组的滞后：LAG 一直涨，说明入库消费者没在读或读不过来
+$K/kafka-consumer-groups.sh --bootstrap-server patra-kafka:29092 --describe --all-groups
+# 看几条原始事件
+$K/kafka-console-consumer.sh --bootstrap-server patra-kafka:29092 --topic events.raw --from-beginning --max-messages 5
+```
+
+命令行工具每次都起一个 JVM，`KAFKA_HEAP_OPTS` 要压小，否则沿用容器里 512 MB 的设置，可能把 1 GB 的容器挤爆。
+
 ## 门户的固定地址与受信转发（PAP-99）
 
 `portal` 容器在 `patra-net` 上固定为 `192.168.97.250`（`docker-compose.apps.yaml`）：网关只信任这个地址发来的 `X-Forwarded-For`（同一个文件里 gateway 的 `PATRA_GATEWAY_TRUSTED_PROXIES`，即 `server.tomcat.remoteip.internal-proxies`），据此记录浏览器的真实 IP。两边要一起改。不能信任整个网段：tailnet 经 `tailscale-gw` 子网路由进来的连接会被 SNAT 成网段内地址，OrbStack 端口转发进来的连接都显示成 `192.168.97.1`。所以 mini 上从 tailnet 访问门户时，门户看到的浏览器地址本身就是内网地址，登录设备列表里属地显示「内网」。
@@ -333,6 +386,8 @@ identity 的定时任务除 `emailTokenCleanupJob`（04:30）外还有 `loginRec
 interaction 的执行器 `patra-interaction`（端口 6501，不映射到宿主机）在 xxl-job-admin 的「执行器管理」里手工新建、自动注册；它的两个每日任务 `subjectReconciliationJob`（`0 30 6 * * ?`）、`deletedUserCleanupJob`（`0 0 6 * * ?`）见 `docs/patra/runbooks/v0.13-library-go-live-runbook.md`。
 
 notification 的执行器 `patra-notification`（端口 6601，不映射到宿主机）同样手工新建、自动注册；它的任务（提醒清理、注销清理、离站邮件、每日汇总）随 v0.16 各 Issue 登记，见 `docs/patra/runbooks/v0.16-notification-go-live-runbook.md`。
+
+analytics 的执行器 `patra-analytics`（端口 6701，不映射到宿主机）同样手工新建、自动注册；v0.18 采集（PAP-167）还没有任务，热读、共现、历史清理随后续 Issue 登记，见 `docs/patra/runbooks/v0.18-analytics-go-live-runbook.md`。
 
 ## 门户的公网入口（Cloudflare Tunnel）
 
@@ -411,6 +466,10 @@ Nacos 的地址、账号和服务发现设置由 `patra-spring-boot-starter-naco
 - **Tempo**: http://linqibins-mac-mini:3200
 - **AlertManager**: http://linqibins-mac-mini:9093
 
+### 行为数据（pipeline 栈）
+- **ClickHouse**: HTTP `linqibins-mac-mini:8123`、原生 TCP `linqibins-mac-mini:9000`（账号 `patra` / `grafana`，密码在 `~/.patra/secrets/clickhouse*.env`）
+- **Kafka**: `linqibins-mac-mini:9092`（无认证）
+
 ### 任务服务
 - **mysql-ops**: 不暴露宿主机端口；容器内 `mysql-ops:3306`，仅供 xxl-job-admin 使用，凭据见 `.env` 的 `MYSQL_OPS_*`
 - **XXL-Job Admin**: http://linqibins-mac-mini:7070/xxl-job-admin (admin/123456)
@@ -433,6 +492,12 @@ bash patra-infra/scripts/compose-all.sh up core jobs
 
 # 核心 + 监控
 bash patra-infra/scripts/compose-all.sh up core observability
+
+# 行为数据管线（Grafana 的 ClickHouse 数据源在 observability 里）
+bash patra-infra/scripts/compose-all.sh up pipeline observability
+
+# 内存紧张时整栈撤下，腾出约 3 GB（数据保留）
+bash patra-infra/scripts/compose-all.sh down pipeline
 ```
 
 ---
@@ -444,7 +509,8 @@ bash patra-infra/scripts/compose-all.sh up core observability
 | 仅 core | 2 核 | ~1 GB |
 | core + storage | 2 核 | ~1.5 GB |
 | core + storage + jobs | 4 核 | ~3.5 GB |
-| 全栈 | 6+ 核 | ~5.5 GB |
+| pipeline（上限） | 2 核 | ClickHouse 2 GB + Kafka 1 GB（实测空闲约 0.6 GB） |
+| 全栈 | 6+ 核 | ~5.5 GB + pipeline |
 
 ---
 
@@ -522,4 +588,5 @@ PATRA_INFRA_HOST=100.103.73.27 docker compose -f patra-infra/docker/docker-compo
 ```
 
 - **xxl-job-admin** 依赖 `mysql-ops`（独立的 MySQL 8.0 容器，仅服务于不支持 PG 的运维组件；业务库走 PG）
-- **可观测性栈** 自包含
+- **可观测性栈** 自包含；Grafana 的 ClickHouse 数据源指向 pipeline 栈的 `patra-clickhouse`（数据源在 ClickHouse 不在线时也能启动，只是查询失败）
+- **pipeline 栈** 自包含（clickhouse、kafka、kafka-init），不依赖 core

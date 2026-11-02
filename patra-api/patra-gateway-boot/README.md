@@ -6,7 +6,7 @@ Patra 的 API 网关：所有外部请求的统一入口，按路径前缀路由
 
 ## 职责
 
-- **路由**：`/patra-catalog/**`、`/patra-registry/**`、`/patra-identity/**`、`/patra-interaction/**`、`/patra-notification/**` 剥掉第一段后转给对应服务，经 Nacos 发现、Spring Cloud LoadBalancer 选实例。
+- **路由**：`/patra-catalog/**`、`/patra-registry/**`、`/patra-identity/**`、`/patra-interaction/**`、`/patra-notification/**`、`/patra-analytics/**` 剥掉第一段后转给对应服务，经 Nacos 发现、Spring Cloud LoadBalancer 选实例。
 - **推送连接**（PAP-145）：`/patra-notification/me/notifications/stream` 是一条单独的路由（`lb-push://`，排在通用 notification 路由之前），走推送专用连接池，见下文「推送路由」。
 - **鉴权**：`Authorization: Bearer <会话令牌>` → 调 identity 的 `POST /_internal/sessions/introspect`（`lb://patra-identity`，令牌放请求体，不缓存）→ 建认证对象；不是「恰好一个非空 Bearer 头 + identity 说 active」的一律按匿名，是否放行由下面的路径规则决定。令牌格式只由 identity 判断，网关不连 Redis。
 - **入站转发头**：只有受信代理（门户）发来的 `X-Forwarded-For` 被采用，Tomcat `RemoteIpValve` 据此改写客户端地址；其余一切 `Forwarded` / `X-Forwarded-*`（包括非受信来源的 `X-Forwarded-For`）在 servlet 层直接剥掉、不解释（`ForwardedHeaderFilter` 的 `removeOnly`），路径规则、路由和下面的出站头都按真实请求算。
@@ -25,7 +25,7 @@ Patra 的 API 网关：所有外部请求的统一入口，按路径前缀路由
 | 第二条链 | `/patra-identity/auth/register`、`/auth/login`、`/auth/logout`、`/v3/api-docs`、`/v3/api-docs/**` | 放行（登出公开是为了幂等：会话已失效也要能到达 identity） |
 | 第二条链 | `/patra-identity/**` 其余 | 需登录；匿名 401 `GW-0401` |
 | 第二条链 | `/patra-notification/me/notifications/stream`（推送连接） | 需登录；匿名、已登出 401 `GW-0401`，不借推送池的连接 |
-| 第二条链 | 其他一切（catalog、registry、interaction、notification、网关自己的 `/actuator/**` 与 `/scalar`） | 放行 |
+| 第二条链 | 其他一切（catalog、registry、interaction、notification、analytics、网关自己的 `/actuator/**` 与 `/scalar`） | 放行 |
 
 规则只看路径不看方法。网关自己的 `/actuator/health` 没有服务前缀，compose 健康检查照常。`//`、`%2F`、`;`、`..` 这类路径由 Spring Security 的防火墙以 400 拒绝（框架默认，不是 ProblemDetail）。
 

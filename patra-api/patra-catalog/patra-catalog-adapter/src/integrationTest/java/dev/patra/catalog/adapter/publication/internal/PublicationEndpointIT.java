@@ -72,9 +72,12 @@ class PublicationEndpointIT {
     assertThat(first.get("title").asString()).isEqualTo("Empagliflozin in HFpEF");
     assertThat(first.get("journal").asString()).isEqualTo("The New England journal of medicine");
     assertThat(first.get("year").asInt()).isEqualTo(2021);
+    assertThat(first.get("retracted").asBoolean()).isFalse();
     JsonNode missing = json.get("items").get(1);
     assertThat(missing.get("key").asString()).isEqualTo("1");
     assertThat(missing.get("exists").asBoolean()).isFalse();
+    assertThat(missing.get("retracted").isBoolean()).isTrue();
+    assertThat(missing.get("retracted").asBoolean()).isFalse();
     for (String field : List.of("state", "id", "pmid", "title", "journal", "year")) {
       assertThat(missing.get(field).isNull()).as(field).isTrue();
     }
@@ -102,6 +105,19 @@ class PublicationEndpointIT {
         JSON.readValue(post("/by-ids", "{\"ids\":[" + BIG_ID + "]}"), PublicationResolveResp.class);
 
     assertThat(resp.items().get(0).id()).isEqualTo(BIG_ID);
+  }
+
+  @Test
+  @DisplayName("撤稿文献：retracted 为 true")
+  void should_expose_retracted_flag() {
+    PublicationResolveReadModel retracted =
+        PublicationResolveReadModel.builder().id(9L).title("Retracted").retracted(true).build();
+    when(service.resolveByIds(List.of(9L)))
+        .thenReturn(List.of(PublicationResolution.of("9", retracted)));
+
+    JsonNode first = JSON.readTree(post("/by-ids", "{\"ids\":[9]}")).get("items").get(0);
+
+    assertThat(first.get("retracted").asBoolean()).isTrue();
   }
 
   @Test

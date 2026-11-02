@@ -1,0 +1,100 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://patra.linqibin.dev/schemas/analytics/collect-envelope.schema.json",
+  "title": "② 采集信封：门户服务端发给采集端点的单条事件",
+  "x-patra-version": "1-0-0",
+  "type": "object",
+  "properties": {
+    "event_id": {
+      "$ref": "defs.schema.json#/$defs/uuid"
+    },
+    "event_name": {
+      "type": "string"
+    },
+    "schema_version": {
+      "type": "string"
+    },
+    "source": {
+      "enum": [
+        "server",
+        "client"
+      ]
+    },
+    "created_at": {
+      "$ref": "defs.schema.json#/$defs/timestamp"
+    },
+    "sent_at": {
+      "$ref": "defs.schema.json#/$defs/timestamp"
+    },
+    "device_id": {
+      "$ref": "defs.schema.json#/$defs/device_id"
+    },
+    "session_id": {
+      "$ref": "defs.schema.json#/$defs/uuid"
+    },
+    "user_id": {
+      "$ref": "defs.schema.json#/$defs/user_id"
+    },
+    "page_path": {
+      "$ref": "defs.schema.json#/$defs/page_path"
+    },
+    "page_type": {
+      "$ref": "defs.schema.json#/$defs/page_type"
+    },
+    "referrer_host": {
+      "$ref": "defs.schema.json#/$defs/referrer_host"
+    },
+    "is_synthetic": {
+      "type": "boolean"
+    },
+    "properties": {
+      "type": "object"
+    },
+    "client_ip": {
+      "type": "string",
+      "minLength": 2,
+      "maxLength": 45
+    },
+    "user_agent": {
+      "type": "string",
+      "maxLength": 1024
+    }
+  },
+  "required": [
+    "event_id",
+    "event_name",
+    "schema_version",
+    "source",
+    "created_at",
+    "sent_at",
+    "device_id",
+    "session_id",
+    "user_id",
+    "page_path",
+    "page_type",
+    "referrer_host",
+    "is_synthetic",
+    "properties",
+    "client_ip",
+    "user_agent"
+  ],
+  "oneOf": [
+    {
+      "properties": {
+        "source": {
+          "const": "server"
+        }
+      },
+      "$ref": "event-catalog.schema.json#/$defs/server_event"
+    },
+    {
+      "properties": {
+        "source": {
+          "const": "client"
+        }
+      },
+      "$ref": "event-catalog.schema.json#/$defs/client_event"
+    }
+  ],
+  "unevaluatedProperties": false
+}

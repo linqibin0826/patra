@@ -1,0 +1,68 @@
+{
+  "events": [
+    {
+      "event_id": "0193e1a2-7c4b-7d2e-9f10-000000000006",
+      "event_name": "page_viewed",
+      "schema_version": "1-0-0",
+      "created_at": "2026-11-01T08:30:10.120Z",
+      "page_path": "/",
+      "page_type": "home",
+      "properties": {}
+    },
+    {
+      "event_id": "0193e1a2-7c4b-7d2e-9f10-000000000007",
+      "event_name": "article_impressed",
+      "schema_version": "1-0-0",
+      "created_at": "2026-11-01T08:30:10.120Z",
+      "page_path": "/",
+      "page_type": "home",
+      "properties": {
+        "article_id": "39871245",
+        "list_type": "feed_latest",
+        "list_id": "0193e1a3-1111-7a22-8b33-445566778899",
+        "position": 3
+      }
+    },
+    {
+      "event_id": "0193e1a2-7c4b-7d2e-9f10-000000000008",
+      "event_name": "article_clicked",
+      "schema_version": "1-0-0",
+      "created_at": "2026-11-01T08:30:10.120Z",
+      "page_path": "/papers",
+      "page_type": "search",
+      "properties": {
+        "article_id": "39871245",
+        "list_type": "search",
+        "list_id": "0193e1a3-2222-7a22-8b33-445566778899",
+        "position": 21
+      }
+    },
+    {
+      "event_id": "0193e1a2-7c4b-7d2e-9f10-000000000009",
+      "event_name": "fulltext_read",
+      "schema_version": "1-0-0",
+      "created_at": "2026-11-01T08:30:10.120Z",
+      "page_path": "/papers/39871245",
+      "page_type": "article",
+      "properties": {
+        "article_id": "39871245",
+        "visible_seconds": 10
+      }
+    },
+    {
+      "event_id": "0193e1a2-7c4b-7d2e-9f10-00000000000a",
+      "event_name": "citation_copied",
+      "schema_version": "1-0-0",
+      "created_at": "2026-11-01T08:30:10.120Z",
+      "page_path": "/library",
+      "page_type": "library",
+      "properties": {
+        "article_ids": [
+          "39871245",
+          "40112233"
+        ],
+        "style": "gb-t-7714-2015"
+      }
+    }
+  ]
+}

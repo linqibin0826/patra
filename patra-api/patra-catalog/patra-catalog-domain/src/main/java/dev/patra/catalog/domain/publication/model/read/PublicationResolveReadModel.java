@@ -11,6 +11,7 @@ import lombok.Builder;
 /// @param publicationYear 出版年份（可空）
 /// @param publishedDate 出版日期，按实际精度输出 `yyyy` / `yyyy-MM` / `yyyy-MM-dd`（可空）
 /// @param deleted 是否已软删
+/// @param retracted 是否撤稿文献（发表类型 `D016441` 或全文原因 `RETRACTED`）
 /// @author linqibin
 /// @since 0.1.0
 @Builder
@@ -21,4 +22,5 @@ public record PublicationResolveReadModel(
     String venueName,
     Integer publicationYear,
     String publishedDate,
-    boolean deleted) {}
+    boolean deleted,
+    boolean retracted) {}

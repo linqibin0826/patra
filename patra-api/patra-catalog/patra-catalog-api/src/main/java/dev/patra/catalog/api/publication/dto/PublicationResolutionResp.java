@@ -13,6 +13,7 @@ import lombok.Builder;
 /// @param journal 期刊全称；不存在或没有载体时为 null
 /// @param year 出版年份；不存在或未知时为 null
 /// @param publishedDate 出版日期，按实际精度输出 `yyyy` / `yyyy-MM` / `yyyy-MM-dd`；不存在或未知时为 null
+/// @param retracted 是否撤稿文献（发表类型 `D016441` 或全文原因 `RETRACTED`）；不存在时为 false
 /// @author linqibin
 /// @since 0.1.0
 @Builder
@@ -25,12 +26,13 @@ public record PublicationResolutionResp(
     String title,
     String journal,
     Integer year,
-    String publishedDate) {
+    String publishedDate,
+    boolean retracted) {
 
   /// 查不到的键。
   ///
   /// @param key 请求键
-  /// @return 只有 `key`、`exists = false` 的结果
+  /// @return 只有 `key`、`exists = false`（`retracted = false`）的结果
   public static PublicationResolutionResp missing(String key) {
     return PublicationResolutionResp.builder().key(key).exists(false).build();
   }

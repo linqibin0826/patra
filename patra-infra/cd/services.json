@@ -32,6 +32,16 @@
       "healthMatch": "\"status\":\"UP\""
     },
     {
+      "name": "analytics",
+      "gradleTask": ":patra-api:patra-analytics:patra-analytics-boot:bootJar",
+      "context": "patra-api/patra-analytics/patra-analytics-boot",
+      "srcPrefix": "patra-api/patra-analytics/",
+      "port": 6700,
+      "image": "ghcr.io/linqibin0826/patra-analytics",
+      "healthPath": "/actuator/health",
+      "healthMatch": "\"status\":\"UP\""
+    },
+    {
       "name": "gateway",
       "gradleTask": ":patra-api:patra-gateway-boot:bootJar",
       "context": "patra-api/patra-gateway-boot",

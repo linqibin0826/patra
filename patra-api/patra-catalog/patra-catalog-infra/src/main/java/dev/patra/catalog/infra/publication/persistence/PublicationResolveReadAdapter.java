@@ -54,6 +54,7 @@ public class PublicationResolveReadAdapter implements PublicationResolveReadPort
             PublicationDate.isoString(
                 row.getPublicationYear(), row.getPublicationMonth(), row.getPublicationDay()))
         .deleted(Boolean.TRUE.equals(row.getDeleted()))
+        .retracted(Boolean.TRUE.equals(row.getRetracted()))
         .build();
   }
 }

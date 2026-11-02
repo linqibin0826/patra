@@ -108,6 +108,15 @@ spring:
               filters:
                 - StripPrefix=1
 
+            # Analytics Service Route（行为数据采集；门户服务端与模拟器调用，不要求登录）
+            # Example: /patra-analytics/events -> lb://patra-analytics/events
+            - id: patra-analytics
+              uri: lb://patra-analytics
+              predicates:
+                - Path=/patra-analytics/**
+              filters:
+                - StripPrefix=1
+
 # ----------------------------------------------------------------------------
 # API Documentation Aggregation
 # ----------------------------------------------------------------------------
@@ -129,6 +138,9 @@ scalar:
     - url: /patra-notification/v3/api-docs
       title: Notification Service
       slug: notification
+    - url: /patra-analytics/v3/api-docs
+      title: Analytics Service
+      slug: analytics
 
 # ----------------------------------------------------------------------------
 # Logging Configuration

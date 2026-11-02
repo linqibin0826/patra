@@ -16,7 +16,7 @@ patra-catalog 是 Patra 医学文献数据平台的目录管理微服务，负�
 
 在 Patra 微服务架构中的位置：
 - **外部数据源**：NLM（PubMed baseline / updatefiles、MeSH）、PMC Cloud Service（公开 S3 桶 `pmc-oa-opendata`）、OpenAlex、Scopus、LetPub
-- **调用方**：patra-gateway 转发的门户（patra-portal）读端点 `/portal/**`；patra-identity 经 HTTP Interface 直连（`lb://patra-catalog`）的内部接口 `/_internal/**`（保存资料时校验 ROR ID / MeSH UI 并取名称快照）；patra-interaction 同样直连内部接口，按内部 ID 或 PMID 批量解析文献、按期刊 ID 或 NLM ID 批量解析期刊（对象登记表首次登记与每日对账）
+- **调用方**：patra-gateway 转发的门户（patra-portal）读端点 `/portal/**`；patra-identity 经 HTTP Interface 直连（`lb://patra-catalog`）的内部接口 `/_internal/**`（保存资料时校验 ROR ID / MeSH UI 并取名称快照）；patra-interaction 同样直连内部接口，按内部 ID 或 PMID 批量解析文献、按期刊 ID 或 NLM ID 批量解析期刊（对象登记表首次登记与每日对账）；patra-analytics 直连内部接口核对文献是否可用、取最新收录与同主题邻居（热读与「看过还看了」的补位）
 - **依赖服务**：patra-registry（解析国家、语言等数据字典）；MinIO（期刊封面、全文 XML / PDF / 图片）
 
 ## 🗂️ 分包
@@ -145,7 +145,8 @@ patra-catalog 是 Patra 医学文献数据平台的目录管理微服务，负�
    - Patra 自维护的机构别名表 `cat_organization_alias` 补 ROR 缺的中文名与简称，种子在可重复迁移 `R__cat_organization_alias_seed.sql`（手工三甲清单 + Wikidata zh 标签），改文件即改数据
    - 设计：[机构与 MeSH 建议接口](../../docs/patra/specs/2026-10-21-catalog-org-mesh-suggest-design.md)
 14. **文献批量解析与批量卡片**（v0.13 文献库，PAP-109）
-   - 内部（给 interaction，网关对外 403）：`POST /_internal/publications/resolve/by-ids`、`POST /_internal/publications/resolve/by-pmids`，请求体 1 ~ 100 个键；每个请求键一行（按请求顺序、去重），软删的文献照样返回 `state = DELETED`，查不到的 `exists = false`；契约在 `patra-catalog-api` 的 `PublicationEndpoint`
+   - 内部（给 interaction，网关对外 403）：`POST /_internal/publications/resolve/by-ids`、`POST /_internal/publications/resolve/by-pmids`，请求体 1 ~ 100 个键；每个请求键一行（按请求顺序、去重），软删的文献照样返回 `state = DELETED`，查不到的 `exists = false`，撤稿文献 `retracted = true`；契约在 `patra-catalog-api` 的 `PublicationEndpoint`
+   - 内部（给 analytics，网关对外 403）：`GET /_internal/publications/latest?limit=`（1 ~ 100，最新收录，主键倒序，去掉软删与撤稿）、`GET /_internal/publications/{id}/subject-neighbors?limit=`（1 ~ 20，先同主要主题词、多个词轮流取，再同期刊）；契约在 `PublicationNeighborEndpoint`，设计见 [insight 设计](../../docs/patra/specs/2026-11-02-analytics-insight-design.md) §8
    - 门户：`GET /portal/publications/batch?id=…&id=…`（1 ~ 100），响应 `{ "items": [...] }`，元素与 feed / 检索列表项同形；不存在与软删的 ID 不返回，按请求顺序；整批一条 SQL
    - 按主键与 `uk_pmid` 命中，不加索引；门户响应不再有写死为 0 的 `bookmarks`
    - 设计：[文献批量解析与批量卡片](../../docs/patra/specs/2026-10-24-catalog-publication-resolve-cards-design.md)

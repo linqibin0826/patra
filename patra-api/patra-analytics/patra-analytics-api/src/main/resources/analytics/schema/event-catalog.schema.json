@@ -1,0 +1,206 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://patra.linqibin.dev/schemas/analytics/event-catalog.schema.json",
+  "title": "事件目录：事件名、来源、版本、属性的绑定",
+  "description": "server_event 只含门户服务端发的 5 个事件，client_event 只含浏览器发的 5 个事件",
+  "$defs": {
+    "server_event": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": [
+            "event_name",
+            "schema_version",
+            "properties"
+          ],
+          "properties": {
+            "event_name": {
+              "const": "article_viewed"
+            },
+            "schema_version": {
+              "$ref": "defs.schema.json#/$defs/schema_version_model_1"
+            },
+            "properties": {
+              "$ref": "events/article_viewed.schema.json"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "event_name",
+            "schema_version",
+            "properties"
+          ],
+          "properties": {
+            "event_name": {
+              "const": "search_performed"
+            },
+            "schema_version": {
+              "$ref": "defs.schema.json#/$defs/schema_version_model_1"
+            },
+            "properties": {
+              "$ref": "events/search_performed.schema.json"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "event_name",
+            "schema_version",
+            "properties"
+          ],
+          "properties": {
+            "event_name": {
+              "const": "pdf_downloaded"
+            },
+            "schema_version": {
+              "$ref": "defs.schema.json#/$defs/schema_version_model_1"
+            },
+            "properties": {
+              "$ref": "events/pdf_downloaded.schema.json"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "event_name",
+            "schema_version",
+            "properties"
+          ],
+          "properties": {
+            "event_name": {
+              "const": "export_completed"
+            },
+            "schema_version": {
+              "$ref": "defs.schema.json#/$defs/schema_version_model_1"
+            },
+            "properties": {
+              "$ref": "events/export_completed.schema.json"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "event_name",
+            "schema_version",
+            "properties"
+          ],
+          "properties": {
+            "event_name": {
+              "const": "article_collected"
+            },
+            "schema_version": {
+              "$ref": "defs.schema.json#/$defs/schema_version_model_1"
+            },
+            "properties": {
+              "$ref": "events/article_collected.schema.json"
+            }
+          }
+        }
+      ]
+    },
+    "client_event": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": [
+            "event_name",
+            "schema_version",
+            "properties"
+          ],
+          "properties": {
+            "event_name": {
+              "const": "page_viewed"
+            },
+            "schema_version": {
+              "$ref": "defs.schema.json#/$defs/schema_version_model_1"
+            },
+            "properties": {
+              "$ref": "events/page_viewed.schema.json"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "event_name",
+            "schema_version",
+            "properties"
+          ],
+          "properties": {
+            "event_name": {
+              "const": "article_impressed"
+            },
+            "schema_version": {
+              "$ref": "defs.schema.json#/$defs/schema_version_model_1"
+            },
+            "properties": {
+              "$ref": "events/article_impressed.schema.json"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "event_name",
+            "schema_version",
+            "properties"
+          ],
+          "properties": {
+            "event_name": {
+              "const": "article_clicked"
+            },
+            "schema_version": {
+              "$ref": "defs.schema.json#/$defs/schema_version_model_1"
+            },
+            "properties": {
+              "$ref": "events/article_clicked.schema.json"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "event_name",
+            "schema_version",
+            "properties"
+          ],
+          "properties": {
+            "event_name": {
+              "const": "fulltext_read"
+            },
+            "schema_version": {
+              "$ref": "defs.schema.json#/$defs/schema_version_model_1"
+            },
+            "properties": {
+              "$ref": "events/fulltext_read.schema.json"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "event_name",
+            "schema_version",
+            "properties"
+          ],
+          "properties": {
+            "event_name": {
+              "const": "citation_copied"
+            },
+            "schema_version": {
+              "$ref": "defs.schema.json#/$defs/schema_version_model_1"
+            },
+            "properties": {
+              "$ref": "events/citation_copied.schema.json"
+            }
+          }
+        }
+      ]
+    }
+  }
+}

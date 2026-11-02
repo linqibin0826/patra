@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://patra.linqibin.dev/schemas/analytics/events/citation_copied.schema.json",
+  "title": "Citation Copied",
+  "x-patra-version": "1-0-0",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "article_ids": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 100,
+      "uniqueItems": true,
+      "items": {
+        "$ref": "../defs.schema.json#/$defs/article_id"
+      }
+    },
+    "style": {
+      "enum": [
+        "gb-t-7714-2015",
+        "vancouver",
+        "apa-7",
+        "ama-11"
+      ]
+    }
+  },
+  "required": [
+    "article_ids",
+    "style"
+  ]
+}

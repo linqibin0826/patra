@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://patra.linqibin.dev/schemas/analytics/events/fulltext_read.schema.json",
+  "title": "Fulltext Read",
+  "x-patra-version": "1-0-0",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "article_id": {
+      "$ref": "../defs.schema.json#/$defs/article_id"
+    },
+    "visible_seconds": {
+      "type": "integer",
+      "minimum": 10
+    }
+  },
+  "required": [
+    "article_id",
+    "visible_seconds"
+  ]
+}

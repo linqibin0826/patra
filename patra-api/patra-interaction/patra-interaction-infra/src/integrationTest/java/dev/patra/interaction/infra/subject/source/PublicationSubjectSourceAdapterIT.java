@@ -42,7 +42,7 @@ class PublicationSubjectSourceAdapterIT {
   private static final String RESOLVED_100 =
       """
       {"items":[{"key":"100","exists":true,"state":"ACTIVE","id":"100","pmid":"1",
-        "title":"A <i>title</i>","journal":"The Journal","year":2019,"publishedDate":"2019-03-15"}]}""";
+        "title":"A <i>title</i>","journal":"The Journal","year":2019,"publishedDate":"2019-03-15","retracted":false}]}""";
 
   private PublicationSubjectSourceAdapter adapter;
 
@@ -75,8 +75,8 @@ class PublicationSubjectSourceAdapterIT {
                 okJson(
                     """
                     {"items":[{"key":"1","exists":true,"state":"ACTIVE","id":"100","pmid":"1",
-                      "title":"T","journal":"J","year":2019,"publishedDate":"2019"},
-                     {"key":"2","exists":false}]}""")));
+                      "title":"T","journal":"J","year":2019,"publishedDate":"2019","retracted":false},
+                     {"key":"2","exists":false,"retracted":false}]}""")));
 
     Map<NaturalKey, SourceRecord> result =
         adapter.resolveByNaturalKeys(
