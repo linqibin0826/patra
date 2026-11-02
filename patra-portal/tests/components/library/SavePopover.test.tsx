@@ -101,7 +101,8 @@ describe("SavePopover", () => {
     ]);
     const options = success.mock.calls[0]?.[1] as unknown as { action: { onClick: () => void } };
     options.action.onClick();
-    await waitFor(() => expect(collect).toHaveBeenCalledWith("11"));
+    // 撤销是恢复，不是新收藏：不算一次 Article Collected
+    await waitFor(() => expect(collect).toHaveBeenCalledWith("11", { restore: true }));
   });
 
   it("有备注且在 2 个夹里：先确认，确认后 toast 不带撤销", async () => {

@@ -15,10 +15,20 @@ interface CopyButtonProps {
   /// 主按钮（引用对话框）还是次按钮（链接框、分享面板）
   primary?: boolean;
   className?: string;
+  /// 真正复制进剪贴板之后调用（降级成「已选中」时不调：不知道用户最后有没有复制）
+  onCopied?: () => void;
 }
 
 /// 复制按钮：成功时按钮内 `Check` + `已复制` 1.6 秒，不出 toast；都失败时按钮位置换成快捷键提示（简报 §3.8）
-export function CopyButton({ label, text, target, disabled, primary, className }: CopyButtonProps) {
+export function CopyButton({
+  label,
+  text,
+  target,
+  disabled,
+  primary,
+  className,
+  onCopied,
+}: CopyButtonProps) {
   const { state, hint, copy } = useCopy();
   if (state === "selected") {
     return (
@@ -31,7 +41,13 @@ export function CopyButton({ label, text, target, disabled, primary, className }
     <button
       type="button"
       disabled={disabled}
-      onClick={() => void copy(text, target())}
+      onClick={() =>
+        void copy(text, target()).then((result) => {
+          if (result === "copied") {
+            onCopied?.();
+          }
+        })
+      }
       className={cn(
         primary ? btnPrimary : btnSecondary,
         "px-4 py-2 text-sm",

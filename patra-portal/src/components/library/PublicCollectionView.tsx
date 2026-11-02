@@ -1,5 +1,7 @@
 import { Eye } from "lucide-react";
 import Link from "next/link";
+import { TrackedArticle } from "@/components/analytics/TrackedArticle";
+import { TrackedList } from "@/components/analytics/TrackedList";
 import { CopyCollectionButton } from "@/components/library/CopyCollectionButton";
 import { InteractionUnavailable } from "@/components/library/InteractionUnavailable";
 import { LibraryStatusProvider } from "@/components/library/LibraryStatusProvider";
@@ -190,30 +192,41 @@ function Entries({
         </span>
       </div>
       <LibraryStatusProvider keys={keys}>
-        <ul aria-label="收藏夹条目" className="flex flex-col">
-          {data.items.map((entry) => (
-            <li key={entry.item.itemId}>
-              {entry.paper ? (
-                <PaperListItem
-                  paper={entry.paper}
-                  detailedDate
-                  stats={
-                    <PaperStats paperKey={entry.paper.id} stats={entry.stats} className="mt-1" />
-                  }
-                  action={
-                    <SaveButton
-                      paperKey={entry.paper.id}
-                      title={entry.paper.title}
-                      variant="icon"
+        <TrackedList listType="collection">
+          <ul aria-label="收藏夹条目" className="flex flex-col">
+            {data.items.map((entry, i) => (
+              <li key={entry.item.itemId}>
+                {entry.paper ? (
+                  <TrackedArticle
+                    articleId={entry.paper.id}
+                    position={(page - 1) * data.pageSize + i + 1}
+                  >
+                    <PaperListItem
+                      paper={entry.paper}
+                      detailedDate
+                      stats={
+                        <PaperStats
+                          paperKey={entry.paper.id}
+                          stats={entry.stats}
+                          className="mt-1"
+                        />
+                      }
+                      action={
+                        <SaveButton
+                          paperKey={entry.paper.id}
+                          title={entry.paper.title}
+                          variant="icon"
+                        />
+                      }
                     />
-                  }
-                />
-              ) : (
-                <UnavailableEntry title={entry.item.title} />
-              )}
-            </li>
-          ))}
-        </ul>
+                  </TrackedArticle>
+                ) : (
+                  <UnavailableEntry title={entry.item.title} />
+                )}
+              </li>
+            ))}
+          </ul>
+        </TrackedList>
       </LibraryStatusProvider>
       <LinkPagination sort={sort} page={page} total={data.total} pageSize={data.pageSize} />
     </div>

@@ -4,6 +4,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import { usePathname, useRouter } from "next/navigation";
 import { type ReactNode, useRef, useState } from "react";
 import { toast } from "sonner";
+import { TrackedArticle } from "@/components/analytics/TrackedArticle";
+import { TrackedList } from "@/components/analytics/TrackedList";
 import { FormAlert } from "@/components/auth/FormAlert";
 import { CheckBox } from "@/components/library/CheckBox";
 import { CiteDialog } from "@/components/library/CiteDialog";
@@ -253,7 +255,7 @@ export function LibraryView({ view, sort, page, collectionContext }: LibraryView
       action: {
         label: "撤销",
         onClick: () => {
-          void orUnavailable(collectPublication(key)).then((again) => {
+          void orUnavailable(collectPublication(key, { restore: true })).then((again) => {
             if (again.ok) {
               patchItemStatus(client, key, {
                 collected: true,
@@ -332,51 +334,69 @@ export function LibraryView({ view, sort, page, collectionContext }: LibraryView
   } else {
     body = (
       <div className="flex flex-col gap-6">
-        <ul aria-label="文献库条目" className="flex flex-col">
-          {data.items.map((entry) => (
-            <li key={entry.item.itemId}>
-              <EntryRow
-                entry={entry}
-                select={
-                  selecting ? (
-                    <CheckBox
-                      aria-label={`选择「${Array.from(entry.paper?.title ?? entry.item.title ?? "")
-                        .slice(0, 40)
-                        .join("")}」`}
-                      checked={selection.selected.has(entry.item.itemId)}
-                      onChange={() => selection.toggle(entry.item.itemId)}
-                    />
-                  ) : undefined
-                }
-                collections={collections}
-                currentCollection={collection ?? null}
-                editingNote={editing === entry.item.itemId}
-                onEditNote={() => setEditing(entry.item.itemId)}
-                onNoteDone={() => setEditing(null)}
-                onNoteSaved={(item) => {
-                  patchEntry(client, item.itemId, { note: item.note });
-                  if (item.key) {
-                    patchItemStatus(client, item.key, { hasNote: item.note !== null });
+        <TrackedList listType="library">
+          <ul aria-label="文献库条目" className="flex flex-col">
+            {data.items.map((entry, i) => {
+              const row = (
+                <EntryRow
+                  entry={entry}
+                  select={
+                    selecting ? (
+                      <CheckBox
+                        aria-label={`选择「${Array.from(
+                          entry.paper?.title ?? entry.item.title ?? "",
+                        )
+                          .slice(0, 40)
+                          .join("")}」`}
+                        checked={selection.selected.has(entry.item.itemId)}
+                        onChange={() => selection.toggle(entry.item.itemId)}
+                      />
+                    ) : undefined
                   }
-                }}
-                onAddToCollections={(anchor) => {
-                  addAnchor.current = anchor;
-                  setAdding({ entry, anchor });
-                }}
-                onCite={() => setDialog({ kind: "cite", scope: singleScope(entry) })}
-                onExport={() => setDialog({ kind: "export", scope: singleScope(entry) })}
-                onRemoveFromCollection={() => void removeFromCurrent(entry)}
-                onRemove={() => {
-                  if (entry.item.note || entry.item.collectionIds.length > 0) {
-                    setConfirming(entry);
-                  } else {
-                    void remove(entry, false);
-                  }
-                }}
-              />
-            </li>
-          ))}
-        </ul>
+                  collections={collections}
+                  currentCollection={collection ?? null}
+                  editingNote={editing === entry.item.itemId}
+                  onEditNote={() => setEditing(entry.item.itemId)}
+                  onNoteDone={() => setEditing(null)}
+                  onNoteSaved={(item) => {
+                    patchEntry(client, item.itemId, { note: item.note });
+                    if (item.key) {
+                      patchItemStatus(client, item.key, { hasNote: item.note !== null });
+                    }
+                  }}
+                  onAddToCollections={(anchor) => {
+                    addAnchor.current = anchor;
+                    setAdding({ entry, anchor });
+                  }}
+                  onCite={() => setDialog({ kind: "cite", scope: singleScope(entry) })}
+                  onExport={() => setDialog({ kind: "export", scope: singleScope(entry) })}
+                  onRemoveFromCollection={() => void removeFromCurrent(entry)}
+                  onRemove={() => {
+                    if (entry.item.note || entry.item.collectionIds.length > 0) {
+                      setConfirming(entry);
+                    } else {
+                      void remove(entry, false);
+                    }
+                  }}
+                />
+              );
+              return (
+                <li key={entry.item.itemId}>
+                  {entry.paper ? (
+                    <TrackedArticle
+                      articleId={entry.paper.id}
+                      position={(page - 1) * data.pageSize + i + 1}
+                    >
+                      {row}
+                    </TrackedArticle>
+                  ) : (
+                    row
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        </TrackedList>
         <PaginationView
           page={page}
           total={data.total}

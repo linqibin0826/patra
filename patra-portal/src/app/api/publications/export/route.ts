@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { readHandlerFacts, requestPage } from "@/lib/analytics/server/context";
+import { trackServerEvent } from "@/lib/analytics/server/send";
 import { logRequestError, logUnexpectedResponse } from "@/lib/auth/gateway-response";
 import { gatewayStream } from "@/lib/gateway";
 import { graphemeCount, graphemes } from "@/lib/grapheme";
@@ -32,6 +34,8 @@ const bodySchema = z.object({
     .refine((value) => graphemeCount(value) <= 100)
     .transform(fitName)
     .optional(),
+  /// 导出范围，只用于埋点 Export Completed，不转给 catalog
+  scope: z.enum(["items", "collection", "public_collection", "library_all", "library_unfiled"]),
 });
 
 /// 导出（spec 2.1.3）：浏览器 → 这里 → 网关 → catalog。公共数据，不带会话；文件名由 catalog 生成。
@@ -45,15 +49,28 @@ export async function POST(request: Request): Promise<Response> {
     return invalidRequest();
   }
   try {
+    const { scope, ...exportRequest } = body.data;
     const res = await gatewayStream(ENDPOINT, {
       method: "POST",
-      json: body.data,
+      json: exportRequest,
       signal: request.signal,
     });
     if (!res.ok || !res.body) {
       logUnexpectedResponse(ENDPOINT, res.status, undefined);
       return NextResponse.json({ reason: "unavailable" }, { status: 502, headers: NO_STORE });
     }
+    trackServerEvent(
+      {
+        name: "export_completed",
+        properties: {
+          format: exportRequest.format,
+          scope,
+          article_count: exportRequest.ids.length,
+        },
+      },
+      await readHandlerFacts(),
+      requestPage(request),
+    );
     const headers = new Headers(NO_STORE);
     for (const name of ["Content-Type", "Content-Disposition"]) {
       const value = res.headers.get(name);

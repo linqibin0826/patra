@@ -1,7 +1,15 @@
 // @vitest-environment node
+import { FACTS } from "@tests/fixtures/analytics";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { POST as postCitations } from "@/app/api/publications/citations/route";
 import { POST as postExport } from "@/app/api/publications/export/route";
+import { trackServerEvent } from "@/lib/analytics/server/send";
+
+vi.mock("@/lib/analytics/server/context", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/analytics/server/context")>()),
+  readHandlerFacts: vi.fn(async () => FACTS),
+}));
+vi.mock("@/lib/analytics/server/send", () => ({ trackServerEvent: vi.fn() }));
 
 const fetchMock = vi.fn<typeof fetch>();
 
@@ -45,7 +53,12 @@ describe("POST /api/publications/export", () => {
       }),
     );
     const res = await postExport(
-      post("/api/publications/export", { ids: ["11", "12"], format: "ris", name: "组会" }),
+      post("/api/publications/export", {
+        ids: ["11", "12"],
+        format: "ris",
+        name: "组会",
+        scope: "collection",
+      }),
     );
     expect(res.status).toBe(200);
     expect(await res.text()).toBe("TY  - JOUR");
@@ -66,11 +79,13 @@ describe("POST /api/publications/export", () => {
   });
 
   it.each([
-    [{ ids: [], format: "ris" }],
-    [{ ids: ["01"], format: "ris" }],
-    [{ ids: ["1"], format: "pdf" }],
-    [{ ids: Array.from({ length: 5001 }, (_, i) => String(i + 1)), format: "ris" }],
-    [{ ids: ["1"], format: "ris", name: "x".repeat(101) }],
+    [{ ids: ["1"], format: "ris" }],
+    [{ ids: ["1"], format: "ris", scope: "everything" }],
+    [{ ids: [], format: "ris", scope: "items" }],
+    [{ ids: ["01"], format: "ris", scope: "items" }],
+    [{ ids: ["1"], format: "pdf", scope: "items" }],
+    [{ ids: Array.from({ length: 5001 }, (_, i) => String(i + 1)), format: "ris", scope: "items" }],
+    [{ ids: ["1"], format: "ris", name: "x".repeat(101), scope: "items" }],
   ])("请求不合格：422，不打网关（%#）", async (body) => {
     expect((await postExport(post("/api/publications/export", body))).status).toBe(422);
     expect(fetchMock).not.toHaveBeenCalled();
@@ -78,7 +93,9 @@ describe("POST /api/publications/export", () => {
 
   it("catalog 失败：502", async () => {
     fetchMock.mockResolvedValue(new Response("x", { status: 500 }));
-    const res = await postExport(post("/api/publications/export", { ids: ["1"], format: "csv" }));
+    const res = await postExport(
+      post("/api/publications/export", { ids: ["1"], format: "csv", scope: "items" }),
+    );
     expect(res.status).toBe(502);
   });
 });
@@ -113,11 +130,41 @@ describe("POST /api/publications/export · 评审修复", () => {
     fetchMock.mockResolvedValue(new Response("x"));
     const name = "👍".repeat(60);
     const res = await postExport(
-      post("/api/publications/export", { ids: ["1"], format: "ris", name }),
+      post("/api/publications/export", { ids: ["1"], format: "ris", name, scope: "items" }),
     );
     expect(res.status).toBe(200);
     const sent = JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body)).name as string;
     expect(sent.length).toBeLessThanOrEqual(100);
     expect(sent).toBe("👍".repeat(50));
+  });
+});
+
+describe("Export Completed", () => {
+  it("catalog 回 200、开始回传时发一条：格式、范围、篇数", async () => {
+    fetchMock.mockResolvedValue(new Response("TY  - JOUR", { status: 200 }));
+    await postExport(
+      post("/api/publications/export", {
+        ids: ["1", "2", "3"],
+        format: "ris",
+        scope: "library_all",
+      }),
+    );
+    expect(trackServerEvent).toHaveBeenCalledWith(
+      {
+        name: "export_completed",
+        properties: { format: "ris", scope: "library_all", article_count: 3 },
+      },
+      FACTS,
+      { path: "/api/publications/export", type: "other" },
+    );
+  });
+
+  it("catalog 失败：不发", async () => {
+    vi.mocked(trackServerEvent).mockClear();
+    fetchMock.mockResolvedValue(new Response(null, { status: 500 }));
+    await postExport(
+      post("/api/publications/export", { ids: ["1"], format: "ris", scope: "items" }),
+    );
+    expect(trackServerEvent).not.toHaveBeenCalled();
   });
 });

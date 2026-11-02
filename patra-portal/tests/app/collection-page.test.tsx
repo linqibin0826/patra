@@ -1,4 +1,4 @@
-import { screen, within } from "@testing-library/react";
+import { fireEvent, screen, within } from "@testing-library/react";
 import { makePublicCollection, makePublicItem } from "@tests/fixtures/interaction";
 import { makePaper } from "@tests/fixtures/paper";
 import { PUBLIC_PROFILE } from "@tests/fixtures/public-profile";
@@ -15,6 +15,7 @@ vi.mock("next/navigation", async (importOriginal) => ({
   usePathname: () => "/collections/9",
   useSearchParams: () => new URLSearchParams(),
 }));
+vi.mock("@/lib/analytics/client/queue", () => ({ track: vi.fn() }));
 vi.mock("@/components/portal/TopNav", () => ({ TopNav: () => <nav aria-label="导航栏桩" /> }));
 vi.mock("@/components/portal/Footer", () => ({ Footer: () => <footer /> }));
 vi.mock("@/lib/auth/current-user", () => ({ lookupSession: vi.fn() }));
@@ -33,6 +34,7 @@ vi.mock("@/lib/public-url", () => ({
 }));
 
 import CollectionPage, { generateMetadata } from "@/app/collections/[id]/page";
+import { track } from "@/lib/analytics/client/queue";
 import { lookupSession } from "@/lib/auth/current-user";
 import { fetchPublicProfile } from "@/lib/identity/public-profile";
 import { fetchPublicCollection, fetchPublicCollectionPage } from "@/lib/interaction/collections";
@@ -291,5 +293,17 @@ describe("/collections/[id] 页面信息", () => {
     const result = await meta();
     expect(result.robots).toEqual({ index: false });
     expect(result.title).toBe("组会 · 陈宇的收藏夹 · Patra");
+  });
+});
+
+describe("/collections/[id] 埋点", () => {
+  it("点条目：list_type 为 collection，位置按页算", async () => {
+    viewAs("anonymous");
+    await renderPage("9", { page: "2" });
+    fireEvent.click(screen.getByRole("link", { name: "Paper one" }));
+    expect(track).toHaveBeenCalledWith(
+      "article_clicked",
+      expect.objectContaining({ article_id: "11", list_type: "collection", position: 51 }),
+    );
   });
 });

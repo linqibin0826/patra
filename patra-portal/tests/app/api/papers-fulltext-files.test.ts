@@ -3,6 +3,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { GET as getFigure } from "@/app/api/papers/[id]/figures/[file]/route";
 import { GET as getPdf } from "@/app/api/papers/[id]/pdf/route";
 
+// 埋点另有用例（tests/app/api/pdf-analytics.test.ts）
+vi.mock("@/lib/analytics/server/context", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/analytics/server/context")>()),
+  readHandlerFacts: vi.fn(async () => null),
+}));
+vi.mock("@/lib/analytics/server/send", () => ({ trackServerEvent: vi.fn() }));
+
 const fetchMock = vi.fn<typeof fetch>();
 
 beforeEach(() => {

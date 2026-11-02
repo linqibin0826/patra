@@ -24,6 +24,7 @@
     "tests/**/*.ts",
     "tests/**/*.tsx",
     "server/**/*.d.mts",
+    "scripts/**/*.d.mts",
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts"
   ],

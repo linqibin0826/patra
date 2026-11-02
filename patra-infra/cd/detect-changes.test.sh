@@ -137,6 +137,13 @@ F="patra-api/patra-analytics/patra-analytics-infra/src/main/java/X.java"
 assert_field "$F" '.backend_units' '["analytics"]' "analytics 私有只跑 analytics"
 assert_field "settings.gradle.kts" '.backend_units | index("analytics") != null' 'true' "全量运行包含 analytics"
 assert_field "patra-infra/nacos/dev/patra-analytics.yaml" '.backend_units' '["analytics","foundation"]' "analytics 的 nacos yaml 重部署 analytics"
+
+echo "== 场景 18：埋点契约 schema 与样例 → 门户也要跑（事件类型由 schema 生成，门户单测核对一致；PAP-173）=="
+F="patra-api/patra-analytics/patra-analytics-api/src/main/resources/analytics/schema/events/page_viewed.schema.json"
+assert_field "$F" '.portal_changed' 'true' "改 schema 触发 portal"
+assert_field "$F" '.backend_units | index("analytics") != null' 'true' "改 schema 仍跑 analytics"
+F="patra-api/patra-analytics/patra-analytics-api/src/main/resources/analytics/examples/valid/browser-batch--single.json"
+assert_field "$F" '.portal_changed' 'true' "改样例也触发 portal（门户单测按样例核对校验器）"
 echo
 echo "通过 $PASS / 失败 $FAIL"
 [ "$FAIL" -eq 0 ]

@@ -1,12 +1,20 @@
 import { render, screen, within } from "@testing-library/react";
 import { makeBody, makeFullText, para, section } from "@tests/fixtures/fulltext";
 import { makePaperDetail } from "@tests/fixtures/paper";
+import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { FullTextBlock } from "@/types/fulltext";
 import "@testing-library/jest-dom/vitest";
 
 vi.mock("@/lib/portal-api/fulltext", () => ({ fetchPublicationFullText: vi.fn() }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
+vi.mock("@/components/analytics/FulltextReadTracker", () => ({
+  FulltextReadTracker: ({ articleId, children }: { articleId: string; children: ReactNode }) => (
+    <div data-testid="fulltext-read-tracker" data-article-id={articleId}>
+      {children}
+    </div>
+  ),
+}));
 
 import { FullTextSection } from "@/components/portal/fulltext/FullTextSection";
 import { fetchPublicationFullText } from "@/lib/portal-api/fulltext";
@@ -144,5 +152,27 @@ describe("FullTextSection · 没有可读正文", () => {
     );
     expect(screen.getByRole("link", { name: /下载 PDF/ })).toBeInTheDocument();
     expect(screen.queryByText("PDF 按原文许可转载，未作改动。")).toBeNull();
+  });
+});
+
+describe("FullTextSection · 全文停留埋点", () => {
+  it("只包正文：参考文献、许可在外面", async () => {
+    fetchMock.mockResolvedValue(
+      makeFullText({
+        body: makeBody({ sections: [section("s1", "Introduction", [para("Hi.")])] }),
+      }),
+    );
+    await renderSection();
+    // 埋点的包装没有可访问的语义，只能按 testid 找
+    const tracker = screen.getByTestId("fulltext-read-tracker");
+    expect(tracker).toHaveAttribute("data-article-id", readable.id);
+    expect(within(tracker).getByText("Introduction")).toBeInTheDocument();
+    expect(within(tracker).queryByText("RECORD")).toBeNull();
+  });
+
+  it("没有全文（只有 PDF）：不计时", async () => {
+    fetchMock.mockResolvedValue(makeFullText({ body: null }));
+    await renderSection(makePaperDetail({ hasFullText: false, hasPdf: true, pmcid: "PMC1" }));
+    expect(screen.queryByTestId("fulltext-read-tracker")).toBeNull();
   });
 });

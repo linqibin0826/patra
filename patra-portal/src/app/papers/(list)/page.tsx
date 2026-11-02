@@ -12,6 +12,10 @@ import { PaperSearchBar } from "@/components/portal/papers/PaperSearchBar";
 import { PapersInfoRow } from "@/components/portal/papers/PapersInfoRow";
 import { PapersQueryProvider } from "@/components/portal/papers/PapersQueryProvider";
 import { TopNav } from "@/components/portal/TopNav";
+import { newId } from "@/lib/analytics/ids";
+import { readPageFacts } from "@/lib/analytics/server/context";
+import { searchPerformedProperties } from "@/lib/analytics/server/search-properties";
+import { trackServerEvent } from "@/lib/analytics/server/send";
 import {
   currentPortalYear,
   isExactLookup,
@@ -36,6 +40,15 @@ export default async function PapersPage({
     prefetched = await fetchPublicationSearch(query);
     const [only] = prefetched.items;
     if (prefetched.items.length === 1 && only) {
+      // 直跳详情时 PaperResults 不会渲染，检索在这里记（spec §4.2）
+      trackServerEvent(
+        {
+          name: "search_performed",
+          properties: searchPerformedProperties(query, newId(), prefetched.items.length),
+        },
+        await readPageFacts(),
+        { path: "/papers", type: "search" },
+      );
       redirect(`/papers/${only.id}`);
     }
   }

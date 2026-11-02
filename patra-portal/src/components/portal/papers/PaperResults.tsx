@@ -1,9 +1,15 @@
+import { TrackedArticle } from "@/components/analytics/TrackedArticle";
+import { TrackedList } from "@/components/analytics/TrackedList";
 import { LibraryStatusProvider } from "@/components/library/LibraryStatusProvider";
 import { PaperStats } from "@/components/library/PaperStats";
 import { SaveButton } from "@/components/library/SaveButton";
 import { BrowsePagination } from "@/components/portal/browse/BrowsePagination";
 import { PaperListItem } from "@/components/portal/papers/PaperListItem";
 import { PapersEmptyResult, papersEmptyKind } from "@/components/portal/papers/PapersEmptyResult";
+import { newId } from "@/lib/analytics/ids";
+import { readPageFacts } from "@/lib/analytics/server/context";
+import { isBrowseState, searchPerformedProperties } from "@/lib/analytics/server/search-properties";
+import { trackServerEvent } from "@/lib/analytics/server/send";
 import { fetchPaperStats } from "@/lib/interaction/stats";
 import { fetchPublicationSearch } from "@/lib/portal-api/publication-search";
 import type { PageResult, Paper, PaperSearchQuery } from "@/types/portal";
@@ -21,6 +27,18 @@ interface PaperResultsProps {
  */
 export async function PaperResults({ query, prefetched }: PaperResultsProps) {
   const page = prefetched ?? (await fetchPublicationSearch(query));
+  // 埋点：一次检索一条 Search Performed（含无结果）；无任何条件的浏览不算。searchId 也是这一页结果列表的 list_id
+  const searchId = newId();
+  if (!isBrowseState(query)) {
+    trackServerEvent(
+      {
+        name: "search_performed",
+        properties: searchPerformedProperties(query, searchId, page.total),
+      },
+      await readPageFacts(),
+      { path: "/papers", type: "search" },
+    );
+  }
   const kind = papersEmptyKind(query, page);
   if (kind) {
     return <PapersEmptyResult kind={kind} query={query} />;
@@ -31,24 +49,31 @@ export async function PaperResults({ query, prefetched }: PaperResultsProps) {
   return (
     <div className="flex flex-col gap-6">
       <LibraryStatusProvider keys={keys}>
-        <ul aria-label="文献列表" className="flex flex-col">
-          {page.items.map((paper) => (
-            <li key={paper.id}>
-              <PaperListItem
-                paper={paper}
-                highlight={query.q || undefined}
-                action={<SaveButton paperKey={paper.id} title={paper.title} variant="icon" />}
-                stats={
-                  <PaperStats
-                    paperKey={paper.id}
-                    stats={stats?.get(paper.id) ?? null}
-                    className="mt-1"
+        <TrackedList listType="search" listId={searchId}>
+          <ul aria-label="文献列表" className="flex flex-col">
+            {page.items.map((paper, i) => (
+              <li key={paper.id}>
+                <TrackedArticle
+                  articleId={paper.id}
+                  position={(query.page - 1) * page.pageSize + i + 1}
+                >
+                  <PaperListItem
+                    paper={paper}
+                    highlight={query.q || undefined}
+                    action={<SaveButton paperKey={paper.id} title={paper.title} variant="icon" />}
+                    stats={
+                      <PaperStats
+                        paperKey={paper.id}
+                        stats={stats?.get(paper.id) ?? null}
+                        className="mt-1"
+                      />
+                    }
                   />
-                }
-              />
-            </li>
-          ))}
-        </ul>
+                </TrackedArticle>
+              </li>
+            ))}
+          </ul>
+        </TrackedList>
       </LibraryStatusProvider>
       <BrowsePagination page={query.page} total={page.total} pageSize={page.pageSize} unit="篇" />
     </div>

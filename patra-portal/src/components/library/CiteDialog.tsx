@@ -11,6 +11,7 @@ import {
 import { CitationPreview } from "@/components/library/CitationPreview";
 import { CopyButton } from "@/components/library/CopyButton";
 import { Dialog } from "@/components/ui/dialog";
+import { track } from "@/lib/analytics/client/queue";
 import { LIMITS } from "@/lib/library/messages";
 import { type DialogScope, formatCount, scopeCount, useScopeKeys } from "@/lib/library/scope";
 import { btnSecondary, btnText } from "@/lib/portal-ui";
@@ -143,6 +144,9 @@ export function CiteDialog({ open, onOpenChange, scope, onExport }: CiteDialogPr
               text={lines.join("\n")}
               target={() => preview.current}
               disabled={!citations.data || lines.length === 0}
+              onCopied={() =>
+                track("citation_copied", { article_ids: [...new Set(ids)].slice(0, 100), style })
+              }
             />
           </div>
         </>

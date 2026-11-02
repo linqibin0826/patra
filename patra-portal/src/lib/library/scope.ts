@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import type { ExportCompleted } from "@/lib/analytics/generated/events";
 import type { ItemState } from "@/lib/interaction/schema";
 import type { ExportScope } from "@/lib/interaction/scope";
 import { queryKeys } from "@/lib/query-keys";
@@ -21,6 +22,20 @@ export type ScopeKeys =
   | { kind: "ready"; keys: string[]; skipped: number }
   | { kind: "too-large" }
   | { kind: "error" };
+
+/// 范围 → 埋点 Export Completed 的 `scope`
+export function exportScopeOf(scope: DialogScope): ExportCompleted["scope"] {
+  switch (scope.kind) {
+    case "items":
+      return "items";
+    case "library":
+      return scope.view === "all" ? "library_all" : "library_unfiled";
+    case "collection":
+      return "collection";
+    case "public-collection":
+      return "public_collection";
+  }
+}
 
 /// 范围的篇数（`items` 为条数，其余为视图 / 收藏夹的篇数）
 export function scopeCount(scope: DialogScope): number {

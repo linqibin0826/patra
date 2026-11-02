@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { FulltextReadTracker } from "@/components/analytics/FulltextReadTracker";
 import { CitationPopover } from "@/components/portal/fulltext/CitationPopover";
 import { renderFullTextBody } from "@/components/portal/fulltext/FullTextBody";
 import { FullTextUnavailable } from "@/components/portal/fulltext/FullTextUnavailable";
@@ -113,7 +114,10 @@ function ReadableFullText({
   }));
   return (
     <>
-      {rendered.content}
+      {/* 埋点：只有正文计全文停留，参考文献、许可等不算（埋点方案 §6.3）；换文献时重新挂载、重新计时 */}
+      <FulltextReadTracker key={paper.id} articleId={paper.id}>
+        {rendered.content}
+      </FulltextReadTracker>
       {rendered.declarations}
       {rendered.appendices}
       {items.length > 0 && <ReferenceList firstCiteByRef={rendered.firstCiteByRef} items={items} />}

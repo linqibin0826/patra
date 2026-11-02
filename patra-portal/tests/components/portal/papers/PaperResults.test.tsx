@@ -1,4 +1,4 @@
-import { screen } from "@testing-library/react";
+import { fireEvent, screen } from "@testing-library/react";
 import { renderWithQuery } from "@tests/support/render-with-query";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import "@testing-library/jest-dom/vitest";
@@ -15,7 +15,11 @@ vi.mock("@/lib/portal-api/publication-search", () => ({
 }));
 
 vi.mock("@/lib/interaction/stats", () => ({ fetchPaperStats: vi.fn() }));
+// 埋点另有用例（tests/app/papers/analytics-events.test.tsx）
+vi.mock("@/lib/analytics/server/context", () => ({ readPageFacts: vi.fn(async () => null) }));
+vi.mock("@/lib/analytics/client/queue", () => ({ track: vi.fn() }));
 
+import { track } from "@/lib/analytics/client/queue";
 import { fetchPaperStats } from "@/lib/interaction/stats";
 import { fetchPublicationSearch } from "@/lib/portal-api/publication-search";
 
@@ -91,5 +95,23 @@ describe("PaperResults · 公开计数", () => {
     await renderResults({ ...EMPTY_PAPER_QUERY, q: "osbpl6" });
     expect(screen.getByRole("list", { name: "文献列表" })).toBeInTheDocument();
     expect(screen.queryByText(/人收藏|条讨论/)).not.toBeInTheDocument();
+  });
+});
+
+describe("PaperResults · 埋点", () => {
+  it("点结果：list_type 为 search，位置跨页连续（第 2 页第 1 篇是 21）", async () => {
+    vi.mocked(fetchPublicationSearch).mockResolvedValue({ ...pageOf([makePaper()], 45), page: 2 });
+    vi.mocked(fetchPaperStats).mockResolvedValue(new Map());
+    await renderResults({ ...EMPTY_PAPER_QUERY, q: "osbpl6", page: 2 });
+    fireEvent.click(screen.getByRole("link", { name: /demyelination/ }));
+    expect(track).toHaveBeenCalledWith(
+      "article_clicked",
+      expect.objectContaining({
+        article_id: "352303128713027974",
+        list_type: "search",
+        position: 21,
+        list_id: expect.stringMatching(/^[0-9a-f]{8}-[0-9a-f]{4}-7/),
+      }),
+    );
   });
 });

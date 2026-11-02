@@ -1,6 +1,8 @@
 import { ArrowRight } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { TrackedArticle } from "@/components/analytics/TrackedArticle";
+import { TrackedList } from "@/components/analytics/TrackedList";
 import { LibraryStatusProvider } from "@/components/library/LibraryStatusProvider";
 import { PaperCard } from "@/components/portal/PaperCard";
 import { SectionEyebrow } from "@/components/portal/SectionEyebrow";
@@ -39,7 +41,10 @@ export async function ExploreFeed({ tab }: { tab: FeedTab }) {
   return (
     <FeedSection tabs={<ExploreFeedTabs currentTab={tab} />}>
       <LibraryStatusProvider keys={keys}>
-        <FeedLayout papers={papers} stats={stats} />
+        {/* 每个标签是一个列表实例：切标签时组件位置不变，用 key 换新的 list_id 与去重集合 */}
+        <TrackedList key={tab} listType={tab === "recent" ? "feed_latest" : "feed_cited"}>
+          <FeedLayout papers={papers} stats={stats} />
+        </TrackedList>
       </LibraryStatusProvider>
     </FeedSection>
   );
@@ -56,13 +61,17 @@ function FeedLayout({ papers, stats }: { papers: Paper[]; stats: PaperStatsMap |
       <div className="grid grid-cols-1 lg:grid-cols-12 lg:gap-x-12">
         {first && (
           <div className="max-lg:pb-8 lg:col-span-7">
-            <PaperCard paper={first} variant="lead" index={1} stats={statsOf(first)} />
+            <TrackedArticle articleId={first.id} position={1}>
+              <PaperCard paper={first} variant="lead" index={1} stats={statsOf(first)} />
+            </TrackedArticle>
           </div>
         )}
         <ol className="flex flex-col lg:col-span-5">
           {side.map((p, i) => (
             <li key={p.id} className="flex-1">
-              <PaperCard paper={p} index={i + 2} stats={statsOf(p)} />
+              <TrackedArticle articleId={p.id} position={i + 2}>
+                <PaperCard paper={p} index={i + 2} stats={statsOf(p)} />
+              </TrackedArticle>
             </li>
           ))}
         </ol>
@@ -73,7 +82,9 @@ function FeedLayout({ papers, stats }: { papers: Paper[]; stats: PaperStatsMap |
         <ol className="mt-4 grid grid-cols-2 gap-x-12 max-md:grid-cols-1">
           {more.map((p, i) => (
             <li key={p.id} className="reveal max-md:[&:nth-child(n+5)]:hidden">
-              <PaperCard paper={p} index={i + 2 + SIDE_COUNT} stats={statsOf(p)} />
+              <TrackedArticle articleId={p.id} position={i + 2 + SIDE_COUNT}>
+                <PaperCard paper={p} index={i + 2 + SIDE_COUNT} stats={statsOf(p)} />
+              </TrackedArticle>
             </li>
           ))}
         </ol>

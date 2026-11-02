@@ -1,5 +1,6 @@
-import { screen } from "@testing-library/react";
+import { fireEvent, screen } from "@testing-library/react";
 import { renderWithQuery } from "@tests/support/render-with-query";
+import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
 import "@testing-library/jest-dom/vitest";
 import { makePaper } from "@tests/fixtures/paper";
@@ -12,7 +13,9 @@ vi.mock("@/lib/portal-api/publications", () => ({
 }));
 
 vi.mock("@/lib/interaction/stats", () => ({ fetchPaperStats: vi.fn(async () => new Map()) }));
+vi.mock("@/lib/analytics/client/queue", () => ({ track: vi.fn() }));
 
+import { track } from "@/lib/analytics/client/queue";
 import { fetchPaperStats } from "@/lib/interaction/stats";
 import { fetchFeed } from "@/lib/portal-api/publications";
 
@@ -88,5 +91,59 @@ describe("ExploreFeed · 公开计数", () => {
     renderWithQuery(await ExploreFeed({ tab: "recent" }));
     expect(screen.getByRole("link", { name: /查看更多文献/ })).toBeInTheDocument();
     expect(screen.queryByText(/人收藏|条讨论/)).not.toBeInTheDocument();
+  });
+});
+
+describe("ExploreFeed 埋点", () => {
+  it("切标签是另一个列表实例：list_id 不同", async () => {
+    vi.mocked(track).mockReset();
+    vi.mocked(fetchFeed).mockResolvedValue({
+      page: 1,
+      pageSize: 14,
+      total: 1,
+      totalPages: 1,
+      items: [makePaper()],
+    });
+    const recent = await ExploreFeed({ tab: "recent" });
+    const cited = await ExploreFeed({ tab: "cited" });
+    /// 切标签时 Next 在同一位置换上新的服务端结果：用一个开关在同一位置换两棵树
+    function Switcher() {
+      const [tab, setTab] = useState<"recent" | "cited">("recent");
+      return (
+        <>
+          <button type="button" onClick={() => setTab("cited")}>
+            切到高被引
+          </button>
+          {tab === "recent" ? recent : cited}
+        </>
+      );
+    }
+    renderWithQuery(<Switcher />);
+    fireEvent.click(screen.getAllByRole("link", { name: /demyelination/ })[0] as HTMLElement);
+    fireEvent.click(screen.getByRole("button", { name: "切到高被引" }));
+    fireEvent.click(screen.getAllByRole("link", { name: /demyelination/ })[0] as HTMLElement);
+    const [first, second] = vi
+      .mocked(track)
+      .mock.calls.map(([, props]) => props as { list_id: string; list_type: string });
+    expect(first?.list_type).toBe("feed_latest");
+    expect(second?.list_type).toBe("feed_cited");
+    expect(second?.list_id).not.toBe(first?.list_id);
+  });
+
+  it("点文献：article_clicked 的列表类型按标签、位置就是卡片序号", async () => {
+    const second = makePaper({ id: "22", title: "Second paper" });
+    vi.mocked(fetchFeed).mockResolvedValue({
+      page: 1,
+      pageSize: 14,
+      total: 2,
+      totalPages: 1,
+      items: [makePaper(), second],
+    });
+    renderWithQuery(await ExploreFeed({ tab: "cited" }));
+    fireEvent.click(screen.getAllByRole("link", { name: /Second paper/ })[0] as HTMLElement);
+    expect(track).toHaveBeenCalledWith(
+      "article_clicked",
+      expect.objectContaining({ article_id: "22", list_type: "feed_cited", position: 2 }),
+    );
   });
 });

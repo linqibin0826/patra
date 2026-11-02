@@ -7,7 +7,13 @@ import { Dialog } from "@/components/ui/dialog";
 import { saveResponseAsFile } from "@/lib/download";
 import { EXPORT_FORMATS, type ExportFormat } from "@/lib/library/export-formats";
 import { LIMITS } from "@/lib/library/messages";
-import { type DialogScope, formatCount, scopeCount, useScopeKeys } from "@/lib/library/scope";
+import {
+  type DialogScope,
+  exportScopeOf,
+  formatCount,
+  scopeCount,
+  useScopeKeys,
+} from "@/lib/library/scope";
 import { btnPrimary, btnText, RADIO_INPUT } from "@/lib/portal-ui";
 import { readChoice, writeChoice } from "@/lib/remembered-choice";
 import { cn } from "@/lib/utils";
@@ -62,7 +68,12 @@ export function ExportDialog({ open, onOpenChange, scope }: ExportDialogProps) {
       const res = await fetch("/api/publications/export", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ids: keys.keys, format, name: scope.name }),
+        body: JSON.stringify({
+          ids: keys.keys,
+          format,
+          name: scope.name,
+          scope: exportScopeOf(scope),
+        }),
       });
       if (!res.ok) {
         throw new Error(`导出失败：${res.status}`);

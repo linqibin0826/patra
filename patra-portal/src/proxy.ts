@@ -1,4 +1,9 @@
 import { type NextRequest, NextResponse } from "next/server";
+import {
+  resolveTrackingIds,
+  TRACKING_HEADERS,
+  type TrackingIds,
+} from "@/lib/analytics/server/identity-cookies";
 import { lookupSessionByToken } from "@/lib/auth/current-user";
 import { deletionPendingHref, isFocusPage, safeNextPath } from "@/lib/auth/next-path";
 import { readRequestSessionToken } from "@/lib/auth/session-cookie";
@@ -22,25 +27,25 @@ const AUTH_PAGES = ["/login", "/register"];
 /// 跳转规则 6：已登录的人打开登录页、注册页时，直接 307 到 `next`。只拦 GET：Server Action 是发到
 /// 当前页的 POST，放行。站内点链接、预取也要拦，所以不看 `sec-fetch-dest`。没有 Cookie 时不请求网关；
 /// 读 Cookie 抛错、令牌失效、网关出错或超时都放行，显示表单。这里不写 Cookie。
-async function leaveAuthPage(req: NextRequest): Promise<NextResponse> {
+async function leaveAuthPage(req: NextRequest, pass: Pass): Promise<NextResponse> {
   if (req.method !== "GET") {
-    return NextResponse.next();
+    return pass.next();
   }
   let token: string | null;
   try {
     token = readRequestSessionToken(req);
   } catch {
-    return NextResponse.next();
+    return pass.next();
   }
   if (!token) {
-    return NextResponse.next();
+    return pass.next();
   }
   const session = await lookupSessionByToken(token, {
     timeoutMs: CHECK_TIMEOUT_MS,
     client: clientOriginFromHeaders(req.headers),
   });
   if (session.status !== "authenticated") {
-    return NextResponse.next();
+    return pass.next();
   }
   const next = safeNextPath(req.nextUrl.searchParams.get("next"));
   // 冷静期账号直接去取消注销页，不先到 next 再被拦一次（spec §8.2）
@@ -79,9 +84,44 @@ async function pendingDeletionRedirect(req: NextRequest): Promise<NextResponse |
   return NextResponse.redirect(new URL(deletionPendingHref(here), req.url), 307);
 }
 
+/// 放行与改写：都把 proxy 定好的请求头交给渲染层
+interface Pass {
+  next(): NextResponse;
+  rewrite(url: URL): NextResponse;
+}
+
+/// 埋点（PAP-173）：每个页面请求都下发设备与会话 Cookie（站内跳转、预取也算活动），并把这次确定的两个 ID 写进
+/// 传给渲染层的请求头，页面与 Server Action 的服务端事件从 `headers()` 读——第一次访问时请求里还没有 Cookie。
+/// 浏览器自己带来的同名头先删掉。算 ID 出错（不应发生）时页面照常，只是这次没有埋点。
 export async function proxy(req: NextRequest) {
+  let ids: TrackingIds | null = null;
+  try {
+    ids = resolveTrackingIds((name) => req.cookies.get(name)?.value, Date.now());
+  } catch {
+    ids = null;
+  }
+  const forward = new Headers(req.headers);
+  forward.delete(TRACKING_HEADERS.device);
+  forward.delete(TRACKING_HEADERS.session);
+  if (ids) {
+    forward.set(TRACKING_HEADERS.device, ids.deviceId);
+    forward.set(TRACKING_HEADERS.session, ids.sessionId);
+  }
+  const pass: Pass = {
+    next: () => NextResponse.next({ request: { headers: forward } }),
+    rewrite: (url) => NextResponse.rewrite(url, { request: { headers: forward } }),
+  };
+  const res = await route(req, pass);
+  for (const cookie of ids?.cookies ?? []) {
+    res.cookies.set({ ...cookie.options, value: cookie.value });
+  }
+  return res;
+}
+
+/// 页面请求的路由：登录页跳走、冷静期跳转、详情页先确认存在，其余放行
+async function route(req: NextRequest, pass: Pass): Promise<NextResponse> {
   if (AUTH_PAGES.includes(req.nextUrl.pathname)) {
-    return leaveAuthPage(req);
+    return leaveAuthPage(req, pass);
   }
   // 冷静期查询先发出去；详情页的存在检查与它并行，结果出来后冷静期跳转优先
   const pending = pendingDeletionRedirect(req);
@@ -90,18 +130,18 @@ export async function proxy(req: NextRequest) {
   // Next 交给这里之前会剥掉 rsc 等内部请求头，在这里读不到。
   // 爬虫、curl 不带这个头，按直接打开处理，照样能拿到真正的 404
   if (req.headers.get("sec-fetch-dest") === "empty") {
-    return NextResponse.next();
+    return pass.next();
   }
   const segments = req.nextUrl.pathname.split("/");
   const [, section = "", id = ""] = segments;
   // 只有 `/papers/:id`、`/journals/:id`、`/posts/:id` 两段的地址是详情页；列表页（`/papers`、`/journals/`）和更深的路径放行。
   // matcher 按解码后的路径匹配，pathname 却保留编码（`/%70apers/1`、`/%6Cogin` 也会进来）：认不出的放行
   if (segments.length !== 3 || id === "" || !Object.hasOwn(DETAIL, section)) {
-    return (await pending) ?? NextResponse.next();
+    return (await pending) ?? pass.next();
   }
   const { kind, endpoint } = DETAIL[section as keyof typeof DETAIL];
   if (!/^[1-9]\d*$/.test(id)) {
-    return (await pending) ?? NextResponse.rewrite(new URL(`/missing/${kind}`, req.url));
+    return (await pending) ?? pass.rewrite(new URL(`/missing/${kind}`, req.url));
   }
   // 后端出错或超时不在这里拦：放行后由页面照原路报错，不让中间层多等
   const [redirect, status] = await Promise.all([
@@ -119,9 +159,9 @@ export async function proxy(req: NextRequest) {
   }
   // 与详情页取数一致：404 不存在，400 / 422 是后端拒绝了 id，对读者同样是「没有这一页」
   if (status === 404 || status === 400 || status === 422) {
-    return NextResponse.rewrite(new URL(`/missing/${kind}`, req.url));
+    return pass.rewrite(new URL(`/missing/${kind}`, req.url));
   }
-  return NextResponse.next();
+  return pass.next();
 }
 
 /// 全部页面（冷静期跳转要覆盖任何页面），不含 `/api/`、`/_next/` 与带扩展名的静态文件
