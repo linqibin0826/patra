@@ -152,7 +152,8 @@ describe("表单与发布", () => {
         name: "录用",
       }),
     );
-    await user.selectOptions(within(form).getByLabelText(/^文章类型/), "REVIEW");
+    await user.click(within(form).getByRole("combobox", { name: /^文章类型/ }));
+    await user.click(await screen.findByRole("option", { name: "综述" }));
     await user.click(within(form).getByRole("button", { name: "发布投稿经验" }));
     await waitFor(() =>
       expect(screen.queryByRole("form", { name: "写投稿经验" })).not.toBeInTheDocument(),

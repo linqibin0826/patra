@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronDown, CircleAlert } from "lucide-react";
+import { CircleAlert } from "lucide-react";
 import type { ReactNode } from "react";
 import { FIELD_BOX, FIELD_INPUT } from "@/components/auth/FormField";
 import { cn } from "@/lib/utils";
@@ -63,6 +63,8 @@ interface BoxFieldProps {
   error?: string;
   hint?: ReactNode;
   wide?: boolean;
+  /// 控件自带外框（日期、下拉、数字原语）时不再套输入井
+  bare?: boolean;
   children: (control: {
     id: string;
     className: string;
@@ -71,7 +73,7 @@ interface BoxFieldProps {
   }) => ReactNode;
 }
 
-/// 带输入井外框的字段（日期、下拉、数字）
+/// 带标签与提示行的字段；普通输入框套输入井外框，自带外框的控件传 `bare`
 export function BoxField({
   id,
   label,
@@ -80,31 +82,30 @@ export function BoxField({
   error,
   hint,
   wide,
+  bare,
   children,
 }: BoxFieldProps) {
   const noteId = `${id}-note`;
+  const control = children({
+    id,
+    className: cn(FIELD_INPUT, "disabled:cursor-not-allowed"),
+    "aria-invalid": Boolean(error),
+    "aria-describedby": error || hint ? noteId : undefined,
+  });
   return (
     <div data-field className={cn("flex min-w-0 flex-col gap-2", wide && "col-span-full")}>
       <FieldLabel htmlFor={id} required={required} optional={optional}>
         {label}
       </FieldLabel>
-      <div className={cn(FIELD_BOX, "h-11 rounded-lg has-[:disabled]:bg-bg-sunken")}>
-        {children({
-          id,
-          className: cn(FIELD_INPUT, "disabled:cursor-not-allowed"),
-          "aria-invalid": Boolean(error),
-          "aria-describedby": error || hint ? noteId : undefined,
-        })}
-      </div>
+      {bare ? (
+        control
+      ) : (
+        <div className={cn(FIELD_BOX, "h-11 rounded-lg has-[:disabled]:bg-bg-sunken")}>
+          {control}
+        </div>
+      )}
       <FieldNote id={noteId} error={error} hint={hint} />
     </div>
-  );
-}
-
-/// 下拉的右端箭头
-export function SelectChevron() {
-  return (
-    <ChevronDown className="pointer-events-none size-4 shrink-0 text-fg-3" aria-hidden="true" />
   );
 }
 

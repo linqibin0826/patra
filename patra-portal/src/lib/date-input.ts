@@ -22,7 +22,7 @@ export function parseDateInput(text: string): string | null {
   return `${year}-${pad(month)}-${pad(day)}`;
 }
 
-/// 两个 `YYYY-MM-DD` 相差的天数（`to - from`）
+/// 两个 `YYYY-MM-DD` 相差的天数（`to - from`，按 UTC 日历日算，不受本地时区与夏令时影响）
 export function daysBetween(from: string, to: string): number {
   return Math.round((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / DAY_MS);
 }

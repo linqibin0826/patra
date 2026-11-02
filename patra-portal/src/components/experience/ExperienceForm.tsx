@@ -13,10 +13,18 @@ import {
   ChoiceGroup,
   type ChoiceOption,
   FieldNote,
-  SelectChevron,
 } from "@/components/experience/form-fields";
 import { ResendVerificationButton } from "@/components/portal/ResendVerificationButton";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Dialog } from "@/components/ui/dialog";
+import { NumberField } from "@/components/ui/number-field";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { authPageHref } from "@/lib/auth/next-path";
 import { COMPOSER_COPY } from "@/lib/discussion/messages";
 import {
@@ -91,6 +99,10 @@ const TRANSFER_OPTIONS = [
   { value: "no", label: "否" },
 ] as const;
 const FORM_FIELDS = new Set<string>(Object.keys(EMPTY_FORM));
+const ARTICLE_TYPE_ITEMS = ARTICLE_TYPES.map((value) => ({
+  value,
+  label: ARTICLE_TYPE_LABELS[value],
+}));
 
 /// 写不进去时表单底部的提示条
 type Alert = { reason: ExperienceFailure["reason"]; existingPostId?: string | null };
@@ -282,17 +294,28 @@ export function ExperienceForm(props: ExperienceFormProps) {
               label="投稿日期"
               required
               error={errors.submittedOn?.message}
+              bare
             >
               {(field) => (
-                <input
-                  {...field}
-                  {...register("submittedOn")}
-                  type="date"
-                  min={MIN_DATE}
-                  max={today}
-                  // biome-ignore lint/a11y/noAutofocus: 表单是点「写投稿经验」后原地展开的，焦点进第一个字段（简报 §3.15）
-                  autoFocus
-                  className={cn(field.className, "font-mono text-sm")}
+                <Controller
+                  control={control}
+                  name="submittedOn"
+                  render={({ field: date }) => (
+                    <DatePicker
+                      id={field.id}
+                      value={date.value}
+                      onChange={date.onChange}
+                      onBlur={date.onBlur}
+                      inputRef={date.ref}
+                      today={today}
+                      min={MIN_DATE}
+                      invalid={field["aria-invalid"]}
+                      describedBy={field["aria-describedby"]}
+                      // 表单是点「写投稿经验」后原地展开的，焦点进第一个字段（简报 §3.15）
+                      autoFocus
+                      sheetTitle="投稿日期"
+                    />
+                  )}
                 />
               )}
             </BoxField>
@@ -301,15 +324,27 @@ export function ExperienceForm(props: ExperienceFormProps) {
               label="首轮决定日期"
               required
               error={errors.firstDecisionOn?.message}
+              bare
             >
               {(field) => (
-                <input
-                  {...field}
-                  {...register("firstDecisionOn")}
-                  type="date"
-                  min={MIN_DATE}
-                  max={today}
-                  className={cn(field.className, "font-mono text-sm")}
+                <Controller
+                  control={control}
+                  name="firstDecisionOn"
+                  render={({ field: date }) => (
+                    <DatePicker
+                      id={field.id}
+                      value={date.value}
+                      onChange={date.onChange}
+                      onBlur={date.onBlur}
+                      inputRef={date.ref}
+                      today={today}
+                      min={MIN_DATE}
+                      reference={{ date: values.submittedOn, label: "投稿" }}
+                      invalid={field["aria-invalid"]}
+                      describedBy={field["aria-describedby"]}
+                      sheetTitle="首轮决定日期"
+                    />
+                  )}
                 />
               )}
             </BoxField>
@@ -349,36 +384,72 @@ export function ExperienceForm(props: ExperienceFormProps) {
               optional
               error={errors.finalDecisionOn?.message}
               hint={finalDateHint}
+              bare
             >
               {(field) => (
-                <input
-                  {...field}
-                  {...register("finalDecisionOn")}
-                  type="date"
-                  min={MIN_DATE}
-                  max={today}
-                  disabled={constraints.finalDecisionOn !== "enabled"}
-                  className={cn(field.className, "font-mono text-sm")}
+                <Controller
+                  control={control}
+                  name="finalDecisionOn"
+                  render={({ field: date }) => (
+                    <DatePicker
+                      id={field.id}
+                      value={date.value}
+                      onChange={date.onChange}
+                      onBlur={date.onBlur}
+                      inputRef={date.ref}
+                      today={today}
+                      min={MIN_DATE}
+                      reference={{ date: values.firstDecisionOn, label: "首轮决定" }}
+                      disabled={constraints.finalDecisionOn !== "enabled"}
+                      invalid={field["aria-invalid"]}
+                      describedBy={field["aria-describedby"]}
+                      sheetTitle="最终决定日期"
+                    />
+                  )}
                 />
               )}
             </BoxField>
-            <BoxField id={id("type")} label="文章类型" required error={errors.articleType?.message}>
+            <BoxField
+              id={id("type")}
+              label="文章类型"
+              required
+              error={errors.articleType?.message}
+              bare
+            >
               {(field) => (
-                <>
-                  <select
-                    {...field}
-                    {...register("articleType")}
-                    className={cn(field.className, "cursor-pointer appearance-none")}
-                  >
-                    <option value="">请选择</option>
-                    {ARTICLE_TYPES.map((value) => (
-                      <option key={value} value={value}>
-                        {ARTICLE_TYPE_LABELS[value]}
-                      </option>
-                    ))}
-                  </select>
-                  <SelectChevron />
-                </>
+                <Controller
+                  control={control}
+                  name="articleType"
+                  render={({ field: type }) => (
+                    <Select
+                      items={ARTICLE_TYPE_ITEMS}
+                      value={type.value === "" ? null : type.value}
+                      onValueChange={(next) => type.onChange(next ?? "")}
+                      // 下拉展开时焦点在弹层里，按失焦校验会过早报错；改在收起时校验
+                      onOpenChange={(open) => {
+                        if (!open) {
+                          type.onBlur();
+                        }
+                      }}
+                    >
+                      <SelectTrigger
+                        id={field.id}
+                        ref={type.ref}
+                        aria-invalid={field["aria-invalid"] || undefined}
+                        aria-describedby={field["aria-describedby"]}
+                      >
+                        <SelectValue placeholder="请选择" />
+                      </SelectTrigger>
+                      <SelectContent sheetTitle="文章类型">
+                        {ARTICLE_TYPE_ITEMS.map((item) => (
+                          <SelectItem key={item.value} value={item.value}>
+                            {item.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
               )}
             </BoxField>
           </div>
@@ -410,17 +481,26 @@ export function ExperienceForm(props: ExperienceFormProps) {
               label="审稿轮数"
               error={errors.reviewRounds?.message}
               hint={roundsHint}
+              bare
             >
               {(field) => (
-                <input
-                  {...field}
-                  {...register("reviewRounds")}
-                  type="number"
-                  inputMode="numeric"
-                  min={1}
-                  max={10}
-                  disabled={constraints.reviewRounds !== "enabled"}
-                  className={cn(field.className, "font-mono text-sm")}
+                <Controller
+                  control={control}
+                  name="reviewRounds"
+                  render={({ field: rounds }) => (
+                    <NumberField
+                      id={field.id}
+                      value={rounds.value === "" ? null : Number(rounds.value)}
+                      onValueChange={(next) => rounds.onChange(next === null ? "" : String(next))}
+                      onBlur={rounds.onBlur}
+                      inputRef={rounds.ref}
+                      min={1}
+                      max={10}
+                      disabled={constraints.reviewRounds !== "enabled"}
+                      invalid={field["aria-invalid"]}
+                      describedBy={field["aria-describedby"]}
+                    />
+                  )}
                 />
               )}
             </BoxField>
