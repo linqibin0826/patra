@@ -106,7 +106,8 @@ describe("LibraryView 视图与工具条", () => {
 
   it("排序写进地址", async () => {
     const { user } = renderView("all", [ACTIVE]);
-    await user.selectOptions(screen.getByRole("combobox", { name: "排序" }), "出版日期");
+    await user.click(screen.getByRole("combobox", { name: "排序" }));
+    await user.click(await screen.findByRole("option", { name: "出版日期" }));
     expect(push).toHaveBeenCalledWith("/library?sort=published");
   });
 

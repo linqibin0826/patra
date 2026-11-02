@@ -54,7 +54,5 @@ export function constraintsFor(
   };
 }
 
-/// 两个 `yyyy-MM-dd` 之间的天数（按 UTC 日历日算，不受本地时区与夏令时影响）
-export function daysBetween(from: string, to: string): number {
-  return Math.round((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / 86_400_000);
-}
+/// 两个 `yyyy-MM-dd` 之间的天数，实现在日期输入工具里
+export { daysBetween } from "@/lib/date-input";

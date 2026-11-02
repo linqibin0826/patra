@@ -104,15 +104,26 @@ describe("ProfileForm · 专业背景", () => {
     expect(screen.getByRole("link", { name: "更改" })).toHaveAttribute("href", "/settings/privacy");
   });
 
-  it("身份下拉：不填写 + 八项", () => {
-    renderForm();
-    const select = screen.getByLabelText("身份");
+  it("身份下拉：不填写 + 八项，当前是医师", async () => {
+    const { user } = renderForm();
+    const select = screen.getByRole("combobox", { name: "身份" });
+    expect(select).toHaveTextContent("医师");
+    await user.click(select);
     expect(
-      within(select)
+      within(await screen.findByRole("listbox"))
         .getAllByRole("option")
         .map((option) => option.textContent),
     ).toEqual(["不填写", "医师", "护士", "药师", "医技", "科研人员", "学生", "行业从业者", "其他"]);
-    expect(select).toHaveValue("PHYSICIAN");
+  });
+
+  it("身份选「不填写」后保存的是空值（请求里由 toUpdateRequest 转成 null）", async () => {
+    const { user } = renderForm();
+    await user.click(screen.getByRole("combobox", { name: "身份" }));
+    await user.click(await screen.findByRole("option", { name: "不填写" }));
+    expect(screen.getByRole("combobox", { name: "身份" })).toHaveTextContent("不填写");
+    await user.click(screen.getByRole("button", { name: "保存" }));
+    await waitFor(() => expect(saveProfile).toHaveBeenCalled());
+    expect(vi.mocked(saveProfile).mock.calls[0]?.[0]).toMatchObject({ occupation: "" });
   });
 });
 

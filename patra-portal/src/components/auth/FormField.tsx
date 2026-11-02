@@ -20,6 +20,8 @@ interface FormFieldProps {
   hint?: ReactNode;
   /// 错误文案，可以带链接（「该邮箱已注册，去登录」）
   error?: ReactNode;
+  /// 控件自带外框（下拉、日期、数字原语）时不再套输入井
+  bare?: boolean;
   children: (control: FieldControl) => ReactNode;
 }
 
@@ -41,8 +43,23 @@ export const FIELD_BOX =
 /// 输入框由 `children` 渲染，拿到 `id`、`aria-invalid`、`aria-describedby` 和样式。
 /// 错误行出现时淡入下落，参数和折叠区相同，直接用 `.disclosure-body`（高保真稿 Spec-Form 07）。
 /// 错误行和提示行的 `key` 不同：错误替换提示时节点重新插入，入场过渡才会触发。
-export function FormField({ id, label, optional, aside, hint, error, children }: FormFieldProps) {
+export function FormField({
+  id,
+  label,
+  optional,
+  aside,
+  hint,
+  error,
+  bare,
+  children,
+}: FormFieldProps) {
   const messageId = error ? `${id}-error` : hint ? `${id}-hint` : undefined;
+  const control = children({
+    id,
+    className: FIELD_INPUT,
+    "aria-invalid": Boolean(error),
+    "aria-describedby": messageId,
+  });
   return (
     <div className="flex min-w-0 flex-col gap-2">
       <div className="flex items-baseline justify-between gap-3">
@@ -52,14 +69,7 @@ export function FormField({ id, label, optional, aside, hint, error, children }:
         </label>
         {aside}
       </div>
-      <div className={FIELD_BOX}>
-        {children({
-          id,
-          className: FIELD_INPUT,
-          "aria-invalid": Boolean(error),
-          "aria-describedby": messageId,
-        })}
-      </div>
+      {bare ? control : <div className={FIELD_BOX}>{control}</div>}
       {error ? (
         <p
           key="error"

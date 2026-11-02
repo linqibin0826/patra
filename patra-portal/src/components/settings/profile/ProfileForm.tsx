@@ -2,7 +2,6 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useQueryClient } from "@tanstack/react-query";
-import { ChevronDown } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { type FormEvent, useState } from "react";
@@ -18,6 +17,14 @@ import { MeshInterestPicker } from "@/components/settings/profile/MeshInterestPi
 import { OrganizationPicker } from "@/components/settings/profile/OrganizationPicker";
 import { SettingsCard } from "@/components/settings/SettingsCard";
 import { StickySaveBar } from "@/components/settings/StickySaveBar";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectSeparator,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import type { CurrentUser } from "@/lib/auth/types";
 import { useCommonFailureRedirect } from "@/lib/auth/use-common-failure-redirect";
 import { OCCUPATIONS, occupationLabel } from "@/lib/identity/occupation";
@@ -36,6 +43,7 @@ import { queryKeys } from "@/lib/query-keys";
 
 /// 这一页的地址：保存失败跳登录页、取消注销页时作 `next`
 const PAGE = "/settings/profile";
+const OCCUPATION_ITEMS = OCCUPATIONS.map((value) => ({ value, label: occupationLabel(value) }));
 
 /// 非字段错误的提示条文案（简报 §4.5）
 const ALERTS = {
@@ -221,27 +229,40 @@ export function ProfileForm({ initial, user, privacy }: ProfileFormProps) {
             </>
           }
         >
-          <FormField id="profile-occupation" label="身份" error={errors.occupation?.message}>
+          <FormField id="profile-occupation" label="身份" error={errors.occupation?.message} bare>
             {(control) => (
-              <>
-                <select
-                  {...control}
-                  {...register("occupation")}
-                  disabled={saving}
-                  className={`${control.className} cursor-pointer appearance-none`}
-                >
-                  <option value="">不填写</option>
-                  {OCCUPATIONS.map((occupation) => (
-                    <option key={occupation} value={occupation}>
-                      {occupationLabel(occupation)}
-                    </option>
-                  ))}
-                </select>
-                <ChevronDown
-                  className="pointer-events-none size-4 shrink-0 text-fg-3"
-                  aria-hidden="true"
-                />
-              </>
+              <Controller
+                control={form.control}
+                name="occupation"
+                render={({ field }) => (
+                  <Select
+                    items={OCCUPATION_ITEMS}
+                    // 「不填写」是空值：表单里是空串，下拉里是 null（显示成灰色占位）
+                    value={field.value === "" ? null : field.value}
+                    onValueChange={(next) => field.onChange(next ?? "")}
+                    disabled={saving}
+                  >
+                    <SelectTrigger
+                      id={control.id}
+                      ref={field.ref}
+                      size="lg"
+                      aria-invalid={control["aria-invalid"] || undefined}
+                      aria-describedby={control["aria-describedby"]}
+                    >
+                      <SelectValue placeholder="不填写" />
+                    </SelectTrigger>
+                    <SelectContent sheetTitle="身份">
+                      <SelectItem value={null}>不填写</SelectItem>
+                      <SelectSeparator />
+                      {OCCUPATION_ITEMS.map((item) => (
+                        <SelectItem key={item.value} value={item.value}>
+                          {item.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
             )}
           </FormField>
           <FormField

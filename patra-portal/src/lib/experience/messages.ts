@@ -22,6 +22,7 @@ export const REQUIRED_MESSAGES: Record<string, string> = {
 };
 
 export const DATE_MESSAGES = {
+  format: "日期写成 2026-08-14 这样",
   future: "日期不能晚于今天",
   tooEarly: "日期不能早于 1990 年",
   beforeSubmission: "首轮决定日期不能早于投稿日期",
