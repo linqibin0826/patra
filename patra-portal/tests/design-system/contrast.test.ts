@@ -7,7 +7,7 @@ describe("文字对比度", () => {
     const hits = findAll(
       /(?<![\w-])((?:[\w\-[\]=&>*:@.]+:)*)!?text-(?:fg-4|ink-400|ink-500)(?:\/\d+)?(?![\w-])/,
     ).filter(
-      ({ match }) => !/(?:^|:)(?:placeholder|disabled|aria-disabled|data-disabled):/.test(match),
+      ({ match }) => !/(?:^|:)(?:placeholder|data-placeholder|disabled|aria-disabled|data-disabled):/.test(match),
     );
     expect(format(hits)).toEqual([]);
   });
