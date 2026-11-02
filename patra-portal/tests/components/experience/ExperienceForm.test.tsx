@@ -245,6 +245,24 @@ describe("校验", () => {
     expect(await screen.findByText("日期不能早于 1990 年")).toBeInTheDocument();
   });
 
+  it("从日历选了日期，点日历按钮时冒出的必填错误随之消失", async () => {
+    const user = userEvent.setup();
+    renderCreate();
+    await user.click(screen.getByRole("button", { name: "打开日历：投稿日期" }));
+    const grid = await screen.findByRole("grid");
+    await user.click(within(grid).getByRole("button", { name: /10月20日/ }));
+    expect(dateField(/^投稿日期/)).toHaveValue("2026-10-20");
+    await waitFor(() => expect(screen.queryByText("请填写投稿日期")).not.toBeInTheDocument());
+  });
+
+  it("日期不合法时不算用时", async () => {
+    renderCreate();
+    setDate(/^投稿日期/, "2026-02-30");
+    setDate(/^首轮决定日期/, "2026-04-13");
+    expect(await screen.findByText("日期写成 2026-08-14 这样")).toBeInTheDocument();
+    expect(screen.getByRole("form", { name: "写投稿经验" })).not.toHaveTextContent("首轮用时");
+  });
+
   it("两个日期都有效时算出用时，填了最终日期再算总时长", async () => {
     renderCreate();
     setDate(/^投稿日期/, "2026-03-02");

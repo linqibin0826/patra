@@ -37,7 +37,7 @@ function Harness({ value = "", reference, disabled, onChange }: Props) {
 
 const input = () => screen.getByRole("textbox", { name: "首轮决定日期" });
 const openCalendar = async (user: ReturnType<typeof userEvent.setup>) => {
-  await user.click(screen.getByRole("button", { name: "打开日历" }));
+  await user.click(screen.getByRole("button", { name: "打开日历：首轮决定日期" }));
   return screen.findByRole("grid");
 };
 
@@ -71,7 +71,7 @@ describe("DatePicker：直接输入", () => {
   it("禁用时输入框与日历按钮都禁用", () => {
     render(<Harness disabled />);
     expect(input()).toBeDisabled();
-    expect(screen.getByRole("button", { name: "打开日历" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "打开日历：首轮决定日期" })).toBeDisabled();
   });
 });
 
@@ -91,6 +91,15 @@ describe("DatePicker：日历", () => {
     expect(within(grid).getByRole("button", { name: /9月14日/ })).toBeDisabled();
     expect(within(grid).getByRole("button", { name: /9月15日/ })).toBeEnabled();
     expect(screen.getByText("距投稿 13 天")).toBeInTheDocument();
+  });
+
+  it("选中日早于参照日：页脚不算负天数，日历开在参照日所在月", async () => {
+    const user = userEvent.setup();
+    render(<Harness value="2026-04-13" reference={{ date: "2026-05-01", label: "投稿" }} />);
+    await openCalendar(user);
+    expect(screen.getByText("投稿日 05-01 起可选")).toBeInTheDocument();
+    expect(screen.queryByText(/距投稿 -/)).not.toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: "选择月份" })).toHaveTextContent("5 月");
   });
 
   it("点日子选中并收起", async () => {

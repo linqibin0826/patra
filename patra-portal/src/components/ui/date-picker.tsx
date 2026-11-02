@@ -64,7 +64,12 @@ export function DatePicker({
   const selected = validDate(value);
   const referenceDate = validDate(reference?.date);
   const earliest = referenceDate && referenceDate > min ? referenceDate : min;
-  const [month, setMonth] = useState(() => toDate(selected ?? referenceDate ?? today));
+  // 日历打开时停在哪个月：已选日，或参照日，或今天；夹在可选范围内（参照日改晚后，旧的选中日可能已在范围外）
+  const startOf = () => {
+    const base = selected ?? referenceDate ?? today;
+    return toDate(base < earliest ? earliest : base > today ? today : base);
+  };
+  const [month, setMonth] = useState(startOf);
   const boxRef = useRef<HTMLDivElement>(null);
   const ownInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -79,13 +84,15 @@ export function DatePicker({
   };
 
   const openCalendar = () => {
-    setMonth(toDate(selected ?? referenceDate ?? today));
+    setMonth(startOf());
     setOpen(true);
   };
 
+  /// 从日历选定：等同于敲完离开，交给表单后补一次失焦，好让点日历按钮时冒出的校验错误跟着更新
   const choose = (next: string) => {
     setText(next);
     onChange(next);
+    onBlur?.();
     setOpen(false);
   };
 
@@ -100,9 +107,10 @@ export function DatePicker({
 
   let footNote = "";
   if (reference && referenceDate) {
-    footNote = selected
-      ? `距${reference.label} ${daysBetween(referenceDate, selected)} 天`
-      : `${reference.label}日 ${referenceDate.slice(5)} 起可选`;
+    footNote =
+      selected && selected >= referenceDate
+        ? `距${reference.label} ${daysBetween(referenceDate, selected)} 天`
+        : `${reference.label}日 ${referenceDate.slice(5)} 起可选`;
   }
   const todayAllowed = today >= earliest;
 
@@ -146,7 +154,7 @@ export function DatePicker({
         />
         <button
           type="button"
-          aria-label="打开日历"
+          aria-label={`打开日历：${sheetTitle}`}
           aria-haspopup="dialog"
           aria-expanded={open}
           disabled={disabled}

@@ -26,6 +26,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { authPageHref } from "@/lib/auth/next-path";
+import { parseDateInput } from "@/lib/date-input";
 import { COMPOSER_COPY } from "@/lib/discussion/messages";
 import {
   EMPTY_FORM,
@@ -245,8 +246,13 @@ export function ExperienceForm(props: ExperienceFormProps) {
     }
   };
 
+  // 日期框会把认不出的原文交给表单，先确认两边都是真实存在的日期再算用时
   const datesValid = (from: string, to: string) =>
-    from >= MIN_DATE && to <= today && from <= to && from !== "" && to !== "";
+    parseDateInput(from) === from &&
+    parseDateInput(to) === to &&
+    from >= MIN_DATE &&
+    to <= today &&
+    from <= to;
   const firstRound = datesValid(values.submittedOn, values.firstDecisionOn)
     ? daysBetween(values.submittedOn, values.firstDecisionOn)
     : null;
