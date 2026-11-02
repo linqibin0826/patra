@@ -31,6 +31,8 @@ yauaa = "8.2.0"
 ip2region = "3.3.7"
 json-schema-validator = "3.0.8"
 clickhouse-client = "0.11.0"
+# 流量模拟器的命令行解析（PAP-171）
+picocli = "4.7.7"
 twelvemonkeys = "3.15.2"
 webp-imageio = "0.10.0"
 # 提醒摘录：评论 Markdown 转纯文本（PAP-123）
@@ -156,6 +158,7 @@ yauaa = { module = "nl.basjes.parse.useragent:yauaa", version.ref = "yauaa" }
 ip2region = { module = "org.lionsoul:ip2region", version.ref = "ip2region" }
 json-schema-validator = { module = "com.networknt:json-schema-validator", version.ref = "json-schema-validator" }
 clickhouse-client = { module = "com.clickhouse:client-v2", version.ref = "clickhouse-client" }
+picocli = { module = "info.picocli:picocli", version.ref = "picocli" }
 twelvemonkeys-imageio-webp = { module = "com.twelvemonkeys.imageio:imageio-webp", version.ref = "twelvemonkeys" }
 twelvemonkeys-imageio-jpeg = { module = "com.twelvemonkeys.imageio:imageio-jpeg", version.ref = "twelvemonkeys" }
 webp-imageio = { module = "com.github.usefulness:webp-imageio", version.ref = "webp-imageio" }

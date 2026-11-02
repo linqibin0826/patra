@@ -26,6 +26,9 @@ public class ClickHouseEventStoreAdapter implements EventStorePort {
   /// 一次写入或删除最多等多久；客户端的读超时也是 30 秒
   private static final long TIMEOUT_SECONDS = 60;
 
+  /// 流量模拟器合成用户 ID 的起点（PAP-171 spec §4）：这之上的用户在 identity 里查不到，清理任务不去查
+  private static final long SYNTHETIC_USER_ID_FLOOR = 9_000_000_000_000_000_000L;
+
   private final Client client;
   private final MeterRegistry meterRegistry;
 
@@ -57,7 +60,7 @@ public class ClickHouseEventStoreAdapter implements EventStorePort {
   }
 
   /// 找游标之后的登录用户：日活表（明细只留 90 天，日活表留 400 天）并上文献 × 会话汇总（长期保留），
-  /// 否则 400 天前活跃过的用户注销时，汇总里的记录永远找不到、删不掉。
+  /// 否则 400 天前活跃过的用户注销时，汇总里的记录永远找不到、删不掉。流量模拟器的合成用户不算（每天白查几万个）。
   ///
   /// @param afterUserId 游标（不含）
   /// @param limit 最多几个
@@ -69,14 +72,15 @@ public class ClickHouseEventStoreAdapter implements EventStorePort {
             """
             SELECT user_id FROM (
                 SELECT toUInt64(user_id) AS user_id FROM daily_person_activity
-                WHERE user_id > {after:UInt64}
+                WHERE user_id > {after:UInt64} AND user_id < {synthetic:UInt64}
                 UNION ALL
                 SELECT toUInt64OrZero(substring(person_id, 3)) AS user_id FROM article_session_reads
                 WHERE startsWith(person_id, 'u:') AND toUInt64OrZero(substring(person_id, 3)) > {after:UInt64}
+                  AND toUInt64OrZero(substring(person_id, 3)) < {synthetic:UInt64}
             )
             GROUP BY user_id ORDER BY user_id LIMIT {limit:UInt32}
             """,
-            Map.of("after", afterUserId, "limit", limit))
+            Map.of("after", afterUserId, "limit", limit, "synthetic", SYNTHETIC_USER_ID_FLOOR))
         .stream()
         .map(row -> row.getLong("user_id"))
         .toList();

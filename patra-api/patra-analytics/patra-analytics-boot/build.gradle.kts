@@ -41,6 +41,9 @@ dependencies {
     testImplementation(libs.clickhouse.client)
     // 阅读历史流程测试用测试私钥签身份断言
     testImplementation(testFixtures(project(":patra-tool:patra-tool-security")))
+    // 端到端：流量模拟器经 HTTP 打真的采集端点、等入库后对账（PAP-171）；只给 e2eTest，主代码与架构测试都看不到它
+    e2eTestImplementation(project(":patra-api:patra-analytics:patra-analytics-simulator"))
+    e2eTestImplementation(testFixtures(project(":patra-api:patra-analytics:patra-analytics-simulator")))
 }
 
 // 装配了 ip2region 适配器的测试上下文要有数据文件：下载只归 identity-infra 一处（两边各注册下载任务会写同一个缓存目录，Gradle 判成隐式依赖、

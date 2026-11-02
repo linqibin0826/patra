@@ -100,6 +100,15 @@ class ClickHouseEventStoreAdapterIT {
   }
 
   @Test
+  void skips_synthetic_user_id_range() {
+    // 模拟器的合成用户（9e18 起）在 identity 里查不到，清理任务每天拿去查一遍是白费（PAP-171 spec §15）
+    adapter.insertEvents(
+        List.of(json(userEvent(5)), json(userEvent(9_000_000_000_070_000_001L))), "T|p0:0-1");
+
+    assertThat(adapter.findUsersAfter(0, 10)).containsExactly(5L);
+  }
+
+  @Test
   void finds_users_left_only_in_article_session_reads() throws Exception {
     // 日活表 400 天后过期，文献 × 会话汇总长期保留：只看日活表会漏掉很久以前活跃过的用户
     adapter.insertEvents(List.of(json(userEvent(5)), json(userEvent(9))), "T|p0:0-1");
