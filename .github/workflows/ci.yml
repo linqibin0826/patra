@@ -177,8 +177,12 @@ jobs:
           docker pull "$POSTGRES_IMAGE" & pid_pg=$!
           docker pull "$REDIS_IMAGE" & pid_redis=$!
           docker pull "$RABBITMQ_IMAGE" & pid_mq=$!
+          # v0.18 起 analytics 与 tool-test 的集成测试用 ClickHouse、Kafka；不预拉时第一个用到的测试要现拉镜像，
+          # 撞上单个测试 15 秒的默认超时
+          docker pull "$CLICKHOUSE_IMAGE" & pid_ch=$!
+          docker pull "apache/kafka-native:$KAFKA_VERSION" & pid_kafka=$!
           wait "$pid_pg"; wait "$pid_redis"
-          wait "$pid_mq"
+          wait "$pid_mq"; wait "$pid_ch"; wait "$pid_kafka"
       - name: ✅ Test unit (check + integrationTest + e2eTest)
         run: ./gradlew ${{ steps.tasks.outputs.list }} -x jacocoTestReport -x integrationTestCodeCoverageReport --build-cache
       - name: 📦 Upload jacoco exec (${{ matrix.unit }})

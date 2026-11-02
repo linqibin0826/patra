@@ -28,6 +28,9 @@ class KafkaEventPublishUnavailableIT {
             new SimpleMeterRegistry());
     List<OutboundMessage> batch =
         IntStream.range(0, 500).mapToObj(i -> OutboundMessage.raw("d" + i, "{}")).toList();
+    // 预热：建生产者等冷启动开销不计入，计的是服务跑起来之后一批的耗时
+    assertThatThrownBy(() -> adapter.publish(List.of(OutboundMessage.raw("warm", "{}"))))
+        .isInstanceOf(EventPublishUnavailableException.class);
 
     long started = System.nanoTime();
     assertThatThrownBy(() -> adapter.publish(batch))

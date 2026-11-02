@@ -7,6 +7,7 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.context.support.GenericApplicationContext;
@@ -21,6 +22,13 @@ class ClickHouseContainerInitializerIT {
   /// 本机 JVM 可能继承系统代理，连容器映射端口时显式不走代理。
   private final HttpClient http =
       HttpClient.newBuilder().proxy(HttpClient.Builder.NO_PROXY).build();
+
+  /// 容器在这里启动：拉镜像、等 ClickHouse 就绪在 CI 上要十几秒，放在测试方法里会撞上单个测试 15 秒的默认超时
+  /// （它只管测试方法，不管 `@BeforeAll`）。
+  @BeforeAll
+  static void startContainer() {
+    ClickHouseContainerInitializer.getClickHouseContainer();
+  }
 
   @Test
   @DisplayName("启动 ClickHouse 容器，写进环境的账号能在 patra_analytics 里写读一行")

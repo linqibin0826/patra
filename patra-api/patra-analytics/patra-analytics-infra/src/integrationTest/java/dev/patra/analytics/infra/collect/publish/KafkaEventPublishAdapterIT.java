@@ -8,9 +8,16 @@ import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.time.Clock;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import org.apache.kafka.clients.admin.Admin;
+import org.apache.kafka.clients.admin.AdminClientConfig;
+import org.apache.kafka.clients.admin.NewTopic;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
@@ -39,10 +46,11 @@ class KafkaEventPublishAdapterIT {
   }
 
   @Test
-  void publishes_raw_with_device_key_and_dlq_without_key() {
+  void publishes_raw_with_device_key_and_dlq_without_key() throws Exception {
     String suffix = UUID.randomUUID().toString();
     KafkaPublishProperties properties =
         new KafkaPublishProperties("raw-" + suffix, "dlq-" + suffix, Duration.ofSeconds(5));
+    createTopics(properties.rawTopic(), properties.dlqTopic());
     KafkaEventPublishAdapter adapter =
         new KafkaEventPublishAdapter(
             new KafkaTemplate<>(producerFactory),
@@ -62,6 +70,21 @@ class KafkaEventPublishAdapterIT {
     List<ConsumerRecord<String, String>> dlq = readAll(properties.dlqTopic(), 1);
     assertThat(dlq.getFirst().key()).isNull();
     assertThat(dlq.getFirst().value()).isEqualTo("{\"reason_code\":\"schema_invalid\"}");
+  }
+
+  /// 先建好 topic：线上的 topic 由 compose 预先建好；靠第一次写入自动建 topic 时，慢的 CI 机器上建 topic、选出 leader
+  /// 会超过 5 秒的投递超时。
+  ///
+  /// @param topics topic 名
+  private static void createTopics(String... topics)
+      throws InterruptedException, ExecutionException, TimeoutException {
+    try (Admin admin =
+        Admin.create(Map.of(AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrap))) {
+      admin
+          .createTopics(Arrays.stream(topics).map(t -> new NewTopic(t, 1, (short) 1)).toList())
+          .all()
+          .get(30, TimeUnit.SECONDS);
+    }
   }
 
   private static List<ConsumerRecord<String, String>> readAll(String topic, int expected) {
