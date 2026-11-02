@@ -137,7 +137,8 @@ public final class LiveCommand implements Callable<Integer> {
       try (Client ch = clickhouse.client();
           Writer parts =
               Files.newBufferedWriter(dir.resolve("parts.csv"), StandardCharsets.UTF_8)) {
-        PartsSampler sampler = new PartsSampler(ch, new RunScope(run.run), Clock.systemUTC());
+        PartsSampler sampler =
+            new PartsSampler(ch, new RunScope(run.run), Clock.systemUTC(), PROBE_PERIOD);
         runner.addProbe(PROBE_PERIOD, () -> sampler.sampleInto(parts));
         summary = runner.run();
       } catch (IOException e) {

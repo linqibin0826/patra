@@ -14,7 +14,8 @@ import java.util.TreeSet;
 
 /// 对账（spec §7.3）：按天用 PAP-170「看过人数」的同一口径查 ClickHouse 汇总表，与真值逐行比对。
 ///
-/// 每天一条查询，避开 `patra` 账号每条查询 1 GiB 的内存上限；`session_quality` 只看当天与前一天开始的会话。
+/// 每天一条查询，避开 `patra` 账号每条查询 1 GiB 的内存上限。`session_quality` 看前一天到次日：会话特征每次写入各一行、
+/// 合并前不汇总，跨午夜的会话在次日那次写入里才被标为爬虫，只看到当天会把它误算成真人。
 public final class Reconciler {
 
   /// 误差上限（D10）
@@ -35,7 +36,7 @@ public final class Reconciler {
           GROUP BY article_id, session_id, person_id)
       WHERE session_id IN (
           SELECT session_id FROM session_quality
-          WHERE first_day BETWEEN {d:Date} - 1 AND {d:Date}
+          WHERE first_day BETWEEN {d:Date} - 1 AND {d:Date} + 1
           GROUP BY session_id HAVING max(has_client) = 1 AND max(has_bot) = 0)
       GROUP BY article_id
       HAVING viewers > 0

@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.sun.net.httpserver.HttpServer;
 import java.io.StringWriter;
 import java.net.InetSocketAddress;
+import java.net.ServerSocket;
 import java.net.URI;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
@@ -56,5 +57,19 @@ class LagExporterTest {
     } finally {
       server.stop(0);
     }
+  }
+
+  @Test
+  void unreachable_prometheus_leaves_csv_empty_without_failing() throws Exception {
+    int port;
+    try (ServerSocket socket = new ServerSocket(0)) {
+      port = socket.getLocalPort();
+    }
+    StringWriter csv = new StringWriter();
+
+    new LagExporter(URI.create("http://127.0.0.1:" + port), LagExporter.DEFAULT_QUERY)
+        .export(Instant.ofEpochSecond(1762048800), Instant.ofEpochSecond(1762050600), csv);
+
+    assertThat(csv.toString()).isEmpty();
   }
 }
