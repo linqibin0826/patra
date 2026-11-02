@@ -288,9 +288,9 @@ describe("PaperHeader · 事实条的互动两格", () => {
     );
   }
 
-  it("should_render_interaction_facts_inside_library_status_scope", () => {
+  it("读者一行在收藏状态的范围里（本人收藏时收藏人数 ±1）", () => {
     renderWithQuery(
-      <PaperHeader paper={paper()} shareLink={LINK} interactionFacts={<StatusProbe id="1" />} />,
+      <PaperHeader paper={paper()} shareLink={LINK} readers={<StatusProbe id="1" />} />,
     );
     expect(screen.getByText("探针").nextElementSibling).toHaveTextContent("anon");
   });

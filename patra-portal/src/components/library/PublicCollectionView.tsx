@@ -208,6 +208,7 @@ function Entries({
                         <PaperStats
                           paperKey={entry.paper.id}
                           stats={entry.stats}
+                          viewerCount={entry.views}
                           className="mt-1"
                         />
                       }

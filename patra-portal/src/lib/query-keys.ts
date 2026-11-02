@@ -47,6 +47,8 @@ export const queryKeys = {
   /** @ 联想：按对象与查询词缓存 */
   discussionMentions: (type: string, key: string, q: string) =>
     ["discussion", type, key, "mentions", q] as const,
+  /** 我的阅读历史（无限翻页）：删一条、清空在这一页改缓存；在设置里改开关或清空后丢掉 */
+  readingHistory: ["reading-history"] as const,
   /** 提醒：全部提醒缓存的公共前缀（未读数与两个标签的列表），身份变化时整体清掉 */
   notifications: ["notifications"] as const,
   /** 未读数：数据是 `{ counts, etag }`，ETag 留给下一次轮询带 `If-None-Match` */

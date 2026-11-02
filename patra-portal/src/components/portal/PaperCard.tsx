@@ -4,6 +4,7 @@ import { Fragment, type ReactNode } from "react";
 import { PaperStats } from "@/components/library/PaperStats";
 import { SaveButton } from "@/components/library/SaveButton";
 import { AISummaryBadge } from "@/components/portal/AISummaryBadge";
+import { FillerTag } from "@/components/portal/explore-feed/FillerTag";
 import { RichInlineText } from "@/components/portal/RichInlineText";
 import type { PaperStats as PaperStatsValue } from "@/lib/interaction/stats";
 import { snippetText } from "@/lib/portal-api/publication-derive";
@@ -20,12 +21,23 @@ interface PaperCardProps {
   index?: number;
   /** 这一屏取到的收藏人数与讨论数；不传或取不到（null）时没有计数 */
   stats?: PaperStatsValue | null;
+  /// 看过的人数（v0.18，行为数据服务）；取不到为 null
+  views?: number | null;
+  /// 热读的补位卡片：序号位置换成「最新收录」（v0.18 简报 §3.5）
+  filler?: boolean;
 }
 
 /// 首页文献流条目（编辑排版，无卡片框）：顶部发丝线 hover 时由陶土色自左生长、标题下划线绘出。
 /// 来源行（序号 · 来源 · DOI）→ 衬线标题 → 刊名 · 年份 · 作者 → [头条摘要] → [AI 速读] → 阅读详情 / 收藏人数与
 /// 讨论数 / 引用数 / 收藏。收藏状态来自外层的 `LibraryStatusProvider`（文献流一屏一批），计数由文献流随页面取好传入。
-export function PaperCard({ paper, variant = "default", index, stats = null }: PaperCardProps) {
+export function PaperCard({
+  paper,
+  variant = "default",
+  index,
+  stats = null,
+  views = null,
+  filler = false,
+}: PaperCardProps) {
   const lead = variant === "lead";
   const visibleAuthors = paper.authors.slice(0, 2);
   const remaining = paper.authors.length - visibleAuthors.length;
@@ -56,8 +68,12 @@ export function PaperCard({ paper, variant = "default", index, stats = null }: P
       )}
     >
       <div className="flex min-w-0 items-center gap-3 font-mono text-2xs text-fg-3">
-        {index != null && (
-          <span className="font-medium text-accent-strong">{String(index).padStart(2, "0")}</span>
+        {filler ? (
+          <FillerTag />
+        ) : (
+          index != null && (
+            <span className="font-medium text-accent-strong">{String(index).padStart(2, "0")}</span>
+          )
         )}
         <span className="inline-flex shrink-0 items-center gap-1.5 font-medium text-fg-2">
           <span
@@ -146,6 +162,7 @@ export function PaperCard({ paper, variant = "default", index, stats = null }: P
           <PaperStats
             paperKey={paper.id}
             stats={stats}
+            viewerCount={views}
             className="max-md:order-first max-md:basis-full"
           />
           <span className="inline-flex items-center gap-1.5 font-mono text-xs tabular-nums text-fg-3 max-md:ml-auto">

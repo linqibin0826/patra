@@ -54,11 +54,13 @@ const ITEMS = {
       item: makePublicItem({ key: "11" }),
       paper: makePaper({ id: "11", title: "Paper one", publishedDate: "2019-03" }),
       stats: { collectorCount: 4, discussionCount: 2 },
+      views: 1284,
     },
     {
       item: makePublicItem({ itemId: "502", key: null, state: "UNAVAILABLE", title: "旧标题" }),
       paper: null,
       stats: null,
+      views: null,
     },
   ],
 };

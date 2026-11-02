@@ -52,4 +52,18 @@ describe("Footer", () => {
     render(<Footer />);
     expect(screen.getByText(/装订成册。Patra 把散落在/)).toBeInTheDocument();
   });
+
+  it("隐私政策：「项目」一列在「数据源」之后一处，底栏一处，都到 /privacy", () => {
+    render(<Footer />);
+    const links = screen.getAllByRole("link", { name: "隐私政策" });
+    expect(links).toHaveLength(2);
+    for (const link of links) {
+      expect(link).toHaveAttribute("href", "/privacy");
+    }
+    const project = screen.getByRole("heading", { name: "项目" }).parentElement as HTMLElement;
+    const names = within(project)
+      .getAllByRole("link")
+      .map((link) => link.textContent);
+    expect(names.indexOf("隐私政策")).toBe(names.indexOf("数据源") + 1);
+  });
 });

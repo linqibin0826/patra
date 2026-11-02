@@ -9,9 +9,9 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import "@testing-library/jest-dom/vitest";
 import { LibraryStatusProvider } from "@/components/library/LibraryStatusProvider";
 import {
-  PaperDiscussionFact,
-  PaperSavedFact,
-} from "@/components/portal/paper-detail/PaperCountFacts";
+  PaperDiscussionCount,
+  PaperSavedCount,
+} from "@/components/portal/paper-detail/PaperReaderCounts";
 import type { ThreadsData } from "@/lib/discussion/cache";
 import { patchItemStatus } from "@/lib/library/cache";
 import { queryKeys } from "@/lib/query-keys";
@@ -23,31 +23,29 @@ afterEach(() => {
 function renderIn(children: ReactNode, client = new QueryClient()) {
   render(
     <QueryClientProvider client={client}>
-      <dl>{children}</dl>
+      <div>{children}</div>
     </QueryClientProvider>,
   );
   return client;
 }
 
-/// 事实条里每一格的「dt dd」文本
+/// 读者一行里每一项的文本（计数是纯文本，没有可查的角色）
 const cells = () =>
-  screen
-    .queryAllByRole("term")
-    .map((dt) => `${dt.textContent} ${dt.nextElementSibling?.textContent ?? ""}`);
+  [...document.querySelectorAll("[data-reader-count]")].map((item) => item.textContent);
 
 const threads = (total: number): ThreadsData => ({
   pages: [makeThreadPage([makeThread()], { total })],
   pageParams: [null],
 });
 
-describe("PaperSavedFact", () => {
+describe("PaperSavedCount", () => {
   it("should_show_collector_count", () => {
-    renderIn(<PaperSavedFact paperKey="11" collectorCount={1234} />);
-    expect(cells()).toEqual(["收藏 1,234 人"]);
+    renderIn(<PaperSavedCount paperKey="11" collectorCount={1234} />);
+    expect(cells()).toEqual(["1,234 人收藏"]);
   });
 
   it("should_not_render_when_zero", () => {
-    renderIn(<PaperSavedFact paperKey="11" collectorCount={0} />);
+    renderIn(<PaperSavedCount paperKey="11" collectorCount={0} />);
     expect(cells()).toEqual([]);
   });
 
@@ -62,37 +60,37 @@ describe("PaperSavedFact", () => {
     client.setQueryData(queryKeys.currentUser, USER);
     renderIn(
       <LibraryStatusProvider keys={["11"]}>
-        <PaperSavedFact paperKey="11" collectorCount={0} />
+        <PaperSavedCount paperKey="11" collectorCount={0} />
       </LibraryStatusProvider>,
       client,
     );
     await waitFor(() => expect(client.getQueryData(queryKeys.libraryStatus(["11"]))).toBeDefined());
     act(() => patchItemStatus(client, "11", { collected: true }));
-    await waitFor(() => expect(cells()).toEqual(["收藏 1 人"]));
+    await waitFor(() => expect(cells()).toEqual(["1 人收藏"]));
   });
 });
 
-describe("PaperDiscussionFact", () => {
+describe("PaperDiscussionCount", () => {
   it("should_show_discussion_count_linking_to_discussion", () => {
-    renderIn(<PaperDiscussionFact paperKey="11" discussionCount={7} />);
-    expect(cells()).toEqual(["讨论 7 条"]);
-    expect(screen.getByRole("link", { name: "7 条" })).toHaveAttribute("href", "#discussion");
+    renderIn(<PaperDiscussionCount paperKey="11" discussionCount={7} />);
+    expect(cells()).toEqual(["7 条讨论"]);
+    expect(screen.getByRole("link", { name: "7 条讨论" })).toHaveAttribute("href", "#discussion");
   });
 
   it("should_not_render_when_zero_and_no_discussion_cache", () => {
-    renderIn(<PaperDiscussionFact paperKey="11" discussionCount={0} />);
+    renderIn(<PaperDiscussionCount paperKey="11" discussionCount={0} />);
     expect(cells()).toEqual([]);
   });
 
   it("should_follow_total_of_cached_discussion_list", async () => {
     const client = new QueryClient();
     client.setQueryData(queryKeys.discussionThreads("publication", "11", "asc"), threads(8));
-    renderIn(<PaperDiscussionFact paperKey="11" discussionCount={7} />, client);
-    expect(cells()).toEqual(["讨论 8 条"]);
+    renderIn(<PaperDiscussionCount paperKey="11" discussionCount={7} />, client);
+    expect(cells()).toEqual(["8 条讨论"]);
     act(() => {
       client.setQueryData(queryKeys.discussionThreads("publication", "11", "asc"), threads(9));
     });
-    await waitFor(() => expect(cells()).toEqual(["讨论 9 条"]));
+    await waitFor(() => expect(cells()).toEqual(["9 条讨论"]));
   });
 
   it("should_use_most_recently_updated_sort_when_several_cached", async () => {
@@ -102,19 +100,19 @@ describe("PaperDiscussionFact", () => {
     vi.setSystemTime(Date.now() + 1_000);
     client.setQueryData(queryKeys.discussionThreads("publication", "11", "latest"), threads(9));
     vi.useRealTimers();
-    renderIn(<PaperDiscussionFact paperKey="11" discussionCount={7} />, client);
-    expect(cells()).toEqual(["讨论 9 条"]);
+    renderIn(<PaperDiscussionCount paperKey="11" discussionCount={7} />, client);
+    expect(cells()).toEqual(["9 条讨论"]);
   });
 
   it("should_ignore_other_papers_discussion", () => {
     const client = new QueryClient();
     client.setQueryData(queryKeys.discussionThreads("publication", "12", "asc"), threads(8));
-    renderIn(<PaperDiscussionFact paperKey="11" discussionCount={7} />, client);
-    expect(cells()).toEqual(["讨论 7 条"]);
+    renderIn(<PaperDiscussionCount paperKey="11" discussionCount={7} />, client);
+    expect(cells()).toEqual(["7 条讨论"]);
   });
 });
 
-describe("PaperDiscussionFact · 讨论区在渲染中写缓存", () => {
+describe("PaperDiscussionCount · 讨论区在渲染中写缓存", () => {
   /// 仿 `DiscussionCache`：渲染期间把首屏写进缓存
   function Hydrator({ client, total }: { client: QueryClient; total: number }) {
     client.setQueryData(queryKeys.discussionThreads("publication", "11", "asc"), threads(total));
@@ -127,20 +125,20 @@ describe("PaperDiscussionFact · 讨论区在渲染中写缓存", () => {
       const client = new QueryClient();
       const { rerender } = render(
         <QueryClientProvider client={client}>
-          <dl>
-            <PaperDiscussionFact paperKey="11" discussionCount={7} />
-          </dl>
+          <div>
+            <PaperDiscussionCount paperKey="11" discussionCount={7} />
+          </div>
         </QueryClientProvider>,
       );
       rerender(
         <QueryClientProvider client={client}>
-          <dl>
-            <PaperDiscussionFact paperKey="11" discussionCount={7} />
-          </dl>
+          <div>
+            <PaperDiscussionCount paperKey="11" discussionCount={7} />
+          </div>
           <Hydrator client={client} total={9} />
         </QueryClientProvider>,
       );
-      await waitFor(() => expect(cells()).toEqual(["讨论 9 条"]));
+      await waitFor(() => expect(cells()).toEqual(["9 条讨论"]));
       expect(error.mock.calls.flat().join(" ")).not.toMatch(/Cannot update a component/);
     } finally {
       error.mockRestore();
@@ -148,19 +146,19 @@ describe("PaperDiscussionFact · 讨论区在渲染中写缓存", () => {
   });
 });
 
-describe("PaperDiscussionFact · 服务端渲染与水合", () => {
+describe("PaperDiscussionCount · 服务端渲染与水合", () => {
   it("should_render_server_stats_on_server_even_when_discussion_cached", () => {
     const client = new QueryClient();
     client.setQueryData(queryKeys.discussionThreads("publication", "11", "asc"), threads(8));
     const html = renderToString(
       <QueryClientProvider client={client}>
-        <dl>
-          <PaperDiscussionFact paperKey="11" discussionCount={7} />
-        </dl>
+        <div>
+          <PaperDiscussionCount paperKey="11" discussionCount={7} />
+        </div>
       </QueryClientProvider>,
     );
-    // 服务端输出里数字与「条」之间有 React 的文本分隔注释
-    expect(html).toMatch(/>7(<!-- -->)? 条</);
-    expect(html).not.toMatch(/>8(<!-- -->)? 条</);
+    // 数字在自己的 span 里，后面跟「条讨论」
+    expect(html).toMatch(/>7<\/span> 条讨论/);
+    expect(html).not.toMatch(/>8<\/span>/);
   });
 });

@@ -16,8 +16,8 @@ interface PublicationDetailViewProps {
   shareLink: string;
   /** 事实条里来自全文接口的几格（页面在 Suspense 里流式给出） */
   fullTextFacts?: ReactNode;
-  /** 事实条最后的收藏人数、讨论数两格（页面在 Suspense 里流式给出） */
-  interactionFacts?: ReactNode;
+  /** 事实条下方的读者一行（v0.18，`PaperReaders`，两组各自在 Suspense 里流式给出） */
+  readers?: ReactNode;
   /** 全文区块（页面在 Suspense 里流式给出；没有时不渲染） */
   fullText?: ReactNode;
   /** 桌面侧栏的目录卡，只在有全文时放进侧栏 */
@@ -28,6 +28,8 @@ interface PublicationDetailViewProps {
   crumbStatus?: ReactNode;
   /** 讨论区（主栏最后、全文区块之后；页面在自己的 Suspense 里流式给出） */
   discussion?: ReactNode;
+  /** 两栏之后的整宽区块「看过这篇的人还看了」（v0.18，页面在 Suspense 里流式给出） */
+  alsoRead?: ReactNode;
 }
 
 /// 文献详情（spec §4）：吸顶面包屑 → 整宽页头（标题、事实条、唯一一组操作）→ 两栏：
@@ -37,12 +39,13 @@ export function PublicationDetailView({
   paper,
   shareLink,
   fullTextFacts,
-  interactionFacts,
+  readers,
   fullText,
   tocCard,
   tocButton,
   crumbStatus,
   discussion,
+  alsoRead,
 }: PublicationDetailViewProps) {
   const crumb = paper.pmid ? `PMID ${paper.pmid}` : `#${paper.id}`;
   // 与全文区块同一口径：已撤稿的文献即便后端标了有全文也不展示正文、不出目录卡
@@ -64,7 +67,7 @@ export function PublicationDetailView({
         <PaperHeader
           paper={paper}
           fullTextFacts={fullTextFacts}
-          interactionFacts={interactionFacts}
+          readers={readers}
           shareLink={shareLink}
         />
       </div>
@@ -98,6 +101,8 @@ export function PublicationDetailView({
           )}
         </aside>
       </div>
+
+      {alsoRead}
     </div>
   );
 }

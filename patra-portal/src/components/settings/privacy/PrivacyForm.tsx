@@ -2,7 +2,7 @@
 
 import { ArrowUpRight, MailWarning } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import { RadioRow } from "@/components/settings/RadioRow";
 import { type SaveState, SaveStatus } from "@/components/settings/SaveStatus";
 import { SettingsCard } from "@/components/settings/SettingsCard";
@@ -35,12 +35,14 @@ const UNAVAILABLE: SavePrivacyResult = { ok: false, reason: "unavailable" };
 interface PrivacyFormProps {
   initial: PrivacySettings;
   user: CurrentUser;
+  /// 第四张卡片「阅读记录」（v0.18），在三张之后、「查看我的主页」之前；它单独保存、单独降级
+  readingCard?: ReactNode;
 }
 
 /// 隐私设置（简报 §3.12）：每次改动立即保存（三项一起 PUT），控件所在卡片旁显示保存中 / 已保存 / 失败，
 /// 不出 toast。快速连续改动时按顺序串行提交；界面停在最后一次点的值，全部回来后若最后一次失败，回到服务端
 /// 最后确认的值。
-export function PrivacyForm({ initial, user }: PrivacyFormProps) {
+export function PrivacyForm({ initial, user, readingCard }: PrivacyFormProps) {
   const leave = useCommonFailureRedirect(PAGE);
   const [shown, setShown] = useState(initial);
   const [status, setStatus] = useState<Partial<Record<Group, SaveState>>>({});
@@ -187,6 +189,8 @@ export function PrivacyForm({ initial, user }: PrivacyFormProps) {
           </div>
         </label>
       </SettingsCard>
+
+      {readingCard}
 
       <Link
         href={`/u/${user.username}`}

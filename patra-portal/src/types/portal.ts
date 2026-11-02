@@ -3,8 +3,8 @@
  */
 
 export type ComposerMode = "keyword" | "pmid" | "doi" | "author";
-// trending 后端暂无热度信号，本版只暴露 recent / cited（见 spec §范围边界）
-export type FeedTab = "recent" | "cited";
+// 首页文献流三个标签：recent / cited 来自 catalog，hot 来自行为数据服务的热读（v0.18）
+export type FeedTab = "recent" | "cited" | "hot";
 // 后端 source 来自 18 种 provenance 展示名或回退 code，故为开放 string（不可用三值 union）
 export type PaperSource = string;
 export type TopicHeatTier = 1 | 2 | 3 | 4 | 5;

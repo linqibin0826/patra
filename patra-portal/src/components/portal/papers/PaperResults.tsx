@@ -7,6 +7,7 @@ import { BrowsePagination } from "@/components/portal/browse/BrowsePagination";
 import { PaperListItem } from "@/components/portal/papers/PaperListItem";
 import { PapersEmptyResult, papersEmptyKind } from "@/components/portal/papers/PapersEmptyResult";
 import { newId } from "@/lib/analytics/ids";
+import { fetchArticleStats } from "@/lib/analytics/insight";
 import { readPageFacts } from "@/lib/analytics/server/context";
 import { isBrowseState, searchPerformedProperties } from "@/lib/analytics/server/search-properties";
 import { trackServerEvent } from "@/lib/analytics/server/send";
@@ -45,7 +46,8 @@ export async function PaperResults({ query, prefetched }: PaperResultsProps) {
   }
 
   const keys = page.items.map((paper) => paper.id);
-  const stats = await fetchPaperStats(keys);
+  // 收藏与讨论（互动服务）、看过与热读（行为数据服务）并行取，各自降级
+  const [stats, insight] = await Promise.all([fetchPaperStats(keys), fetchArticleStats(keys)]);
   return (
     <div className="flex flex-col gap-6">
       <LibraryStatusProvider keys={keys}>
@@ -60,11 +62,13 @@ export async function PaperResults({ query, prefetched }: PaperResultsProps) {
                   <PaperListItem
                     paper={paper}
                     highlight={query.q || undefined}
+                    hot={insight?.get(paper.id)?.hot ?? false}
                     action={<SaveButton paperKey={paper.id} title={paper.title} variant="icon" />}
                     stats={
                       <PaperStats
                         paperKey={paper.id}
                         stats={stats?.get(paper.id) ?? null}
+                        viewerCount={insight ? (insight.get(paper.id)?.viewerCount ?? 0) : null}
                         className="mt-1"
                       />
                     }

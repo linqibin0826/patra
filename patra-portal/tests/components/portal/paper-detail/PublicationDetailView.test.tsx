@@ -152,22 +152,20 @@ describe("PublicationDetailView · 全文", () => {
   });
 });
 
-describe("PublicationDetailView · 事实条的互动两格", () => {
-  it("should_pass_interaction_facts_into_the_facts_row", () => {
+describe("PublicationDetailView · 读者一行（v0.18 简报 §3.3）", () => {
+  it("在事实条下方、不在事实条里，排在操作按钮之前", () => {
     renderWithQuery(
       <PublicationDetailView
         paper={paper()}
         shareLink="http://patra.test/papers/1"
-        interactionFacts={
-          <div>
-            <dt>收藏人数探针</dt>
-            <dd>2 人</dd>
-          </div>
-        }
+        readers={<p>读者一行探针</p>}
       />,
     );
-    expect(screen.getByText("收藏人数探针").closest("dl")).toContainElement(
-      screen.getByText("被引"),
-    );
+    const probe = screen.getByText("读者一行探针");
+    expect(probe.closest("dl")).toBeNull();
+    const facts = screen.getByText("被引").closest("dl") as HTMLElement;
+    expect(facts.compareDocumentPosition(probe) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    const share = screen.getByRole("button", { name: /分享/ });
+    expect(probe.compareDocumentPosition(share) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 });

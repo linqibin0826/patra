@@ -32,6 +32,11 @@ function sessionCookie() {
   } as const;
 }
 
+/// 会话 Cookie 的名字（隐私政策的 Cookie 表按它写）
+export function sessionCookieName(): string {
+  return sessionCookie().name;
+}
+
 /// 读会话令牌；没有 Cookie 或值为空时返回 null。
 export async function readSessionToken(): Promise<string | null> {
   const value = (await cookies()).get(sessionCookie().name)?.value;

@@ -7,9 +7,11 @@ import { FullTextCrumbStatus } from "@/components/portal/fulltext/FullTextCrumbS
 import { FullTextTocButton, FullTextTocCard } from "@/components/portal/fulltext/FullTextNav";
 import { FullTextSection } from "@/components/portal/fulltext/FullTextSection";
 import { FullTextSkeleton, TocCardSkeleton } from "@/components/portal/fulltext/FullTextSkeleton";
+import { AlsoReadSection } from "@/components/portal/paper-detail/AlsoReadSection";
+import { AlsoReadSkeleton } from "@/components/portal/paper-detail/AlsoReadSkeleton";
 import { CrumbStatus } from "@/components/portal/paper-detail/CrumbStatus";
 import { FactCellsSkeleton, FullTextFacts } from "@/components/portal/paper-detail/PaperFacts";
-import { PaperInteractionFacts } from "@/components/portal/paper-detail/PaperInteractionFacts";
+import { PaperReaders } from "@/components/portal/paper-detail/PaperReaders";
 import { PublicationDetailView } from "@/components/portal/paper-detail/PublicationDetailView";
 import { RecordSection } from "@/components/portal/paper-detail/RecordSection";
 import { TopNav } from "@/components/portal/TopNav";
@@ -72,11 +74,7 @@ export default async function PaperDetailPage({
               <FullTextCrumbStatus paper={paper} />
             </Suspense>
           }
-          interactionFacts={
-            <Suspense fallback={null}>
-              <PaperInteractionFacts paperId={paper.id} />
-            </Suspense>
-          }
+          readers={<PaperReaders paperId={paper.id} />}
           fullTextFacts={
             deriveFullTextState(paper) === "full" && (
               <Suspense fallback={<FactCellsSkeleton />}>
@@ -101,6 +99,11 @@ export default async function PaperDetailPage({
               copy={PAPER_DISCUSSION_COPY}
               basePath={`/papers/${id}`}
             />
+          }
+          alsoRead={
+            <Suspense fallback={<AlsoReadSkeleton />}>
+              <AlsoReadSection paperId={paper.id} />
+            </Suspense>
           }
           tocButton={
             deriveFullTextState(paper) === "full" && (

@@ -31,15 +31,15 @@ const TITLE_CLASS = {
 export function PaperHeader({
   paper,
   fullTextFacts,
-  interactionFacts,
+  readers,
   shareLink,
 }: {
   paper: PaperDetail;
   /** 事实条里来自全文接口的几格（Suspense 包好的节点） */
   fullTextFacts?: ReactNode;
-  /** 事实条最后的收藏人数、讨论数两格（Suspense 包好的节点）；本人收藏 / 取消时收藏格 ±1，所以和收藏按钮在同一个
+  /** 事实条下方的读者一行（v0.18 简报 §3.3，`PaperReaders`）；本人收藏 / 取消时收藏人数 ±1，所以和收藏按钮在同一个
    *  `LibraryStatusProvider` 里 */
-  interactionFacts?: ReactNode;
+  readers?: ReactNode;
   /** 这篇的规范地址（服务端按门户公开地址拼好），分享面板「复制链接」用 */
   shareLink: string;
 }) {
@@ -134,11 +134,8 @@ export function PaperHeader({
       </div>
 
       <LibraryStatusProvider keys={[paper.id]}>
-        <PaperFacts
-          paper={paper}
-          fullTextFacts={fullTextFacts}
-          interactionFacts={interactionFacts}
-        />
+        <PaperFacts paper={paper} fullTextFacts={fullTextFacts} />
+        {readers}
 
         <div className="anim-rise mt-6 flex flex-wrap items-center gap-3 [--delay:200ms] max-[540px]:flex-col max-[540px]:items-stretch">
           <FullTextPrimaryAction paper={paper} />

@@ -133,7 +133,7 @@ describe("NavAccount · 文献库入口", () => {
 });
 
 describe("NavAccount · 用户菜单", () => {
-  it("头部是昵称和 @用户名，不出现邮箱；下面是个人主页、我的文献库、提醒、设置、退出登录", async () => {
+  it("头部是昵称和 @用户名，不出现邮箱；下面是个人主页、我的文献库、阅读历史、提醒、设置、退出登录", async () => {
     const { menu } = await openMenu();
     expect(within(menu).getByRole("group", { name: "陈宇 @chen-yu" })).toBeInTheDocument();
     expect(within(menu).queryByText(USER.email)).not.toBeInTheDocument();
@@ -141,7 +141,18 @@ describe("NavAccount · 用户菜单", () => {
       within(menu)
         .getAllByRole("menuitem")
         .map((item) => item.textContent),
-    ).toEqual(["个人主页", "我的文献库", expect.stringMatching(/^提醒/), "设置", "退出登录"]);
+    ).toEqual([
+      "个人主页",
+      "我的文献库",
+      "阅读历史",
+      expect.stringMatching(/^提醒/),
+      "设置",
+      "退出登录",
+    ]);
+    expect(within(menu).getByRole("menuitem", { name: "阅读历史" })).toHaveAttribute(
+      "href",
+      "/history",
+    );
     expect(within(menu).getByRole("menuitem", { name: "我的文献库" })).toHaveAttribute(
       "href",
       "/library",
@@ -222,7 +233,7 @@ describe("NavAccount · 提醒入口", () => {
     expect(screen.queryByRole("link", { name: /^提醒/ })).not.toBeInTheDocument();
   });
 
-  it("用户菜单：「我的文献库」后是「提醒」，右端是未读数；0 不写数字", async () => {
+  it("用户菜单：「阅读历史」后是「提醒」，右端是未读数；0 不写数字", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async () => Response.json({ total: 3, replies: 2, mentions: 1, helpful: 0 })),
@@ -233,7 +244,7 @@ describe("NavAccount · 提醒入口", () => {
         within(menu)
           .getAllByRole("menuitem")
           .map((item) => item.textContent),
-      ).toEqual(["个人主页", "我的文献库", "提醒3", "设置", "退出登录"]),
+      ).toEqual(["个人主页", "我的文献库", "阅读历史", "提醒3", "设置", "退出登录"]),
     );
     expect(within(menu).getByRole("menuitem", { name: /提醒/ })).toHaveAttribute(
       "href",

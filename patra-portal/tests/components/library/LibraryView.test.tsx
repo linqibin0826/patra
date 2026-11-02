@@ -83,6 +83,7 @@ const ACTIVE: LibraryEntry = {
   item: makeLibraryItem({ itemId: "501", key: "11", collectionIds: ["9", "10"], note: null }),
   paper,
   stats: null,
+  views: null,
 };
 
 function renderView(view: string, entries: LibraryEntry[], total?: number) {
@@ -176,6 +177,7 @@ describe("LibraryItem", () => {
         item: makeLibraryItem({ itemId: "503", key: null, state: "UNAVAILABLE", title: "旧标题" }),
         paper: null,
         stats: null,
+        views: null,
       },
     ]);
     const item = screen.getByRole("article");
@@ -211,6 +213,7 @@ describe("条目菜单", () => {
         item: makeLibraryItem({ key: null, state: "UNAVAILABLE", title: "旧" }),
         paper: null,
         stats: null,
+        views: null,
       },
     ]);
     await user.click(screen.getByRole("button", { name: "条目操作" }));

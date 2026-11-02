@@ -1,6 +1,6 @@
 "use client";
 
-import { Bell, Library, LogOut, Settings, UserRound } from "lucide-react";
+import { Bell, History, Library, LogOut, Settings, UserRound } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { AuthLink } from "@/components/auth/AuthLink";
@@ -17,7 +17,7 @@ import { cn } from "@/lib/utils";
 /// 「登录」「退出登录」：48px 高的次按钮，占满一行
 const ACCOUNT_BUTTON = cn(btnSecondary, "flex h-12 w-full gap-2 py-0");
 
-/// 「主页」「文献库」「提醒」「设置」：2×2 的等宽次按钮（v0.14 简报 §2.3）
+/// 「主页」「文献库」「阅读历史」「提醒」「设置」：两列的等宽次按钮（v0.14 简报 §2.3；v0.18 加阅读历史）
 const LINK_BUTTON = cn(btnSecondary, "flex h-12 min-w-0 gap-2 px-2 py-0");
 
 /// 账号块的外框：上方一条分隔线。未登录与占位的内容是 80px 高；已登录多一行链接，更高（简报 §3.3）
@@ -48,7 +48,8 @@ interface MobileAccountProps {
 }
 
 /// 移动端全屏菜单底部的账号块（v0.8 高保真稿 Nav-M-*；已登录形态按 v0.12 简报 §3.3：头像 + 昵称 /
-/// @用户名一行，下面 2×2 的「主页」「文献库」/「提醒」「设置」，再下面整行「退出登录」；v0.13 加文献库，v0.14 加提醒，
+/// @用户名一行，下面两列的「主页」「文献库」/「阅读历史」「提醒」/「设置」，再下面整行「退出登录」；v0.13 加文献库，v0.14 加提醒，
+/// v0.18 加阅读历史，
 /// 「提醒」按钮内右上角挂未读数，取不到时按钮里写「暂不可用」）。
 /// 「退出登录」进行中用 `aria-disabled` 而不是 `disabled`：按钮不丢焦点，`title` 照常显示。
 export function MobileAccount({ onClose }: MobileAccountProps) {
@@ -100,6 +101,10 @@ export function MobileAccount({ onClose }: MobileAccountProps) {
         <Link href="/library" onClick={onClose} className={LINK_BUTTON}>
           <Library className="size-3.75" aria-hidden="true" />
           文献库
+        </Link>
+        <Link href="/history" onClick={onClose} className={LINK_BUTTON}>
+          <History className="size-3.75" aria-hidden="true" />
+          阅读历史
         </Link>
         <Link
           href="/notifications"

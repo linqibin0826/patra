@@ -3,13 +3,13 @@
 import { notifyManager, type QueryCache, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useSyncExternalStore } from "react";
 import { useCollectDelta } from "@/components/library/LibraryStatusProvider";
-import { FactCell } from "@/components/portal/paper-detail/FactCell";
 import type { ThreadsData } from "@/lib/discussion/cache";
 import { formatCount } from "@/lib/format-count";
 import { queryKeys } from "@/lib/query-keys";
 
-/// 事实条「收藏」格（简报 §3.7）：公开的收藏人数，本人在页头收藏 / 取消时 ±1；0 不出现
-export function PaperSavedFact({
+/// 读者一行的「N 人收藏」（v0.15 简报 §3.7，v0.18 简报 §3.3 从事实条挪到这一行）：公开的收藏人数，本人在页头收藏 /
+/// 取消时 ±1；0 不出现
+export function PaperSavedCount({
   paperKey,
   collectorCount,
 }: {
@@ -17,12 +17,16 @@ export function PaperSavedFact({
   collectorCount: number;
 }) {
   const count = Math.max(0, collectorCount + useCollectDelta(paperKey));
-  return count > 0 ? <FactCell term="收藏">{formatCount(count)} 人</FactCell> : null;
+  return count > 0 ? (
+    <span data-reader-count>
+      <span className="font-medium text-fg-1 tabular-nums">{formatCount(count)}</span> 人收藏
+    </span>
+  ) : null;
 }
 
-/// 事实条「讨论」格（简报 §3.7、§4.3）：跟着讨论区的数据走——讨论区列表已在缓存里时取它第一页的条数（本人发表 /
-/// 删除后已 ±1），否则用页面请求时取到的统计；0 不出现
-export function PaperDiscussionFact({
+/// 读者一行的「N 条讨论」（v0.15 简报 §3.7、§4.3）：跟着讨论区的数据走——讨论区列表已在缓存里时取它第一页的条数
+/// （本人发表 / 删除后已 ±1），否则用页面请求时取到的统计；0 不出现。链到讨论区
+export function PaperDiscussionCount({
   paperKey,
   discussionCount,
 }: {
@@ -35,11 +39,13 @@ export function PaperDiscussionFact({
     return null;
   }
   return (
-    <FactCell term="讨论">
-      <a href="#discussion" className="text-link transition-colors hover:text-link-hover">
-        {formatCount(count)} 条
-      </a>
-    </FactCell>
+    <a
+      data-reader-count
+      href="#discussion"
+      className="text-link transition-colors hover:text-link-hover"
+    >
+      <span className="font-medium tabular-nums">{formatCount(count)}</span> 条讨论
+    </a>
   );
 }
 
