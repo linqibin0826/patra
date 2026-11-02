@@ -46,14 +46,27 @@ jobs:
           docker ps --format '{{.Names}}' | wc -l
       - name: 🧾 Runner 版本未过期（--disableupdate 后 30 天红线）
         # GitHub 要求禁用自更新的 runner 在新版发布 30 天内手动升级，逾期停止派发任务。
-        # 新版一出即告警（严格 != 比较）：告警即行动信号，闲时重跑 install-github-runner.sh 升级。
+        # 落后天数 = 第一个比当前新的正式版（不含 pre-release）发布至今的天数：
+        # 不足 20 天只打 warning（run 仍是绿的、不发通知），满 20 天才失败，留 10 天升级。
+        # 升级：闲时重跑 install-github-runner.sh。
         run: |
           set -euo pipefail
           CURRENT="$("$HOME/actions-runner/bin/Runner.Listener" --version)"
-          LATEST="$(curl -fsSL https://api.github.com/repos/actions/runner/releases/latest | jq -r '.tag_name | ltrimstr("v")')"
-          echo "当前: $CURRENT / 最新: $LATEST"
+          read -r LATEST LAG_DAYS <<<"$(curl -fsSL 'https://api.github.com/repos/actions/runner/releases?per_page=30' \
+            | jq -r --arg cur "$CURRENT" --argjson now "$(date +%s)" '
+                def ver: ltrimstr("v") | split(".") | map(tonumber);
+                [.[] | select((.draft or .prerelease) | not)] as $r
+                | ($r | map(.tag_name) | max_by(ver) | ltrimstr("v")) as $latest
+                | ($r | map(select((.tag_name | ver) > ($cur | ver)) | .published_at | fromdateiso8601)) as $newer
+                | "\($latest) \(if ($newer | length) == 0 then 0 else (($now - ($newer | min)) / 86400 | floor) end)"')"
+          echo "当前: ${CURRENT} / 最新: ${LATEST} / 落后: ${LAG_DAYS} 天"
           # 注意 ${VAR} 必须带大括号：macOS bash 3.2 会把紧跟的全角字符并入变量名（unbound variable 实际踩坑）
-          [ "$CURRENT" = "$LATEST" ] || { echo "::error::runner 版本过期（当前 ${CURRENT}，最新 ${LATEST}）。30 天内不升级 GitHub 将停止派发任务，闲时重跑 install-github-runner.sh"; exit 1; }
+          if [ "$LAG_DAYS" -ge 20 ]; then
+            echo "::error::runner 版本已落后 ${LAG_DAYS} 天（当前 ${CURRENT}，最新 ${LATEST}）。满 30 天 GitHub 将停止派发任务，闲时重跑 install-github-runner.sh"
+            exit 1
+          elif [ "$CURRENT" != "$LATEST" ]; then
+            echo "::warning::runner 有新版 ${LATEST}（当前 ${CURRENT}，已落后 ${LAG_DAYS} 天，满 20 天转为失败），闲时重跑 install-github-runner.sh"
+          fi
       - name: 💾 磁盘余量 ≥ 20G
         run: |
           AVAIL=$(df -g / | awk 'NR==2{print $4}')
