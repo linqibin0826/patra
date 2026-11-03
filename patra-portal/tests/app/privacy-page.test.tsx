@@ -80,12 +80,18 @@ describe("/privacy", () => {
     }
   });
 
-  it("网站域名已填；联系邮箱、运营者、服务器所在地还是占位", async () => {
-    await renderPage();
+  it("网站域名、运营者、服务器所在地、联系邮箱与日期都已填，页面上没有方括号占位", async () => {
+    const { container } = await renderPage();
     expect(screen.getByText("https://patra.linqibin.dev")).toBeInTheDocument();
-    for (const placeholder of ["[联系邮箱]", "[运营者名称]", "[服务器所在地]"]) {
-      expect(screen.getByText(placeholder)).toBeInTheDocument();
-    }
+    expect(container).toHaveTextContent("Patra 由 Patra（个人项目） 开发和运营");
+    expect(container).toHaveTextContent("其余数据存放在我们自己的服务器上（中国大陆）");
+    expect(screen.getByRole("link", { name: "privacy@example.com" })).toHaveAttribute(
+      "href",
+      "mailto:privacy@example.com",
+    );
+    expect(container).toHaveTextContent("生效日期 2026-11-03");
+    expect(container).toHaveTextContent("最近更新 2026-11-03");
+    expect(container.textContent).not.toMatch(/\[[^\]]+\]/);
   });
 
   it("「你可以做什么」链到隐私设置与阅读历史", async () => {

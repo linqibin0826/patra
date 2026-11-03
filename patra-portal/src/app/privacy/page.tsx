@@ -11,17 +11,12 @@ import { deviceCookie, sessionCookieName } from "@/lib/auth/session-cookie";
 
 export const metadata: Metadata = { title: "隐私政策 · Patra" };
 
-/// 生效日期与最近更新：上线当天改成实际日期
-const POLICY_DATES = { effective: "[上线当天]", updated: "[上线当天]" } as const;
-
-/// 还没定的内容，原样显示方括号占位（合并前要填上）
-function Placeholder({ children }: { children: string }) {
-  return (
-    <span className="rounded px-1 font-mono text-[0.9em] text-amber-700 bg-amber-50">
-      {children}
-    </span>
-  );
-}
+/// 运营方信息与日期。现在只有开发者自己在用，下面都是假值（`example.com` 是保留域名，没有人会收到信）；
+/// 对外开放前要换成真实信息
+const POLICY_DATES = { effective: "2026-11-03", updated: "2026-11-03" } as const;
+const OPERATOR = "Patra（个人项目）";
+const SERVER_LOCATION = "中国大陆";
+const CONTACT_EMAIL = "privacy@example.com";
 
 function Code({ children }: { children: string }) {
   return (
@@ -52,7 +47,7 @@ export default async function PrivacyPage() {
       <p>
         本政策适用于 Patra 医学文献门户（<span>https://patra.linqibin.dev</span>
         ）上的全部页面与功能，包括检索与阅读文献、账号、讨论与投稿经验、提醒邮件。Patra 由{" "}
-        <Placeholder>[运营者名称]</Placeholder> 开发和运营。
+        {OPERATOR} 开发和运营。
       </p>
     ),
     "p-collect": (
@@ -138,9 +133,7 @@ export default async function PrivacyPage() {
         <ul>
           <li>提醒邮件与账号邮件通过邮件服务商 Resend 发送，它会拿到收件邮箱与邮件内容。</li>
           <li>网站访问经 Cloudflare 的网络转发到我们的服务器。</li>
-          <li>
-            其余数据存放在我们自己的服务器上（<Placeholder>[服务器所在地]</Placeholder>）。
-          </li>
+          <li>其余数据存放在我们自己的服务器上（{SERVER_LOCATION}）。</li>
         </ul>
         <p>法律法规要求时，我们会依法提供相应信息。</p>
       </>
@@ -190,7 +183,10 @@ export default async function PrivacyPage() {
     "p-contact": (
       <>
         <p>
-          对本政策或你的个人信息有任何问题，请写信到 <Placeholder>[联系邮箱]</Placeholder>
+          对本政策或你的个人信息有任何问题，请写信到{" "}
+          <a href={`mailto:${CONTACT_EMAIL}`} className="text-link hover:text-link-hover">
+            {CONTACT_EMAIL}
+          </a>
           ，我们会尽快回复。
         </p>
         <p>政策修改后会更新本页的版本与日期；影响你权利的重大变更，会在站内提前告知。</p>
@@ -210,12 +206,8 @@ export default async function PrivacyPage() {
             </h1>
             <div className="mt-4 flex flex-wrap gap-x-4 gap-y-1 font-mono text-xs text-fg-3">
               <span>第 1 版</span>
-              <span>
-                生效日期 <Placeholder>{POLICY_DATES.effective}</Placeholder>
-              </span>
-              <span>
-                最近更新 <Placeholder>{POLICY_DATES.updated}</Placeholder>
-              </span>
+              <span>生效日期 {POLICY_DATES.effective}</span>
+              <span>最近更新 {POLICY_DATES.updated}</span>
             </div>
             <p className="mt-7 font-serif text-xl leading-[1.6] text-fg-2">
               这份政策说明 Patra
