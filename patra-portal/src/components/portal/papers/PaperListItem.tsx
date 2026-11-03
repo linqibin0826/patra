@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Fragment, type ReactNode } from "react";
 import { EvidenceBadge } from "@/components/portal/EvidenceBadge";
+import { HotBadge } from "@/components/portal/papers/HotBadge";
 import { RichInlineText } from "@/components/portal/RichInlineText";
 import { snippetText } from "@/lib/portal-api/publication-derive";
 import { sourceDotClass } from "@/lib/portal-ui";
@@ -22,6 +23,8 @@ interface PaperListItemProps {
   stats?: ReactNode;
   /** 元信息之后的附加行（文献库条目的归属与备注） */
   children?: ReactNode;
+  /** 在热读榜前 100 名：来源行右端、文献类型之前带「近期热读」（v0.18，只有检索结果传） */
+  hot?: boolean;
 }
 
 /**
@@ -38,6 +41,7 @@ export function PaperListItem({
   summary = true,
   stats,
   children,
+  hot = false,
 }: PaperListItemProps) {
   const shownAuthors = paper.authors.slice(0, 2);
   const moreAuthors = paper.authors.length - shownAuthors.length;
@@ -102,9 +106,12 @@ export function PaperListItem({
           {paper.source}
         </span>
         {paper.doi && <span className="truncate">{paper.doi}</span>}
-        {paper.kind && (
-          <span className="ml-auto shrink-0 uppercase tracking-caps max-sm:hidden">
-            {paper.kind}
+        {(hot || paper.kind) && (
+          <span className="ml-auto inline-flex shrink-0 items-center gap-2.5">
+            {hot && <HotBadge />}
+            {paper.kind && (
+              <span className="uppercase tracking-caps max-sm:hidden">{paper.kind}</span>
+            )}
           </span>
         )}
       </div>

@@ -7,7 +7,7 @@ const MAX_AGE_SECONDS = 30 * 24 * 60 * 60;
 
 /// `Secure` 开关 `PATRA_SESSION_COOKIE_SECURE`：不设或为 `true` 时开，为 `false` 时关，其他值报错。
 /// 每次读写 Cookie 时读取。
-function secureEnabled(): boolean {
+export function secureEnabled(): boolean {
   const value = process.env.PATRA_SESSION_COOKIE_SECURE;
   if (value === undefined || value === "true") {
     return true;
@@ -30,6 +30,11 @@ function sessionCookie() {
     path: "/",
     secure,
   } as const;
+}
+
+/// 会话 Cookie 的名字（隐私政策的 Cookie 表按它写）
+export function sessionCookieName(): string {
+  return sessionCookie().name;
 }
 
 /// 读会话令牌；没有 Cookie 或值为空时返回 null。
@@ -67,10 +72,10 @@ export async function clearSessionCookie(): Promise<void> {
 export const DEVICE_ID_PATTERN = /^[A-Za-z0-9_-]{43}$/;
 
 /// 400 天：Chrome 对 Cookie 有效期的上限
-const DEVICE_MAX_AGE_SECONDS = 400 * 24 * 60 * 60;
+export const DEVICE_MAX_AGE_SECONDS = 400 * 24 * 60 * 60;
 
-/// 设备标识 Cookie 的名称和固定属性，`Secure` 与会话 Cookie 同一个开关
-function deviceCookie() {
+/// 设备标识 Cookie 的名称和固定属性，`Secure` 与会话 Cookie 同一个开关。埋点（PAP-173）在 proxy 里给所有访客下发它
+export function deviceCookie() {
   const secure = secureEnabled();
   return {
     name: secure ? "__Host-patra_device" : "patra_device",
@@ -93,4 +98,30 @@ export async function ensureDeviceId(): Promise<string> {
       : Buffer.from(crypto.getRandomValues(new Uint8Array(32))).toString("base64url");
   store.set({ ...cookie, value: id, maxAge: DEVICE_MAX_AGE_SECONDS });
   return id;
+}
+
+/// 要写回的一条 Cookie（埋点的设备与会话 Cookie）
+export interface CookieWrite {
+  value: string;
+  options: {
+    name: string;
+    httpOnly: true;
+    sameSite: "lax";
+    path: "/";
+    secure: boolean;
+    maxAge?: number;
+  };
+}
+
+/// 埋点（PAP-173）的设备与会话 Cookie：`compute` 按请求里的 Cookie 算出这次的 ID 与要写回的几条，这里写回后原样
+/// 返回。算法在 `lib/analytics/server/identity-cookies.ts`；Next 的 Cookie 读写只经这个模块
+export async function rewriteTrackingCookies<T extends { cookies: readonly CookieWrite[] }>(
+  compute: (read: (name: string) => string | undefined) => T,
+): Promise<T> {
+  const store = await cookies();
+  const result = compute((name) => store.get(name)?.value);
+  for (const cookie of result.cookies) {
+    store.set({ ...cookie.options, value: cookie.value });
+  }
+  return result;
 }

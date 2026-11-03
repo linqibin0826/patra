@@ -10,7 +10,11 @@ import type { FeedTab, PageResult, Paper, PaperDetail } from "@/types/portal";
  * 注意：响应用 `as PageResult<Paper>` 裸断言，无运行时校验。
  * TODO(contract-validation)：API 契约稳定后可用 zod safeParse 替换以防后端字段漂移。
  */
-export async function fetchFeed(tab: FeedTab, page = 1, pageSize = 14): Promise<PageResult<Paper>> {
+export async function fetchFeed(
+  tab: Exclude<FeedTab, "hot">,
+  page = 1,
+  pageSize = 14,
+): Promise<PageResult<Paper>> {
   const res = await gatewayFetch(
     `/patra-catalog/portal/publications?tab=${tab}&page=${page}&pageSize=${pageSize}`,
   );

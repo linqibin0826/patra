@@ -112,7 +112,7 @@ export function SavePopover({
       action: {
         label: "撤销",
         onClick: () => {
-          void orUnavailable(collectPublication(paperKey)).then((again) => {
+          void orUnavailable(collectPublication(paperKey, { restore: true })).then((again) => {
             if (again.ok) {
               patchItemStatus(client, paperKey, {
                 collected: true,

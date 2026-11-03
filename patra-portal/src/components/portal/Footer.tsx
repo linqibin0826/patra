@@ -91,6 +91,11 @@ export function Footer() {
                   </a>
                 </li>
                 <li>
+                  <Link href="/privacy" className={COLUMN_LINK}>
+                    隐私政策
+                  </Link>
+                </li>
+                <li>
                   <a
                     href={CHANGELOG_URL}
                     target="_blank"
@@ -126,6 +131,9 @@ export function Footer() {
             <BrandMark width={6} />
             <span className="font-serif text-xl tracking-tight normal-case">Patra</span>
           </a>
+          <Link href="/privacy" className="normal-case transition-colors hover:text-fg-inverse-1">
+            隐私政策
+          </Link>
           <p className="uppercase">© 2026 Patra · 医学文献门户</p>
         </div>
       </div>

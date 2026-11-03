@@ -2,9 +2,11 @@
 import { makeLibraryItem } from "@tests/fixtures/interaction";
 import { resetCookieJar } from "@tests/stubs/cookie-jar";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { trackServerEvent } from "@/lib/analytics/server/send";
 import { collectPublication, removeItems, saveNote } from "@/lib/interaction/library-actions";
 
 vi.mock("next/headers", () => import("@tests/stubs/cookie-jar"));
+vi.mock("@/lib/analytics/server/send", () => ({ trackServerEvent: vi.fn() }));
 
 const fetchMock = vi.fn<typeof fetch>();
 const CLEARED = "patra_session=; Path=/; Max-Age=0; HttpOnly; SameSite=lax";
@@ -29,6 +31,55 @@ afterEach(() => {
 const reply = (status: number, body?: unknown) =>
   body === undefined ? new Response(null, { status }) : Response.json(body, { status });
 const call = () => fetchMock.mock.calls[0] ?? [];
+
+describe("collectPublication · 埋点 Article Collected", () => {
+  beforeEach(() => vi.mocked(trackServerEvent).mockReset());
+
+  it("新收藏（created）：发一条；真实的 Action 请求带 Next-Action 头，不能被当成回渲染跳过", async () => {
+    const jar = resetCookieJar(
+      { patra_session: "patra_user_abc" },
+      {
+        referer: "http://localhost:4000/papers/11",
+        host: "localhost:4000",
+        "next-action": "7f3a",
+        "x-patra-device-id": "D".repeat(43),
+        "x-patra-session-id": "0193e1a3-1111-7a22-8b33-445566778899",
+      },
+    );
+    fetchMock.mockResolvedValue(reply(200, { created: true, item: makeLibraryItem() }));
+    await collectPublication("11");
+    expect(trackServerEvent).toHaveBeenCalledWith(
+      { name: "article_collected", properties: { article_id: "11" } },
+      expect.objectContaining({
+        deviceId: "D".repeat(43),
+        sessionId: "0193e1a3-1111-7a22-8b33-445566778899",
+        token: "patra_user_abc",
+        isActionRequest: false,
+      }),
+      { path: "/papers/11", type: "article" },
+    );
+    // 设备与会话 ID 来自 proxy 写好的请求头：Action 里写 Cookie 会让 Next 回渲染整页（换掉检索列表的 list_id）
+    expect(jar.written.filter((c) => /^patra_(device|sid)=/.test(c))).toEqual([]);
+  });
+
+  it("本来就在库里（created=false）：不发", async () => {
+    fetchMock.mockResolvedValue(reply(200, { created: false, item: makeLibraryItem() }));
+    await collectPublication("11");
+    expect(trackServerEvent).not.toHaveBeenCalled();
+  });
+
+  it("撤销移除引起的重新收藏（restore）：不发", async () => {
+    fetchMock.mockResolvedValue(reply(200, { created: true, item: makeLibraryItem() }));
+    await collectPublication("11", { restore: true });
+    expect(trackServerEvent).not.toHaveBeenCalled();
+  });
+
+  it("失败：不发", async () => {
+    fetchMock.mockResolvedValue(reply(500, {}));
+    await collectPublication("11");
+    expect(trackServerEvent).not.toHaveBeenCalled();
+  });
+});
 
 describe("collectPublication", () => {
   it("PUT /me/library/publication/{key}，回条目与是否新建", async () => {

@@ -19,6 +19,46 @@ function wrap(children: ReactNode, client = new QueryClient()): HTMLElement {
   return render(<QueryClientProvider client={client}>{children}</QueryClientProvider>).container;
 }
 
+describe("PaperStats · 看过（v0.18 简报 §3.1、§3.2）", () => {
+  it("card.views：看过在收藏之前，千分位", () => {
+    const line = wrap(
+      <PaperStats
+        paperKey="k"
+        viewerCount={1284}
+        stats={{ collectorCount: 23, discussionCount: 7 }}
+      />,
+    );
+    expect(line).toHaveTextContent("1,284 人看过 · 23 人收藏 · 7 条讨论");
+  });
+
+  it("card.views.zero：看过为 0 不写，其余照常", () => {
+    const line = wrap(
+      <PaperStats paperKey="k" viewerCount={0} stats={{ collectorCount: 3, discussionCount: 0 }} />,
+    );
+    expect(line).toHaveTextContent(/^3 人收藏$/);
+  });
+
+  it("card.views.all-zero：三项都没有时整行不出现", () => {
+    expect(wrap(<PaperStats paperKey="k" viewerCount={0} stats={null} />)).toBeEmptyDOMElement();
+  });
+
+  it("card.analytics-down：看过取不到只少这一项", () => {
+    const line = wrap(
+      <PaperStats
+        paperKey="k"
+        viewerCount={null}
+        stats={{ collectorCount: 2, discussionCount: 1 }}
+      />,
+    );
+    expect(line).toHaveTextContent(/^2 人收藏 · 1 条讨论$/);
+  });
+
+  it("card.interaction-down：收藏、讨论取不到只剩看过", () => {
+    const line = wrap(<PaperStats paperKey="k" viewerCount={37} stats={null} />);
+    expect(line).toHaveTextContent(/^37 人看过$/);
+  });
+});
+
 describe("PaperStats", () => {
   it("should_show_both_counts_with_discussion_link", () => {
     const line = wrap(

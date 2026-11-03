@@ -11,6 +11,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import "@testing-library/jest-dom/vitest";
 import { toast } from "sonner";
 import { LibraryView } from "@/components/library/LibraryView";
+import { track } from "@/lib/analytics/client/queue";
 import { addToCollection, removeFromCollection } from "@/lib/interaction/collection-actions";
 import type { LibraryEntry } from "@/lib/interaction/library";
 import { collectPublication, removeItems } from "@/lib/interaction/library-actions";
@@ -30,6 +31,7 @@ vi.mock("@/lib/interaction/collection-actions", () => ({
   deleteCollection: vi.fn(),
   setVisibility: vi.fn(),
 }));
+vi.mock("@/lib/analytics/client/queue", () => ({ track: vi.fn() }));
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 const push = vi.fn();
 let pathname = "/library";
@@ -81,6 +83,7 @@ const ACTIVE: LibraryEntry = {
   item: makeLibraryItem({ itemId: "501", key: "11", collectionIds: ["9", "10"], note: null }),
   paper,
   stats: null,
+  views: null,
 };
 
 function renderView(view: string, entries: LibraryEntry[], total?: number) {
@@ -174,6 +177,7 @@ describe("LibraryItem", () => {
         item: makeLibraryItem({ itemId: "503", key: null, state: "UNAVAILABLE", title: "旧标题" }),
         paper: null,
         stats: null,
+        views: null,
       },
     ]);
     const item = screen.getByRole("article");
@@ -209,6 +213,7 @@ describe("条目菜单", () => {
         item: makeLibraryItem({ key: null, state: "UNAVAILABLE", title: "旧" }),
         paper: null,
         stats: null,
+        views: null,
       },
     ]);
     await user.click(screen.getByRole("button", { name: "条目操作" }));
@@ -235,8 +240,9 @@ describe("条目菜单", () => {
     expect(client.getQueryState(queryKeys.libraryOverview)?.isInvalidated).toBe(true);
   });
 
-  it("不在夹里、没有备注：立即移除，toast 带撤销", async () => {
+  it("不在夹里、没有备注：立即移除，toast 带撤销；撤销按恢复重新收藏（不算新收藏）", async () => {
     remove.mockResolvedValue({ ok: true });
+    vi.mocked(collectPublication).mockResolvedValue({ ok: false, reason: "unavailable" });
     const { user } = renderView("all", [
       { ...ACTIVE, item: { ...ACTIVE.item, collectionIds: [] } },
     ]);
@@ -247,6 +253,13 @@ describe("条目菜单", () => {
     expect(toast.success).toHaveBeenCalledWith(
       "已从文献库移除",
       expect.objectContaining({ action: expect.objectContaining({ label: "撤销" }) }),
+    );
+    const options = vi.mocked(toast.success).mock.calls.at(-1)?.[1] as unknown as {
+      action: { onClick: () => void };
+    };
+    options.action.onClick();
+    await waitFor(() =>
+      expect(collectPublication).toHaveBeenCalledWith(expect.any(String), { restore: true }),
     );
   });
 
@@ -386,5 +399,18 @@ describe("LibraryView · 公开计数", () => {
     expect(
       within(screen.getByRole("article")).queryByText(/人收藏|条讨论/),
     ).not.toBeInTheDocument();
+  });
+});
+
+describe("LibraryView 埋点", () => {
+  it("点条目：list_type 为 library，位置从 1 起", async () => {
+    const { user } = renderView("all", [ACTIVE]);
+    await user.click(
+      screen.getAllByRole("link", { name: new RegExp(paper.title.slice(0, 10)) })[0] as HTMLElement,
+    );
+    expect(track).toHaveBeenCalledWith(
+      "article_clicked",
+      expect.objectContaining({ article_id: paper.id, list_type: "library", position: 1 }),
+    );
   });
 });
