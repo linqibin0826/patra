@@ -454,7 +454,8 @@
             "drawStyle": "line",
             "lineWidth": 1,
             "fillOpacity": 10,
-            "showPoints": "auto"
+            "showPoints": "auto",
+            "axisSoftMin": 0
           }
         },
         "overrides": []
@@ -506,7 +507,8 @@
             "drawStyle": "line",
             "lineWidth": 1,
             "fillOpacity": 10,
-            "showPoints": "auto"
+            "showPoints": "auto",
+            "axisSoftMin": 0
           }
         },
         "overrides": []
@@ -561,7 +563,8 @@
             "stacking": {
               "mode": "normal",
               "group": "A"
-            }
+            },
+            "axisSoftMin": 0
           }
         },
         "overrides": []
@@ -650,6 +653,22 @@
               {
                 "id": "max",
                 "value": 60
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "special",
+                    "options": {
+                      "match": "null+nan",
+                      "result": {
+                        "index": 0,
+                        "text": "",
+                        "color": "transparent"
+                      }
+                    }
+                  }
+                ]
               }
             ]
           }
@@ -692,7 +711,8 @@
             "drawStyle": "line",
             "lineWidth": 1,
             "fillOpacity": 10,
-            "showPoints": "auto"
+            "showPoints": "auto",
+            "axisSoftMin": 0
           }
         },
         "overrides": []
@@ -793,7 +813,8 @@
             "drawStyle": "line",
             "lineWidth": 1,
             "fillOpacity": 10,
-            "showPoints": "auto"
+            "showPoints": "auto",
+            "axisSoftMin": 0
           }
         },
         "overrides": []
@@ -848,7 +869,8 @@
             "stacking": {
               "mode": "normal",
               "group": "A"
-            }
+            },
+            "axisSoftMin": 0
           }
         },
         "overrides": []
@@ -913,7 +935,8 @@
             "drawStyle": "line",
             "lineWidth": 1,
             "fillOpacity": 10,
-            "showPoints": "auto"
+            "showPoints": "auto",
+            "axisSoftMin": 0
           }
         },
         "overrides": []
@@ -962,7 +985,20 @@
         "defaults": {
           "unit": "short"
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "检索词"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "string"
+              }
+            ]
+          }
+        ]
       },
       "options": {}
     },
@@ -1014,7 +1050,8 @@
             "drawStyle": "line",
             "lineWidth": 1,
             "fillOpacity": 10,
-            "showPoints": "auto"
+            "showPoints": "auto",
+            "axisSoftMin": 0
           }
         },
         "overrides": []
@@ -1070,6 +1107,10 @@
               "options": "article_id"
             },
             "properties": [
+              {
+                "id": "unit",
+                "value": "string"
+              },
               {
                 "id": "links",
                 "value": [
@@ -1170,7 +1211,8 @@
             "drawStyle": "line",
             "lineWidth": 1,
             "fillOpacity": 10,
-            "showPoints": "auto"
+            "showPoints": "auto",
+            "axisSoftMin": 0
           }
         },
         "overrides": []
@@ -1225,7 +1267,8 @@
             "stacking": {
               "mode": "normal",
               "group": "A"
-            }
+            },
+            "axisSoftMin": 0
           }
         },
         "overrides": []
@@ -1277,7 +1320,8 @@
             "drawStyle": "line",
             "lineWidth": 1,
             "fillOpacity": 10,
-            "showPoints": "auto"
+            "showPoints": "auto",
+            "axisSoftMin": 0
           }
         },
         "overrides": []
@@ -1332,7 +1376,8 @@
             "stacking": {
               "mode": "normal",
               "group": "A"
-            }
+            },
+            "axisSoftMin": 0
           }
         },
         "overrides": []
