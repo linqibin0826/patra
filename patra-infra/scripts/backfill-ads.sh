@@ -79,7 +79,9 @@ for entry in ${TABLES}; do
       echo "${sql}"
     else
       started="$(date +%s)"
-      if ! query "${sql}" >/dev/null; then
+      # --fail-with-body 把 ClickHouse 的报错正文写在 stdout，接下来失败时转到 stderr
+      if ! out="$(query "${sql}")"; then
+        echo "${out}" >&2
         echo "失败：${table} ${day}" >&2
         exit 1
       fi

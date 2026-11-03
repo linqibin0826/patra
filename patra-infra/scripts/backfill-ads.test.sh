@@ -67,5 +67,16 @@ check "查不到分区时不执行任何 INSERT" "1" "$(grep -c '' "${TMP}/calls
 check "报错里说明原因" "1" "$(echo "${OUT}" | grep -c 'events 没有活跃分区')"
 rm -rf "${TMP}"
 
+echo "== 场景 5：执行失败时把 ClickHouse 的报错正文打到 stderr =="
+TMP="$(mktemp -d)"
+mkdir -p "${TMP}/bin" "${TMP}/home/.patra/secrets"
+echo "CLICKHOUSE_PATRA_PASSWORD=stub" > "${TMP}/home/.patra/secrets/clickhouse.env"
+printf '#!/usr/bin/env bash\necho "Code: 241. DB::Exception: Query memory limit exceeded"\nexit 22\n' > "${TMP}/bin/curl"
+chmod +x "${TMP}/bin/curl"
+ERR="$(HOME="${TMP}/home" PATH="${TMP}/bin:${PATH}" bash "${SCRIPT_DIR}/backfill-ads.sh" --from 2026-10-01 --to 2026-10-01 --events-floor 2026-10-01 2>&1 >/dev/null)"
+check "stderr 里有 ClickHouse 的报错" "1" "$(echo "${ERR}" | grep -c 'Query memory limit exceeded')"
+check "stderr 里有出错的表和日期" "1" "$(echo "${ERR}" | grep -c '失败：device_user_links 2026-10-01')"
+rm -rf "${TMP}"
+
 echo "通过 ${PASS} / 失败 ${FAIL}"
 [ "${FAIL}" -eq 0 ]
