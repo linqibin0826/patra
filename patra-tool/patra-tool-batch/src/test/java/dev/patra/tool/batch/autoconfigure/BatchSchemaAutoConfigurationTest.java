@@ -14,11 +14,19 @@ class BatchSchemaAutoConfigurationTest {
   private final ApplicationContextRunner runner =
       new ApplicationContextRunner()
           .withConfiguration(AutoConfigurations.of(BatchSchemaAutoConfiguration.class))
-          .withBean("dataSource", DataSource.class, () -> mock(DataSource.class));
+          .withBean("batchDataSource", DataSource.class, () -> mock(DataSource.class));
 
   @Test
   void should_register_schema_initializer_by_default() {
     runner.run(ctx -> assertThat(ctx).hasSingleBean(BatchSchemaInitializer.class));
+  }
+
+  @Test
+  void should_not_create_tables_in_primary_datasource_when_batch_datasource_missing() {
+    new ApplicationContextRunner()
+        .withConfiguration(AutoConfigurations.of(BatchSchemaAutoConfiguration.class))
+        .withBean("dataSource", DataSource.class, () -> mock(DataSource.class))
+        .run(ctx -> assertThat(ctx).hasNotFailed().doesNotHaveBean(BatchSchemaInitializer.class));
   }
 
   @Test

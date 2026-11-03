@@ -2,7 +2,9 @@
 
 ## 能力
 
-给服务提供 Spring Batch 基础设施：`BatchAutoConfiguration` 装配 `JobRepository` 与 `JobOperatorHelper`；`BatchDataSourceAutoConfiguration` 在配了 `datasource.url` 时才建独立的 Batch 元数据库 HikariCP 数据源；`BatchSchemaAutoConfiguration` 在启动时建 Batch 元数据表；`BatchMetricsAutoConfiguration` 在有 `MeterRegistry` 时注册进度指标监听器。
+给服务提供 Spring Batch 基础设施：`BatchAutoConfiguration` 装配 `JobRepository` 与 `JobOperatorHelper`；`BatchDataSourceAutoConfiguration` 在配了 `datasource.url` 时才建独立的 Batch 元数据库 HikariCP 数据源；`BatchSchemaAutoConfiguration` 在启动时往这个独立库里建 Batch 元数据表；`BatchMetricsAutoConfiguration` 在有 `MeterRegistry` 时注册进度指标监听器。
+
+Batch 元数据只放独立库：启用 Batch 却既没配 `datasource.url`、也没提供名为 `batchDataSource` 的 Bean 时启动失败，不退回主数据源，否则 `BATCH_*` 表会被悄悄建进业务库。
 
 ## 配置（前缀 `patra.batch`）
 
@@ -12,7 +14,7 @@
 | `table-prefix` | String | `BATCH_` | JobRepository 表前缀 |
 | `chunk.default-size` | int | `5000` | 默认分块，最小 1 |
 | `chunk.max-size` | int | `10000` | 允许的最大分块，最小 1 |
-| `datasource.url` | String | 无 | JDBC URL；不配则用主数据源，不建独立数据源 |
+| `datasource.url` | String | 无 | JDBC URL；启用 Batch 时必须配（或自行提供 `batchDataSource` Bean），否则启动失败 |
 | `datasource.username` | String | 无 | 用户名 |
 | `datasource.password` | String | 无 | 密码 |
 | `datasource.driver-class-name` | String | 无 | 驱动类，空则由 URL 推断 |

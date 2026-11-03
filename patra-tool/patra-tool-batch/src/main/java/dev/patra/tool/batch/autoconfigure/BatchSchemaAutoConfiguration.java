@@ -2,17 +2,18 @@ package dev.patra.tool.batch.autoconfigure;
 
 import dev.patra.tool.batch.schema.BatchSchemaInitializer;
 import javax.sql.DataSource;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 
 /// Spring Batch Schema 初始化自动配置。
 ///
-/// 当 `patra.batch.schema.initialize=true`（默认）时，自动创建 `BatchSchemaInitializer` Bean，
-/// 在 `BatchAutoConfiguration` 构造时触发 Schema 初始化。
+/// 当 `patra.batch.schema.initialize=true`（默认）且存在独立的 `batchDataSource` 时，
+/// 自动创建 `BatchSchemaInitializer` Bean，在 `BatchAutoConfiguration` 构造时触发 Schema 初始化。
+/// 没有 `batchDataSource` 时不建表（绝不建进主数据源），由 `BatchAutoConfiguration` 报启动失败。
 ///
 /// ## 配置选项
 ///
@@ -46,29 +47,21 @@ import org.springframework.context.annotation.Bean;
     name = "initialize",
     havingValue = "true",
     matchIfMissing = true)
+@ConditionalOnBean(name = "batchDataSource")
 @AutoConfiguration(
     after = BatchDataSourceAutoConfiguration.class,
     before = BatchAutoConfiguration.class)
 @EnableConfigurationProperties(BatchProperties.class)
 public final class BatchSchemaAutoConfiguration {
 
-  /// 创建 Schema 初始化器 Bean。
-  ///
-  /// 优先使用独立 Batch 数据源，否则使用主数据源。
+  /// 创建 Schema 初始化器 Bean，在独立 Batch 数据源上建表。
   ///
   /// @param properties Batch 配置属性
-  /// @param primaryDataSource 主数据源（使用 `dataSource` 名称注入）
-  /// @param batchDataSource 独立 Batch 数据源（可选）
+  /// @param batchDataSource 独立 Batch 数据源
   /// @return BatchSchemaInitializer 实例
   @Bean
   public BatchSchemaInitializer batchSchemaInitializer(
-      BatchProperties properties,
-      @Qualifier("dataSource") DataSource primaryDataSource,
-      @Autowired(required = false) @Qualifier("batchDataSource") DataSource batchDataSource) {
-
-    // 选择数据源：优先使用独立数据源
-    DataSource targetDataSource = (batchDataSource != null) ? batchDataSource : primaryDataSource;
-
-    return new BatchSchemaInitializer(targetDataSource, properties.tablePrefix());
+      BatchProperties properties, @Qualifier("batchDataSource") DataSource batchDataSource) {
+    return new BatchSchemaInitializer(batchDataSource, properties.tablePrefix());
   }
 }
