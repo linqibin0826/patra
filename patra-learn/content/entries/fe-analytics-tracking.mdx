@@ -1,0 +1,208 @@
+---
+title: 门户怎么埋点：服务端事件排到响应之后，浏览器事件经第一方路径转发
+summary: 门户的埋点分两条路：打开文献、检索、下载这类服务端看得见的事，由门户服务端在响应发完之后发；页面浏览、曝光、点击这类只有浏览器知道的事，在浏览器里攒成批，发给门户自己的路径，由门户补上身份再转给网关。这篇讲 proxy 怎么给每个请求认人、`after()` 为什么不拖慢页面、第一方路径为什么只收白名单字段，以及事件类型怎么从 JSON Schema 生成。
+type: concept
+difficulty: advanced
+tags: [frontend, analytics]
+prerequisites: [analytics-tracking-plan, fe-server-and-client-components]
+topics: [analytics-pipeline]
+sources:
+  - version: v0.18
+    issue: PAP-173
+    pr: 376
+personalEnv: false
+---
+
+<Diagnose
+  question="门户想在读者打开文献页时记一条「看过」，记录里要带上读者的设备 ID，而且不能让人把浏览记到别人头上。下面哪种放法最可靠？"
+  options={["在文献页的服务端组件里发，设备 ID 由服务端从 httpOnly Cookie 里读", "在客户端组件的 useEffect 里发，设备 ID 由浏览器脚本读出来一起带上", "让浏览器直接请求采集端点，设备 ID 由页面脚本自己生成后存在本地"]}
+  answer="A"
+  ifRight="对。浏览器发来的东西谁都能改，身份只能由服务端填；服务端组件在服务器上跑，读得到 httpOnly Cookie。往下读：门户把能放在服务端的事件都放在服务端，放不了的也只让浏览器报「发生了什么」，身份一律由服务端补。"
+  ifWrong="答案是 A。httpOnly Cookie 浏览器脚本读不到；就算读得到，浏览器发出去的内容也能被任意改写，身份不能信它。服务端组件只在服务器上跑，从请求带来的 Cookie 里读身份，这才可信。哪些代码跑在服务器、哪些跑在浏览器，先读服务端组件与客户端组件那篇。"
+  suggest="fe-server-and-client-components"
+/>
+
+<Callout kind="lead">
+
+门户埋点走两条路：服务端看得见的事，门户服务端在响应发完之后自己发；只有浏览器知道的事，浏览器只报「发生了什么」，发到门户自己的路径，由门户补上设备、会话、账号再转给网关。
+
+</Callout>
+
+「埋点方案」那篇定了 Patra 记哪 10 个事件、每个带什么。落到门户里，它们按「谁看得见」分成两半：
+
+| 谁发 | 事件 | 为什么放这里 |
+|---|---|---|
+| 门户服务端 | `article_viewed`、`search_performed`、`pdf_downloaded`、`export_completed`、`article_collected` | 这些事本来就要经过门户服务端（渲染文献页、调检索、回传文件、写收藏），服务端知道得最准，也不怕广告拦截器 |
+| 浏览器 | `page_viewed`、`article_impressed`、`article_clicked`、`fulltext_read`、`citation_copied` | 卡片有没有露出来、全文读了几秒、有没有点复制，只有浏览器知道 |
+
+两半最后都变成同一种「采集信封」，发给网关后面的采集端点 `POST /patra-analytics/events`。下面按一个请求走过的顺序讲。
+
+## 第一步：proxy 给每个页面请求认人
+
+不管哪条路，事件里都要有设备 ID 和会话 ID（「设备 ID、会话与『一个人』」那篇讲过它们的规则）。门户在 `proxy.ts` 里统一处理。proxy 是 Next 16 对中间件的叫法：它在每个页面请求进入渲染之前先跑一遍，能改请求、改响应。
+
+<CodeRef at="patra-portal/src/proxy.ts@ffc25c0bf848b54ae29bb08571a5c491c1f5089d" lines="96-119" />
+
+```ts
+export async function proxy(req: NextRequest) {
+  let ids: TrackingIds | null = null;
+  try {
+    ids = resolveTrackingIds((name) => req.cookies.get(name)?.value, Date.now());
+  } catch {
+    ids = null;
+  }
+  const forward = new Headers(req.headers);
+  forward.delete(TRACKING_HEADERS.device);
+  forward.delete(TRACKING_HEADERS.session);
+  if (ids) {
+    forward.set(TRACKING_HEADERS.device, ids.deviceId);
+    forward.set(TRACKING_HEADERS.session, ids.sessionId);
+  }
+  const pass: Pass = {
+    next: () => NextResponse.next({ request: { headers: forward } }),
+    rewrite: (url) => NextResponse.rewrite(url, { request: { headers: forward } }),
+  };
+  const res = await route(req, pass);
+  for (const cookie of ids?.cookies ?? []) {
+    res.cookies.set({ ...cookie.options, value: cookie.value });
+  }
+  return res;
+}
+```
+
+它做了三件事：
+
+1. 按请求里的两条 Cookie 算出这次的设备 ID 和会话 ID：设备值格式对就沿用、不对就新生成；会话 30 分钟没活动就换新。
+2. 把两个 ID 写进**传给渲染层的请求头** `x-patra-device-id`、`x-patra-session-id`。浏览器自己带来的同名头先删掉，所以页面里读到的这两个头一定是 proxy 写的。
+3. 不管后面的路由逻辑走哪个返回点（跳登录页、详情页改写到 404……），最后都把两条 Cookie 写回响应。
+
+为什么要多此一举写请求头，页面直接读 Cookie 不行吗？因为**第一次来的访客**请求里还没有 Cookie：proxy 刚生成的 ID 只在响应的 `Set-Cookie` 里，这一次渲染用 `cookies()` 读不到。经请求头传给渲染层是 Next 文档写明的做法。
+
+matcher 排除了 `/api/`、`/_next/` 和静态文件，所以 Route Handler 不经过 proxy，它们要发事件时自己读写这两条 Cookie。
+
+## 服务端事件：排到响应发完之后
+
+以文献页为例，读者打开 `/papers/123` 时发生的事：
+
+<Sequence
+  title="一次打开文献页，Article Viewed 什么时候发"
+  actors={[
+    { id: "browser", label: "浏览器" },
+    { id: "proxy", label: "proxy.ts" },
+    { id: "page", label: "文献页", sub: "page.tsx" },
+    { id: "identity", label: "identity" },
+    { id: "gateway", label: "网关", sub: "采集端点" }
+  ]}
+  messages={[
+    { from: "browser", to: "proxy", label: "GET /papers/123", caption: "请求先到 proxy。第一次来的访客这时还没有任何 Cookie。" },
+    { from: "proxy", to: "page", label: "请求头带两个 ID", caption: "proxy 算好设备 ID 与会话 ID，写进请求头交给渲染层。页面渲染时把两个 ID、会话令牌、IP、UA、来源、是否 Server Action 一次读好，排一个 after 回调。" },
+    { from: "page", to: "browser", label: "页面 + 两条 Set-Cookie", caption: "页面照常流给读者，响应上带着 proxy 写回的两条 Cookie。到这里读者已经看到内容了，事件一条都还没发。" },
+    { from: "page", to: "identity", label: "当前用户是谁？", caption: "响应发完，after 回调开始跑：拿会话令牌问 identity。匿名访客没有令牌，不问。" },
+    { from: "identity", to: "page", label: "user_id 或 null", caption: "登录了就是用户 ID；没登录、令牌失效、identity 不可用都是 null，事件照发。" },
+    { from: "page", to: "gateway", label: "POST /patra-analytics/events", caption: "组装成采集信封发给网关，最多等 6 秒。回 202 就结束，其他情况丢弃这一批，只打一行警告。" }
+  ]}
+  summary={{ caption: "读者等的只有前三条。问 identity、发事件都排在响应之后，采集端点慢了、挂了，页面都不受影响。" }}
+/>
+
+关键是 Next 的 `after(callback)`：它把回调排到响应（包括流式渲染）结束之后执行。门户的服务端事件全部通过一个 `trackServerEvent` 发，里面就是一个 `after`。
+
+`after` 在页面里有个限制：回调里**不能**再读 `cookies()`、`headers()`。所以页面在渲染时先把要用的都读进一个 `RequestFacts` 对象（两个 ID、会话令牌、IP、UA、外站来源、是否 Server Action），再交给回调。代价是登录用户每打开一篇文献，门户在响应之后多问一次 identity。
+
+**Server Action 引起的重渲染不算浏览。** 读者在文献页上点收藏，Server Action 跑完 Next 会重新渲染这一页，`page.tsx` 又执行一遍。Server Action 的请求带 `Next-Action` 头，门户读到它就不发 `article_viewed`。收藏这个动作本身由 Server Action 里单独发 `article_collected`，那里固定按「不是重渲染」处理。
+
+预取也会让人担心多算，那是另一个坑，单独一篇讲：「Next 16 读不到预取请求头」。
+
+## 浏览器事件：攒批发给门户自己的路径
+
+浏览器里有一个全页共用的队列：第一条事件进来后 5 秒，或者攒满 20 条，就发一批；页面切到后台时把剩下的立刻发出去。发的时机和用的浏览器能力在「页面要关了也能发出去」那篇展开。
+
+批次发到 `/api/reading-signals`。路径用门户自己的域名，名字故意不叫 `/analytics`、`/ingest`：广告拦截器的规则表认这类名字，被拦的访客会整个从「真人会话」里消失。
+
+这个 Route Handler 做的事：
+
+<CodeRef at="patra-portal/src/app/api/reading-signals/route.ts@ffc25c0bf848b54ae29bb08571a5c491c1f5089d" lines="43-54" />
+
+```ts
+  const batch = batchSchema.safeParse(json);
+  if (!batch.success) {
+    return status(400);
+  }
+  const facts = await readHandlerFacts();
+  after(async () => {
+    const userId = await resolveUserId(facts);
+    await sendEnvelopes(
+      batch.data.events.map((event) => toCollectEnvelope(event, batch.data.sent_at, facts, userId)),
+    );
+  });
+  return status(204);
+```
+
+在它之前还有三道门：不是同源请求回 403，请求体超过 64 KiB 回 413，不是 JSON 或外壳不对（`sent_at` 格式、`events` 是 1～50 个对象）回 400。外壳之后它**不逐条校验事件**：一条坏事件交给采集端点去判，只让它自己进死信，不连累同批。
+
+然后读 Cookie 拿设备与会话，**立刻回 204**，转发放进 `after()`。浏览器只知道「收下了」，后面采集端点成不成功它不知道，也不需要知道。
+
+## 身份只由服务端填：白名单
+
+浏览器批次转成采集信封时，门户只从每条事件里取 7 个字段：
+
+<CodeRef at="patra-portal/src/lib/analytics/server/envelope.ts@ffc25c0bf848b54ae29bb08571a5c491c1f5089d" lines="18-27" />
+
+```ts
+/// 浏览器事件只取这几个字段，其余（身份、来源、合成标记……）一律由服务端填
+const CLIENT_FIELDS = [
+  "event_id",
+  "event_name",
+  "schema_version",
+  "created_at",
+  "page_path",
+  "page_type",
+  "properties",
+] as const;
+```
+
+设备 ID、会话 ID、用户 ID、IP、UA、`is_synthetic: false`、`source: "client"` 全部由服务端填，`referrer_host` 对浏览器事件固定是 `null`（批次请求自己的来源就是本站，没有意义）。用显式白名单而不是「删掉几个危险字段」，是因为将来信封里多一个字段时，白名单默认不带，黑名单默认放行。
+
+<Quiz
+  questions={[
+    {
+      question: "有人在浏览器控制台里手工发了一批事件，其中一条写着 user_id 是别人的 ID、is_synthetic 是 true。这条事件转到采集端点时会变成什么样？",
+      options: ["整批被 Route Handler 拒掉，回 400", "原样转发，由采集端点按 schema 发现多余字段再拒", "user_id 换成当前会话里的值（没登录就是 null），is_synthetic 固定为 false", "user_id 保留，is_synthetic 改成 false"],
+      answer: "C",
+      explain: "Route Handler 只校验外壳，不看事件里多了什么；转信封时按白名单只取 7 个字段，身份和合成标记都由服务端重新填。浏览器写的 user_id 根本没被带过去。"
+    }
+  ]}
+/>
+
+## 失败一律丢弃
+
+埋点不能影响页面。门户在每个环节都是「出错就丢」：
+
+| 情况 | 结果 |
+|---|---|
+| 采集端点停了、Kafka 不可用、网关超时 | 服务端在 `after` 里丢弃这一批，打一行警告（只带状态码或错误名，不带事件内容）；页面、下载、收藏照常 |
+| identity 不可用 | `user_id` 记 `null`，事件照发 |
+| 浏览器端发批失败 | 吞掉，不重试，不往控制台打错误 |
+| proxy 算 ID 出错（不应发生） | 不写 Cookie、不写请求头，页面照常，这一次没有服务端事件 |
+
+不重试是有意的（采集端点的设计里定的）：行为数据丢一小段只会让计数少几条，不影响业务；门户为了重试埋点去堆积请求，反而会拖慢页面。代价是采集端点停机期间的真实浏览会丢失。
+
+## 事件类型从 JSON Schema 生成
+
+10 个事件的格式定义在后端的 JSON Schema 里（「事件信封三形态与 JSON Schema」那篇讲过）。门户不手写一份 TypeScript 类型，而是由脚本 `scripts/generate-analytics-types.mjs`（`pnpm gen:analytics`）生成：
+
+- 用 `json-schema-to-typescript` 把每个事件的属性 schema 生成接口，从事件目录读出哪些是服务端事件、哪些是浏览器事件，从各 schema 的 `x-patra-version` 读版本，产出「事件名 → 属性类型」的映射和版本表。浏览器的 `track(name, properties)` 用这个映射约束签名：事件名和属性对不上，编译就不过。
+- 生成的 `events.ts` 提交进仓库，因为门户的 Docker 构建只拿得到 `patra-portal/` 目录，读不到后端的 schema。
+
+提交了生成文件，就要防它和 schema 走样。门户的单元测试里用同一个生成函数重新生成一遍，和提交的文件逐字比较，不一致就失败、提示跑 `pnpm gen:analytics`。另一个测试用 ajv 按 schema 校验门户造出来的每一种事件和信封。
+
+还有一个缺口：schema 在 `patra-api/` 下，只改 schema 时 CI 的变更检测原本不认为门户变了，门户的测试就不跑。所以 `patra-infra/cd/detect-changes.sh` 加了一条规则：埋点契约的 `schema/`、`examples/` 目录有改动，也算门户变了。
+
+<Transfer
+  prompt="门户要加一个新事件「分享了文献链接」：读者在分享面板里点「复制链接」时记一条。按这篇的思路，它该在服务端发还是浏览器发？身份从哪来？要改哪些地方才能让类型和 CI 都守住它？"
+  points={[
+    { label: "浏览器发", text: "复制链接只发生在浏览器里，服务端不知道，所以走浏览器队列，用 track 入队。" },
+    { label: "身份由服务端补", text: "浏览器事件只带事件名、属性、页面这几项，设备、会话、账号由 /api/reading-signals 按 Cookie 和会话补上，白名单不用改。" },
+    { label: "先改 schema", text: "在后端的事件目录和事件 schema 里加上它，再跑 pnpm gen:analytics 重新生成类型；不重新生成，一致性测试会失败。" },
+    { label: "CI 会跑到", text: "改的是契约 schema 目录，变更检测会把它算作门户改动，门户的测试照样跑。" }
+  ]}
+/>

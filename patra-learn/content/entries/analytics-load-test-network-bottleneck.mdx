@@ -49,7 +49,7 @@ v0.18 的验收要求以每秒不少于 1,000 条事件持续打采集端点 30 
 1. **网络绕路**：笔记本和 mini 之间没有建立点对点直连，流量经一个中转节点绕行（作者用组网工具连这两台机器，这次没打通直连），一次往返 40～60 毫秒。
 2. **超时错配加重试**：模拟器照门户的设定，一个请求 6 秒没响应就放弃，按退避再发，最多 5 次；网关到采集服务的读超时却是 60 秒，连续 60 秒收不到下游任何字节才断，所以一个被模拟器放弃的请求，在网关那边要 45～60 秒才放手。网关到采集服务用的 Reactor Netty 连接池是默认大小：500 条连接、1,000 个排队名额，就这样被打满了。
 
-<CodeRef at="patra-api/patra-analytics/patra-analytics-simulator/src/main/java/dev/patra/analytics/simulator/command/LiveCommand.java@8140a9d9482324670b63f00ab3c62690102196c5" lines="39-41" />
+<CodeRef at="patra-api/patra-analytics/patra-analytics-simulator/src/main/java/dev/patra/analytics/simulator/command/LiveCommand.java@2f1091829f2e2d993a9ddb9b886ed40f9d1608ac" lines="39-41" />
 
 ```java
   /// 门户调采集端点的超时（采集设计 §4.5）

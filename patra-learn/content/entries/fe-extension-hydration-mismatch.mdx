@@ -36,7 +36,7 @@ curl -s http://localhost:<门户端口>/ | grep -o '<html[^>]*>'
 
 当时的结果是 `<html>` 上只有 `lang`、`data-scroll-behavior`、`class` 三个属性，源码里也没有那个名字。服务器没给，浏览器里却有，就是扩展加的。
 
-<CodeRef at="patra-portal/src/app/layout.tsx@4a13287485468f2c489027f1aac0bb6174643e8d" lines="43-47" />
+<CodeRef at="patra-portal/src/app/layout.tsx@ffc25c0bf848b54ae29bb08571a5c491c1f5089d" lines="44-48" />
 
 另一个办法是开一个无痕窗口（默认不加载扩展）再打开页面，不报了就是扩展的事。
 

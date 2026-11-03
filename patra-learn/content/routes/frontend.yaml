@@ -20,6 +20,8 @@ entries:
   - fe-auth-state
   - fe-optimistic-updates
   - fe-realtime-eventsource
+  - fe-analytics-tracking
+  - fe-send-beacon-keepalive
   - test-e2e-playwright
   - fe-rsc-try-catch-swallows-dynamic
   - fe-reauth-needs-route-handler
@@ -30,3 +32,5 @@ entries:
   - fe-extension-hydration-mismatch
   - test-e2e-wait-for-hydration
   - fe-next15-build-clobbers-dev
+  - fe-next16-prefetch-header-hidden
+  - test-headless-ua-counted-as-bot

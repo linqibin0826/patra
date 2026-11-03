@@ -17,6 +17,7 @@ entries:
   - ops-self-hosted-runner
   - ops-cd-deploy-loop
   - ops-health-checks
+  - obs-metrics-micrometer-otlp
   - ops-rollback
   - ops-scheduled-watchdog
   - ops-config-as-code
@@ -34,3 +35,4 @@ entries:
   - ops-precommit-stashes-unstaged
   - ops-zsh-is-not-bash
   - ops-public-learning-site-boundary
+  - obs-metrics-never-exported

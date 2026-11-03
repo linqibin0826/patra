@@ -63,7 +63,7 @@ HTML 是一份带标记的文本。每样东西用一对**标签**包起来，�
 
 门户的代码不是直接写 `.html` 文件，而是写在 `.tsx` 文件里，用一种长得很像 HTML 的写法。服务器先把它变成真正的 HTML，再发给浏览器。所以浏览器收到的仍然是 HTML。门户每一页最外层的骨架写在这里：
 
-<CodeRef at="patra-portal/src/app/layout.tsx@4a13287485468f2c489027f1aac0bb6174643e8d" lines="41-60" />
+<CodeRef at="patra-portal/src/app/layout.tsx@ffc25c0bf848b54ae29bb08571a5c491c1f5089d" lines="42-62" />
 
 ```tsx
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -80,6 +80,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <QueryProvider>
           {children}
           <NotificationStream />
+          <AnalyticsRoot />
           <Toaster position="bottom-right" />
         </QueryProvider>
       </body>

@@ -1,0 +1,189 @@
+---
+title: 七个服务的指标，一个都没进 Prometheus
+summary: OTel Collector 跑了 7.5 天，收到的指标点是 0。网络通、指标也在，问题出在没人往外推：analytics 缺一个 jar，Boot 的 OTLP 自动配置两个类少一个就静默不建；另外六个服务指望的 Agent 桥接，容器里根本没挂 Agent。
+type: troubleshooting
+difficulty: practice
+tags: [spring, backend, docker]
+prerequisites: [obs-metrics-micrometer-otlp, spring-boot-auto-configuration]
+topics: [analytics-pipeline]
+sources:
+  - version: v0.18
+    issue: PAP-172
+    pr: 375
+personalEnv: false
+---
+
+<Diagnose
+  question="OTel Collector 运行了 7.5 天，收到的指标点是 0。在服务容器里手动往 Collector 的 4318 发一条，返回 200；服务的 `/actuator/metrics` 里也能看到自定义指标。最该先怀疑哪一段？"
+  options={["服务进程里负责往外推的那个注册表，可能根本没建出来", "容器到 Collector 的网络或代理时好时坏，推送偶尔丢了", "Collector 到 Prometheus 的导出那段配错了，收到了也存不进去"]}
+  answer="A"
+  ifRight="对。网络通、数也在进程里，剩下的就是「有没有人推」。这篇讲它为什么没建出来，而且一声不吭。"
+  ifWrong="答案是 A。手动发 200 说明网络通；收到的点是 0 说明问题在 Collector 之前，跟它后面怎么导出无关；`/actuator/metrics` 有数只说明进程内的注册表有数。指标通路分哪几段、推和拉各在哪一段会失败，前置那篇讲过。"
+  suggest="obs-metrics-micrometer-otlp"
+/>
+
+<Callout kind="lead" label="结论先说">
+
+analytics 只加了 `micrometer-registry-otlp`，而 Spring Boot 4.1.2 的 `OtlpMetricsExportAutoConfiguration` 要求类路径上同时有 `OtlpMeterRegistry` 和 `spring-boot-opentelemetry` 里的 `OpenTelemetryProperties`，缺一个就整类跳过，不报错、不打日志。另外六个服务指望 OTel Agent 桥接，可容器里没挂 Agent。
+
+- **怎么修**：两个依赖和默认导出地址收进工具模块 `patra-tool-observability`，七个服务都经应用内的 OTLP 注册表推；删掉 Agent 桥接，本机的 Agent 关掉指标导出
+- **值得记住**：自动配置的条件不满足时是安静跳过的。推送式的通路坏了，接收方看到的只是「什么也没来」，要从收到的点数倒着查
+
+</Callout>
+
+## 现象
+
+v0.18 后半程做运营看板（PAP-172），面板要画入库滞后 `analytics.ingest.lag`。打开 mini 上的 Prometheus，一个 Patra 应用指标都查不到，不止 analytics，七个服务全没有。
+
+查 Collector 自己的内部指标：`otelcol_processor_incoming_items_total{otel_signal="metrics"}` 是 0，而 Collector 已经运行了约 7.5 天；`otelcol_receiver_accepted_metric_points` 这一系列根本没出现过。也就是说，Collector 从来没收到过一个指标点。
+
+最容易把人带偏的方向是网络：服务在容器里，Collector 在宿主机上，中间隔着容器网络和名字解析，Patra 以前在代理、DNS 上栽过不少跟头。
+
+## 怎么查
+
+<DebugTrail
+  steps={[
+    { hypothesis: "Collector 往 Prometheus 导出这一段断了？", result: "Prometheus 里查得到 Collector 的内部指标，说明它抓 Collector 是通的。可 Collector 收到的指标点是 0、`otelcol_receiver_accepted_metric_points` 一次都没出现：不是存不进去，是压根没收到。问题在 Collector 之前。", verdict: "ruled-out" },
+    { hypothesis: "服务容器到 Collector 的网络不通？", result: "在 patra-analytics 容器里 POST `http://<mini 的地址>:4318/v1/metrics`，返回 200。这个名字在容器里经 host-gateway 解析回宿主机，容器里也没有代理变量。网络是通的。", verdict: "ruled-out" },
+    { hypothesis: "服务里根本没产生这些指标？", result: "analytics 的 `/actuator/metrics` 里有 `analytics.ingest.lag`、`analytics.collect.publish`。数在进程里，只是没出去。", verdict: "ruled-out" },
+    { hypothesis: "analytics 根本没往外推：负责推的 `OtlpMeterRegistry` 没建出来？", result: "用 javap 读 Spring Boot 4.1.2 里 `OtlpMetricsExportAutoConfiguration` 的字节码，类上是 `@ConditionalOnClass({OtlpMeterRegistry, OpenTelemetryProperties})`。第二个类在 `spring-boot-opentelemetry` 模块里，analytics 镜像的 `/app/lib` 里没有这个 jar。条件不成立，注册表不建，不报错，不打日志。", verdict: "found" },
+    { hypothesis: "另外六个服务连 `micrometer-registry-otlp` 都没加，它们的指标原本打算怎么出去？", result: "规范和 `ObservabilityMicrometerAutoConfiguration` 假定 OTel Java Agent 负责把 Micrometer 的数转成 OTLP。可 Agent 只挂在本机的 `bootRun` 上，`service.Dockerfile` 的 ENTRYPOINT 里没有 `-javaagent`，也没有任何服务带 OTLP 注册表。容器里从来没有指标通路：这是设计缺口，不是故障。", verdict: "found" }
+  ]}
+/>
+
+## 根因一：两个类缺一个，整个配置类安静地跳过
+
+「自动配置：引一个依赖就能用」那篇讲过条件注解，其中 `@ConditionalOnClass(X.class)` 的意思是「类路径上有 X 才装」。这次的关键在于它可以写好几个类，而且是**全部都在才算满足**。javap 读出的类注解，按源码写法整理如下：
+
+```java
+@AutoConfiguration(
+    before = { CompositeMeterRegistryAutoConfiguration.class, SimpleMetricsExportAutoConfiguration.class },
+    after = MetricsAutoConfiguration.class)
+@ConditionalOnBean(Clock.class)
+@ConditionalOnClass({ OtlpMeterRegistry.class, OpenTelemetryProperties.class })
+@ConditionalOnEnabledMetricsExport("otlp")
+@EnableConfigurationProperties({ OtlpMetricsProperties.class, OpenTelemetryProperties.class })
+public final class OtlpMetricsExportAutoConfiguration {
+```
+
+四个条件都要满足，`OtlpMeterRegistry` 才会建出来：
+
+| 条件 | 要什么 | 谁提供 |
+|---|---|---|
+| `@ConditionalOnBean(Clock.class)` | 容器里有 Micrometer 的 `Clock` | `MetricsAutoConfiguration` |
+| `@ConditionalOnClass` 第一个类 | `OtlpMeterRegistry` | `micrometer-registry-otlp` |
+| `@ConditionalOnClass` 第二个类 | `OpenTelemetryProperties` | `spring-boot-opentelemetry`：analytics 缺的就是它 |
+| `@ConditionalOnEnabledMetricsExport("otlp")` | OTLP 导出没被关掉 | 默认开着，可以用配置关 |
+
+排查笔记里还记了一句：当时对照的官方文档写的是「有 `micrometer-registry-otlp` 就够」，和 4.1.2 的实际行为对不上。所以只照着文档加依赖，正好掉进去。
+
+动手试试三个开关的组合：
+
+<Params
+  title="启动时，OTLP 注册表建不建得出来"
+  guess={{ question: "类路径上只有 `micrometer-registry-otlp`、没有 `spring-boot-opentelemetry`，服务启动时会怎样？", options: ["启动失败，报找不到 `OpenTelemetryProperties` 这个类", "不建 OTLP 注册表，不报错、不打日志，退回只在内存里的注册表", "建出注册表，但每 30 秒推送失败一次、打一行错误日志"], answer: "B", explain: "条件不满足就整类跳过，这是自动配置的设计：引了才生效、不引不打扰。跳过之后，排在它后面的 `SimpleMetricsExportAutoConfiguration` 见容器里还没有注册表，就建一个只在内存里的。" }}
+  controls={[
+    { type: "switch", id: "registry", label: "类路径有 `micrometer-registry-otlp`", default: true },
+    { type: "switch", id: "otel", label: "类路径有 `spring-boot-opentelemetry`", default: false },
+    { type: "switch", id: "enabled", label: "OTLP 指标导出没被关掉", default: true }
+  ]}
+  cases={[
+    { when: { registry: false }, results: [{ label: "OtlpMetricsExportAutoConfiguration", value: "跳过：缺 OtlpMeterRegistry", tone: "wait" }, { label: "/actuator/metrics", value: "有数（内存注册表）", tone: "ok" }, { label: "Collector 收到的点", value: "0", tone: "bad" }], verdict: { tone: "bad", head: "另外六个服务的样子。", text: "连注册表的类都没有，本来就不会推。它们原本指望的是 Agent。" } },
+    { when: { otel: false }, results: [{ label: "OtlpMetricsExportAutoConfiguration", value: "跳过：缺 OpenTelemetryProperties", tone: "wait" }, { label: "/actuator/metrics", value: "有数（内存注册表）", tone: "ok" }, { label: "Collector 收到的点", value: "0", tone: "bad" }], verdict: { tone: "bad", head: "analytics 的样子。", text: "加了注册表依赖，看上去该推了，可第二个类不在，整个配置类安静地跳过。" } },
+    { when: { enabled: false }, results: [{ label: "OtlpMetricsExportAutoConfiguration", value: "跳过：导出被关掉", tone: "wait" }, { label: "/actuator/metrics", value: "有数（内存注册表）", tone: "ok" }, { label: "Collector 收到的点", value: "0", tone: "ok" }], verdict: { tone: "ok", head: "测试里要的就是这个。", text: "类都齐了，只是主动关掉导出：`@SpringBootTest` 不该往 Collector 推。" } },
+    { results: [{ label: "OtlpMetricsExportAutoConfiguration", value: "装上", tone: "ok" }, { label: "otlpMeterRegistry", value: "建出来，每 30 秒推一次", tone: "ok" }, { label: "Collector 收到的点", value: "> 0", tone: "ok" }], verdict: { tone: "ok", head: "修好之后。", text: "四个条件都满足，指标经 OTLP 推给 Collector。" } }
+  ]}
+/>
+
+<Callout kind="insight">
+
+**为什么 `/actuator/metrics` 照样有数**：`OtlpMetricsExportAutoConfiguration` 排在 `SimpleMetricsExportAutoConfiguration` 之前，后者的条件是「容器里还没有任何 `MeterRegistry`」。OTLP 那个被跳过，轮到它时条件满足，就建一个只存在内存里的 `SimpleMeterRegistry`。进程里一切正常，只是数出不去，这正是第三步看到的样子。
+
+</Callout>
+
+**为什么写着一个不存在的类却不报 `ClassNotFoundException`**：Spring 判断这些条件时，是直接读 class 文件里的注解信息（不经过类加载），所以注解里引用的类缺了也不会炸。这是条件注解能放心地写「可能不在」的类的原因，也是它能安静跳过的原因。
+
+**想看到被跳过的配置类**，一般有两个办法：启动时加 `--debug`，Spring Boot 会打印条件评估报告，没装上的配置类列在 Negative matches 里，写明缺了哪个类；或者打开 actuator 的 `conditions` 端点。Patra 的 actuator 只暴露 `health`、`info`、`metrics`，所以容器里平时看不到这份报告。
+
+## 根因二：桥接只在挂了 Agent 的 JVM 里存在
+
+另外六个服务的问题不在依赖，在设计。工具模块里原来有一个桥接 Bean `otelMeterRegistryBridge`：它从 `Metrics.globalRegistry` 里找到 Agent 放进去的 OTel 注册表，作为主注册表搬进 Spring 容器。它自己也贴着两个条件：类路径上有 `io.opentelemetry.javaagent.OpenTelemetryAgent`（只有挂了 Agent 才有），并且 `otel.instrumentation.micrometer.enabled=true`。
+
+Agent 只在一个地方挂上：本机 `bootRun` 在配置了 Agent 路径时，由 Gradle 给 JVM 加 `-javaagent`。容器的启动命令是 `java -XX:MaxRAMPercentage=75.0 ... -jar app.jar`，没有 Agent，桥接的第一个条件就不成立，同样是安静跳过。这六个服务的类路径上又没有任何导出用的注册表，于是和 analytics 一样，只剩内存里那一个。
+
+<Callout kind="insight">
+
+两个根因是同一种失败：**通路成立的前提藏在条件里，条件不满足时没有任何报错**。一个藏在类路径上，一个藏在 JVM 启动参数里。本机能跑、容器里没有，往往就是这种前提只在一边成立。
+
+</Callout>
+
+## 修法
+
+**依赖收进工具模块**。七个服务都引了 `patra-tool-observability`，两个依赖放在这里，谁也不会再漏：
+
+<CodeRef at="patra-tool/patra-tool-observability/build.gradle.kts@cff912f0b0bd40cd32755fe44174880ab9e160e8" lines="37-40" />
+
+```kotlin
+    // 指标经 OTLP 推给 OTel Collector：Boot 4.1 的 OtlpMetricsExportAutoConfiguration 两个类都要，
+    // 缺 spring-boot-opentelemetry 就静默不导出。不用 starter-opentelemetry：它还会带上链路导出
+    implementation("io.micrometer:micrometer-registry-otlp")
+    implementation("org.springframework.boot:spring-boot-opentelemetry")
+```
+
+导出地址（`http://${PATRA_INFRA_HOST:127.0.0.1}:4318/v1/metrics`）、30 秒步长、计时单位秒，也由这个模块出默认值；analytics 原来单独加的依赖和导出配置删掉。
+
+**为什么不用 `spring-boot-starter-opentelemetry`**：一个 starter 就能把 `OpenTelemetryProperties` 带进来，看上去更省事。可它还会带上 Micrometer Tracing 的 OTel 桥接和 OTLP 导出器，容器会开始导出链路。这是另一处行为变化，这次只修指标，所以只引只带 opentelemetry-api 和 sdk 的 `spring-boot-opentelemetry`。
+
+**删掉 Agent 桥接，本机 Agent 关掉指标**。桥接 Bean 和它的测试删除。本机运行时 Agent 仍然挂着导出链路和日志，但指标改由应用内注册表推，Agent 再推就是同一份推两次，所以 `bootRun` 的参数和 Agent 配置文件都关掉指标导出：
+
+<CodeRef at="patra-infra/docker/otel-agent/otel-dev.properties@cff912f0b0bd40cd32755fe44174880ab9e160e8" lines="30-35" />
+
+```properties
+# ============================================================
+# Metrics 配置
+# ============================================================
+# 指标不经 Agent：各服务由 patra-tool-observability 的 Micrometer OTLP 注册表直接推给 Collector，
+# Agent 再导出就会重复一份
+otel.metrics.exporter=none
+```
+
+**测试里不推**。现在七个服务的类路径上都有 OTLP 导出了，`@SpringBootTest` 一起来就会往 Collector 推。`patra-tool-test` 加了 Boot 官方的 `spring-boot-micrometer-metrics-test`，在 `@SpringBootTest` 里关掉指标导出、只留内存注册表，就是上面开关里「导出被关掉」那一格；analytics 测试 yml 里原来手动关导出的配置随之删掉。
+
+**用测试守住类路径**。先写一个失败的测试，加依赖后通过：
+
+<CodeRef at="patra-tool/patra-tool-observability/src/test/java/dev/patra/tool/observability/autoconfigure/OtlpMetricsExportTest.java@cff912f0b0bd40cd32755fe44174880ab9e160e8" lines="11-28" />
+
+```java
+/// 本模块的类路径要让 Boot 的 OTLP 指标导出生效：七个服务都经它把指标推给 OTel Collector。
+///
+/// Boot 4.1 的 `OtlpMetricsExportAutoConfiguration` 除了 `OtlpMeterRegistry` 还要求
+/// `spring-boot-opentelemetry` 的 `OpenTelemetryProperties`，缺一个就静默跳过、不报错。
+class OtlpMetricsExportTest {
+
+  private final ApplicationContextRunner runner =
+      new ApplicationContextRunner()
+          .withConfiguration(
+              AutoConfigurations.of(
+                  MetricsAutoConfiguration.class, OtlpMetricsExportAutoConfiguration.class));
+
+  /// 类路径齐全时 Boot 建出 OTLP 注册表。
+  @Test
+  void should_create_otlp_meter_registry_from_module_classpath() {
+    runner.run(ctx -> assertThat(ctx).hasBean("otlpMeterRegistry"));
+  }
+}
+```
+
+`ApplicationContextRunner` 起一个只装指定自动配置的小容器，条件照真的判断，用的就是这个模块测试时的类路径。哪天有人把 `spring-boot-opentelemetry` 删了，或者 Boot 升级又加了一个必需的类，这个测试会先红。配置里带上 `MetricsAutoConfiguration`，是因为它提供 `@ConditionalOnBean(Clock.class)` 要的那个 `Clock`。
+
+**部署后怎么算修好**：在接收方这一侧看，而不是看服务里有没有数。`otelcol_processor_incoming_items_total{otel_signal="metrics"}` 大于 0，Prometheus 里按 `application` 标签能看到七个服务的指标。
+
+<Transfer
+  prompt="以后要加第八个服务。写构建脚本的人没引 `patra-tool-observability`，自己加了 `micrometer-registry-otlp` 和导出地址。上线后会看到什么？你会在合并前、部署后各用什么办法发现它？"
+  points={[
+    { label: "会看到什么", text: "和 analytics 一样：缺 `OpenTelemetryProperties`，OTLP 注册表静默不建，`/actuator/metrics` 照样有数，Prometheus 里没有这个服务的 `application` 标签，没有任何报错。" },
+    { label: "合并前", text: "照 `OtlpMetricsExportTest` 的写法，用 `ApplicationContextRunner` 断言模块类路径上建得出 `otlpMeterRegistry`；或者干脆规定服务一律引工具模块，不自己拼依赖。" },
+    { label: "启动时", text: "加 `--debug` 看条件评估报告，Negative matches 里会写明 `OtlpMetricsExportAutoConfiguration` 缺哪个类。" },
+    { label: "部署后", text: "验收看接收方：Collector 收到的指标点有没有涨、Prometheus 里按 `application` 标签有没有这个服务。推送式通路只能从接收方确认。" }
+  ]}
+/>

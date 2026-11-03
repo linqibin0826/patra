@@ -1,0 +1,147 @@
+---
+title: 留存的首日从哪来：增量维护一张「每人首日」表，不每小时扫全部历史
+summary: 算新增和留存要知道每个人第一次来是哪天，这要看全部历史。每小时扫一遍日活表，mini 上 90 天历史就要 621 MiB，攒满 400 天会超过每条查询 1 GiB 的上限；只看窗口里出现过的人也不行，实测 1.01 GiB。Patra 选了第三种：增量维护的每人首日表 ads_person_first_day，代价是注销清理多删一张表、刷新与回填多了先后顺序。
+type: decision
+difficulty: practice
+tags: [analytics, database]
+prerequisites: [analytics-metrics-retention-cohort, analytics-refreshable-materialized-views]
+topics: [analytics-pipeline]
+sources:
+  - version: v0.18
+    issue: PAP-172
+    pr: 377
+personalEnv: false
+---
+
+<Diagnose
+  question="某人 60 天前来过一次，之后再没来过，今天又来了。按经典的新增与同期群口径，他算不算今天的新增访客？"
+  options={["不算：他的首日是 60 天前，今天是回访，要判断这一点就得看到 60 天前的记录", "算：他在最近 30 天里是第一次出现，按滚动窗口就是新人", "要看他今天有没有登录：登录了就算老用户，没登录就算新增"]}
+  answer="A"
+  ifRight="对。新增看的是「有史以来第一次」，所以首日要看全部历史。这篇讲每小时都要判首日时，这份全部历史怎么读才不撑爆内存。"
+  ifWrong="答案是 A。新增访客是这一天第一次出现的人，「之前从没来过」要看全部历史，不是看最近 30 天；登录与否只影响认人，不影响新不新。这题考的是同期群按首日分组，先读新增与留存那篇。"
+  suggest="analytics-metrics-retention-cohort"
+/>
+
+## 背景
+
+运营看板的留存组要一张同期群表：每一天的新增人数，以及他们恰好在第 1、7、30 天又来的人数。口径照经典 N 日留存，「人」还要先认回：登录前用设备、登录后用账号的同一个人不算两次新增。
+
+ADS 的做法是每小时刷新一次。留存表每次重算**最近 32 个同期群**：第 30 天的留存要等一个月，认回也会改过去的首日（一台设备后来登录了，它当初那天的「新增」要挪到账号首次出现的那天）。
+
+难点在首日。要判断一个人是不是某天的新增，得确认他在那天之前从没出现过，这要读日活表 `daily_person_activity` 的全部历史，它保留 400 天。集成测试专门守着这一点：一个 60 天前来过的人今天又来，不能算今天的新增。
+
+约束也是硬的：ClickHouse 容器 2 GiB，每条查询上限 1 GiB；这一版明确不调高任何容器的内存，mini 已经超卖。
+
+## 选项
+
+<DecisionOptions
+  options={[
+    { name: "每小时扫全部日活历史", summary: "刷新时把日活表从头到尾读一遍，每个人取最早的一天，再挑出首日落在这 32 天里的人。", pros: "最直接，口径一眼看得懂，没有额外的表要维护。", cons: "内存随历史长度涨：mini 上 90 天历史已经要 621 MiB，日活表攒满 400 天会超过每条查询 1 GiB 的上限。今天能跑，几个月后就跑不了。" },
+    { name: "只看窗口里出现过的人", summary: "先挑出这 32 个同期群窗口里出现过的人，只查这些人的历史来判首日。", pros: "不用加表；看起来把要查历史的人缩小了一圈。", cons: "缩得不够：窗口里有 52.5 万人，历史上一共 71.9 万人，大部分人都在窗口里出现过。实测 1.01 GiB，超过上限。" },
+    { name: "增量维护每人首日表", summary: "新建 ads_person_first_day：每个身份、每种口径一行，只存首日。刷新视图每小时用最近两天的日活补进来，取最小值合并。", pros: "每小时只读两天的日活；算留存时先从这张表挑出同期群的人，再只读这些人首日之后 30 天的日活，不再碰全部历史。", cons: "多一张表、一个刷新视图；它存着账号身份，要进注销清理；刷新和回填都要排在留存前面。", chosen: true }
+  ]}
+/>
+
+第二个选项值得多看一眼：直觉上「只查相关的人」总能省很多，可留存的窗口有 32 天、每个同期群还要往后看 30 天，在 Patra 的数据里，窗口里的人占了历史总人数的大半，过滤几乎没省下什么。缩小查询范围之前，先量一下缩掉了多少。
+
+## 选择
+
+<Callout kind="lead" label="选了什么">
+
+选了增量的每人首日表。决定性的一条：它让刷新的输入量只取决于「最近两天来了多少人」，不再随历史一天天变长；另外两个选项都是读全部或接近全部的历史，日活表越攒越多，迟早超过 1 GiB。
+
+</Callout>
+
+表和它的刷新写在留存的迁移脚本里：
+
+<CodeRef at="patra-api/patra-analytics/patra-analytics-infra/src/main/resources/clickhouse/V8__ads_cohort_retention.sql@c3df651e18fcd34d66a1ece0e2cea00c78e9d881" lines="9-31" />
+
+```sql
+CREATE TABLE IF NOT EXISTS ads_person_first_day (
+    person_id     String,
+    is_synthetic  Bool,
+    traffic       LowCardinality(String),
+    first_day     SimpleAggregateFunction(min, Date)
+) ENGINE = AggregatingMergeTree
+ORDER BY (traffic, is_synthetic, person_id);
+
+CREATE VIEW IF NOT EXISTS ads_person_first_day_calc AS
+SELECT person_id, is_synthetic, traffic, min(day) AS first_day
+FROM (
+    SELECT day, person_id, is_synthetic, max(has_client) = 1 AND max(is_bot) = 0 AS human
+    FROM daily_person_activity
+    WHERE day BETWEEN {from:Date} AND {to:Date}
+    GROUP BY day, person_id, is_synthetic
+)
+ARRAY JOIN ['human', 'all'] AS traffic
+WHERE traffic = 'all' OR human
+GROUP BY person_id, is_synthetic, traffic;
+
+CREATE MATERIALIZED VIEW IF NOT EXISTS ads_person_first_day_rmv
+REFRESH EVERY 1 HOUR OFFSET 10 MINUTE APPEND TO ads_person_first_day EMPTY AS
+SELECT * FROM ads_person_first_day_calc(from = toDate(now(), 'Asia/Shanghai') - 1, to = toDate(now(), 'Asia/Shanghai'));
+```
+
+它和其他 ADS 表长得不一样：
+
+- **引擎是 `AggregatingMergeTree`，列是 `SimpleAggregateFunction(min, Date)`**：同一个身份写了几行，合并时取最早的那天。这正是物化视图那篇说的「汇总表只存幂等的值」：每小时都把最近两天再补一遍，同一个人被补几次，`min` 的结果都一样。
+- **没有 `computed_at`，也没有 `_latest`**：首日只会越来越早，不存在「新一版要替掉旧一版」。
+- **按原始身份存**（`u:<账号>` 或 `d:<设备>`），认回留到算留存时再做：留存的计算先用设备与账号的对应表把 `d:` 换成账号，再取这个人所有身份里最早的首日。设备后来登录了，首日跟着变。
+
+历史只在上线时由回填脚本建一次：从 08-06 起逐天补进来，之后交给刷新视图。
+
+<Quiz
+  title="考考自己"
+  questions={[
+    {
+      question: "如果把 ads_person_first_day 也做成 ReplacingMergeTree(computed_at) 加一个「只取最近一次计算的行」的读取视图，刷新视图照样每小时只算最近两天，会怎样？",
+      options: ["一样能用，只是多存几版，占点空间", "更好：首日表也能享受「每次计算都完整」的保证", "坏了：每次只算两天，最近一次计算里只有这两天来过的人，更早来过的人的首日在读取视图里就没了", "坏了：ReplacingMergeTree 不支持 Date 类型的列"],
+      answer: "C",
+      explain: "「取最近一次计算」的前提是每次计算都写出完整结果，而首日表每次只补最近两天的人。用 min 合并时，新补的行只会和旧行比大小、留下更早的那天；换成「取最近一次」，旧的人就整批被挤掉了。"
+    }
+  ]}
+/>
+
+## 代价
+
+<Callout kind="cost">
+
+- **注销清理多删一张表**：首日表存着 `u:<账号>`，是用户数据。注销清理要删它，而且顺序在日活表之前。
+- **多了先后顺序**：首日表要先于留存更新。刷新视图排在第 10 分钟，留存在第 12 分钟；回填脚本里它也排在留存前面；留存的集成测试先补首日、再算留存，照的是同一个顺序。
+- **一个已知偏差**：某人某天先被算作真人、当天晚些时候才被标为爬虫，真人口径的首日不会撤回（`min` 只往早里合并，不会把一天删掉）。设计里判断量很小，写进了迁移脚本的注释。
+- **什么时候重新考虑**：首日表只解决了「判首日」这一步，算留存仍要读同期群成员首日之后 30 天的日活。如果哪天同期群本身大到这一步也逼近上限，这个决策就要重新评估。
+
+</Callout>
+
+删除顺序在入库服务的注销清理里：
+
+<CodeRef at="patra-api/patra-analytics/patra-analytics-infra/src/main/java/dev/patra/analytics/infra/ingest/store/ClickHouseEventStoreAdapter.java@c3df651e18fcd34d66a1ece0e2cea00c78e9d881" lines="93-106" />
+
+```java
+  public void deleteUsers(List<Long> userIds) {
+    if (userIds.isEmpty()) {
+      return;
+    }
+    String ids = userIds.stream().map(String::valueOf).collect(Collectors.joining(", "));
+    String persons = userIds.stream().map(id -> "'u:" + id + "'").collect(Collectors.joining(", "));
+    execute("DELETE FROM events WHERE user_id IN (" + ids + ")");
+    execute("DELETE FROM dlq_events WHERE user_id IN (" + ids + ")");
+    execute("DELETE FROM article_session_reads WHERE person_id IN (" + persons + ")");
+    execute("DELETE FROM device_user_links WHERE user_id IN (" + ids + ")");
+    execute("DELETE FROM ads_person_first_day WHERE person_id IN (" + persons + ")");
+    // 日活表是找用户的唯一来源，最后删：中途失败时其他表的残留次日还能再找到
+    execute("DELETE FROM daily_person_activity WHERE user_id IN (" + ids + ")");
+  }
+```
+
+清理任务靠日活表找出「哪些注销用户在行为数据里还有痕迹」。日活表要是先删了，中途失败时首日表里的残留就再也找不到；把它放最后，失败了下次还能从日活表找到这个人，把剩下的表补删干净。这和「行为数据的隐私与合规：告知与同意、最小化、删除、保留期」里讲的删除要求是一回事：每加一张存用户身份的表，就要同时想清楚它怎么被删掉。
+
+<Transfer
+  prompt="产品想在看板上加「回流用户」：之前来过、但已经连续 30 天没来、今天又来了的人。按这篇的思路，你会怎么设计，才能每小时刷新而不扫全部历史？"
+  points={[
+    { label: "先看要什么状态", text: "判断回流只需要每个人「上一次来是哪天」，不需要全部历史；这和首日一样，可以增量维护一张每人一行的小表。" },
+    { label: "合并函数要选对", text: "首日用 min，「最近一次来」用 max；但判断回流要的是今天之前的最后一次，刷新时要先读出旧值再写新值，或者同时存最近两次。" },
+    { label: "进注销清理", text: "表里存着 u:<账号>，和首日表一样要进注销清理，并排在日活表之前。" },
+    { label: "排好先后", text: "这张表要先于用它的回流指标更新：刷新视图的分钟、回填脚本的顺序、测试里的准备步骤都要照这个顺序。" }
+  ]}
+/>

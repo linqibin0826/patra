@@ -88,7 +88,7 @@ Patra 的生产查询全部用 `uniqExact`：门户上展示的「N 人看过」
 
 费内存的一面在对账时碰到了。一次性对 1 亿个 UUID 做 `uniqExact` 要几 GB 内存，而 ClickHouse 的 `patra` 账号每条查询上限 1 GiB。所以模拟器的对账按天算、再求和：
 
-<CodeRef at="patra-api/patra-analytics/patra-analytics-simulator/src/main/java/dev/patra/analytics/simulator/truth/Reconciler.java@8140a9d9482324670b63f00ab3c62690102196c5" lines="44-49" />
+<CodeRef at="patra-api/patra-analytics/patra-analytics-simulator/src/main/java/dev/patra/analytics/simulator/truth/Reconciler.java@c3df651e18fcd34d66a1ece0e2cea00c78e9d881" lines="51-56" />
 
 ```java
   private static final String UNIQUE_SQL =

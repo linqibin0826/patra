@@ -33,10 +33,14 @@ personalEnv: false
 
 拿到 Promise 以后，在它前面写 `await`，意思是「在这里等它有结果，再往下走」。用了 `await` 的函数要标上 `async`。门户在服务器上取首页文献流，就是这么写的：
 
-<CodeRef at="patra-portal/src/lib/portal-api/publications.ts@6ead12db647bcd3e56f651af791d56e418cb79ff" lines="13-21" />
+<CodeRef at="patra-portal/src/lib/portal-api/publications.ts@ffc25c0bf848b54ae29bb08571a5c491c1f5089d" lines="13-25" />
 
 ```ts
-export async function fetchFeed(tab: FeedTab, page = 1, pageSize = 14): Promise<PageResult<Paper>> {
+export async function fetchFeed(
+  tab: Exclude<FeedTab, "hot">,
+  page = 1,
+  pageSize = 14,
+): Promise<PageResult<Paper>> {
   const res = await gatewayFetch(
     `/patra-catalog/portal/publications?tab=${tab}&page=${page}&pageSize=${pageSize}`,
   );
@@ -101,7 +105,7 @@ export async function fetchFeed(tab: FeedTab, page = 1, pageSize = 14): Promise<
 
 单篇文献详情把这几种情况分得很清楚：
 
-<CodeRef at="patra-portal/src/lib/portal-api/publications.ts@6ead12db647bcd3e56f651af791d56e418cb79ff" lines="34-47" />
+<CodeRef at="patra-portal/src/lib/portal-api/publications.ts@ffc25c0bf848b54ae29bb08571a5c491c1f5089d" lines="38-51" />
 
 ```ts
 export const fetchPublicationDetail = cache(async (id: string): Promise<PaperDetail | null> => {

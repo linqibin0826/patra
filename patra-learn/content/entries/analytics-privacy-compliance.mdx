@@ -10,6 +10,9 @@ sources:
   - version: v0.18
     issue: PAP-164
     pr: 373
+  - version: v0.18
+    issue: PAP-172
+    pr: 377
 personalEnv: false
 ---
 
@@ -89,7 +92,7 @@ GDPR 第 17 条给了数据主体请求删除的权利，适用情形包括数�
 
 Patra 的注销清理是一个每天跑的定时任务：按用户 ID 分批，向 identity 查账号状态，**只有 identity 明确返回「已注销」的才删**，没返回的不删（省略不等于已注销），identity 不可用就跳过这一批、次日再跑。删除时一批用户一条语句：
 
-<CodeRef at="patra-api/patra-analytics/patra-analytics-infra/src/main/java/dev/patra/analytics/infra/ingest/store/ClickHouseEventStoreAdapter.java@8140a9d9482324670b63f00ab3c62690102196c5" lines="89-103" />
+<CodeRef at="patra-api/patra-analytics/patra-analytics-infra/src/main/java/dev/patra/analytics/infra/ingest/store/ClickHouseEventStoreAdapter.java@c3df651e18fcd34d66a1ece0e2cea00c78e9d881" lines="89-106" />
 
 ```java
   /// 一批用户一条语句地轻量删除：`events` 的排序键里没有 `user_id`，每条删除都扫全表，逐个用户删会扫上百遍。
@@ -105,6 +108,9 @@ Patra 的注销清理是一个每天跑的定时任务：按用户 ID 分批，�
     execute("DELETE FROM events WHERE user_id IN (" + ids + ")");
     execute("DELETE FROM dlq_events WHERE user_id IN (" + ids + ")");
     execute("DELETE FROM article_session_reads WHERE person_id IN (" + persons + ")");
+    execute("DELETE FROM device_user_links WHERE user_id IN (" + ids + ")");
+    execute("DELETE FROM ads_person_first_day WHERE person_id IN (" + persons + ")");
+    // 日活表是找用户的唯一来源，最后删：中途失败时其他表的残留次日还能再找到
     execute("DELETE FROM daily_person_activity WHERE user_id IN (" + ids + ")");
   }
 ```
@@ -112,6 +118,7 @@ Patra 的注销清理是一个每天跑的定时任务：按用户 ID 分批，�
 几个值得注意的地方：
 
 - **不只删明细，汇总也删。** `article_session_reads`（文献 × 会话）和 `daily_person_activity`（每人每天）虽然是汇总表，但里面存着 `person_id` 或 `user_id`，还是个人信息。删掉之后，对外的「N 人看过」会少掉这些人，这是删除权的本意，按 release spec 要在隐私政策里写明。
+- **运营看板加的两张表也删。** v0.18 后来给运营看板加了设备与账号的对应表 `device_user_links` 和「每人首日」表 `ads_person_first_day`，两张都含用户，注销时一起删，顺序排在日活表之前。
 - **`daily_person_activity` 最后删。** 它是找「有哪些用户要删」的来源，先删了它，中途失败的话，其他表的残留就再也找不到了。
 - **`session_quality` 不删。** 这张表不含用户信息。
 - **设备 ID 产生的匿名数据不删。** 同一个人登录前用设备 ID 产生的记录（`person_id` 是 `d:` 开头），无法认定那台设备只属于他，所以不删（入库设计 §6），同样要在隐私政策里写明。

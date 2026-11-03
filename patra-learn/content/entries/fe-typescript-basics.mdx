@@ -32,7 +32,7 @@ showTitle(paper.titel); // 想写 title，拼成了 titel
 
 门户从后端拿到的每种数据，都在 `src/types/` 里写了形状。比如一篇文献：
 
-<CodeRef at="patra-portal/src/types/portal.ts@5073ab1358404ecd989e722373cd9f7edafe238b" lines="145-153" />
+<CodeRef at="patra-portal/src/types/portal.ts@ffc25c0bf848b54ae29bb08571a5c491c1f5089d" lines="145-153" />
 
 ```ts
 export interface Paper {
@@ -108,7 +108,7 @@ TS 会跟着 `if` 走：进了 `target.kind === "invalid"` 这个分支，它就
 
 TS 的检查松紧可以调。门户把两项开到最严：
 
-<CodeRef at="patra-portal/tsconfig.json@fe4c6bb68c591a9c9b5fe80f76bbfbbbc6aeae75" lines="7-8" />
+<CodeRef at="patra-portal/tsconfig.json@ffc25c0bf848b54ae29bb08571a5c491c1f5089d" lines="7-8" />
 
 ```json
     "strict": true,
@@ -154,7 +154,7 @@ document.getElementById("hero-input").focus(); // ② 找到输入框，放进�
 
 TS 的类型在构建时被擦掉，运行时没有人再检查。从后端拿来的数据是不是真符合 `Paper`，TS 并不知道。门户在这里写得很坦白：
 
-<CodeRef at="patra-portal/src/lib/portal-api/publications.ts@6ead12db647bcd3e56f651af791d56e418cb79ff" lines="6-12" />
+<CodeRef at="patra-portal/src/lib/portal-api/publications.ts@ffc25c0bf848b54ae29bb08571a5c491c1f5089d" lines="6-12" />
 
 ```ts
 /**

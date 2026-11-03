@@ -32,7 +32,7 @@ personalEnv: false
 
 用户登录成功后，identity 发给门户一个会话令牌。会话本身存在后端，归 identity 一家管，令牌只是一张「凭它来查会话」的号码牌。门户要做的，是让浏览器替它保管这张号码牌，又不让页面上的任何脚本碰到它。
 
-<CodeRef at="patra-portal/src/lib/auth/session-cookie.ts@fe4c6bb68c591a9c9b5fe80f76bbfbbbc6aeae75" lines="21-33" />
+<CodeRef at="patra-portal/src/lib/auth/session-cookie.ts@ffc25c0bf848b54ae29bb08571a5c491c1f5089d" lines="21-33" />
 
 ```ts
 /// 会话 Cookie 的名称和固定属性。`Secure` 开时名字带 `__Host-` 前缀：浏览器只接受本站经 HTTPS 写入、
@@ -74,7 +74,7 @@ function sessionCookie() {
 
 清 Cookie 有个细节：门户不用 `cookies().delete()`，而是写一个空值、`Max-Age=0`。因为 `delete` 发出去的指令不带 `Secure`，浏览器会拒绝用它删 `__Host-` 开头的 Cookie。
 
-<CodeRef at="patra-portal/src/lib/auth/session-cookie.ts@fe4c6bb68c591a9c9b5fe80f76bbfbbbc6aeae75" lines="60-64" />
+<CodeRef at="patra-portal/src/lib/auth/session-cookie.ts@ffc25c0bf848b54ae29bb08571a5c491c1f5089d" lines="65-69" />
 
 ```ts
 /// 清除：写入空值，属性和写入时相同，`Max-Age=0`。不用 `cookies().delete()`：它不带 `Secure`，
@@ -86,14 +86,14 @@ export async function clearSessionCookie(): Promise<void> {
 
 ## 请求入口：proxy.ts 先看一眼
 
-Next 16 里，项目根（或 `src/`）下的 `proxy.ts` 会在每个请求到达页面之前先跑一遍。它以前叫 middleware，功能一样。门户的入口长这样：
+Next 16 里，项目根（或 `src/`）下的 `proxy.ts` 会在每个请求到达页面之前先跑一遍。它以前叫 middleware，功能一样。门户的入口 `proxy` 先给这次请求算好埋点用的设备与会话 ID（v0.18 加的），再交给 `route` 按路径分流，分流的开头长这样：
 
-<CodeRef at="patra-portal/src/proxy.ts@d0ca49caf72d9d9aacd7459c1054cf9131b3759e" lines="82-87" />
+<CodeRef at="patra-portal/src/proxy.ts@ffc25c0bf848b54ae29bb08571a5c491c1f5089d" lines="122-127" />
 
 ```ts
-export async function proxy(req: NextRequest) {
+async function route(req: NextRequest, pass: Pass): Promise<NextResponse> {
   if (AUTH_PAGES.includes(req.nextUrl.pathname)) {
-    return leaveAuthPage(req);
+    return leaveAuthPage(req, pass);
   }
   // 冷静期查询先发出去；详情页的存在检查与它并行，结果出来后冷静期跳转优先
   const pending = pendingDeletionRedirect(req);
@@ -101,7 +101,7 @@ export async function proxy(req: NextRequest) {
 
 它管所有页面，但不管 `/api/` 和静态文件：
 
-<CodeRef at="patra-portal/src/proxy.ts@d0ca49caf72d9d9aacd7459c1054cf9131b3759e" lines="127-130" />
+<CodeRef at="patra-portal/src/proxy.ts@ffc25c0bf848b54ae29bb08571a5c491c1f5089d" lines="167-170" />
 
 ```ts
 /// 全部页面（冷静期跳转要覆盖任何页面），不含 `/api/`、`/_next/` 与带扩展名的静态文件

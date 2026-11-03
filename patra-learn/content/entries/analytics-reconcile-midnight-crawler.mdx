@@ -10,6 +10,9 @@ sources:
   - version: v0.18
     issue: PAP-171
     pr: 373
+  - version: v0.18
+    issue: PAP-171
+    pr: 374
 personalEnv: false
 ---
 
@@ -60,9 +63,15 @@ SELECT
 FROM events;
 ```
 
-这个爬虫会话在表里就有了两类行：零点前的事件写出 `first_day = D`、`has_bot = 0`，零点后的事件写出 `first_day = D+1`、`has_bot = 1`。对账查询按天跑，查 D 日时是这样写的：
+这个爬虫会话在表里就有了两类行：零点前的事件写出 `first_day = D`、`has_bot = 0`，零点后的事件写出 `first_day = D+1`、`has_bot = 1`。对账查询按天跑，查 D 日时，判真人会话的那一行当时写的是：
 
-<CodeRef at="patra-api/patra-analytics/patra-analytics-simulator/src/main/java/dev/patra/analytics/simulator/truth/Reconciler.java@8140a9d9482324670b63f00ab3c62690102196c5" lines="26-42" />
+```sql
+WHERE first_day BETWEEN {d:Date} - 1 AND {d:Date}
+```
+
+下面是后来修好之后的整条查询（PR #374），和当时唯一的区别是这一行末尾多了 `+ 1`：
+
+<CodeRef at="patra-api/patra-analytics/patra-analytics-simulator/src/main/java/dev/patra/analytics/simulator/truth/Reconciler.java@c3df651e18fcd34d66a1ece0e2cea00c78e9d881" lines="33-49" />
 
 ```java
   private static final String ACTUAL_SQL =
@@ -77,14 +86,14 @@ FROM events;
           GROUP BY article_id, session_id, person_id)
       WHERE session_id IN (
           SELECT session_id FROM session_quality
-          WHERE first_day BETWEEN {d:Date} - 1 AND {d:Date}
+          WHERE first_day BETWEEN {d:Date} - 1 AND {d:Date} + 1
           GROUP BY session_id HAVING max(has_client) = 1 AND max(has_bot) = 0)
       GROUP BY article_id
       HAVING viewers > 0
       """;
 ```
 
-`WHERE first_day BETWEEN {d:Date} - 1 AND {d:Date}` 只查前一天到当天的行，而且在 `GROUP BY` 之前生效。D+1 那行爬虫标记被滤掉，分组时这个会话只剩 `has_bot = 0` 的行，于是被当成了真人会话。真值那边按整个会话套规则，会话里有 `rate` 事件，整个不算，两边就差出了这几行。照这个机制推：它零点前打开过的每篇文献，在 D 日都会多算 1 个人；模拟器里的伪装爬虫只打开文献页、不读全文，所以只有「看过」受影响，这也和读过全文误差为 0 对得上。
+当时的写法只查前一天到当天的行，而且在 `GROUP BY` 之前生效。D+1 那行爬虫标记被滤掉，分组时这个会话只剩 `has_bot = 0` 的行，于是被当成了真人会话。真值那边按整个会话套规则，会话里有 `rate` 事件，整个不算，两边就差出了这几行。照这个机制推：它零点前打开过的每篇文献，在 D 日都会多算 1 个人；模拟器里的伪装爬虫只打开文献页、不读全文，所以只有「看过」受影响，这也和读过全文误差为 0 对得上。
 
 ## 为什么
 
@@ -128,6 +137,8 @@ FROM events;
 - **按会话 ID 限定范围**：像计数接口那样，先从当天的 `article_session_reads` 取出涉及的会话 ID，`session_quality` 只按 `session_id IN (…)` 过滤再分组。范围照样收窄，同一个会话的所有行都在。
 - **日期条件挪到聚合之后**：写成 `HAVING min(first_day) BETWEEN {d:Date} - 1 AND {d:Date} AND max(has_client) = 1 AND max(has_bot) = 0`。结果对，但 WHERE 里没了范围，要分组的会话变多，对账这种有 1 GiB 上限的查询要和上一条配合用。
 - **只设下限**：像热读那样只写 `first_day >=`，会话后面的行都参与分组。
+
+Patra 实际的修法（PR #374）是把上限放宽一天，改成 `BETWEEN {d:Date} - 1 AND {d:Date} + 1`：频率规则在一个设备 5 分钟内超过 30 篇时就开始标记，跨午夜的会话在次日那批写入里才被标上，多看一天就能把那一行纳进来，同时仍按天收窄范围、守住单条查询的内存上限。修复时加了 `ReconcilerIT`：先停掉后台合并，造一个跨午夜才被标记的会话，断言前一天不再把它算进去。
 
 <Callout kind="warn">
 

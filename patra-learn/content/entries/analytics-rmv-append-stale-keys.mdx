@@ -1,0 +1,150 @@
+---
+title: 刷新视图是追加写入：上一版有、这一版没有的键，FINAL 去不掉
+summary: ADS 表的刷新视图每小时把结果追加进 ReplacingMergeTree(computed_at)。FINAL 只会在同一个键的几版里挑最新的；一个会话后来多看了一页，从「单页」挪到「多页」，旧的「单页」那一行没有新版本来替它，面板一求和就算了两次。Patra 改为让面板读 <表>_latest：每天只取最近一次计算的全部行。
+type: pitfall
+difficulty: practice
+tags: [analytics, database]
+prerequisites: [analytics-refreshable-materialized-views]
+topics: [analytics-pipeline]
+sources:
+  - version: v0.18
+    issue: PAP-172
+    pr: 377
+personalEnv: false
+---
+
+<Diagnose
+  question="ads_daily_sessions 的键是（天, 合成, 会话类别, 漏斗级, 是否单页）。09:17 刷新时，会话 s1 只看了一页，表里追加了一行（10-01, 级 1, 单页, 会话数 1）；之后 s1 又看了一页、做了一次检索，10:17 刷新追加了一行（10-01, 级 2, 多页, 会话数 1）。这时查 SELECT sum(sessions) FROM ads_daily_sessions FINAL WHERE day = '10-01'，得到几？"
+  options={["1：FINAL 按 computed_at 只留 10:17 那一版", "2：两行的键不同，FINAL 两行都留", "0：FINAL 发现同一个会话有冲突，两行都丢掉"]}
+  answer="B"
+  ifRight="对。FINAL 只在同一个键里挑版本，两行的键不一样，它不认为它们是同一件事的两版。这篇讲这个坑怎么来的、Patra 怎么改。"
+  ifWrong="答案是 B。ReplacingMergeTree 按排序键去重：只有键完全相同的几行才会被当成「同一行的几个版本」、留 computed_at 最大的。s1 换了漏斗级和是否单页，键变了，旧行没有新版本来替它。这题考的是 ADS 目标表怎么按版本去重，先读定时刷新那篇。"
+  suggest="analytics-refreshable-materialized-views"
+/>
+
+## 坑
+
+<Callout kind="lead" label="坑在哪">
+
+刷新视图把每次的结果追加进按版本去重的目标表时，上一版有、这一版没有的键会一直留在表里，`FINAL` 也去不掉；面板按天求和，就把旧行和新行一起算了，数字翻倍。
+
+</Callout>
+
+这个坑是 PR 合并前的全分支终审指出的，没有到 mini 上才暴露。实施计划最初的约定是「读时一律 `FINAL`」，也写了一个「同一天算两次不翻倍」的测试，测试是绿的。问题出在那个测试碰巧测不到它。
+
+## 为什么
+
+`ReplacingMergeTree(computed_at)` 的规则是：**排序键完全相同**的几行，合并后（或查询加 `FINAL` 时）只留 `computed_at` 最大的那行。它不知道「10-01 单页的那一行」和「10-01 多页的那一行」说的是同一个会话，在它眼里这是两个不同的键，各留各的。
+
+会话表的键里有漏斗级、是否单页、会话类别。一个会话还没结束时，这三样都可能变：多看一页，从单页挪到多页；做了检索，漏斗级往上走；后面来了一条爬虫事件，从真人挪到爬虫。每挪一次，下一次刷新就在新的键上写一行，旧键上的那一行原样留着。
+
+<Compare
+  title="同一个会话在两次刷新之间长大了，面板读哪个"
+  variants={[
+    { label: "读目标表 FINAL", steps: ["09:17 刷新：s1 只看了一页，追加（级 1, 单页, 1）", "s1 又看了一页、检索了一次", "10:17 刷新：追加（级 2, 多页, 1）", "面板 FINAL 后按天求和"], results: [{ label: "FINAL 后剩下的行", value: "（级 1, 单页, 1）和（级 2, 多页, 1）", tone: "bad" }, { label: "10-01 会话数", value: "2", tone: "bad" }, { label: "跳出率分子", value: "多了 1 个单页会话", tone: "bad" }], verdict: { tone: "bad", head: "翻倍了。", text: "旧键上没有 10:17 的新版本，FINAL 无从替换，09:17 那行一直被算进去。" } },
+    { label: "读 _latest", steps: ["09:17 刷新：s1 只看了一页，追加（级 1, 单页, 1）", "s1 又看了一页、检索了一次", "10:17 刷新：追加（级 2, 多页, 1）", "面板读 _latest 后按天求和"], results: [{ label: "_latest 返回的行", value: "只有（级 2, 多页, 1）", tone: "ok" }, { label: "10-01 会话数", value: "1", tone: "ok" }, { label: "跳出率分子", value: "不含 s1", tone: "ok" }], verdict: { tone: "ok", head: "对了。", text: "_latest 按天取 computed_at 最大的那次计算：10:17 那次算出的全部行，09:17 的整版都不看。" } }
+  ]}
+/>
+
+<Callout kind="insight" label="怎么认出它">
+
+- 只有**键里带着「会变的分类」**的表才会中招：同一个对象在两次计算之间能从一个键挪到另一个键（单页 → 多页、真人 → 爬虫；留存表里，认回之后某个首日下的一种口径组合整组消失，而那天的其他行还在）。
+- 症状是按天求和偏大，偏多的恰好是「早先的分类」：跳出率偏高、低漏斗级的会话偏多。
+- 键集合稳定的表测不出来。活跃表的键是（天, 合成, 口径），同一天算几次都还是那几个键，`FINAL` 完全够用，计划里那个测试就是在它上面写的。
+
+</Callout>
+
+这就是那个绿着的测试：同一天回填两次，读 `FINAL`，数字不变。
+
+<CodeRef at="patra-api/patra-analytics/patra-analytics-infra/src/integrationTest/java/dev/patra/analytics/infra/ads/AdsDailyActiveIT.java@c3df651e18fcd34d66a1ece0e2cea00c78e9d881" lines="80-87" />
+
+```java
+  @Test
+  void recomputing_a_day_does_not_double_count() {
+    backfill(client, "ads_daily_active", D3, D3);
+    backfill(client, "ads_daily_active", D3, D3);
+
+    assertThat(value("dau", "human", false)).isEqualTo(1);
+    assertThat(value("wau", "human", false)).isEqualTo(2);
+  }
+```
+
+两次之间数据没有变化，每个键都有新版本替换旧版本，所以它证明不了「数据变了以后」也对。
+
+## 怎么避开
+
+不靠键去重，改成按「哪一次计算」取：每张带 `_latest` 的 ADS 表都加一个读取视图，面板只读它。
+
+<CodeRef at="patra-api/patra-analytics/patra-analytics-infra/src/main/resources/clickhouse/V9__ads_daily_sessions.sql@c3df651e18fcd34d66a1ece0e2cea00c78e9d881" lines="16-20" />
+
+```sql
+-- 面板读这个视图：每天只取最近一次计算的结果。刷新只追加这一次算出的键，上一版有、这一版没有的键
+-- （例如会话后来多看了一页，从「单页」挪到「多页」）FINAL 去不掉，按天取 computed_at 最大的那一版才对。
+CREATE VIEW IF NOT EXISTS ads_daily_sessions_latest AS
+SELECT * FROM ads_daily_sessions
+WHERE (day, computed_at) IN (SELECT day, max(computed_at) FROM ads_daily_sessions GROUP BY day);
+```
+
+它成立靠两个前提：
+
+1. **一次计算的所有行共用一个 `computed_at`**：计算视图输出 `now64(3)`，同一条查询里它是常量。所以「`computed_at` 最大」等于「最近一次计算」。
+2. **每次计算都把那一天的全部键重新写一遍**：计算视图对区间里的每一天给出完整结果，而不是只写变了的键。所以取最近一次计算，就拿到了那一天完整、自洽的一套数字。
+
+修好后补的测试，就是开头那个场景：先回填一次，会话再长大，再回填一次，`_latest` 里只剩一行，而且是新的那一行。
+
+<CodeRef at="patra-api/patra-analytics/patra-analytics-infra/src/integrationTest/java/dev/patra/analytics/infra/ads/AdsDailySessionsIT.java@c3df651e18fcd34d66a1ece0e2cea00c78e9d881" lines="121-142" />
+
+```java
+  @Test
+  void recompute_after_session_grows_keeps_only_latest() {
+    insert(client, "T|v1", List.of(event("page_viewed", "client", "2026-10-01 10:00:00")));
+    backfill(client, "ads_daily_sessions", D, D);
+    insert(
+        client,
+        "T|v2",
+        List.of(
+            event("page_viewed", "client", "2026-10-01 10:05:00"),
+            event("search_performed", "server", "2026-10-01 10:05:05")));
+
+    backfill(client, "ads_daily_sessions", D, D);
+
+    List<GenericRecord> latest =
+        rows(
+            client,
+            "SELECT funnel_level, single_page, sessions FROM ads_daily_sessions_latest"
+                + " WHERE day = '%s'".formatted(D));
+    assertThat(latest).hasSize(1);
+    assertThat(latest.getFirst().getInteger("funnel_level")).isEqualTo(2);
+    assertThat(latest.getFirst().getBoolean("single_page")).isFalse();
+  }
+```
+
+看板 JSON 里所有面板也随之改读 `_latest`，白名单测试对 ADS 表只放行 `_latest` 视图（重复率表除外，见下面的小测）。
+
+<Callout kind="warn">
+
+`_latest` 是按天取最近一次计算。从那条 SQL 也能看出它的边界：如果某次计算对某一天一行都没写出来，这一天没有更新的 `computed_at`，读到的仍是上一版。所以计算视图要保证「区间里的每一天都给出完整结果」，不能为了省事只写有变化的行。
+
+</Callout>
+
+<Quiz
+  title="你猜会怎样"
+  questions={[
+    {
+      question: "看板读的 ADS 表里只有一张没有 _latest 视图，面板直接读它。是哪一张，为什么它可以？",
+      options: ["ads_daily_sessions：会话数可以相加，加多了也看不出来", "ads_cohort_retention：留存只看比例，分子分母一起翻倍不影响结果", "ads_daily_counter_items：文献太多，每天取最新一版太慢", "ads_daily_duplicates：键只有天一列，每次计算一定写回同一个键"],
+      answer: "D",
+      explain: "重复率表一天一行，键就是 day。同一天的新版本必然落在同一个键上，旧行一定有新版本来替，不存在「上一版有、这一版没有的键」。坑只出在键里带了会变的分类的表上。"
+    }
+  ]}
+/>
+
+<Transfer
+  prompt="另一个系统每小时把「今天最热的 10 篇文献」追加进一张 ReplacingMergeTree(computed_at) 表，键是（天, 文献 ID），列是热度分和名次，页面读 FINAL 后按名次排序取前 10。会出什么问题？你会怎么改？"
+  points={[
+    { label: "掉出榜单的文献留着", text: "某篇 9 点在榜、10 点掉出去了，10 点那次没有它的行，FINAL 留着它 9 点的分数和名次，页面上会出现 11 篇甚至更多，或者名次重复。" },
+    { label: "按计算取最新", text: "和 Patra 一样加一个按天取 computed_at 最大那次计算的视图，页面只读它；前提是每次计算都写出完整的前 10。" },
+    { label: "或者换键", text: "把键改成（天, 名次），每次计算一定写回第 1 到第 10 名这 10 个键，新版本总能替掉旧版本，FINAL 就够了。" },
+    { label: "或者不追加", text: "如果表里只需要当前这一版，用整体替换的刷新（不写 APPEND），根本不留旧版本。" }
+  ]}
+/>

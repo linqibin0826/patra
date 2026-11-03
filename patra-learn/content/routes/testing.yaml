@@ -22,3 +22,4 @@ entries:
   - test-resttestclient-retries-429
   - test-e2e-wait-for-hydration
   - test-route-mocking-font-flash
+  - test-headless-ua-counted-as-bot

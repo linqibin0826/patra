@@ -1,0 +1,208 @@
+---
+title: 定时刷新的物化视图：每张 ADS 表都是计算视图、目标表、刷新视图、读取视图四件套
+summary: 写入时触发的物化视图只看得到刚写进来的一批，算不了 MAU、漏斗这种要看一整段时间的指标。ClickHouse 的定时刷新物化视图按时刻表重跑一条查询。Patra 的每张 ADS 表由四部分组成：口径只写一处的计算视图 <表>_calc(from, to)，按版本去重的目标表，每小时只重算最近两天的刷新视图 <表>_rmv，以及面板读的 <表>_latest；历史由回填脚本按天调同一个计算视图补上。
+type: concept
+difficulty: advanced
+tags: [analytics, database]
+prerequisites: [analytics-ads-layer, analytics-replacing-mergetree-uniqexact]
+topics: [analytics-pipeline]
+sources:
+  - version: v0.18
+    issue: PAP-172
+    pr: 377
+personalEnv: false
+---
+
+<Diagnose
+  question="面板要每天的 MAU：含当天往前 30 天里来过的独立人数。能不能像 article_session_reads 那样，挂一个写入时触发的物化视图，把 MAU 直接算进一张汇总表？"
+  options={["不能：插入触发的物化视图只看得到刚写进来的这一批，MAU 要看 30 天里的全部人", "能：只要汇总列用 max 这类幂等的聚合，重复写入也不怕", "能：物化视图会在后台合并时回头重扫源表，把 30 天补齐"]}
+  answer="A"
+  ifRight="对。插入触发只看「这一批」，算不了要看一整段时间的指标。这篇讲另一种物化视图：按时刻表重跑一条查询。"
+  ifWrong="答案是 A。插入触发的物化视图每次只拿到刚写进来的那一批，不读源表里已有的数据，也不会回头重算，这在「物化视图：写入时就汇总，所以汇总表只能存幂等的值」里讲过。这题还考为什么面板要一层预先算好的表，先读应用层那篇。"
+  suggest="analytics-ads-layer"
+/>
+
+<Callout kind="lead">
+
+定时刷新的物化视图（refreshable materialized view）按时刻表重跑一条 `SELECT`，把结果写进目标表；它每次都重新读源表里的一整段数据，而不是只看刚写进来的一批。
+
+</Callout>
+
+## 和写入时触发的物化视图差在哪
+
+第一批条目里讲的三个物化视图都是插入触发器：每写进一批事件，就对这一批算一次。它们便宜、实时，但看不到这一批以外的东西。面板要的指标恰好大多跨批、跨天：
+
+| | 写入时触发 | 定时刷新 |
+|---|---|---|
+| 什么时候算 | 每次有数据写进源表 | 按时刻表，例如每小时一次 |
+| 输入 | 刚写进来的这一批 | 一条完整的查询，想读多大范围都行 |
+| 适合 | 每行就能定下来的汇总：「这个会话看过这篇没有」 | 要看整个会话、整 30 天的：漏斗、MAU、留存 |
+| 结果多新 | 写入即生效 | 晚一个刷新周期 |
+| Patra 里 | `article_session_reads_mv` 等三个，这一版又加了 `device_user_links_mv` | 9 个 `ads_*_rmv` |
+
+所以两种不是替代关系。ADS 表里，活跃与留存就是从插入触发的日活表 `daily_person_activity` 再定时算出来的：前一种先把亿级明细压成每人每天一行，后一种再在这张小得多的表上算跨天的指标。
+
+## 每张 ADS 表的四件套
+
+每张 ADS 表都由四个对象组成，名字照同一个规律起：
+
+<Structure
+  title="ads_daily_active 的四件套，谁调谁"
+  nodes={[
+    { id: "rmv", label: "ads_daily_active_rmv", sub: "刷新视图 · 每小时", code: true, col: 1, row: 1, desc: "到点就调计算视图，参数是昨天和今天，结果追加进目标表。" },
+    { id: "script", label: "backfill-ads.sh", sub: "回填脚本 · 一天一条", code: true, col: 1, row: 2, desc: "补历史：对每一天调一次计算视图，INSERT 进目标表。" },
+    { id: "test", label: "AdsDailyActiveIT", sub: "集成测试 · 固定日期", code: true, col: 1, row: 3, desc: "灌一组手工构造的事件，对固定日期调计算视图，断言数字。" },
+    { id: "calc", label: "ads_daily_active_calc", sub: "计算视图 · 口径", code: true, col: 2, row: 2, desc: "带参数 from、to 的视图：给一段北京日期，算出这几天每天的 DAU / WAU / MAU。口径只写在这里。" },
+    { id: "table", label: "ads_daily_active", sub: "目标表 · 按版本去重", code: true, col: 3, row: 2, desc: "ReplacingMergeTree(computed_at)：同一个键算过几次就有几版，保留 computed_at 最大的那版。" },
+    { id: "latest", label: "ads_daily_active_latest", sub: "读取视图 · 面板读它", code: true, col: 4, row: 2, desc: "每天只取 computed_at 最大的那一次计算的全部行。" }
+  ]}
+  edges={[
+    { from: "rmv", to: "calc", label: "昨天 .. 今天" },
+    { from: "script", to: "calc", label: "某一天" },
+    { from: "test", to: "calc", label: "固定日期" },
+    { from: "calc", to: "table", label: "追加" },
+    { from: "table", to: "latest" }
+  ]}
+/>
+
+下面一件一件看。
+
+### 计算视图：口径只写一处
+
+ClickHouse 的参数化视图可以在视图里写占位符 `{from:Date}`，查询时像函数一样传参：
+
+<CodeRef at="patra-api/patra-analytics/patra-analytics-infra/src/main/resources/clickhouse/V7__ads_daily_active.sql@c3df651e18fcd34d66a1ece0e2cea00c78e9d881" lines="21-27" />
+
+```sql
+CREATE VIEW IF NOT EXISTS ads_daily_active_calc AS
+WITH person_days AS (
+    SELECT day, person_id, is_synthetic, max(has_client) = 1 AND max(is_bot) = 0 AS human
+    FROM daily_person_activity
+    WHERE day BETWEEN {from:Date} - 29 AND {to:Date}
+    GROUP BY day, person_id, is_synthetic
+),
+```
+
+调用时写 `SELECT * FROM ads_daily_active_calc(from = '2026-10-01', to = '2026-10-03')`。注意它读的范围比参数大：要算 `from` 那天的 MAU，得往前多读 29 天的日活。每张表的计算视图都要想清楚「算这几天，得读哪几天」，下面两篇坑就出在这里。
+
+把口径写成视图，是为了刷新、回填、测试三方调的是同一份 SQL。要是刷新视图里写一遍、回填脚本里再抄一遍，两份迟早会改得不一样，面板上新算的几天和回填的历史就不是一个口径。
+
+### 目标表：同一个键，留最新的一版
+
+目标表用 `ReplacingMergeTree(computed_at)`。重复行那篇讲的 `ReplacingMergeTree` 没带参数：合并时同一个排序键只留一行，留哪行不讲究，因为重复的事件内容完全一样。这里带了一个**版本列** `computed_at`：同一个键有几行时，合并（或查询时加 `FINAL`）后留下 `computed_at` 最大的那一行，也就是最近一次算的结果。
+
+计算视图在输出里写 `now64(3) AS computed_at`。同一条查询里 `now64(3)` 是常量，所以一次计算写出的所有行共用同一个 `computed_at`，可以把它当成「第几次计算」的标签。
+
+### 刷新视图：每小时，只重算最近两天
+
+<CodeRef at="patra-api/patra-analytics/patra-analytics-infra/src/main/resources/clickhouse/V7__ads_daily_active.sql@c3df651e18fcd34d66a1ece0e2cea00c78e9d881" lines="47-50" />
+
+```sql
+-- EMPTY：建好时不立刻算，按时刻表跑；各表错开分钟，避开整点（热读每小时整点重算）
+CREATE MATERIALIZED VIEW IF NOT EXISTS ads_daily_active_rmv
+REFRESH EVERY 1 HOUR OFFSET 7 MINUTE APPEND TO ads_daily_active EMPTY AS
+SELECT * FROM ads_daily_active_calc(from = toDate(now(), 'Asia/Shanghai') - 1, to = toDate(now(), 'Asia/Shanghai'));
+```
+
+逐个看这一行里的关键字：
+
+- `REFRESH EVERY 1 HOUR OFFSET 7 MINUTE`：每小时的第 7 分钟跑一次。
+- `APPEND TO ads_daily_active`：结果追加进目标表。一般说来，定时刷新的物化视图不写 `APPEND` 时，每次刷新会用新结果整体替换目标表；这里每次只算两天，整体替换就把历史全冲掉了，所以要追加。
+- `EMPTY`：建好时不立刻算一次，等到点再跑。迁移脚本在 analytics 服务启动时执行，视图建好后就按时刻表排队。
+- 参数 `toDate(now(), 'Asia/Shanghai') - 1` 到当天：只重算昨天和今天，「天」按北京时间。
+
+9 个刷新视图错开分钟，同一时刻只跑一个，并且避开整点，因为热读每小时整点重算：
+
+| 分钟 | 刷新视图 | 分钟 | 刷新视图 |
+|---|---|---|---|
+| 07 | `ads_daily_active_rmv` | 27 | `ads_daily_zero_result_terms_rmv` |
+| 10 | `ads_person_first_day_rmv` | 32 | `ads_daily_counter_items_rmv` |
+| 12 | `ads_cohort_retention_rmv` | 37 | `ads_daily_quality_rmv` |
+| 17 | `ads_daily_sessions_rmv` | 42 | `ads_daily_duplicates_rmv` |
+| 22 | `ads_daily_search_rmv` | | |
+
+留存是例外：它重算的是最近 32 个同期群（`- 31` 到当天），因为第 30 天的留存要等一个月才知道。每人首日表排在留存前两分钟，留存要用它，后面讲留存首日表的决策篇会说为什么有这张表。
+
+一次刷新具体发生了什么：
+
+<Stepper
+  title="10:17，ads_daily_sessions_rmv 跑了一次"
+  nodes={[
+    { id: "rmv", label: "刷新视图", sub: "_rmv" },
+    { id: "calc", label: "计算视图", sub: "_calc" },
+    { id: "table", label: "目标表", sub: "ReplacingMergeTree" },
+    { id: "latest", label: "读取视图", sub: "_latest" }
+  ]}
+  links={[
+    { from: "rmv", to: "calc", label: "昨天, 今天" },
+    { from: "calc", to: "table", label: "追加" },
+    { from: "table", to: "latest" }
+  ]}
+  steps={[
+    { caption: "10:17 到点。刷新视图调计算视图，参数是昨天和今天。", focus: ["rmv"], notes: [{ at: "table", text: "昨天、今天各有 09:17 那一版" }] },
+    { caption: "计算视图读明细，按会话聚合，算出昨天和今天每个维度组合的会话数。昨天的数和 09:17 那次可能不一样了。", focus: ["calc"], links: ["rmv>calc"], tokens: [{ id: "v", label: "10:17 版", at: "calc" }] },
+    { caption: "结果追加进目标表，每一行都带同一个 computed_at（10:17）。09:17 那一版还在表里，等后台合并。", focus: ["table"], links: ["calc>table"], tokens: [{ id: "v", label: "10:17 版", at: "table" }], notes: [{ at: "table", text: "昨天、今天各两版", tone: "wait" }] },
+    { caption: "面板读 _latest：每天只取 computed_at 最大的那次计算的行，09:17 那版不会被一起加进来。", focus: ["latest"], links: ["table>latest"], tokens: [{ id: "v", label: "10:17 版", at: "latest" }], notes: [{ at: "table", text: "昨天、今天各两版", tone: "wait" }, { at: "latest", text: "只有 10:17 版", tone: "ok" }] }
+  ]}
+  guesses={[
+    { before: 2, question: "今天的数据还在不断进来，所以要重算今天。那为什么连昨天也要每小时重算？", options: ["昨天的分区每小时会被后台合并一次，合并后要重新统计", "Grafana 默认时间范围包含昨天，必须保证它最新", "事件会迟到，跨午夜的会话也要等结束，昨天的数在今天还会变", "ClickHouse 的参数化视图要求区间至少两天"], answer: "C", explain: "浏览器攒批发、断网重发都会让事件晚到；一个 23:50 开始的会话要到第二天才结束。重算昨天就是给这些留一天的余量。比昨天更早到的事件就不再补进 ADS 了，设计时预期远小于 0.1%。" }
+  ]}
+/>
+
+### 读取视图：每天只取最近一次计算
+
+面板不直接读目标表，而是读 `<表>_latest`。它的条件只有一句：`WHERE (day, computed_at) IN (SELECT day, max(computed_at) FROM <表> GROUP BY day)`，即每天只留 `computed_at` 最大的那一次计算的全部行。
+
+为什么不直接 `SELECT … FINAL`？目标表明明已经按版本去重了。答案在下一篇坑「刷新视图是追加写入：上一版有、这一版没有的键，FINAL 去不掉」里，这里先记住结论：面板读 `_latest`，而 `_latest` 能成立，靠的正是「一次计算的所有行共用一个 `computed_at`」。
+
+## 历史：回填脚本按天调同一个计算视图
+
+刷新视图只算最近两天，2026-08-06 以来的历史要另外补。回填脚本做的事很朴素，对每张表、每一天执行一条 `INSERT … SELECT`，调的还是那个计算视图：
+
+<CodeRef at="patra-infra/scripts/backfill-ads.sh@c3df651e18fcd34d66a1ece0e2cea00c78e9d881" lines="69-80" />
+
+```bash
+for entry in ${TABLES}; do
+  table="${entry%%:*}"
+  reads_events="${entry##*:}"
+  day="${FROM}"
+  if [ "${reads_events}" = "1" ] && [[ "${day}" < "${EVENTS_FLOOR}" ]]; then
+    day="${EVENTS_FLOOR}"
+  fi
+  while ! [[ "${day}" > "${TO}" ]]; do
+    sql="INSERT INTO ${table} SELECT * FROM ${table}_calc(from = '${day}', to = '${day}')"
+    if [ "${DRY_RUN}" -eq 1 ]; then
+      echo "${sql}"
+    else
+```
+
+几个要点：
+
+- **一天一条，串行**：每条只算一天，内存与刷新时算一天的量相当，不会一条查询吃掉整个库。
+- **顺序固定**：十张表按 `device_user_links`、活跃、每人首日、留存、会话、检索……的顺序跑。留存要用前两张，必须排在后面。
+- **明细有下限**：读 `events` 的表标了 `1`，从 `events` 现存最早的分区开始（明细只留 90 天，更早的分区已经被删）；活跃与留存读保留 400 天的日活表，从 08-06 开始。
+- **重跑安全**：脚本注释里写明，面板读各表的 `_latest`，每天只取最近一次计算，同一天回填两次不会叠加。
+
+测试也是同一个思路：集成测试对固定日期调计算视图断言数字；另有一个测试对 9 个刷新视图逐个执行 `SYSTEM REFRESH VIEW` 和 `SYSTEM WAIT VIEW`，再查 `system.view_refreshes` 确认没有报错、目标表里有今天的数。PR 写的上线步骤里，第一步也是查 `system.view_refreshes`：9 个刷新视图都在排队、没有报错。
+
+<Quiz
+  title="考考自己"
+  questions={[
+    {
+      question: "回填脚本中途断了，你从 10-01 重新跑，10-01 这一天就被算了两次。面板上 10-01 的会话数会怎样？",
+      options: ["翻倍，追加写入的两版都被加起来了", "不变，_latest 只取那天最近一次计算的行", "不变，因为回填脚本会先删掉那一天再写", "要等后台合并完才会变回正确的数"],
+      answer: "B",
+      explain: "两次计算各写一版，computed_at 不同。_latest 每天只取最大的那个 computed_at，旧的一版不参与求和，和合并跑没跑无关。脚本本身不删数据。"
+    }
+  ]}
+/>
+
+<Transfer
+  prompt="有人嫌每小时重算两天太浪费，提议刷新视图只算今天（from 和 to 都传今天），昨天的数「反正昨天已经算过了」。你同意吗？如果是留存表，又会怎样？"
+  points={[
+    { label: "昨天的尾巴会丢", text: "昨天最后一次刷新在 23 点多，那之后到午夜的事件、以及第二天才到的迟到事件，再也没有机会被算进昨天。" },
+    { label: "跨午夜的会话定不下来", text: "23:50 开始的会话要到第二天才结束，只算今天时，它的后半段要么算不进来，要么被当成今天的新会话。" },
+    { label: "留存天然要回看", text: "同期群的第 1、7、30 天留存要等到那一天过完才知道，只算今天的同期群永远拿不到 d1 以后的数，所以留存表重算最近 32 个同期群。" },
+    { label: "代价换算", text: "每次多算一天，换来的是数字在一天之内收敛到准确；真要省，可以降低刷新频率，而不是缩短重算区间。" }
+  ]}
+/>

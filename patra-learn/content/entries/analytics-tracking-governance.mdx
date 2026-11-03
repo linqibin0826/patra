@@ -138,7 +138,7 @@ curl -u "patra:$CLICKHOUSE_PATRA_PASSWORD" 'http://<mini 的地址>:8123/?databa
 
 </Callout>
 
-这些维度原计划做成运营面板里的数据质量图（PAP-172），面板这一版还没做。
+这些维度后来做进了运营看板的数据质量那一组（PAP-172），由应用层表 `ads_daily_quality`、`ads_daily_duplicates` 和对账结果表 `reconcile_results` 供数，见「应用层（ADS）」那篇。
 
 <Transfer
   prompt="你加入一家公司，埋点已经有 300 个事件、四个团队在加埋点，没有任何 schema 校验，面板上的数字经常和业务库对不上。按这篇的三层治理和四个质量维度，你会先做哪几件事？"

@@ -95,7 +95,7 @@ personalEnv: false
 
 对账按天查 ClickHouse（每天一条查询，避开 `patra` 账号每条查询 1 GiB 的内存上限），和真值按（日期，文献）逐行对齐，两边缺的行当 0：
 
-<CodeRef at="patra-api/patra-analytics/patra-analytics-simulator/src/main/java/dev/patra/analytics/simulator/truth/Comparison.java@8140a9d9482324670b63f00ab3c62690102196c5" lines="30-56" />
+<CodeRef at="patra-api/patra-analytics/patra-analytics-simulator/src/main/java/dev/patra/analytics/simulator/truth/Comparison.java@c3df651e18fcd34d66a1ece0e2cea00c78e9d881" lines="31-57" />
 
 ```java
   Comparison add(List<TruthRow> truth, List<TruthRow> actual) {
@@ -133,7 +133,7 @@ personalEnv: false
 
 「看过人数」按人去重，这让它对丢数据很不敏感：一个人一天看了某篇三次，丢掉其中两条事件，人数还是 1。丢掉整类事件、或者丢掉 1% 的查看事件，人数几乎不动。所以对账另加一条条数判定：
 
-<CodeRef at="patra-api/patra-analytics/patra-analytics-simulator/src/main/java/dev/patra/analytics/simulator/truth/Reconciler.java@8140a9d9482324670b63f00ab3c62690102196c5" lines="135-145" />
+<CodeRef at="patra-api/patra-analytics/patra-analytics-simulator/src/main/java/dev/patra/analytics/simulator/truth/Reconciler.java@c3df651e18fcd34d66a1ece0e2cea00c78e9d881" lines="247-257" />
 
 ```java
   static ReconcileResult judge(

@@ -7,12 +7,15 @@ entries:
   - analytics-device-and-session
   - analytics-event-envelope-schema
   - analytics-bot-detection
+  - fe-analytics-tracking
   - analytics-kafka-log
   - analytics-columnar-storage
   - analytics-mergetree-parts
   - analytics-batch-insert-dedup-token
   - analytics-materialized-views
   - analytics-replacing-mergetree-uniqexact
+  - analytics-ads-layer
+  - analytics-refreshable-materialized-views
   - analytics-hot-reading-decay
   - analytics-co-reading-cosine
   - analytics-traffic-models
@@ -27,3 +30,7 @@ entries:
   - analytics-counts-live-rankings-snapshot
   - analytics-reading-history-privacy
   - analytics-reconcile-midnight-crawler
+  - analytics-rmv-append-stale-keys
+  - analytics-backfill-cross-midnight
+  - analytics-retention-first-day-table
+  - analytics-grafana-id-precision
