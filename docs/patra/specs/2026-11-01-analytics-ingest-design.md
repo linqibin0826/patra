@@ -234,7 +234,7 @@ TTL day + INTERVAL 400 DAY DELETE;
 `ingest` 子域的实现（`IngestUserDataCleanupGateway`）：
 
 - 找用户：日活表 `daily_person_activity` 的 `user_id`，并上 `article_session_reads` 里 `person_id` 以 `u:` 开头的用户，取游标之后最小的一批（明细表只留 90 天，日活表 400 天，文献 × 会话汇总长期保留：只看日活表，400 天前活跃过的用户注销时汇总里的记录永远找不到）。（PAP-168 终审补）流量模拟器的合成用户（ID ≥ 9×10¹⁸）不找：identity 里查不到，每天白查几万个（PAP-171 补）。
-- 删数据：**一批用户一条语句**（`WHERE user_id IN (...)`）：`events` 的排序键里没有 `user_id`，每条删除都要扫全表，逐个用户删会扫上百遍。顺序是 `events`、`dlq_events`、`article_session_reads`（`WHERE person_id IN ('u:…', …)`）、最后 `daily_person_activity`——它是找用户的唯一来源，先删了它，中途失败的话其他表的残留就再也找不到了。用轻量删除（`DELETE FROM`），立即对查询不可见，后台合并时真正删掉。`session_quality` 不含用户信息，不删。
+- 删数据：**一批用户一条语句**（`WHERE user_id IN (...)`）：`events` 的排序键里没有 `user_id`，每条删除都要扫全表，逐个用户删会扫上百遍。顺序是 `events`、`dlq_events`、`article_session_reads`（`WHERE person_id IN ('u:…', …)`）、`device_user_links`（运营分析面板的认回用，PAP-172 加）、最后 `daily_person_activity`——它是找用户的唯一来源，先删了它，中途失败的话其他表的残留就再也找不到了。用轻量删除（`DELETE FROM`），立即对查询不可见，后台合并时真正删掉。`session_quality` 不含用户信息，不删。
 - ClickHouse 没有事务，不包 `TransactionOperations`；中途失败任务标红，次日重跑时按同样顺序再删一遍（删除是幂等的）。
 - 因此底座的 `UserDataCleanupGateway` 是「按一批用户删」（`deleteAllOf(List<Long> userIds)`），与 notification 的「按单个用户」不同；PAP-169 的阅读历史按同一接口实现。
 - 删掉 `article_session_reads` 里的行，会让对外的「N 人看过」少掉这些人：这是删除权的本意（个保法第 47 条），隐私政策写明。
@@ -253,7 +253,7 @@ TTL day + INTERVAL 400 DAY DELETE;
 | `analytics.ingest.rejected`（计数） | 被 ClickHouse 拒绝、转进 dlq 的条数 |
 | `analytics.cleanup.users`（计数，标签 `outcome`） | 注销清理删掉 / 跳过的用户数 |
 
-Grafana 加一块 provisioning 的看板「Analytics 管线」：消费滞后、每批条数、写入耗时、采集的合格与拒收条数。业务指标面板归 PAP-172。
+Grafana 加一块 provisioning 的看板「Analytics 管线」：消费滞后、每批条数、写入耗时、采集的合格与拒收条数。业务指标面板归 PAP-172：看板「运营分析」，读另一层 ADS 表（`docs/patra/specs/2026-11-02-analytics-dashboard-design.md`）。
 
 ## 8. 测试
 

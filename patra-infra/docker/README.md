@@ -343,6 +343,8 @@ v0.18 起存行为数据的列式数据库：patra-analytics 把 Kafka 里的事
 - **内存**：容器上限 2 GB，`clickhouse/config.d/patra.xml` 照 Altinity 的低内存样例缩了缓存、并发和后台合并，自身用量上限是容器上限的 0.75。每条查询最多 1 GiB，聚合与排序超过 512 MiB 落盘。本机实测空闲约 100～180 MiB，写 1 亿行再做 `uniqExact` 聚合峰值 742 MiB。
 - **磁盘**：剩余空间低于 22 GB 时拒绝写入与合并（报 `NOT_ENOUGH_SPACE`），守住 runner 看门狗的 20 GB 红线；事件在 Kafka 里最多留 2 天，腾出空间后消费者接着写。服务日志降到 information、3 个 100 MB；系统日志只留 `query_log`、`part_log`（7 天）和 `crash_log`。
 
+- **运营分析看板**（PAP-172）：Grafana「Patra / 运营分析」只读 ADS 小表（每小时由 ClickHouse 刷新视图重算最近两天，数字最多晚 1 小时），不扫明细。看板以仓库里的 `grafana/provisioning/dashboards/patra/analytics-ops.json` 为准，界面里改了要导出回文件。ADS 表第一次上线或丢了历史时，在 mini 上补：`bash patra-infra/scripts/backfill-ads.sh --from 2026-08-06 --to <今天>`（按天串行，读明细的表从 `events` 现存最早的一天开始）。刷新状态：`SELECT view, status, last_success_time, exception FROM system.view_refreshes`。
+
 ```bash
 # 进库（default 账号，只在容器里能用）
 docker exec -it patra-clickhouse clickhouse-client

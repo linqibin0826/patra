@@ -138,6 +138,13 @@ class ClickHouseEventStoreAdapterIT {
         .isZero();
     assertThat(number(client, "SELECT count() AS n FROM daily_person_activity WHERE user_id = 5"))
         .isZero();
+    assertThat(number(client, "SELECT count() AS n FROM device_user_links WHERE user_id = 5"))
+        .isZero();
+    assertThat(
+            number(client, "SELECT count() AS n FROM ads_person_first_day WHERE person_id = 'u:5'"))
+        .isZero();
+    assertThat(number(client, "SELECT count() AS n FROM device_user_links WHERE user_id = 9"))
+        .isEqualTo(1);
     assertThat(number(client, "SELECT count() AS n FROM events WHERE user_id = 9")).isEqualTo(1);
     assertThat(
             number(

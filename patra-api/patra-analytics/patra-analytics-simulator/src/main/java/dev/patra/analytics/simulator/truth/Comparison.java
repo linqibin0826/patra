@@ -1,5 +1,6 @@
 package dev.patra.analytics.simulator.truth;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -71,6 +72,28 @@ final class Comparison {
         .mismatchedRows(mismatched)
         .sampleMismatches(samples)
         .passed(viewersError <= Reconciler.TOLERANCE && fulltextError <= Reconciler.TOLERANCE)
+        .build();
+  }
+
+  /// 当作一天的结果输出一行（这个比对只累加了这一天时用）。
+  ///
+  /// @param run 运行号
+  /// @param day 日期
+  /// @param delivered 这一天送达的事件数
+  /// @param distinctEvents 这一天 ClickHouse 里的去重事件数
+  /// @return 一行
+  DailyReconcileRow daily(int run, LocalDate day, long delivered, long distinctEvents) {
+    return DailyReconcileRow.builder()
+        .run(run)
+        .day(day)
+        .delivered(delivered)
+        .distinctEvents(distinctEvents)
+        .viewersTruth(truthViewers)
+        .viewersCh(actualViewers)
+        .viewersAbsDiff(viewerDiff)
+        .fulltextTruth(truthFulltext)
+        .fulltextCh(actualFulltext)
+        .fulltextAbsDiff(fulltextDiff)
         .build();
   }
 

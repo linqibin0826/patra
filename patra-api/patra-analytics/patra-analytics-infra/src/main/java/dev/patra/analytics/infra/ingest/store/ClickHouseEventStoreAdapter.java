@@ -99,6 +99,9 @@ public class ClickHouseEventStoreAdapter implements EventStorePort {
     execute("DELETE FROM events WHERE user_id IN (" + ids + ")");
     execute("DELETE FROM dlq_events WHERE user_id IN (" + ids + ")");
     execute("DELETE FROM article_session_reads WHERE person_id IN (" + persons + ")");
+    execute("DELETE FROM device_user_links WHERE user_id IN (" + ids + ")");
+    execute("DELETE FROM ads_person_first_day WHERE person_id IN (" + persons + ")");
+    // 日活表是找用户的唯一来源，最后删：中途失败时其他表的残留次日还能再找到
     execute("DELETE FROM daily_person_activity WHERE user_id IN (" + ids + ")");
   }
 

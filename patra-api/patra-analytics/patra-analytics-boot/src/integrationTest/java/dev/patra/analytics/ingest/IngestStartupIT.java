@@ -93,7 +93,7 @@ class IngestStartupIT {
                     listeners.getListenerContainer("ingest-raw").isRunning()
                         && listeners.getListenerContainer("ingest-dlq").isRunning()))
         .isTrue();
-    assertThat(number(clickhouse, "SELECT count() AS n FROM schema_migrations")).isEqualTo(5);
+    assertThat(number(clickhouse, "SELECT count() AS n FROM schema_migrations")).isEqualTo(13);
   }
 
   private static String example(String file) throws IOException {
