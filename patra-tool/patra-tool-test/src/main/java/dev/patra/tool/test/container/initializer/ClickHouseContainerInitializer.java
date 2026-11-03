@@ -2,12 +2,15 @@ package dev.patra.tool.test.container.initializer;
 
 import dev.patra.tool.test.container.ContainerRegistry;
 import dev.patra.tool.test.container.ContainerType;
+import java.io.IOException;
+import java.io.UncheckedIOException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.test.util.TestPropertyValues;
 import org.springframework.context.ApplicationContextInitializer;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.testcontainers.clickhouse.ClickHouseContainer;
+import org.testcontainers.containers.Container;
 import org.testcontainers.utility.DockerImageName;
 
 /// ClickHouse 测试容器初始化器。
@@ -43,6 +46,7 @@ public class ClickHouseContainerInitializer
             new ClickHouseContainer(DockerImageName.parse(CLICKHOUSE_IMAGE))
                 .withDatabaseName(DATABASE);
         clickhouse.start();
+        flushSystemLogs(clickhouse);
         ContainerRegistry.register(ContainerType.CLICKHOUSE, clickhouse);
         log.info("ClickHouse 容器已启动: {}", httpUrl(clickhouse));
       }
@@ -61,6 +65,25 @@ public class ClickHouseContainerInitializer
             "patra.clickhouse.username=" + clickhouse.getUsername(),
             "patra.clickhouse.password=" + clickhouse.getPassword())
         .applyTo(applicationContext.getEnvironment());
+  }
+
+  /// 立刻落一次系统日志：`system.part_log` 等表要到第一次落盘（启动后约 7.5 秒）才建出来，
+  /// 读它的视图（patra-analytics 的数据质量 ADS 表）在那之前建不了。
+  ///
+  /// @param clickhouse 已启动的容器
+  private static void flushSystemLogs(ClickHouseContainer clickhouse) {
+    try {
+      Container.ExecResult result =
+          clickhouse.execInContainer("clickhouse-client", "-q", "SYSTEM FLUSH LOGS");
+      if (result.getExitCode() != 0) {
+        throw new IllegalStateException("ClickHouse 落系统日志失败: " + result.getStderr());
+      }
+    } catch (IOException e) {
+      throw new UncheckedIOException("ClickHouse 落系统日志失败", e);
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      throw new IllegalStateException("ClickHouse 落系统日志被中断", e);
+    }
   }
 
   /// 拼出容器 HTTP 接口的地址。

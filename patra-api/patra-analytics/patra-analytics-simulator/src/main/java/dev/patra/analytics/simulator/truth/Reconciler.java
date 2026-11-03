@@ -2,8 +2,12 @@ package dev.patra.analytics.simulator.truth;
 
 import com.clickhouse.client.api.Client;
 import com.clickhouse.client.api.query.GenericRecord;
+import com.clickhouse.data.ClickHouseFormat;
 import dev.patra.analytics.simulator.event.BeijingDays;
+import java.io.ByteArrayInputStream;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
+import java.time.Clock;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
@@ -11,6 +15,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeSet;
+import java.util.concurrent.TimeUnit;
+import java.util.function.BiConsumer;
 
 /// 对账（spec §7.3）：按天用 PAP-170「看过人数」的同一口径查 ClickHouse 汇总表，与真值逐行比对。
 ///
@@ -49,16 +55,43 @@ public final class Reconciler {
         AND is_synthetic AND {run}
       """;
 
+  private static final String PARTITION_SQL =
+      """
+      SELECT count() AS n FROM system.parts
+      WHERE database = currentDatabase() AND table = 'events' AND active AND partition_id = {p:String}
+      """;
+
+  private static final String DAILY_ROW =
+      "{\"run\":%d,\"day\":\"%s\",\"delivered\":%d,\"distinct_events\":%d,"
+          + "\"viewers_truth\":%d,\"viewers_ch\":%d,\"viewers_abs_diff\":%d,"
+          + "\"fulltext_truth\":%d,\"fulltext_ch\":%d,\"fulltext_abs_diff\":%d}";
+
+  /// `events` 保留 90 天、整个分区到期才删；到期前一天起就不对账这一天：分区里的数据片段按各自最晚一行到期，
+  /// 会在一天里陆续被删，对出来的去重条数偏低
+  private static final int TTL_SAFE_DAYS = 89;
+
   private final Client client;
   private final RunScope scope;
+  private final Clock clock;
+  private List<DailyReconcileRow> dailyRows = List.of();
 
   /// 创建对账器。
   ///
   /// @param client ClickHouse 客户端（默认库 `patra_analytics`）
   /// @param scope 本次运行的范围
   public Reconciler(Client client, RunScope scope) {
+    this(client, scope, Clock.system(BeijingDays.ZONE));
+  }
+
+  /// 创建对账器（测试可换时钟）。
+  ///
+  /// @param client ClickHouse 客户端（默认库 `patra_analytics`）
+  /// @param scope 本次运行的范围
+  /// @param clock 判断哪些天临近 TTL 的时钟
+  public Reconciler(Client client, RunScope scope, Clock clock) {
     this.client = client;
     this.scope = scope;
+    this.clock = clock;
   }
 
   /// ClickHouse 里某天各篇的看过、读过全文人数。
@@ -97,31 +130,109 @@ public final class Reconciler {
 
   /// 对账：真值文件一天一天读、一天一天查一遍比对（不把整份真值放进内存）；摘要里有、真值里没有的天也查。
   ///
+  /// `events` 里这一天的分区已被 90 天 TTL 删掉、或临近删除（[#TTL_SAFE_DAYS]）的，整天跳过：不比对、不计入送达数，
+  /// 也不出逐天结果，否则去重条数偏低会被当成丢失（面板 spec §6）。
+  ///
   /// @param truthFile 真值文件
   /// @param summary 运行摘要
-  /// @return 结果
+  /// @return 结果；逐天结果见 [#dailyRows()]
   public ReconcileResult reconcile(Path truthFile, RunSummary summary) {
     TreeSet<LocalDate> pending = new TreeSet<>();
     summary.eventsByDay().keySet().forEach(day -> pending.add(LocalDate.parse(day)));
     Comparison comparison = new Comparison();
+    List<DailyReconcileRow> daily = new ArrayList<>();
     long[] unique = new long[1];
-    TruthFile.forEachDay(
-        truthFile,
-        (day, rows) -> {
-          comparison.add(rows, actual(day));
-          unique[0] += uniqueEvents(day);
+    long[] skippedDelivered = new long[1];
+    BiConsumer<LocalDate, List<TruthRow>> check =
+        (day, truth) -> {
           pending.remove(day);
-        });
-    for (LocalDate day : pending) {
-      comparison.add(List.of(), actual(day));
-      unique[0] += uniqueEvents(day);
+          long delivered = summary.eventsByDay().getOrDefault(day.toString(), 0L);
+          if (nearTtl(day) || !partitionExists(day)) {
+            skippedDelivered[0] += delivered;
+            return;
+          }
+          List<TruthRow> actual = actual(day);
+          long dayUnique = uniqueEvents(day);
+          comparison.add(truth, actual);
+          unique[0] += dayUnique;
+          daily.add(
+              new Comparison().add(truth, actual).daily(scope.run(), day, delivered, dayUnique));
+        };
+    TruthFile.forEachDay(truthFile, check);
+    for (LocalDate day : List.copyOf(pending)) {
+      check.accept(day, List.of());
     }
+    dailyRows = List.copyOf(daily);
+    long delivered = summary.deliveredEvents() - skippedDelivered[0];
     return judge(
         comparison.result(),
-        summary.deliveredEvents(),
+        delivered,
         summary.uncertainEvents(),
         unique[0],
-        summary.deliveredEvents() + summary.resentEvents());
+        delivered + summary.resentEvents());
+  }
+
+  /// 最近一次 [#reconcile] 的逐天结果，按日期升序。
+  ///
+  /// @return 逐天结果
+  public List<DailyReconcileRow> dailyRows() {
+    return dailyRows;
+  }
+
+  /// 把逐天结果写进 `reconcile_results`；同一运行、同一天重写时读 `FINAL` 取最新一次。
+  ///
+  /// @param rows 逐天结果
+  public void writeDailyRows(List<DailyReconcileRow> rows) {
+    if (rows.isEmpty()) {
+      return;
+    }
+    StringBuilder body = new StringBuilder();
+    rows.forEach(
+        row ->
+            body.append(
+                    DAILY_ROW.formatted(
+                        row.run(),
+                        row.day(),
+                        row.delivered(),
+                        row.distinctEvents(),
+                        row.viewersTruth(),
+                        row.viewersCh(),
+                        row.viewersAbsDiff(),
+                        row.fulltextTruth(),
+                        row.fulltextCh(),
+                        row.fulltextAbsDiff()))
+                .append('\n'));
+    try {
+      client
+          .insert(
+              "reconcile_results",
+              new ByteArrayInputStream(body.toString().getBytes(StandardCharsets.UTF_8)),
+              ClickHouseFormat.JSONEachRow)
+          .get(1, TimeUnit.MINUTES)
+          .close();
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      throw new IllegalStateException("写对账结果被中断", e);
+    } catch (Exception e) {
+      throw new IllegalStateException("写对账结果到 ClickHouse 失败", e);
+    }
+  }
+
+  /// 这一天的明细是否已到或临近 90 天 TTL。
+  ///
+  /// @param day 北京时间的日期
+  /// @return 是为 `true`
+  private boolean nearTtl(LocalDate day) {
+    return !day.isAfter(LocalDate.now(clock).minusDays(TTL_SAFE_DAYS));
+  }
+
+  /// `events` 里这一天的分区还在不在。
+  ///
+  /// @param day 北京时间的日期
+  /// @return 在为 `true`
+  private boolean partitionExists(LocalDate day) {
+    String partition = day.toString().replace("-", "");
+    return client.queryAll(PARTITION_SQL, Map.of("p", partition)).getFirst().getLong("n") > 0;
   }
 
   /// 加上条数判定：「看过人数」按人去重，丢了整类事件或 1% 的查看事件也几乎不动它，所以还要求

@@ -31,10 +31,11 @@ public final class ReconcileCommand implements Callable<Integer> {
     Path dir = run.runDirectory();
     RunSummary summary = RunSummary.read(dir.resolve("summary.json"), mapper);
     try (Client client = clickhouse.client()) {
-      ReconcileResult result =
-          new Reconciler(client, new RunScope(run.run))
-              .reconcile(dir.resolve("truth.csv.gz"), summary);
+      Reconciler reconciler = new Reconciler(client, new RunScope(run.run));
+      ReconcileResult result = reconciler.reconcile(dir.resolve("truth.csv.gz"), summary);
       result.write(dir.resolve("reconcile.json"), mapper);
+      // 逐天结果写进 ClickHouse，运营分析面板画丢失率（面板 spec §6）
+      reconciler.writeDailyRows(reconciler.dailyRows());
       System.out.printf(
           "看过：真值 %,d / ClickHouse %,d，误差 %.3f%%；读过全文：真值 %,d / ClickHouse %,d，误差 %.3f%%%n"
               + "写入 %,d 行，去重后 %,d 条（送达 %,d 条，结果不明 %,d 条）；%s%n",

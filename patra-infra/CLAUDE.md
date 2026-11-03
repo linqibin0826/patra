@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 这个目录是什么
 
-`patra-infra` 是 Patra 的**基建配置目录**，不是应用代码。它只包含：Docker Compose 编排（`docker/`）+ CD 路由与部署逻辑（`cd/`）+ macOS 运维脚本（`scripts/`）+ Nacos 配置文件（`nacos/`）。这里没有构建系统、没有 lint —— 改动通过 `docker compose` 重启容器或 `launchctl` 重载 agent 来"生效"。仅有的可执行测试是 `cd/detect-changes.test.sh`、`cd/deploy.test.sh` 与 `scripts/install-github-runner.test.sh`（纯 bash stub 单测，直接 `bash` 运行，改对应脚本时必须跑）；`scripts/nacos-push.sh` 由 starter 的 `NacosPushScriptIT` 对真实 Nacos 测试（`./gradlew :patra-tool:patra-tool-launch:integrationTest`）。
+`patra-infra` 是 Patra 的**基建配置目录**，不是应用代码。它只包含：Docker Compose 编排（`docker/`）+ CD 路由与部署逻辑（`cd/`）+ macOS 运维脚本（`scripts/`）+ Nacos 配置文件（`nacos/`）。这里没有构建系统、没有 lint —— 改动通过 `docker compose` 重启容器或 `launchctl` 重载 agent 来"生效"。仅有的可执行测试是 `cd/detect-changes.test.sh`、`cd/deploy.test.sh`、`scripts/install-github-runner.test.sh` 与 `scripts/backfill-ads.test.sh`（纯 bash stub 单测，直接 `bash` 运行，改对应脚本时必须跑）；`scripts/nacos-push.sh` 由 starter 的 `NacosPushScriptIT` 对真实 Nacos 测试（`./gradlew :patra-tool:patra-tool-launch:integrationTest`）。
 
 完整的部署手册、服务 URL、凭据、故障排查在 `docker/README.md`，本文件只补充架构大图景和容易踩的非显性约束。MacBook ↔ Mac mini 的连接 / 地址 / 路由类问题（含 tailscale、Shadowrocket、各组件 IP 注册）单独记在 `docs/mac-mini-connectivity.md`。
 
@@ -87,3 +87,4 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | `nacos-verify.sh [--expect-services]` | Mac mini | Nacos 加固验收，9 项 PASS / FAIL（加 `--expect-services` 为 10 项）；只读写探针 |
 | `nacos-push.sh [--check] [目录]` | Mac mini（CD）/ MacBook | 把 nacos/dev 同步到 Nacos dev / DEFAULT_GROUP：发布、跳过未变化、删除多余；--check 只对比（0 一致 / 2 有差异 / 1 出错） |
 | `nacos-lib.sh` | — | nacos-init、nacos-verify、nacos-push 共用的函数，只供 source |
+| `backfill-ads.sh --from D --to D [--dry-run]` | Mac mini | 按天回填运营分析看板的 ADS 表（调各表的 `*_calc` 计算视图），读明细的表从 `events` 现存最早的一天开始 |

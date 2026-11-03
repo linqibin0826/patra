@@ -27,9 +27,9 @@ class ClickHouseMigratorIT {
     migrator.migrate();
     migrator.migrate();
 
-    assertThat(number(client, "SELECT count() AS n FROM schema_migrations")).isEqualTo(5);
+    assertThat(number(client, "SELECT count() AS n FROM schema_migrations")).isEqualTo(13);
     assertThat(texts(client, "SELECT toString(version) FROM schema_migrations ORDER BY version"))
-        .containsExactly("1", "2", "3", "4", "5");
+        .containsExactly("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13");
     assertThat(
             texts(
                 client,
@@ -50,7 +50,7 @@ class ClickHouseMigratorIT {
 
     new ClickHouseMigrator(client).migrate();
 
-    assertThat(number(client, "SELECT count() AS n FROM schema_migrations")).isEqualTo(5);
+    assertThat(number(client, "SELECT count() AS n FROM schema_migrations")).isEqualTo(13);
   }
 
   @Test
