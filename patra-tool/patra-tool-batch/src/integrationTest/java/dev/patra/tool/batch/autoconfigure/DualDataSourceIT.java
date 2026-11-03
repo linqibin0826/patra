@@ -3,6 +3,7 @@ package dev.patra.tool.batch.autoconfigure;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.zaxxer.hikari.HikariDataSource;
+import dev.patra.tool.batch.schema.BatchSchemaInitializer;
 import javax.sql.DataSource;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -12,6 +13,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.ApplicationContext;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 
 /// 双数据源集成测试。
@@ -51,6 +53,8 @@ class DualDataSourceIT {
   @Autowired
   @Qualifier("batchDataSource")
   private DataSource batchDataSource;
+
+  @Autowired private DataSource primaryDataSource;
 
   @Autowired private JobRepository jobRepository;
 
@@ -98,6 +102,27 @@ class DualDataSourceIT {
   void batchTransactionManager_ShouldBeCreated() {
     // Then: batchTransactionManager Bean 应存在
     assertThat(applicationContext.containsBean("batchTransactionManager")).isTrue();
+  }
+
+  @Test
+  @DisplayName("配置独立数据源时：Schema 初始化器应被创建")
+  void schemaInitializer_ShouldBeCreated() {
+    assertThat(applicationContext.getBeansOfType(BatchSchemaInitializer.class)).hasSize(1);
+  }
+
+  @Test
+  @DisplayName("配置独立数据源时：BATCH_* 表只建在独立库，主库里一张都没有")
+  void batchTables_ShouldOnlyExistInBatchDatabase() {
+    String countBatchTables =
+        "SELECT count(*) FROM information_schema.tables WHERE table_name LIKE 'batch\\_%'";
+
+    Integer inBatchDatabase =
+        new JdbcTemplate(batchDataSource).queryForObject(countBatchTables, Integer.class);
+    Integer inPrimaryDatabase =
+        new JdbcTemplate(primaryDataSource).queryForObject(countBatchTables, Integer.class);
+
+    assertThat(inBatchDatabase).isEqualTo(6);
+    assertThat(inPrimaryDatabase).isZero();
   }
 
   @Test

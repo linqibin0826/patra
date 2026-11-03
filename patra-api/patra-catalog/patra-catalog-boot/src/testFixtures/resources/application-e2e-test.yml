@@ -34,7 +34,7 @@ spring:
     validate-on-migrate: false
     clean-disabled: false  # 允许清理（仅测试）
   # Spring Batch 配置
-  # BATCH_* 元数据表由 patra-spring-boot-starter-batch 自动初始化
+  # BATCH_* 元数据表由 patra-tool-batch 在 patra.batch.datasource 指向的库里自动初始化
   batch:
     job:
       enabled: false  # 禁止启动时自动运行 Job
@@ -49,6 +49,13 @@ patra:
   # Spring Batch 配置
   batch:
     enabled: true
+    # Batch 元数据库必须显式配置（缺了启动失败，不退回主数据源）。E2E 有意指向同一个测试库，
+    # 测试清理直接用主库 JdbcTemplate 删 BATCH_* 表
+    datasource:
+      url: ${spring.datasource.url}
+      username: ${spring.datasource.username}
+      password: ${spring.datasource.password}
+      driver-class-name: ${spring.datasource.driver-class-name}
   catalog:
     scopus:
       api-key: ""

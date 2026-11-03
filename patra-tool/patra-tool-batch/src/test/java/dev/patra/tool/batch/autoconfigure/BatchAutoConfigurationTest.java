@@ -21,7 +21,9 @@ class BatchAutoConfigurationTest {
           .withConfiguration(
               AutoConfigurations.of(JacksonAutoConfiguration.class, BatchAutoConfiguration.class))
           .withBean(
-              "dataSource", DataSource.class, BatchAutoConfigurationTest::postgresLikeDataSource);
+              "batchDataSource",
+              DataSource.class,
+              BatchAutoConfigurationTest::postgresLikeDataSource);
 
   /// 只回答元数据的假数据源：JobRepository 装配时要问数据库产品名，不真连库。
   private static DataSource postgresLikeDataSource() {
@@ -57,8 +59,25 @@ class BatchAutoConfigurationTest {
                 BatchAutoConfiguration.class,
                 ObservationAutoConfiguration.class))
         .withBean(
-            "dataSource", DataSource.class, BatchAutoConfigurationTest::postgresLikeDataSource)
+            "batchDataSource", DataSource.class, BatchAutoConfigurationTest::postgresLikeDataSource)
         .run(ctx -> assertThat(ctx).hasBean("batchObservabilityBeanPostProcessor"));
+  }
+
+  @Test
+  void should_fail_to_start_when_only_primary_datasource_exists() {
+    new ApplicationContextRunner()
+        .withConfiguration(
+            AutoConfigurations.of(JacksonAutoConfiguration.class, BatchAutoConfiguration.class))
+        .withBean(
+            "dataSource", DataSource.class, BatchAutoConfigurationTest::postgresLikeDataSource)
+        .run(
+            ctx ->
+                assertThat(ctx)
+                    .hasFailed()
+                    .getFailure()
+                    .rootCause()
+                    .isInstanceOf(IllegalStateException.class)
+                    .hasMessageContaining("patra.batch.datasource.url"));
   }
 
   @Test

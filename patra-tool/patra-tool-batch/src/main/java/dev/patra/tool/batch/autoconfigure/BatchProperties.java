@@ -11,7 +11,7 @@ import org.springframework.validation.annotation.Validated;
 /// @param enabled 总开关
 /// @param tablePrefix JobRepository 表前缀
 /// @param chunk 分块大小
-/// @param datasource 独立的 Batch 元数据库；不配 `url` 则用主数据源
+/// @param datasource 独立的 Batch 元数据库；启用 Batch 时必须配 `url`，不退回主数据源
 /// @param schema 启动时建表
 /// @param importLimit 导入条数上限（调试用）
 /// @param metrics 进度指标
@@ -35,7 +35,7 @@ public record BatchProperties(
 
   /// 独立数据源。
   ///
-  /// @param url JDBC URL，空则不建独立数据源
+  /// @param url JDBC URL，空则不建独立数据源（启用 Batch 时会启动失败）
   /// @param username 用户名
   /// @param password 密码
   /// @param driverClassName 驱动类，空则由 URL 推断
