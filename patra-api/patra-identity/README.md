@@ -358,7 +358,7 @@ Redis 连不上、超时、`LOADING` / `READONLY` / `BUSY` / `MASTERDOWN`，以�
 - **再认证**：会话 HASH 多一个 `auth_at`（登录、注册、再认证、改密码时写）。改邮箱、踢设备（PAP-99）、注销（PAP-100）要求 10 分钟内输过密码：`ReauthenticationGuard` 按断言里的会话 ID 读 `auth_at`，会话不在 401，超窗或没有（第三方登录不写，第 18 节）403 `REAUTH_REQUIRED`。`POST /auth/reauth` 校验密码（共用登录失败限制）后换新令牌保留会话 ID（`RedisSessionStore.rotate`），旧令牌立即失效，门户要换 Cookie；`auth_at` 距今不足宽限期（10 秒）时不换、响应 `sessionToken` 为 `null`、门户保持现有 Cookie——两个标签页并发再认证时先换出的令牌保持有效。配置 `patra.identity.reauth.window`（10m）、`patra.identity.reauth.rotation-grace`（10s）。
 - **改密码**：每次都输当前密码（不走窗口）；新密码按注册规则、不能与当前相同（NFKC 后比较）；事务里锁行后再比一次凭据哈希是不是刚校验过的那个（并发改密码只有先到的生效，后到的 401）、换哈希、按用户批量作废令牌、撤销其余会话并记 `PASSWORD_CHANGED`、最后本机换令牌（刷新 `auth_at`；放最后一步，之前失败不碰旧令牌）；提交后发「密码已修改」。不存历史密码。
 - **找回密码**：申请一律 202、异步发信，未注册与已封禁不发（未注册分支做同样的随机数与哈希计算）；限流在查用户之前计数（同邮箱冷却 60 秒、每天 5；同 IP 每小时 20）。提交先过 IP 每分钟 10 的限制，密码不合规时令牌不被消费；成功后换哈希（没有凭据行就新建）、批量作废令牌（含待确认的改邮箱）、写 `email_verified_at`、撤销全部会话、清零登录失败计数与锁，发「密码已重设」，不自动登录。令牌 1 小时。
-- **改邮箱**：申请先过再认证；已有待确认 409 `EMAIL_CHANGE_PENDING`，新地址已被别人使用 409（和注册一致）；每账号每天 3 次。向新邮箱发 1 小时的确认链接；确认后立即生效（改 `email`、写验证时间、批量作废旧地址的令牌），旧邮箱收到含 7 天「不是我」链接的通知（新地址遮掩成 `c***@example.com`），新邮箱收到「已绑定」；确认不撤销会话。撤销：改回旧地址、作废全部令牌（撤销链接只作废比它更晚签发的，更早的保留——X → Y → Z 时攻击者先点 Y 的也废不掉原主 X 的）、删凭据（原密码作废）、撤销全部会话、向改回的地址发重设链接；注销冷静期内也能撤，撤销不碰注销状态。撤销令牌可并存，不被改密码 / 重设 / 再次改邮箱作废。
+- **改邮箱**：申请先过再认证；已有待确认 409 `EMAIL_CHANGE_PENDING`，新地址已被别人使用 409（和注册一致）；每账号每天 3 次。向新邮箱发 1 小时的确认链接；确认后立即生效（改 `email`、写验证时间、批量作废旧地址的令牌），旧邮箱收到含 7 天「不是我」链接的通知（新地址遮掩成 `c***@example.com`），新邮箱收到「已绑定」；确认不撤销会话。撤销：改回旧地址、作废全部令牌（撤销链接只作废比它更晚签发的，更早的保留——X → Y → Z 时攻击者先点 Y 的也废不掉原主 X 的）、删凭据（原密码作废）、删外部身份（攻击者绑的第三方账号不能再进来）、撤销全部会话、向改回的地址发重设链接；注销冷静期内也能撤，撤销不碰注销状态。撤销令牌可并存，不被改密码 / 重设 / 再次改邮箱作废。
 - **限流**：四个适配器共用 `action-throttle.lua`（一个可选冷却 + 任意个滑动窗口，时间由 Java 传入）。键：`idn:pw-reset:cooldown:email:{h}`、`idn:pw-reset:day:email:{h}`、`idn:pw-reset:hour:ip:{h}`、`idn:pw-reset-submit:minute:ip:{h}`、`idn:email-change:day:user:{userId}`，`h` 是 SHA-256 前 32 位，IP 取不到时是 `unknown`（所有未知来源共用一个桶，不放行）。受信转发（PAP-99）接通前 IP 是门户地址，两个 IP 维度等于全站配额。配置 `patra.identity.password-reset.*`、`patra.identity.email-change.per-account-daily`。
 - **邮件**：七封——`password-reset`（重设链接）、`password-changed`、`password-reset-done`、`email-change-confirm`（确认链接）、`email-changed-notice`（旧邮箱，含撤销链接）、`email-changed-confirmation`（新邮箱）、`email-change-reverted`（改回的地址，含重设链接）。落地页路径 `patra.identity.mail.links.reset-password-path`（`/reset-password`）、`confirm-email-change-path`（`/confirm-email-change`）、`revert-email-change-path`（`/revert-email-change`），链接格式同验证邮件。
 - **令牌、会话、密码的联动**：
@@ -371,7 +371,7 @@ Redis 连不上、超时、`LOADING` / `READONLY` / `BUSY` / `MASTERDOWN`，以�
 | 找回密码：重设 | 批量作废 | 全部撤销 | 换或新建 | 清零 |
 | 改邮箱：申请 / 取消 | 作废旧的确认令牌（再签发） | — | — | — |
 | 改邮箱：确认 | 批量作废，再签发撤销令牌 | 不动 | — | — |
-| 改邮箱：撤销 | 批量作废 + 更晚签发的撤销令牌 | 全部撤销 | 删凭据 | — |
+| 改邮箱：撤销 | 批量作废 + 更晚签发的撤销令牌 | 全部撤销 | 删凭据、删外部身份 | — |
 
 ## 12. 资料、隐私设置与公开主页
 
@@ -527,6 +527,7 @@ patra:
 - **老用户**：按 `(provider, subject)` 找账号，永不按邮箱合并。事务里锁用户行（和封禁互斥）、更新账号标识与最近登录时间、建不带密码证明的会话；封禁 403，注销中照常建会话；提交后走新设备提醒（`NewDeviceLoginNotifier`，和密码登录共用）。
 - **首次注册**：账号在邮箱验证通过时才创建，之前只有 Redis 里的待补填记录，这是防预劫持的关键。凭证（`ticket`）只给发起的浏览器，门户写进 HttpOnly Cookie。验证码 6 位数字，只存和凭证绑定的哈希，错 5 次作废，绑定发码时的用户名和邮箱。邮箱已注册时不发码、不建账号。建好的账号邮箱已验证、没有密码凭据。
 - **绑定**：`POST /me/login-methods/{provider}/link` 先查状态、邮箱已验证、这一家没绑过、再认证，再用官方的 `OAuth2AuthorizationRequestResolver` 造授权请求，把发起的用户和会话记进它的属性。回调时现解断言（安全上下文里已经是框架的令牌），用户或会话对不上 403。
+- **撤销改邮箱**：删掉全部外部身份。登录只看 `(provider, subject)`，不删的话攻击者绑的第三方账号能绕过这次恢复；找回密码不碰外部身份。
 - **解绑**：`LoginMethodPolicy` 判「没有密码且只剩这一种」，排在再认证之前（没有密码的人过不了再认证），事务里锁用户行后重判。
 - **再认证**：只认密码。第三方登录不写 `auth_at`，守卫按超时处理；没有密码的用户先经找回密码设置（重设处理器没有凭据行时会新建），之后 `POST /auth/reauth` 写入 `auth_at`。
 - **邮件**：`security-mail.registration-code`、`-login-method-linked`、`-login-method-unlinked`。

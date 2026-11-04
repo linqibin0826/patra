@@ -22,13 +22,13 @@ import org.springframework.security.web.authentication.AuthenticationFailureHand
 @RequiredArgsConstructor
 public class ProviderLoginFailureHandler implements AuthenticationFailureHandler {
 
-  /// 平台或网络暂时不行：框架把连不上、响应读不了都归到这几个错误码。
-  private static final Set<String> UNAVAILABLE_CODES =
-      Set.of(
-          "invalid_token_response",
-          "invalid_user_info_response",
-          OAuth2ErrorCodes.SERVER_ERROR,
-          OAuth2ErrorCodes.TEMPORARILY_UNAVAILABLE);
+  /// 换令牌、取资料时平台或网络暂时不行：框架把连不上、响应读不了都归到这两个错误码。描述来自服务端，留着排查。
+  private static final Set<String> OUTBOUND_FAILURE_CODES =
+      Set.of("invalid_token_response", "invalid_user_info_response");
+
+  /// 平台在授权响应里说自己暂时不行。这些来自回调的查询串，描述是匿名请求写的，不能进 5xx 的 ERROR 日志。
+  private static final Set<String> CALLBACK_FAILURE_CODES =
+      Set.of(OAuth2ErrorCodes.SERVER_ERROR, OAuth2ErrorCodes.TEMPORARILY_UNAVAILABLE);
 
   private final SecurityProblemWriter problemWriter;
 
@@ -59,8 +59,11 @@ public class ProviderLoginFailureHandler implements AuthenticationFailureHandler
       if (OAuth2ErrorCodes.ACCESS_DENIED.equals(code)) {
         return new ProviderAuthorizationCancelledException();
       }
-      if (UNAVAILABLE_CODES.contains(code)) {
+      if (OUTBOUND_FAILURE_CODES.contains(code)) {
         return new TemporarilyUnavailableException(exception);
+      }
+      if (CALLBACK_FAILURE_CODES.contains(code)) {
+        return new TemporarilyUnavailableException();
       }
     }
     return new ProviderAuthorizationRejectedException();

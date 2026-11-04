@@ -17,6 +17,7 @@ import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.security.authentication.InternalAuthenticationServiceException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
+import org.springframework.security.oauth2.core.OAuth2Error;
 
 /// ProviderLoginFailureHandler 单元测试：框架的错误码翻译成给门户的错误。
 @DisplayName("ProviderLoginFailureHandler 单元测试")
@@ -45,6 +46,23 @@ class ProviderLoginFailureHandlerTest {
   void should_translate_unavailable_provider() throws Exception {
     assertThat(translated(new OAuth2AuthenticationException("invalid_token_response")))
         .isInstanceOf(TemporarilyUnavailableException.class);
+  }
+
+  @Test
+  @DisplayName("回调查询串里的 server_error：503，但不带原始异常：描述是匿名请求写的，不能进 ERROR 日志")
+  void should_drop_description_from_callback_error() throws Exception {
+    OAuth2Error error = new OAuth2Error("server_error", "forged\nlog line", null);
+
+    assertThat(translated(new OAuth2AuthenticationException(error, error.toString())))
+        .isInstanceOf(TemporarilyUnavailableException.class)
+        .hasNoCause();
+  }
+
+  @Test
+  @DisplayName("换令牌失败：503，保留原始异常：描述来自服务端，排查要用")
+  void should_keep_cause_of_server_side_failure() throws Exception {
+    assertThat(translated(new OAuth2AuthenticationException("invalid_token_response")))
+        .hasCauseInstanceOf(OAuth2AuthenticationException.class);
   }
 
   @Test

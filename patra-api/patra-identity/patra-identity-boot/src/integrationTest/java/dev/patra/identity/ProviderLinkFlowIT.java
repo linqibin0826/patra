@@ -2,6 +2,8 @@ package dev.patra.identity;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import dev.patra.identity.api.account.event.EmailChangeConfirmMailEvent;
+import dev.patra.identity.api.account.event.EmailChangedNoticeMailEvent;
 import dev.patra.identity.api.account.event.LoginMethodLinkedMailEvent;
 import dev.patra.identity.api.account.event.LoginMethodUnlinkedMailEvent;
 import dev.patra.identity.api.account.event.PasswordResetMailEvent;
@@ -308,5 +310,32 @@ class ProviderLinkFlowIT extends ProviderFlowITSupport {
 
     assertThat(post("/me/deletion", Map.of("username", "link-sudo"), newAuth).status())
         .isEqualTo(200);
+  }
+
+  /// 恢复账号：攻击者拿到密码和会话，改邮箱到自己的地址（安全邮件因此发给自己），再绑自己的 GitHub。原主点旧邮箱里的
+  /// 「不是我」之后，攻击者的 GitHub 不能再进这个账号。
+  @Test
+  void should_remove_linked_accounts_when_email_change_is_reverted() {
+    String original = "flow.link.revert@example.com";
+    String attackerEmail = "flow.link.revert.attacker@example.com";
+    Signed user = verifiedUser(original, "link-revert");
+    assertThat(post("/me/email/change", Map.of("newEmail", attackerEmail), user.auth()).status())
+        .isEqualTo(202);
+    String confirmToken =
+        tokenIn(mailEvent(EmailChangeConfirmMailEvent.class, attackerEmail).confirmUrl());
+    assertThat(
+            post("/auth/email/change/confirm", Map.of("token", confirmToken), noHeaders()).status())
+        .isEqualTo(200);
+    assertThat(linkGithub(8011L, "attacker-github", user.auth()).status()).isEqualTo(200);
+    String revertToken =
+        tokenIn(mailEvent(EmailChangedNoticeMailEvent.class, original).revertUrl());
+
+    RawResponse reverted =
+        post("/auth/email/change/revert", Map.of("token", revertToken), noHeaders());
+
+    assertThat(reverted.status()).as(reverted.body()).isEqualTo(200);
+    assertThat(identityCount(user.userId())).isZero();
+    assertThat(json(githubLogin(8011L, "attacker-github")).get("result").asString())
+        .isEqualTo("REGISTRATION_REQUIRED");
   }
 }

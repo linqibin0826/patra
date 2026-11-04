@@ -365,7 +365,7 @@ return new AdditionalSecurityFilterChain(http.build());
 | `invalid_token_response`、`invalid_user_info_response`、`server_error`、`temporarily_unavailable`，以及 `InternalAuthenticationServiceException`（Redis） | 503 |
 | 其余（`authorization_request_not_found`、`invalid_state_parameter`、`invalid_id_token`、`invalid_nonce`、`invalid_grant` 等） | `OAUTH_REJECTED` |
 
-`StandardErrorTrait` 没有 400，所以协议失败用 `RULE_VIOLATION`（422）。`OAuth2Error` 的描述不进响应，只进 `debug` 日志。
+`StandardErrorTrait` 没有 400，所以协议失败用 `RULE_VIOLATION`（422）。`OAuth2Error` 的描述不进响应。回调查询串带来的 `server_error`、`temporarily_unavailable`，描述是匿名请求写的，只进 `debug` 日志；换令牌、取资料失败的描述来自服务端，随 503 进 `ERROR` 日志，方便排查。
 
 ## 6. 授权请求存储（决策 B）
 
@@ -455,6 +455,8 @@ Redis：
 2. 事务里锁用户行，**重新**按当前凭据和绑定数判一次规则（并发解绑两家、并发撤销改邮箱删凭据，都要先拿这把锁），删行，登记「已解绑」邮件。
 
 注销到期：`ExecuteDueAccountDeletionsHandler.completeOne` 事务里加 `externalIdentities.deleteAllByUserId(id)`。
+
+撤销改邮箱（`RevertEmailChangeHandler`）也删全部外部身份。攻击者拿到密码和会话后先改邮箱，绑定的安全邮件就发给了自己；原主点「不是我」时，系统改回邮箱、删密码、踢会话，而登录只看 `(provider, subject)`，不删的话攻击者的第三方账号还能进来。原主自己绑的也一起删，重新登录后再绑。找回密码不碰外部身份（第 12 节）。
 
 ## 8. `auth_at` 可空的改动面
 
