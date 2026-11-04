@@ -136,10 +136,13 @@
 - 「保留多久」写明解绑或注销到期时删除。「你可以做什么」加解绑入口。
 - 更新日期改 2026-11-04。
 
-## 10. 依赖部署的验证（现在做不了）
+## 10. 端到端验证
 
-- Playwright 模拟平台跑通首次登录、老用户登录、绑定、解绑（D9）。
-- 端到端验证 `ticket` 注入：带别人的 `ticket` 打开补填页或提交，都不能进入别人的注册流程。
-- 真实三家手工验收（D1～D5）。
-- 经 tailnet 地址实测隐藏入口、经隧道实测显示入口；验证 Cloudflare Tunnel 后的 `Host`。
-- `userSchema.hasPassword` 必填：后端部署前，本机门户连 mini 会全站未登录，本地验收要等后端部署。
+`pnpm test:e2e:social-login`（`playwright.social-login.config.ts`）：门户真实运行，连 `tests/e2e/social-login/mock-gateway.mjs` 模拟网关和平台（决策 H），桌面和手机各跑一遍，覆盖首次注册、老用户登录、绑定、解绑、无密码分支和 `ticket` 注入。默认的 `test:e2e` 不跑它。
+
+只有部署到公网后才能验证：
+
+- 真实三家手工验收（D1～D5）：回调地址只注册在 `patra.linqibin.dev`。
+- 经隧道实测显示入口、经 tailnet 地址实测隐藏入口，验证 Cloudflare Tunnel 后的 `Host`。
+- 真实平台在用户拒绝时是否带回 `state`：不带时用户看到的是「这次授权没有成功」。
+- 真实 Safari 里 Google 标识的渲染：它的颜色靠 `foreignObject`。

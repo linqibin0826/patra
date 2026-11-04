@@ -16,6 +16,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
+    "test:e2e:social-login": "playwright test --config playwright.social-login.config.ts",
     "lint": "biome check .",
     "format": "biome format --write .",
     "gen:analytics": "node scripts/generate-analytics-types.mjs"
