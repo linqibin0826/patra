@@ -7,20 +7,34 @@ import { AuthLink } from "@/components/auth/AuthLink";
 import { FormAlert } from "@/components/auth/FormAlert";
 import { FormField } from "@/components/auth/FormField";
 import { PasswordInput } from "@/components/auth/PasswordInput";
+import { ProviderEntries } from "@/components/auth/ProviderEntries";
 import { useAuthSubmit, useServerFieldErrors } from "@/components/auth/use-auth-submit";
 import { useBlurValidation } from "@/components/auth/use-blur-validation";
+import { useOAuthAlert } from "@/components/auth/use-oauth-alert";
 import { login } from "@/lib/auth/actions";
 import { loginSchema } from "@/lib/auth/form-schemas";
-import { LOGIN_NOTICES, loginAlertMessage, TOAST_MESSAGES } from "@/lib/auth/messages";
+import {
+  LOGIN_NOTICES,
+  loginAlertMessage,
+  loginNoticeAlert,
+  TOAST_MESSAGES,
+} from "@/lib/auth/messages";
 import { authPageHref, forgotPasswordHref } from "@/lib/auth/next-path";
+import type { OAuthNotice } from "@/lib/auth/oauth-notice";
 import { btnBlock, btnPrimary } from "@/lib/portal-ui";
 import { cn } from "@/lib/utils";
 import { useAuthHandoffStore } from "@/store/auth-handoff";
 
 /// 登录表单（spec 第 9 节）：提示条、邮箱、密码（标签行右端「忘记密码？」）、提交按钮、去注册的链接。
 /// `next` 已经过 `safeNextPath`。从重设密码页过来时（PAP-102 spec §8.1）预填邮箱、表单上方是成功提示、
-/// 焦点在密码框。
-export function LoginForm({ next }: { next: string }) {
+/// 焦点在密码框。`oauth` 是第三方入口（决策 G）和从第三方回来的结果，不传时没有入口。
+export function LoginForm({
+  next,
+  oauth,
+}: {
+  next: string;
+  oauth?: { enabled: boolean; notice: OAuthNotice | null };
+}) {
   // 挂载时读一次带过来的内容，读完在 effect 里清空（严格模式下初始化函数跑两次也读得到）
   const [handoff] = useState(() => {
     const { email, notice } = useAuthHandoffStore.getState();
@@ -33,6 +47,7 @@ export function LoginForm({ next }: { next: string }) {
   }, [takeHandoff]);
   const afterReset = handoff.notice === "password-reset";
   const [alert, setAlert] = useState<string | null>(null);
+  const { oauthAlert, dismiss } = useOAuthAlert(oauth?.notice ?? null, loginNoticeAlert);
   const serverErrors = useServerFieldErrors();
   const {
     register,
@@ -93,6 +108,7 @@ export function LoginForm({ next }: { next: string }) {
   function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setAlert(null);
+    dismiss();
     serverErrors.clear();
     void handleSubmit((values) => submit(values))(event);
   }
@@ -105,13 +121,16 @@ export function LoginForm({ next }: { next: string }) {
         method="post"
         noValidate
         onSubmit={onSubmit}
-        className={cn("flex flex-col gap-5", alert ? "mt-6" : "mt-8")}
+        className={cn("flex flex-col gap-5", alert || oauthAlert ? "mt-6" : "mt-8")}
       >
         {alert ? (
           <FormAlert>{alert}</FormAlert>
+        ) : oauthAlert ? (
+          <FormAlert tone={oauthAlert.tone}>{oauthAlert.text}</FormAlert>
         ) : (
           afterReset && <FormAlert tone="success">{LOGIN_NOTICES.passwordReset}</FormAlert>
         )}
+        {oauth?.enabled && <ProviderEntries page="login" next={next} />}
         <FormField id="login-email" label="邮箱" error={emailError}>
           {(control) => (
             <input
@@ -126,7 +145,7 @@ export function LoginForm({ next }: { next: string }) {
               placeholder="name@example.com"
               readOnly={submitting}
               // biome-ignore lint/a11y/noAutofocus: 简报 §6 要求进入登录页时焦点在邮箱框
-              autoFocus={!afterReset}
+              autoFocus={handoff.notice === null}
             />
           )}
         </FormField>
@@ -154,7 +173,7 @@ export function LoginForm({ next }: { next: string }) {
               autoComplete="current-password"
               spellCheck={false}
               readOnly={submitting}
-              autoFocus={afterReset}
+              autoFocus={handoff.notice !== null}
             />
           )}
         </FormField>

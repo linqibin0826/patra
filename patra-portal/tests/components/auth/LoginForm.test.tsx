@@ -423,3 +423,13 @@ describe("LoginForm · 忘记密码与重设后的提示", () => {
     await waitFor(() => expect(form.email).toHaveFocus());
   });
 });
+
+describe("LoginForm 从第三方注册的邮箱撞车过来", () => {
+  it("邮箱已填，焦点在密码框，没有提示条", () => {
+    useAuthHandoffStore.getState().put({ email: "reader@example.com", notice: "email-clash" });
+    renderLogin();
+    expect(screen.getByLabelText("邮箱")).toHaveValue("reader@example.com");
+    expect(screen.getByLabelText("密码")).toHaveFocus();
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+  });
+});

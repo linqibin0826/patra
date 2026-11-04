@@ -1,3 +1,6 @@
+import type { OAuthNotice } from "@/lib/auth/oauth-notice";
+import { type Provider, providerName } from "@/lib/auth/oauth-providers";
+import type { PendingRegistration } from "@/lib/auth/registration-types";
 import type { FieldError, LoginResult } from "@/lib/auth/types";
 
 /// 字段下方的错误文案（简报 §4.1、§4.2）。前端校验和后端的原因码共用。
@@ -331,4 +334,125 @@ export const EMAIL_CHANGE_LANDING_MESSAGES = {
   continue: "继续浏览",
   toAccount: "去账号设置",
   login: "登录",
+} as const;
+
+/// 第三方授权结果的提示条
+export interface OAuthAlert {
+  tone: "danger" | "info";
+  text: string;
+}
+
+/// 登录页、注册页收到的结果（简报 v0.19，画板 Auth）。`linked` 这类绑定结果到不了这里，到了按服务错误说
+export function loginNoticeAlert({ kind, provider }: OAuthNotice): OAuthAlert {
+  const name = providerName(provider);
+  switch (kind) {
+    case "cancelled":
+      return { tone: "info", text: `你取消了 ${name} 授权。可以再试一次，或换一种方式。` };
+    case "rejected":
+      return {
+        tone: "danger",
+        text: "这次授权没有成功，可能是等得太久或换了浏览器。请重新点一次，或换一种方式。",
+      };
+    case "unreachable":
+      return { tone: "danger", text: `暂时连不上 ${name}，请稍后再试，或换一种方式。` };
+    case "banned":
+      return { tone: "danger", text: "该账号已被封禁，无法登录" };
+    default:
+      return { tone: "danger", text: "登录没有成功，请稍后再试" };
+  }
+}
+
+/// 设置页收到的绑定结果（画板 Security）。绑定成功是 toast，不用提示条
+export function linkNoticeAlert({ kind, provider }: OAuthNotice): OAuthAlert | null {
+  const name = providerName(provider);
+  switch (kind) {
+    case "linked":
+      return null;
+    case "cancelled":
+      return { tone: "info", text: `你取消了 ${name} 授权，没有绑定。` };
+    case "rejected":
+      return {
+        tone: "danger",
+        text: "这次授权没有成功，可能是等得太久或换了账号，没有绑定任何账号。请重新点「绑定」。",
+      };
+    case "unreachable":
+      return { tone: "danger", text: `暂时连不上 ${name}，没有绑定。请稍后再试。` };
+    case "taken":
+      return {
+        tone: "danger",
+        text: `你刚才授权的 ${name} 账号已经绑定了另一个 Patra 账号，不能再绑到这里。如果那个账号也是你的，先登录它解绑，再回来绑定。`,
+      };
+    case "already-linked":
+      return {
+        tone: "danger",
+        text: `你已经绑定了一个 ${name} 账号，每家只能绑一个。要换账号，先解绑现在这个。`,
+      };
+    default:
+      return { tone: "danger", text: "绑定没有成功，请稍后再试" };
+  }
+}
+
+/// 绑定成功的提示
+export function linkedToast(provider: Provider): string {
+  return `已绑定 ${providerName(provider)}，以后可以用它登录。通知邮件已发到你的邮箱。`;
+}
+
+/// 第三方首次注册（画板 Complete）
+export const REGISTRATION_MESSAGES = {
+  fillTitle: "还差一步",
+  fillDescription: (name: string) =>
+    `第一次用 ${name} 账号登录 Patra，填好用户名和邮箱就能建好账号。`,
+  confirmed: (name: string) => `已确认你的 ${name} 账号`,
+  usernamePrefilled: (name: string) => `已按你的 ${name} 用户名预填，可以改。`,
+  /// 邮箱下方的提示：说明预填来自哪里，或为什么要自己填
+  emailHint: ({
+    provider,
+    suggestedEmail,
+  }: Pick<PendingRegistration, "provider" | "suggestedEmail">) => {
+    const name = providerName(provider);
+    if (provider === "orcid") {
+      return `${name} 不提供邮箱，请填一个常用的。我们会发验证码到这个邮箱。`;
+    }
+    if (suggestedEmail === null) {
+      return provider === "github"
+        ? `你的 ${name} 没有公开邮箱，请填一个常用的。我们会发验证码到这个邮箱。`
+        : "请填一个常用的邮箱。我们会发验证码到这个邮箱。";
+    }
+    return provider === "github"
+      ? `我们会发验证码到这个邮箱。已按你的 ${name} 公开邮箱预填，可以改。`
+      : `我们会发验证码到这个邮箱。已按你的 ${name} 账号预填，可以改。`;
+  },
+  send: "发送验证码",
+  sending: "发送中…",
+  sendFailed: "验证码没有发出去，请稍后再试",
+  usernameRaced: "这个用户名刚被别人用了，请换一个",
+  clashTitle: "这个邮箱已经注册过 Patra。",
+  clashNoChange: "我们没有建新账号，也没有改动原账号。",
+  clashHow: (name: string) =>
+    `如果是你的账号：先用原来的方式登录，再到「设置 › 安全」绑定 ${name}。以后就能用 ${name} 账号登录它了。`,
+  toLogin: "去登录",
+  changeEmail: "换一个邮箱",
+  codeTitle: "输入验证码",
+  codeRequired: "请输入验证码",
+  codeFormat: "验证码是 6 位数字",
+  codeInvalid: "验证码不正确",
+  codeExpired: "这个验证码已失效，请重新发送一个",
+  verifyFailed: "没有验证成功，请稍后再试",
+  resendFailed: "没有发出去，请稍后再试",
+  verifying: "验证中…",
+  complete: "完成注册",
+  spam: "没收到？先看看垃圾邮件。",
+  resend: "重新发送",
+  backToFill: "改用户名或邮箱（要重新发验证码）",
+  expiredTitle: "这次注册已过期",
+  /// 进页面就过期时不知道是哪家
+  expiredDescription: (name: string | null) =>
+    name
+      ? `等得太久了，账号没有建。请重新用 ${name} 账号登录，再填一次。`
+      : "等得太久了，账号没有建。请回到登录页，重新用第三方账号登录，再填一次。",
+  backToLogin: "回到登录页",
+  /// 两个标签页并发时，这个第三方账号已经注册好了
+  takenTitle: "这个账号已经建好了",
+  takenDescription: (name: string) =>
+    `你的 ${name} 账号刚刚完成了注册，可能是在另一个标签页。重新用它登录就行。`,
 } as const;

@@ -34,12 +34,16 @@ describe("safeNextPath", () => {
     expect(safeNextPath(raw)).toBe("/");
   });
 
-  it.each(["/login", "/login/", "/register?x=1", "/papers/../login", "/register//"])(
-    "登录页、注册页本身 %j 回到 /",
-    (raw) => {
-      expect(safeNextPath(raw)).toBe("/");
-    },
-  );
+  it.each([
+    "/login",
+    "/login/",
+    "/register?x=1",
+    "/papers/../login",
+    "/register//",
+    "/register/complete",
+  ])("登录页、注册页本身 %j 回到 /", (raw) => {
+    expect(safeNextPath(raw)).toBe("/");
+  });
 
   it.each(["", null, undefined])("%j 回到 /", (raw) => {
     expect(safeNextPath(raw)).toBe("/");

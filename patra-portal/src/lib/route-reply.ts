@@ -37,3 +37,8 @@ export async function readBody(request: Request): Promise<unknown> {
     return undefined;
   }
 }
+
+/// 302 跳转。`Location` 用相对地址：`request.url` 在隧道后面不一定是公网地址
+export function redirectReply(location: string): NextResponse {
+  return new NextResponse(null, { status: 302, headers: { Location: location, ...NO_STORE } });
+}

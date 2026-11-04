@@ -66,7 +66,15 @@ describe("/privacy", () => {
     vi.stubEnv("PATRA_SESSION_COOKIE_SECURE", "false");
     await renderPage();
     const cookies = screen.getByRole("heading", { level: 2, name: /Cookie$/ }).closest("section");
-    for (const name of ["patra_session", "patra_device", "patra_sid"]) {
+    for (const name of [
+      "patra_session",
+      "patra_device",
+      "patra_sid",
+      "patra_oauth_state",
+      "patra_oauth_return",
+      "patra_oauth_ticket",
+      "patra_oauth_signed_in",
+    ]) {
       expect(within(cookies as HTMLElement).getByText(name)).toBeInTheDocument();
     }
     expect(within(cookies as HTMLElement).getByText("关闭浏览器时失效")).toBeInTheDocument();
@@ -90,7 +98,33 @@ describe("/privacy", () => {
       "mailto:privacy@example.com",
     );
     expect(container).toHaveTextContent("生效日期 2026-11-03");
-    expect(container).toHaveTextContent("最近更新 2026-11-03");
+    expect(container).toHaveTextContent("最近更新 2026-11-04");
+    expect(container.textContent).not.toMatch(/\[[^\]]+\]/);
+  });
+
+  it("第三方登录：写明收集什么、不收什么、对方知道什么、存多久、怎么解绑", async () => {
+    const { container } = await renderPage();
+    const section = (title: RegExp) =>
+      screen.getByRole("heading", { level: 2, name: title }).closest("section") as HTMLElement;
+    const collect = section(/我们收集哪些信息$/);
+    expect(within(collect).getByText("第三方账号")).toBeInTheDocument();
+    expect(collect).toHaveTextContent(
+      "用 Google、GitHub 或 ORCID 登录时：对方给的账号编号，以及显示用的账号标识（Google 邮箱、GitHub 用户名、ORCID iD）。对方给的邮箱和 GitHub 用户名只用来预填注册表单",
+    );
+    expect(collect).toHaveTextContent(
+      "我们不保存第三方的访问令牌，也不导入头像、昵称。确认身份之后，令牌就丢弃了，Patra 不能替你访问对方的任何内容。解绑后这条记录立即删除；注销到期时一并删除。",
+    );
+    expect(section(/共享与委托处理$/)).toHaveTextContent(
+      "用 Google、GitHub 或 ORCID 登录时，你会跳到对方的网站授权，对方会知道你在登录 Patra",
+    );
+    expect(section(/保留多久$/)).toHaveTextContent("第三方账号的绑定");
+    expect(section(/Cookie$/)).toHaveTextContent("防止第三方登录被伪造");
+    expect(section(/Cookie$/)).toHaveTextContent("第一次用第三方登录时，记住还没填完的注册");
+    expect(section(/你可以做什么$/)).toHaveTextContent("解绑第三方账号");
+    expect(screen.getByRole("link", { name: "设置 › 安全 › 登录方式" })).toHaveAttribute(
+      "href",
+      "/settings/security#login-methods",
+    );
     expect(container.textContent).not.toMatch(/\[[^\]]+\]/);
   });
 

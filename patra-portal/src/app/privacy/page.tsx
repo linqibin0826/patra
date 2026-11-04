@@ -13,7 +13,7 @@ export const metadata: Metadata = { title: "隐私政策 · Patra" };
 
 /// 运营方信息与日期。现在只有开发者自己在用，下面都是假值（`example.com` 是保留域名，没有人会收到信）；
 /// 对外开放前要换成真实信息
-const POLICY_DATES = { effective: "2026-11-03", updated: "2026-11-03" } as const;
+const POLICY_DATES = { effective: "2026-11-03", updated: "2026-11-04" } as const;
 const OPERATOR = "Patra（个人项目）";
 const SERVER_LOCATION = "中国大陆";
 const CONTACT_EMAIL = "privacy@example.com";
@@ -61,6 +61,11 @@ export default async function PrivacyPage() {
               "登录、找回密码、发送账号与提醒邮件",
             ],
             [
+              "第三方账号",
+              "用 Google、GitHub 或 ORCID 登录时：对方给的账号编号，以及显示用的账号标识（Google 邮箱、GitHub 用户名、ORCID iD）。对方给的邮箱和 GitHub 用户名只用来预填注册表单",
+              "让你用这个账号登录，并在设置页显示绑定了哪个账号",
+            ],
+            [
               "个人资料",
               "头像、简介、职称、机构、科室、链接，都由你自己填写",
               "按你在「设置 › 隐私」里选的可见性展示",
@@ -79,6 +84,10 @@ export default async function PrivacyPage() {
             ["阅读历史", "登录后打开过的文献与时间、是否读了全文", "给你自己翻看"],
           ]}
         />
+        <p>
+          我们不保存第三方的访问令牌，也不导入头像、昵称。确认身份之后，令牌就丢弃了，Patra
+          不能替你访问对方的任何内容。解绑后这条记录立即删除；注销到期时一并删除。
+        </p>
         <p>
           浏览行为里不存 IP 地址：IP
           只在收到请求的那一刻用来查省级地区、识别搜索引擎等爬虫，用完即丢。
@@ -120,6 +129,14 @@ export default async function PrivacyPage() {
               "把一次访问里的浏览串起来，30 分钟没有活动就换新",
               "关闭浏览器时失效",
             ],
+            [<Code key="n">patra_oauth_state</Code>, "防止第三方登录被伪造", "10 分钟"],
+            [<Code key="n">patra_oauth_return</Code>, "记住第三方登录后回到哪一页", "10 分钟"],
+            [
+              <Code key="n">patra_oauth_ticket</Code>,
+              "第一次用第三方登录时，记住还没填完的注册",
+              "30 分钟",
+            ],
+            [<Code key="n">patra_oauth_signed_in</Code>, "第三方登录后提示「已登录」", "1 分钟"],
           ]}
         />
         <p>浏览器禁用 Cookie 后，登录等功能无法使用。</p>
@@ -135,6 +152,10 @@ export default async function PrivacyPage() {
           <li>网站访问经 Cloudflare 的网络转发到我们的服务器。</li>
           <li>其余数据存放在我们自己的服务器上（{SERVER_LOCATION}）。</li>
         </ul>
+        <p>
+          用 Google、GitHub 或 ORCID 登录时，你会跳到对方的网站授权，对方会知道你在登录
+          Patra。对方怎样处理这些信息，以它们的隐私政策为准。
+        </p>
         <p>法律法规要求时，我们会依法提供相应信息。</p>
       </>
     ),
@@ -147,6 +168,7 @@ export default async function PrivacyPage() {
           ["阅读历史", "12 个月，到期自动删除；也可以随时自己删除"],
           ["登录记录", "会话结束后 190 天"],
           ["账号信息、个人资料、发布的内容", "直到你删除或注销账号"],
+          ["第三方账号的绑定", "直到你解绑，或注销到期"],
         ]}
       />
     ),
@@ -168,6 +190,13 @@ export default async function PrivacyPage() {
         </li>
         <li>
           <b>修改资料与可见性</b>：设置 › 个人资料、设置 › 隐私。
+        </li>
+        <li>
+          <b>解绑第三方账号</b>：
+          <Link href="/settings/security#login-methods" className="text-link hover:text-link-hover">
+            设置 › 安全 › 登录方式
+          </Link>
+          。
         </li>
         <li>
           <b>注销账号</b>
