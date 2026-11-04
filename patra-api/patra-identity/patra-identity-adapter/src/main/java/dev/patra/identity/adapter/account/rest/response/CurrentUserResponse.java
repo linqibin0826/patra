@@ -20,6 +20,7 @@ import lombok.Builder;
 /// @param deletionDueAt 注销到期时间，不在冷静期时为 `null`
 /// @param nextUsernameChangeAt 下次可以改名的时间，没改过名时为 `null`
 /// @param accountType 账号类型的 `code`，本版是 `user`
+/// @param hasPassword 有没有密码：`REAUTH_REQUIRED` 时门户据此选择弹密码框还是引导设置密码
 @Builder
 public record CurrentUserResponse(
     Long userId,
@@ -32,7 +33,8 @@ public record CurrentUserResponse(
     UserStatus status,
     Instant deletionDueAt,
     Instant nextUsernameChangeAt,
-    String accountType) {
+    String accountType,
+    boolean hasPassword) {
 
   /// 从账号读模型映射。
   ///
@@ -51,6 +53,7 @@ public record CurrentUserResponse(
         .deletionDueAt(account.deletionDueAt())
         .nextUsernameChangeAt(account.nextUsernameChangeAt())
         .accountType(AccountType.USER.getCode())
+        .hasPassword(account.hasPassword())
         .build();
   }
 }

@@ -18,6 +18,7 @@ import dev.patra.identity.domain.account.model.vo.profile.JobTitle;
 import dev.patra.identity.domain.account.policy.UsernameChangePolicy;
 import dev.patra.identity.domain.account.port.read.UserReadPort;
 import dev.patra.identity.infra.account.persistence.dao.UserDao;
+import dev.patra.identity.infra.account.persistence.dao.UserPasswordCredentialDao;
 import dev.patra.identity.infra.account.persistence.dao.UserProfileDao;
 import dev.patra.identity.infra.account.persistence.dao.UserProfileLinkDao;
 import dev.patra.identity.infra.account.persistence.dao.UserResearchInterestDao;
@@ -33,7 +34,7 @@ import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
-/// 前台用户读端口的 JPA 实现：账号信息是用户表加资料表；公开主页再加链接与关注领域两张子表。
+/// 前台用户读端口的 JPA 实现：账号信息是用户表、资料表加「有没有密码凭据」；公开主页再加链接与关注领域两张子表。
 ///
 /// 资料行缺失是数据不一致（注册时同事务建的），抛 `IllegalStateException` 而不是静默回退。
 @Component
@@ -42,6 +43,7 @@ public class UserReadAdapter implements UserReadPort {
 
   private final UserDao userDao;
   private final UserProfileDao profileDao;
+  private final UserPasswordCredentialDao credentialDao;
   private final UserProfileLinkDao linkDao;
   private final UserResearchInterestDao interestDao;
   private final UserProfileJpaMapper profileMapper;
@@ -183,6 +185,7 @@ public class UserReadAdapter implements UserReadPort {
         .status(UserStatus.valueOf(user.getStatus()))
         .deletionDueAt(user.getDeletionDueAt())
         .nextUsernameChangeAt(usernameChangePolicy.nextChangeAt(user.getUsernameChangedAt()))
+        .hasPassword(credentialDao.existsByUserId(user.getId()))
         .build();
   }
 
