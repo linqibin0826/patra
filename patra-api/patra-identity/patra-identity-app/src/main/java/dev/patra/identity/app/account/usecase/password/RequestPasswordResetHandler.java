@@ -128,6 +128,7 @@ public class RequestPasswordResetHandler
                       .displayName(account.displayName())
                       .resetUrl(links.resetPasswordUrl(issued.secret()))
                       .linkExpiresAt(issued.token().getExpiresAt())
+                      .settingPassword(!account.hasPassword())
                       .build());
               return Optional.of(issued);
             });

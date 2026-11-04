@@ -4,12 +4,12 @@ import dev.patra.identity.domain.session.model.vo.ActiveUserSession;
 import dev.patra.identity.domain.session.model.vo.DeviceId;
 import dev.patra.identity.domain.session.model.vo.IssuedUserSession;
 import dev.patra.identity.domain.session.model.vo.NewUserSession;
+import dev.patra.identity.domain.session.model.vo.SessionPasswordProof;
 import dev.patra.identity.domain.session.model.vo.SessionRotation;
 import dev.patra.identity.domain.session.port.store.SessionStorePort;
 import dev.patra.tool.core.security.AccountType;
 import dev.patra.tool.core.security.CurrentUser;
 import java.time.Duration;
-import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
@@ -39,6 +39,7 @@ public class SessionStoreAdapter implements SessionStorePort {
                 .clientType(session.client().clientType())
                 .deviceId(session.client().device().map(DeviceId::value).orElse(null))
                 .createdAt(session.now())
+                .authenticatedAt(session.passwordVerifiedAt())
                 .expiresAt(session.expiresAt())
                 .idleTimeout(session.lifetime().idle())
                 .maxSessionsPerUser(session.maxSessionsPerUser())
@@ -76,16 +77,18 @@ public class SessionStoreAdapter implements SessionStorePort {
                     .orElseGet(SessionRotation::kept));
   }
 
-  /// 读再认证时间。
+  /// 读密码证明。
   ///
   /// @param accountType 账号类型
   /// @param userId 用户 ID
   /// @param sessionId 会话 ID
-  /// @return 再认证时间；会话不在时为空
+  /// @return 密码证明；会话不在时为空
   @Override
-  public Optional<Instant> findAuthenticatedAt(
+  public Optional<SessionPasswordProof> findPasswordProof(
       AccountType accountType, long userId, long sessionId) {
-    return store.find(accountType, userId, sessionId).map(StoredSession::authenticatedAt);
+    return store
+        .find(accountType, userId, sessionId)
+        .map(session -> SessionPasswordProof.of(session.authenticatedAt()));
   }
 
   /// 列出活会话：只取会话 ID、创建时间、最后活跃。

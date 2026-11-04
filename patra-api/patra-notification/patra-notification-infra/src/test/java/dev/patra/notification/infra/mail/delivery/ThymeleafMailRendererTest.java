@@ -78,7 +78,7 @@ class ThymeleafMailRendererTest {
   void should_render_every_kind_without_leftover_expressions() {
     List<OutgoingMail> all = all();
 
-    assertThat(all).extracting(OutgoingMail::template).hasSize(13).doesNotHaveDuplicates();
+    assertThat(all).extracting(OutgoingMail::template).hasSize(16).doesNotHaveDuplicates();
     for (OutgoingMail mail : all) {
       RenderedMail rendered = renderer.render(mail);
       assertThat(rendered.subject()).as(mail.template()).isEqualTo(mail.subject());
@@ -230,7 +230,7 @@ class ThymeleafMailRendererTest {
   }
 
   @Test
-  @DisplayName("「到安全设置」的链接只在带它的三封里（来自事件的 securitySettingsUrl），其余没有")
+  @DisplayName("「到安全设置」的链接只在带它的几封里（来自事件的 securitySettingsUrl），其余没有")
   void should_render_security_url_only_where_present() {
     for (OutgoingMail mail :
         List.of(
@@ -352,6 +352,68 @@ class ThymeleafMailRendererTest {
     }
   }
 
+  @Test
+  @DisplayName("没有密码的用户走找回密码：主题和正文都说设置密码，不提重设")
+  void should_say_set_password_when_user_has_none() {
+    RenderedMail rendered =
+        renderer.render(
+            linkMail(
+                SecurityMailKind.PASSWORD_RESET,
+                Map.of("resetUrl", RESET_URL, "settingPassword", true),
+                null));
+
+    assertThat(rendered.subject()).isEqualTo("设置你的 Patra 密码");
+    assertThat(rendered.text()).contains("设置密码").doesNotContain("重设");
+    assertThat(rendered.html()).contains("设置密码").doesNotContain("重设");
+    assertLink(rendered, RESET_URL);
+  }
+
+  @Test
+  @DisplayName("注销两封不假定用户有密码：只用第三方登录的人也要看得懂怎么取消")
+  void should_not_assume_password_in_deletion_mails() {
+    for (OutgoingMail mail : List.of(deletionRequested(), reminder())) {
+      RenderedMail rendered = renderer.render(mail);
+      assertThat(rendered.text()).as(mail.template()).contains("重新登录").doesNotContain("邮箱和密码");
+      assertThat(rendered.html()).as(mail.template()).contains("重新登录").doesNotContain("邮箱和密码");
+    }
+  }
+
+  @Test
+  @DisplayName("注册验证码：码和过期时刻在两部分都有，写明不要告诉别人、不是本人不会建账号")
+  void should_render_registration_code() {
+    RenderedMail rendered = renderer.render(registrationCode());
+
+    assertThat(rendered.subject()).isEqualTo("你的 Patra 注册验证码");
+    for (String part : List.of(rendered.text(), rendered.html())) {
+      assertThat(part)
+          .contains("483920")
+          .contains(VALIDITY)
+          .contains("不要把验证码告诉任何人")
+          .contains("不会有账号被创建");
+    }
+  }
+
+  @Test
+  @DisplayName("绑定、解绑：平台名和账号标识都在，带安全设置链接与「不是我怎么办」")
+  void should_render_login_method_changes() {
+    for (SecurityMailKind kind :
+        List.of(SecurityMailKind.LOGIN_METHOD_LINKED, SecurityMailKind.LOGIN_METHOD_UNLINKED)) {
+      RenderedMail rendered = renderer.render(loginMethodMail(kind));
+
+      assertThat(rendered.text())
+          .as(kind.template())
+          .contains("GitHub")
+          .contains("octocat")
+          .contains(SECURITY_URL)
+          .contains(kind.notMeAdvice());
+      assertThat(rendered.html())
+          .as(kind.template())
+          .contains("GitHub")
+          .contains("octocat")
+          .contains("href=\"" + SECURITY_URL + "\"");
+    }
+  }
+
   /// 断言链接在文本里原样出现、在 HTML 里只挂在按钮上，绝对时刻的有效期在两部分都有。
   ///
   /// @param rendered 渲染结果
@@ -364,7 +426,7 @@ class ThymeleafMailRendererTest {
         .contains(VALIDITY);
   }
 
-  /// 13 类各一封。
+  /// 16 类各一封。
   ///
   /// @return 邮件
   private static List<OutgoingMail> all() {
@@ -378,18 +440,53 @@ class ThymeleafMailRendererTest {
         securityLinkMail(SecurityMailKind.EMAIL_CHANGED_CONFIRMATION),
         linkMail(SecurityMailKind.EMAIL_CHANGE_REVERTED, Map.of("resetUrl", RESET_URL), BARE),
         securityLinkMail(SecurityMailKind.NEW_DEVICE_LOGIN),
-        SecurityMail.builder()
-            .eventId(UUID.randomUUID())
-            .kind(SecurityMailKind.ACCOUNT_DELETION_REQUESTED)
-            .to(TO)
-            .displayName("陈宇")
-            .facts(Map.of("deletionDueAt", DUE))
-            .context(FULL)
-            .build()
-            .compose(),
+        deletionRequested(),
         noticeMail(SecurityMailKind.ACCOUNT_DELETION_CANCELLED, BARE),
         reminder(),
-        completed());
+        completed(),
+        registrationCode(),
+        loginMethodMail(SecurityMailKind.LOGIN_METHOD_LINKED),
+        loginMethodMail(SecurityMailKind.LOGIN_METHOD_UNLINKED));
+  }
+
+  /// 注销已提交。
+  ///
+  /// @return 邮件
+  private static OutgoingMail deletionRequested() {
+    return SecurityMail.builder()
+        .eventId(UUID.randomUUID())
+        .kind(SecurityMailKind.ACCOUNT_DELETION_REQUESTED)
+        .to(TO)
+        .displayName("陈宇")
+        .facts(Map.of("deletionDueAt", DUE))
+        .context(FULL)
+        .build()
+        .compose();
+  }
+
+  /// 注册验证码。
+  ///
+  /// @return 邮件
+  private static OutgoingMail registrationCode() {
+    return linkMail(SecurityMailKind.REGISTRATION_CODE, Map.of("code", "483920"), null);
+  }
+
+  /// 绑定或解绑登录方式。
+  ///
+  /// @param kind 类别
+  /// @return 邮件
+  private static OutgoingMail loginMethodMail(SecurityMailKind kind) {
+    return SecurityMail.builder()
+        .eventId(UUID.randomUUID())
+        .kind(kind)
+        .to(TO)
+        .displayName("陈宇")
+        .facts(
+            Map.of(
+                "providerName", "GitHub", "accountLabel", "octocat", "securityUrl", SECURITY_URL))
+        .context(BARE)
+        .build()
+        .compose();
   }
 
   /// 验证邮箱。

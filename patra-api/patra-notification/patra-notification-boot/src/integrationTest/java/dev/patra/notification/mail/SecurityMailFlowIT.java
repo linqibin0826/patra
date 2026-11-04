@@ -17,11 +17,14 @@ import dev.patra.identity.api.account.event.EmailChangeRevertedMailEvent;
 import dev.patra.identity.api.account.event.EmailChangedConfirmationMailEvent;
 import dev.patra.identity.api.account.event.EmailChangedNoticeMailEvent;
 import dev.patra.identity.api.account.event.EmailVerificationMailEvent;
+import dev.patra.identity.api.account.event.LoginMethodLinkedMailEvent;
+import dev.patra.identity.api.account.event.LoginMethodUnlinkedMailEvent;
 import dev.patra.identity.api.account.event.NewDeviceLoginMailEvent;
 import dev.patra.identity.api.account.event.OperationContext;
 import dev.patra.identity.api.account.event.PasswordChangedMailEvent;
 import dev.patra.identity.api.account.event.PasswordResetDoneMailEvent;
 import dev.patra.identity.api.account.event.PasswordResetMailEvent;
+import dev.patra.identity.api.account.event.RegistrationCodeMailEvent;
 import dev.patra.identity.api.account.event.SecurityMailEvent;
 import dev.patra.notification.domain.mail.port.repository.MailDeliveryRepository;
 import dev.patra.tool.test.mail.GreenMailSmtpInitializer;
@@ -77,11 +80,11 @@ class SecurityMailFlowIT extends SecurityMailITSupport {
 
   /// 13 类各发一个事件：每个地址收到一封、主题对、幂等键就是事件 ID、没有退订头；发送记录与已处理各 13 行。
   @Test
-  void should_deliver_all_thirteen_kinds() throws Exception {
-    List<Sample> samples = thirteen();
+  void should_deliver_all_kinds() throws Exception {
+    List<Sample> samples = allKinds();
     samples.forEach(sample -> publish(sample.event(), sample.routingKey()));
 
-    assertThat(greenMail.waitForIncomingEmail(20_000, 13)).isTrue();
+    assertThat(greenMail.waitForIncomingEmail(20_000, 16)).isTrue();
     for (Sample sample : samples) {
       List<MimeMessage> mails = mailsTo(sample.event().to());
       assertThat(mails).as(sample.routingKey()).hasSize(1);
@@ -97,7 +100,7 @@ class SecurityMailFlowIT extends SecurityMailITSupport {
       assertThat(mail.getHeader("List-Unsubscribe-Post")).as(sample.routingKey()).isNull();
     }
     List<UUID> ids = samples.stream().map(sample -> sample.event().eventId()).toList();
-    await().atMost(Duration.ofSeconds(10)).until(() -> deliveryRows(ids) == 13);
+    await().atMost(Duration.ofSeconds(10)).until(() -> deliveryRows(ids) == 16);
     assertThat(ids).allSatisfy(id -> assertThat(processedRows(id)).isEqualTo(1));
   }
 
@@ -336,7 +339,7 @@ class SecurityMailFlowIT extends SecurityMailITSupport {
   /// 13 类各一个事件，收件地址各不相同。
   ///
   /// @return 样本
-  private static List<Sample> thirteen() {
+  private static List<Sample> allKinds() {
     return List.of(
         new Sample(
             EmailVerificationMailEvent.builder()
@@ -444,7 +447,41 @@ class SecurityMailFlowIT extends SecurityMailITSupport {
             AccountDeletionCompletedMailEvent.of(
                 UUID.randomUUID(), "deletion-completed@example.com", "陈宇", "chen-yu"),
             AccountDeletionCompletedMailEvent.ROUTING_KEY,
-            "你的 Patra 账号已注销"));
+            "你的 Patra 账号已注销"),
+        new Sample(
+            RegistrationCodeMailEvent.builder()
+                .eventId(UUID.randomUUID())
+                .to("registration-code@example.com")
+                .displayName("chen-yu")
+                .code("483920")
+                .codeExpiresAt(LATER)
+                .build(),
+            RegistrationCodeMailEvent.ROUTING_KEY,
+            "你的 Patra 注册验证码"),
+        new Sample(
+            LoginMethodLinkedMailEvent.builder()
+                .eventId(UUID.randomUUID())
+                .to("login-method-linked@example.com")
+                .displayName("陈宇")
+                .providerName("GitHub")
+                .accountLabel("octocat")
+                .securitySettingsUrl(SECURITY_URL)
+                .context(CONTEXT)
+                .build(),
+            LoginMethodLinkedMailEvent.ROUTING_KEY,
+            "你的 Patra 账号绑定了新的登录方式"),
+        new Sample(
+            LoginMethodUnlinkedMailEvent.builder()
+                .eventId(UUID.randomUUID())
+                .to("login-method-unlinked@example.com")
+                .displayName("陈宇")
+                .providerName("GitHub")
+                .accountLabel("octocat")
+                .securitySettingsUrl(SECURITY_URL)
+                .context(CONTEXT)
+                .build(),
+            LoginMethodUnlinkedMailEvent.ROUTING_KEY,
+            "你的 Patra 账号解绑了一种登录方式"));
   }
 
   /// 一个样本：事件、路由键、期望的主题。

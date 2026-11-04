@@ -9,10 +9,13 @@ import dev.patra.identity.api.account.event.EmailChangeRevertedMailEvent;
 import dev.patra.identity.api.account.event.EmailChangedConfirmationMailEvent;
 import dev.patra.identity.api.account.event.EmailChangedNoticeMailEvent;
 import dev.patra.identity.api.account.event.EmailVerificationMailEvent;
+import dev.patra.identity.api.account.event.LoginMethodLinkedMailEvent;
+import dev.patra.identity.api.account.event.LoginMethodUnlinkedMailEvent;
 import dev.patra.identity.api.account.event.NewDeviceLoginMailEvent;
 import dev.patra.identity.api.account.event.PasswordChangedMailEvent;
 import dev.patra.identity.api.account.event.PasswordResetDoneMailEvent;
 import dev.patra.identity.api.account.event.PasswordResetMailEvent;
+import dev.patra.identity.api.account.event.RegistrationCodeMailEvent;
 import dev.patra.identity.api.account.event.SecurityMailEvent;
 import dev.patra.notification.domain.mail.model.enums.SecurityMailKind;
 import dev.patra.notification.domain.mail.model.vo.OperationContext;
@@ -21,7 +24,7 @@ import java.util.Map;
 
 /// identity 的安全邮件事件 → 领域的 {@link SecurityMail}。
 ///
-/// 对 sealed 的 13 种穷举，identity 加一种而这里没跟上时编译不过。`facts` 的键与模板变量同名；
+/// 对 sealed 的 16 种穷举，identity 加一种而这里没跟上时编译不过。`facts` 的键与模板变量同名；
 /// 事件的 `securitySettingsUrl` 进模板变量 `securityUrl`。
 final class SecurityMailEventConverter {
 
@@ -41,7 +44,7 @@ final class SecurityMailEventConverter {
               .build();
       case PasswordResetMailEvent e ->
           base(e, SecurityMailKind.PASSWORD_RESET)
-              .facts(Map.of("resetUrl", e.resetUrl()))
+              .facts(Map.of("resetUrl", e.resetUrl(), "settingPassword", e.settingPassword()))
               .linkExpiresAt(e.linkExpiresAt())
               .build();
       case PasswordResetDoneMailEvent e ->
@@ -96,10 +99,33 @@ final class SecurityMailEventConverter {
           base(e, SecurityMailKind.ACCOUNT_DELETION_COMPLETED)
               .facts(Map.of("username", e.username()))
               .build();
+      case RegistrationCodeMailEvent e ->
+          base(e, SecurityMailKind.REGISTRATION_CODE)
+              .facts(Map.of("code", e.code()))
+              .linkExpiresAt(e.codeExpiresAt())
+              .build();
+      case LoginMethodLinkedMailEvent e ->
+          base(e, SecurityMailKind.LOGIN_METHOD_LINKED)
+              .facts(
+                  Map.of(
+                      "providerName", e.providerName(),
+                      "accountLabel", e.accountLabel(),
+                      "securityUrl", e.securitySettingsUrl()))
+              .context(context(e.context()))
+              .build();
+      case LoginMethodUnlinkedMailEvent e ->
+          base(e, SecurityMailKind.LOGIN_METHOD_UNLINKED)
+              .facts(
+                  Map.of(
+                      "providerName", e.providerName(),
+                      "accountLabel", e.accountLabel(),
+                      "securityUrl", e.securitySettingsUrl()))
+              .context(context(e.context()))
+              .build();
     };
   }
 
-  /// 13 种共有的部分：事件 ID、类别、收件地址、昵称。
+  /// 全部种类共有的部分：事件 ID、类别、收件地址、昵称。
   ///
   /// @param event 事件
   /// @param kind 类别

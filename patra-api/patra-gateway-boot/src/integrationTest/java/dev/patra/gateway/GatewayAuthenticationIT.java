@@ -315,6 +315,105 @@ class GatewayAuthenticationIT {
     }
   }
 
+  /// 第三方登录的发起、回调和首次注册：匿名能到；302 原样透传给门户，不跟随。
+  @Test
+  void should_forward_social_login_paths_anonymously() {
+    identity.stubFor(
+        get(urlPathEqualTo("/oauth2/authorization/github"))
+            .willReturn(
+                aResponse()
+                    .withStatus(302)
+                    .withHeader(HttpHeaders.LOCATION, "https://github.com/login/oauth/authorize")));
+    identity.stubFor(any(urlPathMatching("/login/oauth2/code/.*")).willReturn(okJson("{}")));
+    identity.stubFor(any(urlPathMatching("/auth/oauth/registration.*")).willReturn(okJson("{}")));
+
+    // RestTestClient 在真实端口上会跟着跳转走，这里用不跟随跳转的 JDK 客户端
+    RestClient raw =
+        RestClient.builder()
+            .baseUrl("http://localhost:" + environment.getRequiredProperty("local.server.port"))
+            .requestFactory(
+                new JdkClientHttpRequestFactory(
+                    HttpClient.newBuilder().followRedirects(HttpClient.Redirect.NEVER).build()))
+            .build();
+    String[] observed =
+        raw.get()
+            .uri("/patra-identity/oauth2/authorization/github")
+            .exchange(
+                (request, response) ->
+                    new String[] {
+                      String.valueOf(response.getStatusCode().value()),
+                      response.getHeaders().getFirst(HttpHeaders.LOCATION)
+                    });
+
+    assertThat(observed[0]).isEqualTo("302");
+    assertThat(observed[1]).isEqualTo("https://github.com/login/oauth/authorize");
+    restClient
+        .get()
+        .uri("/patra-identity/login/oauth2/code/github?code=c&state=s")
+        .exchange()
+        .expectStatus()
+        .isOk();
+    restClient
+        .get()
+        .uri("/patra-identity/auth/oauth/registration")
+        .exchange()
+        .expectStatus()
+        .isOk();
+    restClient
+        .post()
+        .uri("/patra-identity/auth/oauth/registration/code")
+        .exchange()
+        .expectStatus()
+        .isOk();
+    restClient
+        .post()
+        .uri("/patra-identity/auth/oauth/registration/complete")
+        .exchange()
+        .expectStatus()
+        .isOk();
+  }
+
+  /// 绑定回调带着会话来：放行的路径照样把令牌翻译成断言，identity 才能核对发起人。
+  @Test
+  void should_translate_session_on_social_login_callback() {
+    identity.stubFor(any(urlPathMatching("/login/oauth2/code/.*")).willReturn(okJson("{}")));
+    String token = GatewayITSessions.issue(identity, 4241L, 9241L);
+
+    restClient
+        .get()
+        .uri("/patra-identity/login/oauth2/code/github?code=c&state=s")
+        .header(HttpHeaders.AUTHORIZATION, BEARER + token)
+        .exchange()
+        .expectStatus()
+        .isOk();
+
+    identity.verify(
+        1,
+        getRequestedFor(urlPathEqualTo("/login/oauth2/code/github"))
+            .withHeader(HttpHeaders.AUTHORIZATION, matching("Bearer .+")));
+  }
+
+  /// 设置页的登录方式是本人操作：匿名 401、不到下游。
+  @Test
+  void should_require_session_for_login_methods() {
+    identity.stubFor(any(urlPathMatching("/me/login-methods.*")).willReturn(okJson("{}")));
+
+    restClient
+        .get()
+        .uri("/patra-identity/me/login-methods")
+        .exchange()
+        .expectStatus()
+        .isUnauthorized();
+    restClient
+        .post()
+        .uri("/patra-identity/me/login-methods/github/link")
+        .exchange()
+        .expectStatus()
+        .isUnauthorized();
+
+    identity.verify(0, anyRequestedFor(urlPathMatching("/me/login-methods.*")));
+  }
+
   /// 再认证、改密码、改邮箱申请是本人操作：匿名 401、不到下游；带会话才转发，且带断言。
   @Test
   void should_require_session_for_reauth_password_change_and_email_change_request() {

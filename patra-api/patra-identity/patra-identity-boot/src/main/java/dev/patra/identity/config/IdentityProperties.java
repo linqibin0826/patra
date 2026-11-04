@@ -1,7 +1,9 @@
 package dev.patra.identity.config;
 
 import java.time.Duration;
+import java.util.List;
 import java.util.Map;
+import lombok.Builder;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.bind.DefaultValue;
 
@@ -17,6 +19,7 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
 /// @param emailChange 改邮箱的限流
 /// @param newDeviceMail 新设备登录提醒
 /// @param deletion 注销：冷静期与提醒提前量
+/// @param oauth 第三方登录：首次注册的验证码与限流、各平台的补充设置
 @ConfigurationProperties(prefix = "patra.identity")
 public record IdentityProperties(
     @DefaultValue PasswordHashing passwordHashing,
@@ -27,7 +30,87 @@ public record IdentityProperties(
     @DefaultValue PasswordReset passwordReset,
     @DefaultValue EmailChange emailChange,
     @DefaultValue NewDeviceMail newDeviceMail,
-    @DefaultValue Deletion deletion) {
+    @DefaultValue Deletion deletion,
+    @DefaultValue OAuth oauth) {
+
+  /// 第三方登录。
+  ///
+  /// @param registration 首次注册的参数
+  /// @param providers 各平台的注册信息，键是注册 ID；没配客户端 ID 或密钥的不注册
+  public record OAuth(@DefaultValue Registration registration, Map<String, Provider> providers) {
+
+    /// 不可变拷贝。
+    public OAuth {
+      providers = providers == null ? Map.of() : Map.copyOf(providers);
+    }
+
+    /// 首次注册的参数。
+    ///
+    /// @param pendingTtl 待补填记录的有效期
+    /// @param codeTtl 验证码的有效期
+    /// @param maxCodeAttempts 一个验证码最多错几次
+    /// @param resendCooldown 同邮箱两次发码的最短间隔
+    /// @param perEmailHourly 同邮箱每小时的发码上限
+    /// @param perIpHourly 同 IP 每小时的发码上限
+    public record Registration(
+        @DefaultValue("30m") Duration pendingTtl,
+        @DefaultValue("10m") Duration codeTtl,
+        @DefaultValue("5") int maxCodeAttempts,
+        @DefaultValue("60s") Duration resendCooldown,
+        @DefaultValue("5") int perEmailHourly,
+        @DefaultValue("20") int perIpHourly) {}
+
+    /// 一家平台的注册信息。
+    ///
+    /// @param clientId 客户端 ID
+    /// @param clientSecret 客户端密钥
+    /// @param redirectUri 门户对外的回调地址，要和平台后台填的完全一致
+    /// @param scopes 权限范围
+    /// @param authorizationUri 授权地址
+    /// @param tokenUri 令牌地址
+    /// @param jwkSetUri 公钥地址；纯 OAuth2 平台没有
+    /// @param userInfoUri 用户信息地址；OIDC 平台不配，要的东西 `id_token` 里都有
+    /// @param userNameAttribute 主体属性
+    /// @param issuer `id_token` 的 `iss` 要等于它，只比较不联网；纯 OAuth2 平台没有
+    /// @param requireProofKey 是否带 PKCE
+    @Builder
+    public record Provider(
+        String clientId,
+        String clientSecret,
+        String redirectUri,
+        List<String> scopes,
+        String authorizationUri,
+        String tokenUri,
+        String jwkSetUri,
+        String userInfoUri,
+        String userNameAttribute,
+        String issuer,
+        boolean requireProofKey) {
+
+      /// 拷贝集合。
+      public Provider {
+        scopes = scopes != null ? List.copyOf(scopes) : List.of();
+      }
+
+      /// 客户端 ID 和密钥都有才算配好。
+      ///
+      /// @return 配好了为 `true`
+      boolean configured() {
+        return clientId != null
+            && !clientId.isBlank()
+            && clientSecret != null
+            && !clientSecret.isBlank();
+      }
+
+      /// 不输出客户端密钥。
+      ///
+      /// @return 描述
+      @Override
+      public String toString() {
+        return "Provider[clientId=" + clientId + ", clientSecret=***, tokenUri=" + tokenUri + "]";
+      }
+    }
+  }
 
   /// 注销。
   ///

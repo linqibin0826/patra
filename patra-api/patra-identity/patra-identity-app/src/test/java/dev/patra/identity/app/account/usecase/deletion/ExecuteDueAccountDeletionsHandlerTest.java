@@ -28,6 +28,7 @@ import dev.patra.identity.domain.account.port.avatar.AvatarStoragePort;
 import dev.patra.identity.domain.account.port.mail.EmailDeliveryPort;
 import dev.patra.identity.domain.account.port.read.UserReadPort;
 import dev.patra.identity.domain.account.port.repository.EmailTokenRepository;
+import dev.patra.identity.domain.account.port.repository.ExternalIdentityRepository;
 import dev.patra.identity.domain.account.port.repository.UserPasswordCredentialRepository;
 import dev.patra.identity.domain.account.port.repository.UserProfileRepository;
 import dev.patra.identity.domain.account.port.repository.UserRepository;
@@ -60,6 +61,8 @@ class ExecuteDueAccountDeletionsHandlerTest {
       mock(UserPasswordCredentialRepository.class);
   private final UserProfileRepository profiles = mock(UserProfileRepository.class);
   private final EmailTokenRepository tokens = mock(EmailTokenRepository.class);
+  private final ExternalIdentityRepository externalIdentities =
+      mock(ExternalIdentityRepository.class);
   private final AvatarStoragePort avatarStorage = mock(AvatarStoragePort.class);
   private final SessionTerminator sessionTerminator = mock(SessionTerminator.class);
   private final EmailDeliveryPort emailDelivery = mock(EmailDeliveryPort.class);
@@ -71,6 +74,7 @@ class ExecuteDueAccountDeletionsHandlerTest {
           credentials,
           profiles,
           tokens,
+          externalIdentities,
           avatarStorage,
           sessionTerminator,
           emailDelivery,
@@ -109,6 +113,7 @@ class ExecuteDueAccountDeletionsHandlerTest {
     verify(profiles).save(profile);
     assertThat(profile.getBio()).isEmpty();
     verify(tokens).deleteAllByUserId(42L);
+    verify(externalIdentities).deleteAllByUserId(42L);
     verify(sessionTerminator).terminateAll(42L, LoginEndReason.DELETION_COMPLETED, NOW);
     ArgumentCaptor<OutgoingMail> mail = ArgumentCaptor.forClass(OutgoingMail.class);
     verify(emailDelivery).send(mail.capture());

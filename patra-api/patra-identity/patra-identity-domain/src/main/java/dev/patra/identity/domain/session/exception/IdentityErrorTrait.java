@@ -25,5 +25,26 @@ public enum IdentityErrorTrait implements ErrorTrait {
   PASSWORD_MISMATCH,
 
   /// 在登录设备列表里踢的是本机（409）；本机走退出登录（PAP-99）。
-  CURRENT_SESSION
+  CURRENT_SESSION,
+
+  /// 用户在第三方平台上点了拒绝（422）。
+  OAUTH_CANCELLED,
+
+  /// 第三方授权没通过协议校验：`state`、`id_token`、授权码（422）。
+  OAUTH_REJECTED,
+
+  /// 绑定第三方账号要求邮箱已验证（409）。
+  EMAIL_NOT_VERIFIED,
+
+  /// 绑定回调时的用户或会话与发起时不一致（403）。
+  LINK_SESSION_MISMATCH,
+
+  /// 这个第三方账号已绑给别的用户（409）。
+  PROVIDER_ACCOUNT_TAKEN,
+
+  /// 当前账号已绑了这一家（409）。
+  PROVIDER_ALREADY_LINKED,
+
+  /// 没有密码且只剩这一种登录方式，不能解绑（409）。
+  LAST_LOGIN_METHOD
 }

@@ -7,7 +7,7 @@ import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-/// SecurityMailKind 单元测试：13 类安全邮件的模板名、主题、「不是我怎么办」与过期规则。
+/// SecurityMailKind 单元测试：16 类安全邮件的模板名、主题、「不是我怎么办」与过期规则。
 @DisplayName("SecurityMailKind 单元测试")
 class SecurityMailKindTest {
 
@@ -28,7 +28,36 @@ class SecurityMailKindTest {
             "account-deletion-requested",
             "account-deletion-cancelled",
             "account-deletion-reminder",
-            "account-deletion-completed");
+            "account-deletion-completed",
+            "registration-code",
+            "login-method-linked",
+            "login-method-unlinked");
+  }
+
+  /// 没有密码的用户走找回密码：主题说设置密码。
+  @Test
+  void should_say_set_password_when_user_has_none() {
+    assertThat(SecurityMailKind.PASSWORD_RESET.subjectFor(Map.of("settingPassword", true)))
+        .isEqualTo("设置你的 Patra 密码");
+    assertThat(SecurityMailKind.PASSWORD_RESET.subjectFor(Map.of("settingPassword", false)))
+        .isEqualTo("重设你的 Patra 密码");
+  }
+
+  /// 第三方登录的三封：验证码过期就不发，绑定与解绑带安全通知片段。
+  @Test
+  void should_define_social_login_mails() {
+    Map<String, Object> none = Map.of();
+    assertThat(SecurityMailKind.REGISTRATION_CODE.subjectFor(none)).isEqualTo("你的 Patra 注册验证码");
+    assertThat(SecurityMailKind.REGISTRATION_CODE.skipsWhenLinkExpired()).isTrue();
+    assertThat(SecurityMailKind.REGISTRATION_CODE.hasNotice()).isFalse();
+    assertThat(SecurityMailKind.LOGIN_METHOD_LINKED.subjectFor(none))
+        .isEqualTo("你的 Patra 账号绑定了新的登录方式");
+    assertThat(SecurityMailKind.LOGIN_METHOD_LINKED.notMeAdvice())
+        .isEqualTo("如果不是你，说明有人登录了你的账号：请立即修改密码，并到安全设置解绑这个登录方式、退出不认识的设备");
+    assertThat(SecurityMailKind.LOGIN_METHOD_UNLINKED.subjectFor(none))
+        .isEqualTo("你的 Patra 账号解绑了一种登录方式");
+    assertThat(SecurityMailKind.LOGIN_METHOD_UNLINKED.notMeAdvice())
+        .isEqualTo("如果不是你，说明有人登录了你的账号：请立即修改密码，并到安全设置退出不认识的设备");
   }
 
   /// 主题照搬 identity 的原文；注销提醒的主题按 `daysLeft` 拼。
@@ -83,16 +112,18 @@ class SecurityMailKindTest {
             SecurityMailKind.EMAIL_CHANGE_REVERTED,
             SecurityMailKind.NEW_DEVICE_LOGIN,
             SecurityMailKind.ACCOUNT_DELETION_REQUESTED,
-            SecurityMailKind.ACCOUNT_DELETION_CANCELLED);
+            SecurityMailKind.ACCOUNT_DELETION_CANCELLED,
+            SecurityMailKind.LOGIN_METHOD_LINKED,
+            SecurityMailKind.LOGIN_METHOD_UNLINKED);
     assertThat(
             Arrays.stream(SecurityMailKind.values())
                 .filter(kind -> !kind.hasNotice())
                 .map(SecurityMailKind::notMeAdvice))
-        .hasSize(5)
+        .hasSize(6)
         .containsOnlyNulls();
   }
 
-  /// 链接过期就不发的恰好是三类只为链接而发的信（spec 第 5 节）。
+  /// 链接过期就不发的恰好是只为链接或验证码而发的信（spec 第 5 节）。
   @Test
   void should_skip_only_link_purpose_kinds_when_expired() {
     assertThat(
@@ -100,6 +131,7 @@ class SecurityMailKindTest {
         .containsExactlyInAnyOrder(
             SecurityMailKind.EMAIL_VERIFICATION,
             SecurityMailKind.PASSWORD_RESET,
-            SecurityMailKind.EMAIL_CHANGE_CONFIRM);
+            SecurityMailKind.EMAIL_CHANGE_CONFIRM,
+            SecurityMailKind.REGISTRATION_CODE);
   }
 }

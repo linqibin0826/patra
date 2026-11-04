@@ -115,6 +115,20 @@ class SecurityServletAutoConfigurationTest {
   }
 
   @Test
+  @DisplayName("应用只声明附加过滤器链时默认链留着，两条链共存")
+  void should_keep_default_chain_when_application_declares_additional_chain() {
+    contextRunner
+        .withPropertyValues(PUBLIC_KEYS_PROPERTY)
+        .withUserConfiguration(AdditionalChainConfig.class)
+        .run(
+            context -> {
+              assertThat(context).hasNotFailed();
+              assertThat(context.getBeansOfType(SecurityFilterChain.class))
+                  .containsOnlyKeys("additionalChain", "patraSecurityFilterChain");
+            });
+  }
+
+  @Test
   @DisplayName("非 Web 环境下不注册 servlet 相关的 Bean，也不要求公钥")
   void should_skip_servlet_beans_without_web_environment() {
     new ApplicationContextRunner()
@@ -232,6 +246,21 @@ class SecurityServletAutoConfigurationTest {
     @Bean
     AuthenticationManager customAuthenticationManager() {
       return authentication -> authentication;
+    }
+  }
+
+  /// 只声明一条附加链：工厂方法的返回类型是附加链类型，默认链不让位。
+  @Configuration(proxyBeanMethods = false)
+  static class AdditionalChainConfig {
+
+    /// 只匹配一个路径的附加链。
+    ///
+    /// @param http Spring Security 的构建器
+    /// @return 附加链
+    @Bean
+    AdditionalSecurityFilterChain additionalChain(HttpSecurity http) {
+      http.securityMatcher("/additional/**");
+      return new AdditionalSecurityFilterChain(http.build());
     }
   }
 }

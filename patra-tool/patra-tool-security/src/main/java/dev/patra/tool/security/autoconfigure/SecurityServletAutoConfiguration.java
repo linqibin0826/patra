@@ -118,13 +118,16 @@ public final class SecurityServletAutoConfiguration {
   ///
   /// 下游不做路径级拦截，路由规则归网关。需要登录的接口由业务代码调
   /// `CurrentUserPort.require()` 来保证，这样服务之间直连的 `/_internal/**` 不受影响。
+  /// 应用声明普通的 `SecurityFilterChain` 时它让位；声明 {@link AdditionalSecurityFilterChain} 时留着。
   ///
   /// @param http Spring Security 的构建器
   /// @param problemWriter 统一的错误写出器
   /// @param identityAssertionDecoder 验签器
   /// @return 过滤器链
   @Bean
-  @ConditionalOnMissingBean(SecurityFilterChain.class)
+  @ConditionalOnMissingBean(
+      value = SecurityFilterChain.class,
+      ignored = AdditionalSecurityFilterChain.class)
   public SecurityFilterChain patraSecurityFilterChain(
       HttpSecurity http,
       SecurityProblemWriter problemWriter,

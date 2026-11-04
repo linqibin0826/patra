@@ -1,0 +1,12 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{html/fragments/layout :: mail('账号通知', '注册验证码 · VERIFICATION CODE', '你的注册验证码', ~{::content}, |你收到这封邮件，是因为有人在 ${siteName} 用这个地址注册账号。|)}">
+<body>
+<th:block th:fragment="content">
+<p style="margin:16px 0 0 0;"><span th:text="${displayName}">chen-yu</span>，你好。<span th:text="|在 ${siteName} 的注册页面输入下面的验证码，完成注册。|">在 Patra 的注册页面输入下面的验证码，完成注册。</span></p>
+<p style="margin:24px 0 0 0;font-size:28px;line-height:1.2;font-weight:600;letter-spacing:6px;" th:text="${code}">483920</p>
+<p class="p-fg3" style="margin:12px 0 0 0;font-size:13px;line-height:1.6;color:#57534e;"><span th:text="|${linkExpiresAt} 前有效。|">11 月 4 日 16:20 前有效。</span>不要把验证码告诉任何人。</p>
+<p class="p-fg3 p-rule" style="margin:32px 0 0 0;padding-top:20px;border-top:1px solid #e7e1d4;font-size:13px;line-height:1.6;color:#57534e;">不是你在注册？忽略这封邮件即可，不会有账号被创建。</p>
+</th:block>
+</body>
+</html>

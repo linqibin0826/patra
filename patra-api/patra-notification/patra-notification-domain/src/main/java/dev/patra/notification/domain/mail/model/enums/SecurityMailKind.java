@@ -2,7 +2,7 @@ package dev.patra.notification.domain.mail.model.enums;
 
 import java.util.Map;
 
-/// identity 请通知服务发的 13 类安全邮件：模板名、主题、「不是我怎么办」与链接过期后发不发。
+/// identity 请通知服务发的 16 类安全邮件：模板名、主题、「不是我怎么办」与链接过期后发不发。
 ///
 /// 模板名就是 identity 事件路由键 `security-mail.<模板名>` 的后半段，渲染器据此找 `html/<模板名>` 与
 /// `text/<模板名>`。主题与「不是我怎么办」是 v0.16 之前 identity 里的原文，随模板一起搬来。
@@ -10,7 +10,16 @@ public enum SecurityMailKind {
   /// 验证邮箱：只为链接而发。
   EMAIL_VERIFICATION("email-verification", "验证你的 Patra 邮箱", null, true),
   /// 找回密码：只为链接而发。
-  PASSWORD_RESET("password-reset", "重设你的 Patra 密码", null, true),
+  PASSWORD_RESET("password-reset", null, null, true) {
+    /// 收件人还没有密码（只用第三方登录）时说设置，不说重设：变量 `settingPassword`。
+    ///
+    /// @param facts 模板变量
+    /// @return 主题
+    @Override
+    public String subjectFor(Map<String, Object> facts) {
+      return Boolean.TRUE.equals(facts.get("settingPassword")) ? "设置你的 Patra 密码" : "重设你的 Patra 密码";
+    }
+  },
   /// 密码已重设。
   PASSWORD_RESET_DONE("password-reset-done", "你的 Patra 密码已重设", Advice.STOLEN_MAILBOX, false),
   /// 密码已修改。
@@ -59,7 +68,21 @@ public enum SecurityMailKind {
     }
   },
   /// 账号已注销：到期执行后发的，不带安全通知片段。
-  ACCOUNT_DELETION_COMPLETED("account-deletion-completed", "你的 Patra 账号已注销", null, false);
+  ACCOUNT_DELETION_COMPLETED("account-deletion-completed", "你的 Patra 账号已注销", null, false),
+  /// 第三方首次注册的验证码：只为验证码而发，过期就没用了。
+  REGISTRATION_CODE("registration-code", "你的 Patra 注册验证码", null, true),
+  /// 绑定了新的第三方登录方式。
+  LOGIN_METHOD_LINKED(
+      "login-method-linked",
+      "你的 Patra 账号绑定了新的登录方式",
+      "如果不是你，说明有人登录了你的账号：请立即修改密码，并到安全设置解绑这个登录方式、退出不认识的设备",
+      false),
+  /// 解绑了一种第三方登录方式。
+  LOGIN_METHOD_UNLINKED(
+      "login-method-unlinked",
+      "你的 Patra 账号解绑了一种登录方式",
+      "如果不是你，说明有人登录了你的账号：请立即修改密码，并到安全设置退出不认识的设备",
+      false);
 
   private final String template;
   private final String subject;
@@ -109,7 +132,7 @@ public enum SecurityMailKind {
     return notMeAdvice != null;
   }
 
-  /// 链接过期后是否不发：只为链接而发的信（验证邮箱、找回密码、改邮箱确认）过期了就没用了。
+  /// 链接过期后是否不发：只为链接或验证码而发的信（验证邮箱、找回密码、改邮箱确认、注册验证码）过期了就没用了。
   ///
   /// @return 过期不发为 `true`
   public boolean skipsWhenLinkExpired() {

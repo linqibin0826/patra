@@ -88,6 +88,7 @@ cp patra-infra/docker/.env.secret.example patra-infra/docker/.env.secret
 scp -p ~/.patra/secrets/redis.env ~/.patra/secrets/rabbitmq.env ~/.patra/secrets/gateway.env \
   ~/.patra/secrets/nacos.env ~/.patra/secrets/nacos-push.env ~/.patra/secrets/clickhouse.env \
   linqibin@linqibins-mac-mini:.patra/secrets/
+#     oauth.env 不复制：线上是另一套应用，按 secrets/oauth.env.example 在 mini 上单独放一份，没有它第三方登录入口 404
 # 4d. (Mac mini) 生成只放 mini 的 nacos-server.env、nacos-admin.env、clickhouse-grafana.env，命令见 secrets/ 下对应的 *.example。
 #     管理员密码另存一份到密码管理器
 
@@ -153,15 +154,16 @@ ssh linqibin@linqibins-mac-mini 'docker restart patra-xxl-job-admin'  # 只重�
 
 ## 密钥
 
-密钥放在仓库外的 `~/.patra/secrets/`（目录 0700，文件 0600）。除了只放 mini 的 `nacos-server.env`、`nacos-admin.env`，MacBook 和 Mac mini 各放一份，内容相同。
+密钥放在仓库外的 `~/.patra/secrets/`（目录 0700，文件 0600）。除了只放 mini 的 `nacos-server.env`、`nacos-admin.env`，MacBook 和 Mac mini 各放一份，内容相同（`oauth.env` 例外）。
 
-- 两边放同一份，是因为本机开发和 mini 是同一个环境，共用 mini 的 Redis、RabbitMQ 和同一对签名密钥。
+- 两边放同一份（`oauth.env` 例外），是因为本机开发和 mini 是同一个环境，共用 mini 的 Redis、RabbitMQ 和同一对签名密钥。
 - 不放在 compose 目录，是因为 CD 每次运行前的 `git clean` 会删掉 runner 工作区里被忽略的文件。
 
 | 文件 | 内容 | 谁加载 | 缺失时 |
 |---|---|---|---|
 | `redis.env` | `REDIS_PASSWORD`，64 位十六进制 | core 栈的 redis；catalog、identity、analytics 的容器和本机进程（gateway 经 identity 查会话，不连 Redis） | compose 报出路径并拒绝执行；本机进程启动失败，报出缺的文件路径或变量名 |
 | `rabbitmq.env` | `RABBITMQ_PASSWORD`，64 位十六进制，RabbitMQ 账号 `patra` 的密码 | core 栈的 rabbitmq（只在首次启动时用来建账号，见「RabbitMQ」）；interaction、identity、notification 的容器和本机进程 | 同 `redis.env`；rabbitmq 的值为空时拒绝启动 |
+| `oauth.env` | 第三方登录：Google / GitHub / ORCID 的客户端 ID 与密钥（模板 `secrets/oauth.env.example`）。**两台机器内容不同**：本机和线上是两套应用 | identity 的容器和本机进程 | 可选：哪一家没配，identity 记一条 WARN，那一家的入口 404 |
 | `gateway.env` | `PATRA_GATEWAY_IDENTITY_ASSERTION_PRIVATE_KEY`，含私钥的 EC P-256 JWK JSON，一行 | gateway 的容器和本机进程 | 同上 |
 | `nacos-server.env` | Nacos 的 `NACOS_AUTH_TOKEN`、`NACOS_AUTH_IDENTITY_KEY`、`NACOS_AUTH_IDENTITY_VALUE`。**只放 mini** | core 栈的 nacos | compose 报出路径并拒绝执行 |
 | `nacos-admin.env` | Nacos 管理员密码 `NACOS_ADMIN_PASSWORD`。**只放 mini**，另存密码管理器 | `nacos-init.sh`、`nacos-verify.sh` | 脚本说明缺哪个变量并退出 |

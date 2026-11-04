@@ -487,6 +487,7 @@ class AuthControllerIT {
     assertThat(json.get("deletionDueAt").asString()).isEqualTo("2026-11-04T08:00:00Z");
     assertThat(json.get("nextUsernameChangeAt").asString()).isEqualTo("2026-11-19T08:00:00Z");
     assertThat(json.get("accountType").asString()).isEqualTo("user");
+    assertThat(json.get("hasPassword").asBoolean()).isFalse();
   }
 
   @Test

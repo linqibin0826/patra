@@ -37,7 +37,7 @@ class SecurityMailOutboxIT extends IdentityFlowITSupport {
   }
 
   @Test
-  @DisplayName("13 种领域邮件经登记表的序列化器往返不变：补投时还原出同一封、同一个事件 ID（含设备与 IP 都缺的通知）")
+  @DisplayName("16 种领域邮件经登记表的序列化器往返不变：补投时还原出同一封、同一个事件 ID（含设备与 IP 都缺的通知）")
   void should_round_trip_every_domain_mail_through_registry_serializer() {
     for (OutgoingMail mail : SecurityMailFixture.all()) {
       Object serialized = eventSerializer.serialize(mail);
@@ -49,7 +49,7 @@ class SecurityMailOutboxIT extends IdentityFlowITSupport {
   }
 
   @Test
-  @DisplayName("13 种集成事件经消息转换器往返不变：消费端按 __TypeId__ 还原出具体类型")
+  @DisplayName("16 种集成事件经消息转换器往返不变：消费端按 __TypeId__ 还原出具体类型")
   void should_round_trip_every_integration_event_through_message_converter() {
     for (OutgoingMail mail : SecurityMailFixture.all()) {
       SecurityMailEvent event = mapper.toIntegrationEvent(mail);

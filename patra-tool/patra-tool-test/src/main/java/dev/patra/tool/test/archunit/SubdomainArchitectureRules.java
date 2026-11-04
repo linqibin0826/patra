@@ -478,7 +478,7 @@ public final class SubdomainArchitectureRules {
                 depth == 1
                     || depth == 2
                         && Set.of("request", "response", "converter").contains(segments.get(1));
-            case "internal", "scheduler", "mq", "config" -> depth == 1;
+            case "internal", "scheduler", "mq", "security", "config" -> depth == 1;
             default -> false;
           };
       case "api" -> depth == 1 && Set.of("endpoint", "dto", "event").contains(first);

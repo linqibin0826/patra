@@ -103,6 +103,23 @@ class UserReadAdapterIT {
   }
 
   @Test
+  void should_report_has_password_only_when_credential_row_exists() {
+    User saved =
+        users.save(User.register(EmailAddress.of("pw@example.com"), Username.of("u-has-pw")));
+    profiles.save(UserProfile.create(saved.getId()));
+
+    assertThat(reader.findAccount(saved.getId()).orElseThrow().hasPassword()).isFalse();
+
+    jdbcTemplate.update(
+        "INSERT INTO idn_user_password_credential (id, user_id, password_hash) VALUES (?, ?, ?)",
+        saved.getId() + 1,
+        saved.getId(),
+        "$argon2id$placeholder");
+
+    assertThat(reader.findAccount(saved.getId()).orElseThrow().hasPassword()).isTrue();
+  }
+
+  @Test
   void should_use_display_name_and_compute_next_username_change() {
     User saved =
         users.save(User.register(EmailAddress.of("named@example.com"), Username.of("u-named")));

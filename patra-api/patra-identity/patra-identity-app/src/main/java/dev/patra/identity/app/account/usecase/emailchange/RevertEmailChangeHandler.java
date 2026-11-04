@@ -13,6 +13,7 @@ import dev.patra.identity.domain.account.policy.MailLinkPolicy;
 import dev.patra.identity.domain.account.port.mail.EmailDeliveryPort;
 import dev.patra.identity.domain.account.port.read.UserReadPort;
 import dev.patra.identity.domain.account.port.repository.EmailTokenRepository;
+import dev.patra.identity.domain.account.port.repository.ExternalIdentityRepository;
 import dev.patra.identity.domain.account.port.repository.UserPasswordCredentialRepository;
 import dev.patra.identity.domain.account.port.repository.UserRepository;
 import dev.patra.identity.domain.account.service.ClientOriginResolver;
@@ -38,7 +39,8 @@ import org.springframework.transaction.support.TransactionOperations;
 /// 拿到账号后申请注销是很自然的事，原主必须能撤回，撤回不碰注销状态）→ 条件消费 → 旧地址 7 天内被别人
 /// 注册了 409 且事务回滚（令牌没被消费；当前邮箱已经是旧地址时不算占用）→ 改回并写验证时间 → 作废全部令牌 + 只作废比本条更晚签发的
 /// 撤销令牌（更早的保留：X → Y → Z 时攻击者先点 Y 的也废不掉原主 X 的）→ 删凭据
-/// （作废密码）→ 撤销全部会话并记 `EMAIL_REVERTED` → 签发重设令牌 → 登记发往改回地址的含重设链接的通知
+/// （作废密码）→ 删外部身份（攻击者绑的第三方账号不能再进来；登录只看 `(provider, subject)`，不删就绕过了这次恢复。
+/// 原主自己绑的也一起删，登回来再绑）→ 撤销全部会话并记 `EMAIL_REVERTED` → 签发重设令牌 → 登记发往改回地址的含重设链接的通知
 /// （与撤销同成同败，PAP-104）。
 /// 不通知被踢掉的新地址。
 @Slf4j
@@ -51,6 +53,7 @@ public class RevertEmailChangeHandler
   private final UserRepository users;
   private final UserReadPort userReadPort;
   private final UserPasswordCredentialRepository credentials;
+  private final ExternalIdentityRepository externalIdentities;
   private final SessionTerminator sessionTerminator;
   private final EmailTokenIssuer emailTokenIssuer;
   private final MailLinkPolicy links;
@@ -106,6 +109,7 @@ public class RevertEmailChangeHandler
                   tokens.revokeAllActive(userId, now);
                   tokens.revokeRevertTokensIssuedAfter(userId, consumed.getId(), now);
                   credentials.deleteByUserId(userId);
+                  externalIdentities.deleteAllByUserId(userId);
                   List<Long> revoked =
                       sessionTerminator.terminateAll(userId, LoginEndReason.EMAIL_REVERTED, now);
                   IssuedEmailToken reset =

@@ -13,9 +13,15 @@ import lombok.Builder;
 /// @param displayName 收件人的昵称
 /// @param resetUrl 重设密码的链接，令牌在 URL 片段里
 /// @param linkExpiresAt 链接的过期时间
+/// @param settingPassword 收件人还没有密码（只用第三方登录），这次是设置而不是重设
 @Builder
 public record PasswordResetMail(
-    UUID eventId, EmailAddress to, String displayName, String resetUrl, Instant linkExpiresAt)
+    UUID eventId,
+    EmailAddress to,
+    String displayName,
+    String resetUrl,
+    Instant linkExpiresAt,
+    boolean settingPassword)
     implements OutgoingMail {
 
   /// 除基本类型外的字段都不能为 `null`。

@@ -177,6 +177,9 @@ services:
         required: true
       - path: ${HOME}/.patra/secrets/rabbitmq.env
         required: true
+      # 第三方登录的客户端 ID 与密钥（PAP-181）。可选：哪一家没配，哪一家的入口就 404
+      - path: ${HOME}/.patra/secrets/oauth.env
+        required: false
       - path: ${HOME}/.patra/secrets/identity.env
         required: false
     # IP 属地的离线库（PAP-99）：两个 xdb 由 scripts/fetch-ip2region.sh 下载到宿主机，只读挂进来；缺文件 identity 起不来
@@ -184,6 +187,9 @@ services:
       - ${HOME}/.patra/data/ip2region:/data/ip2region:ro
     environment:
       PATRA_IDENTITY_IP_GEOLOCATION_DIRECTORY: /data/ip2region
+      # 第三方登录（PAP-181）：回调地址的前缀要和三家后台填的一致；ORCID 线上用正式接口，本机默认沙箱
+      PATRA_OAUTH_REDIRECT_BASE_URL: https://patra.linqibin.dev
+      PATRA_OAUTH_ORCID_BASE_URL: https://orcid.org
     healthcheck:
       test: [ "CMD", "curl", "-fs", "http://localhost:6400/actuator/health" ]
       <<: *app-healthcheck

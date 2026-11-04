@@ -52,7 +52,9 @@ public class GatewaySecurityConfiguration {
   /// 邮箱验证（邮件链接在哪台设备点都要能用；带会话时照样换成断言）、找回密码的申请与提交
   /// （`/auth/password/**`，忘了密码的人没有会话）、改邮箱的确认与撤销（`/auth/email/change/**`，
   /// 新旧邮箱的链接在哪台设备点都要能用；申请在 `/me/email/change`，不在这个前缀下）、
-  /// 公开身份卡与头像（`/users/**`，旧用户名的 301 原样透传）、OpenAPI 文档（Scalar 聚合要拉）。
+  /// 第三方登录的发起、回调和首次注册（`oauth2Login` 的默认路径，门户转发；绑定回调带会话时照样换成断言，
+  /// identity 靠它核对发起人）、公开身份卡与头像（`/users/**`，旧用户名的 301 原样透传）、
+  /// OpenAPI 文档（Scalar 聚合要拉）。
   static final String[] IDENTITY_PUBLIC_PATHS = {
     "/patra-identity/auth/register",
     "/patra-identity/auth/login",
@@ -60,6 +62,10 @@ public class GatewaySecurityConfiguration {
     "/patra-identity/auth/email/verify",
     "/patra-identity/auth/password/**",
     "/patra-identity/auth/email/change/**",
+    "/patra-identity/oauth2/authorization/*",
+    "/patra-identity/login/oauth2/code/*",
+    "/patra-identity/auth/oauth/registration",
+    "/patra-identity/auth/oauth/registration/**",
     "/patra-identity/users/**",
     "/patra-identity/v3/api-docs",
     "/patra-identity/v3/api-docs/**"

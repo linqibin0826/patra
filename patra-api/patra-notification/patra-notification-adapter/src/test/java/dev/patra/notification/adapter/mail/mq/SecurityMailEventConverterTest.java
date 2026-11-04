@@ -11,11 +11,14 @@ import dev.patra.identity.api.account.event.EmailChangeRevertedMailEvent;
 import dev.patra.identity.api.account.event.EmailChangedConfirmationMailEvent;
 import dev.patra.identity.api.account.event.EmailChangedNoticeMailEvent;
 import dev.patra.identity.api.account.event.EmailVerificationMailEvent;
+import dev.patra.identity.api.account.event.LoginMethodLinkedMailEvent;
+import dev.patra.identity.api.account.event.LoginMethodUnlinkedMailEvent;
 import dev.patra.identity.api.account.event.NewDeviceLoginMailEvent;
 import dev.patra.identity.api.account.event.OperationContext;
 import dev.patra.identity.api.account.event.PasswordChangedMailEvent;
 import dev.patra.identity.api.account.event.PasswordResetDoneMailEvent;
 import dev.patra.identity.api.account.event.PasswordResetMailEvent;
+import dev.patra.identity.api.account.event.RegistrationCodeMailEvent;
 import dev.patra.notification.domain.mail.model.enums.SecurityMailKind;
 import dev.patra.notification.domain.mail.model.vo.SecurityMail;
 import java.time.Instant;
@@ -23,7 +26,7 @@ import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-/// SecurityMailEventConverter 单元测试：13 种事件各自转成对的类别、收件人、模板变量、操作上下文与链接过期时刻。
+/// SecurityMailEventConverter 单元测试：16 种事件各自转成对的类别、收件人、模板变量、操作上下文与链接过期时刻。
 @DisplayName("SecurityMailEventConverter 单元测试")
 class SecurityMailEventConverterTest {
 
@@ -72,8 +75,27 @@ class SecurityMailEventConverterTest {
                 .build());
 
     assertCommon(mail, SecurityMailKind.PASSWORD_RESET);
-    assertThat(mail.facts()).containsOnlyKeys("resetUrl");
+    assertThat(mail.facts())
+        .containsOnlyKeys("resetUrl", "settingPassword")
+        .containsEntry("settingPassword", false);
     assertThat(mail.linkExpiresAt()).isEqualTo(EXPIRES);
+  }
+
+  /// 没有密码的用户走找回密码：`settingPassword` 进模板变量，主题和正文据此说设置密码。
+  @Test
+  void should_convert_password_reset_for_user_without_password() {
+    SecurityMail mail =
+        convert(
+            PasswordResetMailEvent.builder()
+                .eventId(ID)
+                .to(TO)
+                .displayName(NAME)
+                .resetUrl("https://patra.example/reset-password#token=r")
+                .linkExpiresAt(EXPIRES)
+                .settingPassword(true)
+                .build());
+
+    assertThat(mail.facts()).containsEntry("settingPassword", true);
   }
 
   /// 密码已重设：只有操作上下文。
@@ -265,6 +287,61 @@ class SecurityMailEventConverterTest {
   private static SecurityMail convert(
       dev.patra.identity.api.account.event.SecurityMailEvent event) {
     return SecurityMailEventConverter.toSecurityMail(event);
+  }
+
+  /// 注册验证码：码进 `code`，过期时刻进 `linkExpiresAt`，过期了就不发。
+  @Test
+  void should_convert_registration_code() {
+    SecurityMail mail =
+        convert(
+            RegistrationCodeMailEvent.builder()
+                .eventId(ID)
+                .to(TO)
+                .displayName(NAME)
+                .code("483920")
+                .codeExpiresAt(EXPIRES)
+                .build());
+
+    assertCommon(mail, SecurityMailKind.REGISTRATION_CODE);
+    assertThat(mail.facts()).containsOnlyKeys("code").containsEntry("code", "483920");
+    assertThat(mail.linkExpiresAt()).isEqualTo(EXPIRES);
+  }
+
+  /// 绑定与解绑：平台名、账号标识、安全设置链接与操作上下文。
+  @Test
+  void should_convert_login_method_changes() {
+    SecurityMail linked =
+        convert(
+            LoginMethodLinkedMailEvent.builder()
+                .eventId(ID)
+                .to(TO)
+                .displayName(NAME)
+                .providerName("GitHub")
+                .accountLabel("octocat")
+                .securitySettingsUrl("https://patra.example/settings/security")
+                .context(CONTEXT)
+                .build());
+    SecurityMail unlinked =
+        convert(
+            LoginMethodUnlinkedMailEvent.builder()
+                .eventId(ID)
+                .to(TO)
+                .displayName(NAME)
+                .providerName("ORCID")
+                .accountLabel("0000-0002-1825-0097")
+                .securitySettingsUrl("https://patra.example/settings/security")
+                .context(CONTEXT)
+                .build());
+
+    assertCommon(linked, SecurityMailKind.LOGIN_METHOD_LINKED);
+    assertThat(linked.facts())
+        .containsEntry("providerName", "GitHub")
+        .containsEntry("accountLabel", "octocat")
+        .containsEntry("securityUrl", "https://patra.example/settings/security");
+    assertContext(linked);
+    assertCommon(unlinked, SecurityMailKind.LOGIN_METHOD_UNLINKED);
+    assertThat(unlinked.facts()).containsEntry("providerName", "ORCID");
+    assertContext(unlinked);
   }
 
   /// 13 种共有的部分。

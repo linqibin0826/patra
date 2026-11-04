@@ -18,6 +18,7 @@ import lombok.Builder;
 /// @param status 状态
 /// @param deletionDueAt 注销到期时间，不在冷静期时为 `null`
 /// @param nextUsernameChangeAt 下次可以改名的时间，没改过名时为 `null`
+/// @param hasPassword 有没有密码凭据：第三方注册的用户没有，门户据此选择再认证的提示
 @Builder
 public record UserAccountReadModel(
     long userId,
@@ -28,7 +29,8 @@ public record UserAccountReadModel(
     Avatar avatar,
     UserStatus status,
     Instant deletionDueAt,
-    Instant nextUsernameChangeAt) {
+    Instant nextUsernameChangeAt,
+    boolean hasPassword) {
 
   /// 校验非空。
   public UserAccountReadModel {
