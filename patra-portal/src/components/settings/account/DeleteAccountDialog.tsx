@@ -105,7 +105,7 @@ export function DeleteAccountDialog({ open, onOpenChange, user }: DeleteAccountD
         open={open}
         onOpenChange={onOpenChangeInternal}
         title={DELETE_ACCOUNT_MESSAGES.doneTitle}
-        description={`账号将于 ${dueAt ? formatDate(dueAt) : ""}删除。所有设备已退出登录。在此之前用邮箱和密码登录，就可以取消注销。确认邮件已发到 ${user.email}。`}
+        description={`账号将于 ${dueAt ? formatDate(dueAt) : ""}删除。所有设备已退出登录。在此之前重新登录，就可以取消注销。确认邮件已发到 ${user.email}。`}
         icon={<StateIcon icon={CalendarClock} tone="warning" />}
       >
         <div className="flex justify-end">
@@ -190,7 +190,7 @@ export function DeleteAccountDialog({ open, onOpenChange, user }: DeleteAccountD
       <div className="flex flex-col gap-3.5">
         <ul className="flex list-disc flex-col gap-1.5 pl-4.5 text-base leading-5.5 text-fg-2">
           <li>所有设备立即退出登录，主页对别人消失。</li>
-          <li>15 天冷静期内用邮箱和密码登录，就可以取消注销。</li>
+          <li>15 天冷静期内重新登录，就可以取消注销。</li>
           <li>
             到期后资料、头像、关注领域被删除，邮箱可以重新注册；用户名 @{user.username}{" "}
             永久保留、不能再被使用。

@@ -456,3 +456,56 @@ export const REGISTRATION_MESSAGES = {
   takenDescription: (name: string) =>
     `你的 ${name} 账号刚刚完成了注册，可能是在另一个标签页。重新用它登录就行。`,
 } as const;
+
+/// 设置密码对话框（决策 E，画板 Security）
+export const SET_PASSWORD_MESSAGES = {
+  title: "设置密码",
+  reasonTitle: "先设置一个密码",
+  why: "有了密码，就能用邮箱和密码登录，也能完成绑定、解绑、注销这类要验证身份的操作。",
+  reasonWhy:
+    "这项操作要先验证密码，但你的账号还没有密码。用第三方账号登录不算验证：只要对方网站还登录着，别人坐到你的电脑前也能通过。",
+  last: "用新密码或第三方账号重新登录。",
+  reasonLast: "用新密码重新登录，再回来完成刚才的操作。",
+  send: "发送设置邮件",
+  sending: "发送中…",
+  cancel: "取消",
+  failed: "没有发出去，请稍后再试",
+  sentTitle: "查看你的邮箱",
+  sentDescription: (email: string) =>
+    `设置密码的邮件已发到 ${email}，链接 1 小时内有效。设置好之后所有设备会退出登录，用新密码重新登录就能继续。`,
+  spam: "没收到？先看看垃圾邮件。",
+  resend: "重新发送",
+  done: "好的",
+} as const;
+
+/// 安全页 · 登录方式（画板 Security）
+export const LOGIN_METHOD_MESSAGES = {
+  description: "这些方式都能登录这个账号。绑定和解绑要先验证密码，并会发一封通知邮件。",
+  descriptionNoPassword:
+    "这些方式都能登录这个账号。绑定和解绑要先验证密码，你还没有密码，需要先设置一个。",
+  loading: "正在加载登录方式",
+  loadFailed: "登录方式加载失败",
+  retry: "重试",
+  passwordRow: "邮箱和密码",
+  passwordSet: "已设置",
+  passwordUnset: "还没有设置",
+  setPassword: "设置密码",
+  unlinked: "未绑定",
+  unlinkedOrcid: "未绑定 · 科研人员身份标识",
+  bind: "绑定",
+  unlink: "解绑",
+  unlinking: "解绑中…",
+  cancel: "取消",
+  lastOnly: "这是你现在唯一的登录方式，解绑后就登录不了了。先",
+  lastOnlyAfter: "，之后可以解绑。",
+  tailnetNote: "要绑定新账号，请到 patra.linqibin.dev 操作。",
+  unlinkConfirm: (name: string, label: string, email: string) =>
+    `解绑后，不能再用 ${name} 账号 ${label} 登录 Patra。通知邮件会发到 ${email}。`,
+  lastMethodRejected: "这是你现在唯一的登录方式，不能解绑。先设置密码，之后可以解绑。",
+  unlinkFailed: "解绑没有成功，请稍后再试",
+} as const;
+
+/// 解绑成功的提示
+export function unlinkedToast(provider: Provider): string {
+  return `已解绑 ${providerName(provider)}。通知邮件已发到你的邮箱。`;
+}

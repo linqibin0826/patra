@@ -12,6 +12,8 @@ export const queryKeys = {
   currentUser: ["current-user"] as const,
   /** 登录设备列表：安全页读取；改密码、踢设备后失效 */
   sessions: ["sessions"] as const,
+  /** 登录方式：安全页读取；绑定、解绑后失效 */
+  loginMethods: ["login-methods"] as const,
   /** 我的状态：全部批次的公共前缀（收藏、移除后按前缀改所有屏里这篇的状态） */
   libraryStatusAll: ["library-status"] as const,
   /** 我的状态：一屏一批，按去重后的文献 ID 缓存 */

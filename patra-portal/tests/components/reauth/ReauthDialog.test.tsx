@@ -164,3 +164,41 @@ describe("ReauthDialog", () => {
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 });
+
+describe("没有密码的账号", () => {
+  it("显示设置密码，没有密码框；关闭算取消，不调再认证", async () => {
+    const client = new QueryClient();
+    client.setQueryData(queryKeys.currentUser, { ...USER, hasPassword: false });
+    render(
+      <QueryClientProvider client={client}>
+        <ReauthDialog />
+      </QueryClientProvider>,
+    );
+    let outcome!: Promise<boolean>;
+    act(() => {
+      outcome = useReauthStore.getState().request();
+    });
+    expect(await screen.findByRole("dialog", { name: "先设置一个密码" })).toHaveTextContent(
+      USER.email,
+    );
+    expect(screen.queryByLabelText("密码")).not.toBeInTheDocument();
+    await userEvent.setup().click(screen.getByRole("button", { name: "取消" }));
+    await expect(outcome).resolves.toBe(false);
+    expect(reauthenticate).not.toHaveBeenCalled();
+  });
+
+  it("当前用户还没加载：仍是密码框，不报缺 queryFn", async () => {
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <ReauthDialog />
+      </QueryClientProvider>,
+    );
+    act(() => {
+      void useReauthStore.getState().request();
+    });
+    expect(await screen.findByLabelText("密码")).toBeInTheDocument();
+    expect(JSON.stringify(error.mock.calls)).not.toContain("queryFn");
+    error.mockRestore();
+  });
+});
