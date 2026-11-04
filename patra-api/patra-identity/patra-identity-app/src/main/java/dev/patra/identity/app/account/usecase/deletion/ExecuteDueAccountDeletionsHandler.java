@@ -8,6 +8,7 @@ import dev.patra.identity.domain.account.port.avatar.AvatarStoragePort;
 import dev.patra.identity.domain.account.port.mail.EmailDeliveryPort;
 import dev.patra.identity.domain.account.port.read.UserReadPort;
 import dev.patra.identity.domain.account.port.repository.EmailTokenRepository;
+import dev.patra.identity.domain.account.port.repository.ExternalIdentityRepository;
 import dev.patra.identity.domain.account.port.repository.UserPasswordCredentialRepository;
 import dev.patra.identity.domain.account.port.repository.UserProfileRepository;
 import dev.patra.identity.domain.account.port.repository.UserRepository;
@@ -24,7 +25,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.support.TransactionOperations;
 
 /// 执行到期的注销（PAP-100 设计第 9、11 节）：按 ID 游标分批扫冷静期已到期的用户，每个用户一个事务、
-/// 加锁复核后匿名化——转 `DELETED`（邮箱置空、行与用户名保留）、删凭据、清资料（行保留）、删令牌、
+/// 加锁复核后匿名化——转 `DELETED`（邮箱置空、行与用户名保留）、删凭据、清资料（行保留）、删令牌与外部身份、
 /// 撤销冷静期内登录的会话，并在同一事务里给注销前的邮箱登记「已注销」（PAP-104）。
 ///
 /// 单个用户失败只记日志、计数，接着处理下一个，它仍在冷静期，下次运行再试；按 ID 往后翻，不会反复撞上它。
@@ -45,6 +46,7 @@ public class ExecuteDueAccountDeletionsHandler
   private final UserPasswordCredentialRepository credentials;
   private final UserProfileRepository profiles;
   private final EmailTokenRepository tokens;
+  private final ExternalIdentityRepository externalIdentities;
   private final AvatarStoragePort avatarStorage;
   private final SessionTerminator sessionTerminator;
   private final EmailDeliveryPort emailDelivery;
@@ -126,6 +128,7 @@ public class ExecuteDueAccountDeletionsHandler
                         profiles.save(profile);
                       });
               tokens.deleteAllByUserId(id);
+              externalIdentities.deleteAllByUserId(id);
               sessionTerminator.terminateAll(id, LoginEndReason.DELETION_COMPLETED, now);
               emailDelivery.send(
                   AccountDeletionCompletedMail.of(email, displayName, user.getUsername().value()));

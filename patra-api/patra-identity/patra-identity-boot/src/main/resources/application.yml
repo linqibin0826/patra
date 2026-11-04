@@ -98,6 +98,45 @@ patra:
     new-device-mail:
       lookback: 180d                      # 这么久内用过的设备标识不算新设备（按那次登录结束或过期的时刻算）
       cooldown: 24h                       # 同一账号同一设备两封新设备提醒的最短间隔
+    # 第三方登录（PAP-180）。客户端 ID 和密钥来自 ~/.patra/secrets/oauth.env，某一家缺了就不注册它：入口 404，identity 照常启动。
+    # 回调地址的前缀和 ORCID 的环境本机走默认值，mini 在 compose 里设。
+    # 都写明确的端点、不用发现文档：启动不联网。redirect-uri 写门户对外的完整地址：{baseUrl} 解析出来是内网地址。
+    # Google、ORCID 不配 user-info-uri：要的东西 id_token 里都有。issuer 只比较 id_token 的 iss，不联网。
+    # ORCID 的 PKCE 由 PAP-181 实测决定
+    oauth:
+      providers:
+        google:
+          client-id: ${PATRA_OAUTH_GOOGLE_CLIENT_ID:}
+          client-secret: ${PATRA_OAUTH_GOOGLE_CLIENT_SECRET:}
+          redirect-uri: ${PATRA_OAUTH_REDIRECT_BASE_URL:http://localhost:4000}/api/auth/oauth/callback/google
+          scopes: openid,email
+          authorization-uri: https://accounts.google.com/o/oauth2/v2/auth
+          token-uri: https://oauth2.googleapis.com/token
+          jwk-set-uri: https://www.googleapis.com/oauth2/v3/certs
+          user-name-attribute: sub
+          issuer: https://accounts.google.com
+          require-proof-key: true
+        github:
+          client-id: ${PATRA_OAUTH_GITHUB_CLIENT_ID:}
+          client-secret: ${PATRA_OAUTH_GITHUB_CLIENT_SECRET:}
+          redirect-uri: ${PATRA_OAUTH_REDIRECT_BASE_URL:http://localhost:4000}/api/auth/oauth/callback/github
+          scopes: read:user
+          authorization-uri: https://github.com/login/oauth/authorize
+          token-uri: https://github.com/login/oauth/access_token
+          user-info-uri: https://api.github.com/user
+          user-name-attribute: id
+          require-proof-key: true
+        orcid:
+          client-id: ${PATRA_OAUTH_ORCID_CLIENT_ID:}
+          client-secret: ${PATRA_OAUTH_ORCID_CLIENT_SECRET:}
+          redirect-uri: ${PATRA_OAUTH_REDIRECT_BASE_URL:http://localhost:4000}/api/auth/oauth/callback/orcid
+          scopes: openid
+          authorization-uri: ${PATRA_OAUTH_ORCID_BASE_URL:https://sandbox.orcid.org}/oauth/authorize
+          token-uri: ${PATRA_OAUTH_ORCID_BASE_URL:https://sandbox.orcid.org}/oauth/token
+          jwk-set-uri: ${PATRA_OAUTH_ORCID_BASE_URL:https://sandbox.orcid.org}/oauth/jwks
+          user-name-attribute: sub
+          issuer: ${PATRA_OAUTH_ORCID_BASE_URL:https://sandbox.orcid.org}
+          require-proof-key: ${PATRA_OAUTH_ORCID_REQUIRE_PKCE:false}
     # IP 属地（PAP-99）：ip2region 两个 xdb 所在目录，由 patra-infra/scripts/fetch-ip2region.sh 下载；
     # 容器里由 compose 设 PATRA_IDENTITY_IP_GEOLOCATION_DIRECTORY=/data/ip2region（只读挂载）。缺文件启动失败
     ip-geolocation:

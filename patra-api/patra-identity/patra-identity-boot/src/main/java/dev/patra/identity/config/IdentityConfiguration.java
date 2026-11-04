@@ -10,6 +10,7 @@ import dev.patra.identity.domain.account.policy.PasswordPolicy;
 import dev.patra.identity.domain.account.policy.PasswordResetPolicy;
 import dev.patra.identity.domain.account.policy.ProfileDisplayPolicy;
 import dev.patra.identity.domain.account.policy.ProfilePolicy;
+import dev.patra.identity.domain.account.policy.ProviderRegistrationPolicy;
 import dev.patra.identity.domain.account.policy.UsernameChangePolicy;
 import dev.patra.identity.domain.account.policy.UsernamePolicy;
 import dev.patra.identity.domain.account.port.geolocation.IpGeolocationPort;
@@ -261,6 +262,23 @@ public class IdentityConfiguration {
     IdentityProperties.PasswordReset reset = properties.passwordReset();
     return PasswordResetPolicy.of(
         reset.cooldown(), reset.perEmailDaily(), reset.perIpHourly(), reset.submitPerIpMinutely());
+  }
+
+  /// 第三方首次注册的参数。不是正数时启动失败。
+  ///
+  /// @param properties 配置
+  /// @return 规则
+  @Bean
+  public ProviderRegistrationPolicy providerRegistrationPolicy(IdentityProperties properties) {
+    IdentityProperties.OAuth.Registration registration = properties.oauth().registration();
+    return ProviderRegistrationPolicy.builder()
+        .pendingTtl(registration.pendingTtl())
+        .codeTtl(registration.codeTtl())
+        .maxCodeAttempts(registration.maxCodeAttempts())
+        .resendCooldown(registration.resendCooldown())
+        .perEmailHourly(registration.perEmailHourly())
+        .perIpHourly(registration.perIpHourly())
+        .build();
   }
 
   /// 改邮箱的限流规则。不是正数时启动失败。

@@ -1,18 +1,18 @@
 # patra-identity
 
-前台用户的账号服务：注册、登录、会话、登出、「当前用户」、用户名、资料与隐私设置、公开主页、邮箱验证与邮件、再认证、改密码、找回密码、改邮箱、登录设备与新设备提醒、注销账号、登录失败限制、封禁与解封。
+前台用户的账号服务：注册、登录、第三方登录（Google、GitHub、ORCID）、会话、登出、「当前用户」、用户名、资料与隐私设置、公开主页、邮箱验证与邮件、再认证、改密码、找回密码、改邮箱、登录设备与新设备提醒、注销账号、登录失败限制、封禁与解封。
 
-工程设计：`docs/patra/specs/2026-10-05-identity-account-design.md`（账号）、`docs/patra/specs/2026-10-09-identity-session-design.md`（会话）、`docs/patra/specs/2026-10-20-identity-account-rebuild-design.md`（账号重建：用户名、昵称、邮箱验证状态、四态状态机、`V1` 最终形态）、`docs/patra/specs/2026-10-21-identity-email-verification-design.md`（邮件发送与邮箱验证）、`docs/patra/specs/2026-10-22-identity-account-security-design.md`（账号安全：再认证、改密码、找回密码、改邮箱）、`docs/patra/specs/2026-10-22-identity-profile-design.md`（资料、隐私设置与公开主页）、`docs/patra/specs/2026-10-22-identity-login-devices-design.md`（登录设备：受信转发链路、设备与属地、会话列表、踢设备、新设备邮件、记录清理）、`docs/patra/specs/2026-10-22-identity-account-deletion-design.md`（注销账号：冷静期、取消、到期执行与匿名化、提醒）、`docs/patra/specs/2026-10-23-session-introspection-design.md`（会话存储归 identity 独占、网关查会话的内部接口）、`docs/patra/specs/2026-10-24-identity-external-contract-design.md`（对外契约：批量用户摘要、头像按用户 ID、公开主页带用户 ID）、`docs/patra/specs/2026-10-27-identity-mention-support-design.md`（提及支撑：前缀联想、用户名批量解析）。
+工程设计：`docs/patra/specs/2026-10-05-identity-account-design.md`（账号）、`docs/patra/specs/2026-10-09-identity-session-design.md`（会话）、`docs/patra/specs/2026-10-20-identity-account-rebuild-design.md`（账号重建：用户名、昵称、邮箱验证状态、四态状态机、`V1` 最终形态）、`docs/patra/specs/2026-10-21-identity-email-verification-design.md`（邮件发送与邮箱验证）、`docs/patra/specs/2026-10-22-identity-account-security-design.md`（账号安全：再认证、改密码、找回密码、改邮箱）、`docs/patra/specs/2026-10-22-identity-profile-design.md`（资料、隐私设置与公开主页）、`docs/patra/specs/2026-10-22-identity-login-devices-design.md`（登录设备：受信转发链路、设备与属地、会话列表、踢设备、新设备邮件、记录清理）、`docs/patra/specs/2026-10-22-identity-account-deletion-design.md`（注销账号：冷静期、取消、到期执行与匿名化、提醒）、`docs/patra/specs/2026-10-23-session-introspection-design.md`（会话存储归 identity 独占、网关查会话的内部接口）、`docs/patra/specs/2026-10-24-identity-external-contract-design.md`（对外契约：批量用户摘要、头像按用户 ID、公开主页带用户 ID）、`docs/patra/specs/2026-10-27-identity-mention-support-design.md`（提及支撑：前缀联想、用户名批量解析）、`docs/patra/specs/2026-11-04-identity-social-login-design.md`（第三方登录：`oauth2Login`、首次注册、绑定与解绑、`auth_at` 可空）。
 
 ## 1. 模块
 
 | 模块 | 内容 |
 |---|---|
-| `patra-identity-domain` | `User`、`UserProfile`、`FormerUsername`、`UserPasswordCredential`、`UserLoginRecord`、`EmailToken` 六个聚合，邮箱、用户名、昵称、密码、客户端信息、令牌密文值对象，资料值对象（`vo/profile/`：简介、链接、职称、科室、ROR ID、MeSH UI、机构、关注领域、隐私设置），用户名 / 昵称 / 资料字段（`ProfilePolicy`，拒绝字符与昵称共用 `ProfileTextRules`）/ 改名 / 密码 / 失败限制 / 重发限流 / 再认证 / 找回密码限流 / 改邮箱限流 / 邮件链接规则、会话策略，端口（含邮件发送 `EmailDeliveryPort`、三个限流端口、向 catalog 取名称快照的 `CatalogReferencePort`），主页可见性规则 `ProfileAccess`（公开主页与批量用户摘要共用的唯一一份），公开主页读模型（`viewFor` 按请求者裁剪）与批量用户摘要读模型 `UserSummaryReadModel`，@ 联想用的用户名、昵称前缀值对象 `UsernamePrefix`、`DisplayNamePrefix`，`SessionIssuer`、`EmailTokenIssuer`、`ReauthenticationGuard` 领域服务，`SessionTerminator`（撤销会话并按原因结束登录记录）、`ClientOriginResolver`（请求来源 → 设备名、端、属地，内网判定 `IpAddressScope`）、`UserAgentParsingPort` / `IpGeolocationPort`，新设备提醒规则 `NewDeviceLoginPolicy` 与限流端口，注销规则 `AccountDeletionPolicy`（冷静期、提醒提前量），头像（`vo/avatar/`：`Avatar`、两档尺寸、两档字节，`AvatarPalette` 默认头像色号、`AvatarPolicy`，出图端口 `AvatarImagePort` 与存储端口 `AvatarStoragePort`），十三个 `OutgoingMail` 记录，领域异常 |
-| `patra-identity-app` | 注册、登录、登出、再认证、改用户名、改密码、找回密码（申请、重设）、改邮箱（申请、取消、确认、撤销）、封禁、解封、重发验证邮件、验证邮箱、清理过期令牌、改资料、改隐私设置、踢单个设备、踢其他设备、清理登录记录、发起注销、取消注销、注销到期执行、注销到期前提醒、换头像、移除头像二十八个处理器，走 CommandBus；`CurrentPasswordVerifier` 给再认证与改密码共用；「当前用户」、本人的资料与隐私设置、待确认的改邮箱和公开主页走 `UserQueryService`，登录设备列表走 `SessionQueryService`，网关查会话走 `SessionIntrospectionService`（不经 CommandBus），头像读取走 `AvatarQueryService`，批量用户摘要走 `UserSummaryQueryService`，@ 联想走 `UserSuggestionQueryService`，用户名批量解析走 `UserResolutionQueryService` |
-| `patra-identity-infra` | JPA 持久化（含令牌表）、Argon2id 哈希、常见密码名单、Redis 失败限制与通用限流脚本 `action-throttle.lua`（重发、找回密码、改邮箱三个适配器共用）、会话存储（`RedisSessionStore`、八段 Lua、令牌格式，第 9 节）与适配器、新设备提醒限流适配器，安全邮件出站适配器 `OutboxEmailDeliveryAdapter`（登记进事件发布登记表，PAP-104；identity 不再渲染、发信），Yauaa 解析 UA（`YauaaUserAgentParsingAdapter`）、ip2region 查属地（`Ip2RegionGeolocationAdapter`）、Flyway 脚本（一份最终形态的 `V1`，加上 `V2` 的用户名与昵称前缀索引、`V20261031025039` 的事件发布登记表 `event_publication`）、catalog 内部接口适配器 `CatalogReferenceAdapter`（依赖 `patra-catalog-api`），头像出图 `AvatarImageAdapter`（TwelveMonkeys 解码、`webp-imageio` 编码）与魔数识别 `AvatarFormatSniffer`、头像存储 `AvatarStorageAdapter`（依赖 `patra-tool-object-storage`）；测试夹具 `AvatarImageFixture`（`testFixtures`，boot 的流程测试也用） |
-| `patra-identity-adapter` | 前台的 `AuthController`、`LogoutController`、`EmailVerificationController`、`PasswordResetController`、`EmailChangeController`、`MeController`、`MeEmailController`、`MeProfileController`、`MeSessionController`、`MeDeletionController`、`MeAvatarController`、`PublicUserController`、`PublicAvatarController`，后台的 `AdminUserController`，内部接口 `SessionEndpointImpl`（网关查会话）、`UserEndpointImpl`（批量用户摘要、@ 联想、用户名批量解析，interaction 调），XXL-Job 任务 `EmailTokenCleanupScheduleJob`、`LoginRecordCleanupScheduleJob`、`AccountDeletionScheduleJob`、`AccountDeletionReminderScheduleJob` |
-| `patra-identity-boot` | 启动类、配置、安全 starter 接入、catalog 两个 HTTP Interface 代理（`CatalogClientConfiguration`，`lb://patra-catalog`） |
+| `patra-identity-domain` | `User`、`UserProfile`、`FormerUsername`、`UserPasswordCredential`、`UserLoginRecord`、`EmailToken`、`ExternalIdentity` 七个聚合，邮箱、用户名、昵称、密码、客户端信息、令牌密文值对象，资料值对象（`vo/profile/`：简介、链接、职称、科室、ROR ID、MeSH UI、机构、关注领域、隐私设置），用户名 / 昵称 / 资料字段（`ProfilePolicy`，拒绝字符与昵称共用 `ProfileTextRules`）/ 改名 / 密码 / 失败限制 / 重发限流 / 再认证 / 找回密码限流 / 改邮箱限流 / 邮件链接规则、会话策略，端口（含邮件发送 `EmailDeliveryPort`、三个限流端口、向 catalog 取名称快照的 `CatalogReferencePort`），主页可见性规则 `ProfileAccess`（公开主页与批量用户摘要共用的唯一一份），公开主页读模型（`viewFor` 按请求者裁剪）与批量用户摘要读模型 `UserSummaryReadModel`，@ 联想用的用户名、昵称前缀值对象 `UsernamePrefix`、`DisplayNamePrefix`，`SessionIssuer`、`EmailTokenIssuer`、`ReauthenticationGuard` 领域服务，`SessionTerminator`（撤销会话并按原因结束登录记录）、`ClientOriginResolver`（请求来源 → 设备名、端、属地，内网判定 `IpAddressScope`）、`UserAgentParsingPort` / `IpGeolocationPort`，新设备提醒规则 `NewDeviceLoginPolicy` 与限流端口，注销规则 `AccountDeletionPolicy`（冷静期、提醒提前量），头像（`vo/avatar/`：`Avatar`、两档尺寸、两档字节，`AvatarPalette` 默认头像色号、`AvatarPolicy`，出图端口 `AvatarImagePort` 与存储端口 `AvatarStoragePort`），十六个 `OutgoingMail` 记录，第三方登录（平台枚举 `IdentityProvider`、值对象 `ProviderAccount`、`PendingRegistration`、`PendingCode`、`RegistrationCode`，规则 `ProviderRegistrationPolicy`、`LoginMethodPolicy`，端口 `port.oauth`），领域异常 |
+| `patra-identity-app` | 注册、登录、登出、再认证、改用户名、改密码、找回密码（申请、重设）、改邮箱（申请、取消、确认、撤销）、封禁、解封、重发验证邮件、验证邮箱、清理过期令牌、改资料、改隐私设置、踢单个设备、踢其他设备、清理登录记录、发起注销、取消注销、注销到期执行、注销到期前提醒、换头像、移除头像二十八个处理器，走 CommandBus；`CurrentPasswordVerifier` 给再认证与改密码共用；「当前用户」、本人的资料与隐私设置、待确认的改邮箱和公开主页走 `UserQueryService`，登录设备列表走 `SessionQueryService`，网关查会话走 `SessionIntrospectionService`（不经 CommandBus），头像读取走 `AvatarQueryService`，批量用户摘要走 `UserSummaryQueryService`，@ 联想走 `UserSuggestionQueryService`，用户名批量解析走 `UserResolutionQueryService`；第三方登录的用例在 `usecase.oauth`（完成登录、发验证码、完成注册、发起绑定前的检查、绑定、解绑），查询走 `PendingRegistrationQueryService`、`LoginMethodQueryService` |
+| `patra-identity-infra` | JPA 持久化（含令牌表）、Argon2id 哈希、常见密码名单、Redis 失败限制与通用限流脚本 `action-throttle.lua`（重发、找回密码、改邮箱三个适配器共用）、会话存储（`RedisSessionStore`、八段 Lua、令牌格式，第 9 节）与适配器、新设备提醒限流适配器，安全邮件出站适配器 `OutboxEmailDeliveryAdapter`（登记进事件发布登记表，PAP-104；identity 不再渲染、发信），Yauaa 解析 UA（`YauaaUserAgentParsingAdapter`）、ip2region 查属地（`Ip2RegionGeolocationAdapter`）、Flyway 脚本（一份最终形态的 `V1`，加上 `V2` 的用户名与昵称前缀索引、`V20261031025039` 的事件发布登记表 `event_publication`、`V20261104120000` 的外部身份表）、第三方登录的 Redis 存储（`infra.account.oauth`，两段 Lua）、catalog 内部接口适配器 `CatalogReferenceAdapter`（依赖 `patra-catalog-api`），头像出图 `AvatarImageAdapter`（TwelveMonkeys 解码、`webp-imageio` 编码）与魔数识别 `AvatarFormatSniffer`、头像存储 `AvatarStorageAdapter`（依赖 `patra-tool-object-storage`）；测试夹具 `AvatarImageFixture`（`testFixtures`，boot 的流程测试也用） |
+| `patra-identity-adapter` | 前台的 `AuthController`、`LogoutController`、`EmailVerificationController`、`PasswordResetController`、`EmailChangeController`、`MeController`、`MeEmailController`、`MeProfileController`、`MeSessionController`、`MeDeletionController`、`MeAvatarController`、`PublicUserController`、`PublicAvatarController`，后台的 `AdminUserController`，内部接口 `SessionEndpointImpl`（网关查会话）、`UserEndpointImpl`（批量用户摘要、@ 联想、用户名批量解析，interaction 调），XXL-Job 任务 `EmailTokenCleanupScheduleJob`、`LoginRecordCleanupScheduleJob`、`AccountDeletionScheduleJob`、`AccountDeletionReminderScheduleJob`；`oauth2Login` 的处理器与授权请求仓库（`adapter.account.security`），控制器 `ProviderRegistrationController`、`MeLoginMethodController` |
+| `patra-identity-boot` | 启动类、配置、安全 starter 接入、catalog 两个 HTTP Interface 代理（`CatalogClientConfiguration`，`lb://patra-catalog`）；第三方登录的客户端与过滤器链（`IdentityOAuth2ClientConfiguration`、`IdentityOAuth2SecurityConfiguration`） |
 | `patra-identity-api` | 服务间契约：网关查会话的 `SessionEndpoint`（PAP-106）；interaction 调的 `UserEndpoint`：批量用户摘要（PAP-108）、@ 联想与用户名批量解析（PAP-118）；各自的请求、响应 DTO 与 `AccountStatus` |
 
 ### 子域与包
@@ -28,7 +28,7 @@ dev.patra.identity.config           装配（XXL-Job 执行器、catalog 客户�
 | 子域 | 职责 |
 |---|---|
 | `session`（底座） | 会话签发与撤销（`SessionIssuer`、`SessionTerminator`）、会话存储（`SessionStorePort`，Redis 实现在 `infra.session.store`）、登录记录 `UserLoginRecord`、再认证守卫与会话生命周期策略、登出、踢设备、登录设备列表、网关查会话、登录记录清理；以及被两个子域共用的东西：客户端与设备值（`ClientOrigin`、`LoginClient`、`DeviceId`、`DeviceClass`、`LoginEndReason`、`IpAddressScope`）、安全通知 `SecurityNotice`、字段校验 `UserFieldViolations` 与 `InvalidUserFieldsException`、`TemporarilyUnavailableException` 等共用异常与服务级 `IdentityErrorTrait`、新设备提醒规则 `NewDeviceLoginPolicy` 与限流端口、限流脚本 `ActionThrottleScript` 与 Redis 故障判定 `TransientRedisFailures`（`infra.session.support`） |
-| `account` | 用户与围绕用户的全部流程：注册、登录、再认证、密码、用户名、邮箱验证与更换、封禁、注销、资料与隐私、头像、公开主页、批量用户摘要与提及支撑、邮件（`EmailDeliveryPort` 与十三种邮件 `domain.account.model.vo.mail`） |
+| `account` | 用户与围绕用户的全部流程：注册、登录、再认证、密码、用户名、邮箱验证与更换、封禁、注销、资料与隐私、头像、公开主页、批量用户摘要与提及支撑、邮件（`EmailDeliveryPort` 与十六种邮件 `domain.account.model.vo.mail`）、第三方登录（`usecase.oauth`） |
 
 - 底座 `session` 对 account 完全公开，自己不依赖 account；account 只依赖底座，没有其他依赖边。
 - 底座只放被两个子域共用的东西：只被 account 用的（请求来源 `RequestOrigin`、UA 解析结果 `DeviceProfile`、邮件公共接口 `OutgoingMail`）归 account。
@@ -44,6 +44,14 @@ dev.patra.identity.config           装配（XXL-Job 执行器、catalog 客户�
 | `PATCH /me/username` | 200 `{ username, nextUsernameChangeAt }` | 需要登录（`/me/**` 整体） |
 | `POST /me/email/verification/resend` | 202 `{ email, nextResendAt }`，无请求体 | 需要登录 |
 | `POST /auth/email/verify` | 200 `{ email, emailVerifiedAt }`，请求体 `{ token }` | 公开（匿名设备点链接也能验证；带会话时网关照样翻译令牌） |
+| `GET /oauth2/authorization/{provider}` | 302 到平台；不认识或没配的平台 404（第 18 节） | 公开 |
+| `GET /login/oauth2/code/{provider}` | 200，`result` 是 `AUTHENTICATED`、`REGISTRATION_REQUIRED` 或 `LINKED`（第 18 节） | 公开（带会话时网关照样翻译令牌，绑定靠它核对发起人） |
+| `GET /auth/oauth/registration` | 200 预填值与 `pendingCode`，头 `X-Patra-Registration-Ticket` | 公开 |
+| `POST /auth/oauth/registration/code` | 202 `{ email, codeExpiresAt, nextResendAt }`，请求体 `{ username, email }` | 公开 |
+| `POST /auth/oauth/registration/complete` | 201 `{ sessionToken, user }`，请求体 `{ code, clientType, deviceId }` | 公开 |
+| `GET /me/login-methods` | 200 `{ hasPassword, linked: [{ provider, accountLabel, linkedAt, lastLoginAt }] }` | 需要登录 |
+| `POST /me/login-methods/{provider}/link` | 200 `{ authorizationUrl }` | 需要登录 + 再认证 |
+| `DELETE /me/login-methods/{provider}` | 204；本来没绑也是 204 | 需要登录 + 再认证 |
 | `POST /auth/reauth` | 200 `{ sessionToken, user }`，请求体 `{ password }`；新令牌，旧令牌立即失效，会话 ID 不变；上次密码验证距今不足 10 秒时 `sessionToken` 为 `null`，沿用现有令牌 | 需要登录 |
 | `PUT /me/password` | 200 `{ sessionToken, user }`，请求体 `{ currentPassword, newPassword }`；本机换新令牌，其他会话全部撤销 | 需要登录 |
 | `POST /auth/password/forgot` | 202 `{ email, nextRequestAt }`，请求体 `{ email }`；注册与否一样 | 公开 |
@@ -82,11 +90,13 @@ dev.patra.identity.config           装配（XXL-Job 执行器、catalog 客户�
   "userId": "352303128713027974", "email": "chen.yu@example.com", "emailVerified": false,
   "username": "chen-yu", "displayName": "chen-yu",
   "avatarUrl": "/users/352303128713027974/avatar?v=3f9a1c0d2b4e5f60", "avatarPalette": 7,
-  "status": "ACTIVE", "deletionDueAt": null, "nextUsernameChangeAt": null, "accountType": "user"
+  "status": "ACTIVE", "deletionDueAt": null, "nextUsernameChangeAt": null, "accountType": "user",
+  "hasPassword": true
 }
 ```
 
 - `displayName` 永远非空：资料表里没设昵称就回退成当前用户名。`nextUsernameChangeAt` 是最近一次改名时间加冷却，没改过名为 `null`。`avatarUrl` 是 identity 的相对路径（带版本、不带尺寸），没上传头像为 `null`；`avatarPalette` 是默认头像色号 0–11，有没有头像都给（第 15 节）。
+- `hasPassword`：有没有密码凭据。第三方注册的用户没有，`REAUTH_REQUIRED` 时门户据此引导去找回密码流程设置。
 - `status` 只会出现 `ACTIVE`、`PENDING_DELETION`。登录在密码正确之后分流：`ACTIVE`、`PENDING_DELETION` 都建会话（后者 `deletionDueAt` 有值，门户据此进取消注销页）；`BANNED` 403；`DELETED` 与密码错误完全一样，按失败结算、401。`/auth/me` 对已封禁、已注销用户的会话返回 401。
 - 公开身份卡：路径里的用户名先去空白、转小写，语法不合法直接 404。可见的条件是 `audience` 为 `PUBLIC`（`ACTIVE` 且邮箱已验证）或请求者就是本人（`SELF`，只要还能登录）；不可见一律 404，不区分原因。门户请求时带上会话令牌，本人才能看到自己。301 的 `Location` 是 identity 自己的相对路径，门户按体里的 `username` 做临时跳转（307，永久跳转会被浏览器缓存、原主改回旧名后成环），`fetch` 要用 `redirect: "manual"`；301 带 `Cache-Control: no-store`。
 - `/admin/**` 本版没有身份校验，只能在内网直连调用；对 `DELETED` 用户封禁、解封都返回 409。
@@ -104,6 +114,7 @@ dev.patra.identity.config           装配（XXL-Job 执行器、catalog 客户�
 | `idn_user_research_interest` | 用户 ID、顺序（0 ~ 9）、MeSH UI、英文名快照；`(user_id, mesh_ui)` 唯一，`mesh_ui` 上有索引 |
 | `idn_user_former_username` | 用户 ID、旧用户名、替换时间、保留到期时间 |
 | `idn_user_login_record` | 会话 ID、用户 ID、客户端信息、结束原因（第 9 节） |
+| `idn_user_external_identity` | 用户 ID、平台（`GOOGLE` / `GITHUB` / `ORCID`）、主体、账号标识、绑定时间、最近登录时间；`(provider, subject)`、`(user_id, provider)` 唯一。不存令牌、资料快照和对方给的邮箱；到期注销时删行（第 18 节） |
 | `idn_email_token` | 用途、用户 ID、发往的邮箱、令牌哈希（SHA-256 十六进制，唯一）、过期 / 消费 / 撤销时间、申请方 IP。同一用户同一用途只留一个有效令牌，由部分唯一索引守住（改邮箱撤销令牌例外） |
 
 改邮箱确认与撤销直接改 `idn_user.email` 并把 `email_verified_at` 写成当时（点链接的人证明了对地址的控制）；重设密码不改邮箱，只写 `email_verified_at`。「待确认的改邮箱」不是表列，是一条未过期的 `EMAIL_CHANGE_CONFIRM` 令牌。
@@ -204,6 +215,15 @@ patra:
 | 新密码与当前相同、新邮箱与当前相同（`errors[]`：`newPassword` / `UNCHANGED`、`newEmail` / `UNCHANGED`） | 422 | `IDN-0422` |
 | 注销确认的用户名为空或与当前不一致（`errors[]`：`username` / `REQUIRED`、`MISMATCH`，后者文案「和你的用户名不一致」） | 422 | `IDN-0422` |
 | 已在注销冷静期又发起注销（`traits` 为 `CONFLICT` + `PENDING_DELETION`） | 409 | `IDN-0409` |
+| 第三方：用户在平台上点了拒绝（`traits` 为 `RULE_VIOLATION` + `OAUTH_CANCELLED`） | 422 | `IDN-0422` |
+| 第三方：`state` 不存在或已用过、`id_token` 不对、平台拒绝授权码（`traits` 为 `RULE_VIOLATION` + `OAUTH_REJECTED`，原因不进响应） | 422 | `IDN-0422` |
+| 第三方：待补填凭证没带或失效（`errors[]`：`ticket` / `REQUIRED`、`INVALID`） | 422 | `IDN-0422` |
+| 第三方：验证码格式不对、不对、失效（`errors[]`：`code` / `REQUIRED`、`INVALID_FORMAT`、`INVALID`、`EXPIRED`） | 422 | `IDN-0422` |
+| 第三方：这个账号已绑给别人（`traits` 为 `CONFLICT` + `PROVIDER_ACCOUNT_TAKEN`）；这一家已绑过（`PROVIDER_ALREADY_LINKED`）；邮箱未验证不能绑定（`EMAIL_NOT_VERIFIED`）；没有密码且只剩这一种不能解绑（`LAST_LOGIN_METHOD`） | 409 | `IDN-0409` |
+| 第三方：绑定回调的用户或会话与发起时不一致（`traits` 为 `FORBIDDEN` + `LINK_SESSION_MISMATCH`） | 403 | `IDN-0403` |
+| 第三方：发验证码过于频繁（`traits` 为 `QUOTA_EXCEEDED`，`Retry-After`、`retryAfterSeconds`） | 429 | `IDN-0429` |
+| 第三方：路径里的平台不认识 | 404 | `IDN-0404` |
+| 第三方：连不上平台（换令牌、取公钥、取资料） | 503 | `IDN-0503` |
 | 账号已被封禁 | 403 | `IDN-0403` |
 | 用户不存在：后台接口；公开身份卡不存在或对请求者不可见 | 404 | `IDN-0404` |
 | 头像超过 5 MB（multipart 上限，没有 `errors[]`） | 413 | `IDN-0413` |
@@ -217,6 +237,7 @@ patra:
 
 ## 8. 本地运行和测试
 
+- 第三方登录的客户端 ID 与密钥来自 `~/.patra/secrets/oauth.env`（模板 `patra-infra/docker/secrets/oauth.env.example`），本机和线上是两套应用。可选：没配的平台不注册，入口 404，identity 照常启动。
 - 配置从 mini 的 Nacos 读（`patra-common.yaml`、`patra-identity.yaml`，源文件在 `patra-infra/nacos/dev/`）：连 mini 上的 `patra_identity` 库和 Redis（`PATRA_INFRA_HOST`），和 mini 上的容器共用同一个 Redis 0 号库。Redis 密码在 Nacos 里写成 `${REDIS_PASSWORD}`，本机由 Nacos starter 从 `~/.patra/secrets/redis.env` 读；生成和复制见 `patra-infra/docker/README.md`「密钥」。
 - 库结构只有一份 `V1`（`infra/src/main/resources/db/migration/`）。库还是旧结构时启动会因 Flyway 校验失败起不来，推倒重建再启动；开发数据可丢弃，不做 `pg_dump`：
 
@@ -287,7 +308,7 @@ Redis 里只存 `SessionToken.hash()`：整个令牌 UTF-8 的 SHA-256，小写�
 
 会话字段（都是字符串）：`user_id`、`session_id`、`account_type`（`user`）、`client_type`（`web`）、
 `device_id`（可选，没有就没这个字段）、`created_at`、`last_active_at`、`auth_at`（最近一次用密码证明身份：
-登录、注册、再认证、改密码；必填，缺失按数据损坏报错）、`expires_at`（epoch 毫秒）、`idle_timeout_ms`。
+密码登录、注册、再认证、改密码；可选，第三方登录不写，守卫按超时处理）、`expires_at`（epoch 毫秒）、`idle_timeout_ms`。
 
 ### 操作（`RedisSessionStore`）
 
@@ -325,7 +346,7 @@ Redis 连不上、超时、`LOADING` / `READONLY` / `BUSY` / `MASTERDOWN`，以�
 - **注册与重发**：首封验证邮件与注册同一事务登记，提交后计入重发配额；重发先判状态（已验证 409、注销中 409）再限流：冷却 60 秒、每账号每小时 5 次、每天 10 次、每 IP 每小时 30 次（Redis Lua 原子判定，`Retry-After` 取最长的等待）。配置在 `patra.identity.mail.resend.*`。
 - **验证**：写 `email_verified_at`；带会话验证时保留当前会话、撤销其余（登录记录标 `EMAIL_VERIFIED`），匿名验证撤销全部会话。
 - **签发**：四种用途共用 `EmailTokenIssuer.issue(purpose, userId, email, ip)`，返回已落库的聚合与原文；调用方用 `MailLinkPolicy` 拼链接、构造邮件；撤销令牌（`EMAIL_CHANGE_REVERT`）签发时不作废旧的。
-- **邮件**（PAP-104，设计 `docs/patra/specs/2026-10-31-identity-security-mail-events-design.md`）：identity 不再发信。`EmailDeliveryPort.send(OutgoingMail)` 必须在业务事务里调（infra 的 `OutboxEmailDeliveryAdapter` 带 `MANDATORY`），它把 13 种 `*Mail` 记录当领域事件发布，事件模块在同一事务里登记进 `event_publication`；提交后由 boot 的 `IdentityEventsConfiguration` / `SecurityMailEventMapper` 映射成 `patra-identity-api` 里的 `*MailEvent`，发到 topic 交换机 `identity.events`（路由键 `security-mail.<种类>`），broker 确认收下即删行（`completion-mode: delete`，链接里的一次性令牌不久留）。`eventId` 在构造邮件时生成、补投不变，通知服务拿它去重并当 Resend 幂等键。真正发信、主题、模板与「不是我怎么办」等文案归 notification（PAP-105）；identity 里的渲染器、模板与 `spring-boot-starter-mail` 已删除。
+- **邮件**（PAP-104，设计 `docs/patra/specs/2026-10-31-identity-security-mail-events-design.md`）：identity 不再发信。`EmailDeliveryPort.send(OutgoingMail)` 必须在业务事务里调（infra 的 `OutboxEmailDeliveryAdapter` 带 `MANDATORY`），它把 16 种 `*Mail` 记录当领域事件发布，事件模块在同一事务里登记进 `event_publication`；提交后由 boot 的 `IdentityEventsConfiguration` / `SecurityMailEventMapper` 映射成 `patra-identity-api` 里的 `*MailEvent`，发到 topic 交换机 `identity.events`（路由键 `security-mail.<种类>`），broker 确认收下即删行（`completion-mode: delete`，链接里的一次性令牌不久留）。`eventId` 在构造邮件时生成、补投不变，通知服务拿它去重并当 Resend 幂等键。真正发信、主题、模板与「不是我怎么办」等文案归 notification（PAP-105）；identity 里的渲染器、模板与 `spring-boot-starter-mail` 已删除。
 - **补投**：XXL-Job 任务 `eventPublicationResubmitJob`（由 `patra-tool-events` 注册，执行器 `patra-identity`，每分钟一次）重发没发出去的登记行；`event_publication` 有行 = 有积压。
 - **配置**：门户地址 `patra.identity.mail.links.base-url` 在 Nacos 的 `patra-identity.yaml`；时区 `patra.identity.mail.zone`、保留期 `patra.identity.mail.token-retention` 在 jar 里（`zone` 现在只用于公开主页加入时间的换算）。identity 已没有 `spring.mail.*`、发件人与邮件健康检查的配置。
 - **清理**：XXL-Job 任务 `emailTokenCleanupJob`（执行器 `patra-identity`）删过期超过保留期（默认 30 天）的令牌，每批 1000 行、每批一个事务；mini 上每天 04:30 一次。
@@ -334,7 +355,7 @@ Redis 连不上、超时、`LOADING` / `READONLY` / `BUSY` / `MASTERDOWN`，以�
 
 工程设计：`docs/patra/specs/2026-10-22-identity-account-security-design.md`。
 
-- **再认证**：会话 HASH 多一个 `auth_at`（登录、注册、再认证、改密码时写）。改邮箱、踢设备（PAP-99）、注销（PAP-100）要求 10 分钟内输过密码：`ReauthenticationGuard` 按断言里的会话 ID 读 `auth_at`，会话不在 401，超窗 403 `REAUTH_REQUIRED`。`POST /auth/reauth` 校验密码（共用登录失败限制）后换新令牌保留会话 ID（`RedisSessionStore.rotate`），旧令牌立即失效，门户要换 Cookie；`auth_at` 距今不足宽限期（10 秒）时不换、响应 `sessionToken` 为 `null`、门户保持现有 Cookie——两个标签页并发再认证时先换出的令牌保持有效。本 PR 前建立的会话没有 `auth_at`，视作从未再认证。配置 `patra.identity.reauth.window`（10m）、`patra.identity.reauth.rotation-grace`（10s）。
+- **再认证**：会话 HASH 多一个 `auth_at`（登录、注册、再认证、改密码时写）。改邮箱、踢设备（PAP-99）、注销（PAP-100）要求 10 分钟内输过密码：`ReauthenticationGuard` 按断言里的会话 ID 读 `auth_at`，会话不在 401，超窗或没有（第三方登录不写，第 18 节）403 `REAUTH_REQUIRED`。`POST /auth/reauth` 校验密码（共用登录失败限制）后换新令牌保留会话 ID（`RedisSessionStore.rotate`），旧令牌立即失效，门户要换 Cookie；`auth_at` 距今不足宽限期（10 秒）时不换、响应 `sessionToken` 为 `null`、门户保持现有 Cookie——两个标签页并发再认证时先换出的令牌保持有效。配置 `patra.identity.reauth.window`（10m）、`patra.identity.reauth.rotation-grace`（10s）。
 - **改密码**：每次都输当前密码（不走窗口）；新密码按注册规则、不能与当前相同（NFKC 后比较）；事务里锁行后再比一次凭据哈希是不是刚校验过的那个（并发改密码只有先到的生效，后到的 401）、换哈希、按用户批量作废令牌、撤销其余会话并记 `PASSWORD_CHANGED`、最后本机换令牌（刷新 `auth_at`；放最后一步，之前失败不碰旧令牌）；提交后发「密码已修改」。不存历史密码。
 - **找回密码**：申请一律 202、异步发信，未注册与已封禁不发（未注册分支做同样的随机数与哈希计算）；限流在查用户之前计数（同邮箱冷却 60 秒、每天 5；同 IP 每小时 20）。提交先过 IP 每分钟 10 的限制，密码不合规时令牌不被消费；成功后换哈希（没有凭据行就新建）、批量作废令牌（含待确认的改邮箱）、写 `email_verified_at`、撤销全部会话、清零登录失败计数与锁，发「密码已重设」，不自动登录。令牌 1 小时。
 - **改邮箱**：申请先过再认证；已有待确认 409 `EMAIL_CHANGE_PENDING`，新地址已被别人使用 409（和注册一致）；每账号每天 3 次。向新邮箱发 1 小时的确认链接；确认后立即生效（改 `email`、写验证时间、批量作废旧地址的令牌），旧邮箱收到含 7 天「不是我」链接的通知（新地址遮掩成 `c***@example.com`），新邮箱收到「已绑定」；确认不撤销会话。撤销：改回旧地址、作废全部令牌（撤销链接只作废比它更晚签发的，更早的保留——X → Y → Z 时攻击者先点 Y 的也废不掉原主 X 的）、删凭据（原密码作废）、撤销全部会话、向改回的地址发重设链接；注销冷静期内也能撤，撤销不碰注销状态。撤销令牌可并存，不被改密码 / 重设 / 再次改邮箱作废。
@@ -437,6 +458,7 @@ patra:
 - **到期执行**（XXL-Job `accountDeletionJob`）：按 ID 游标每批 100 个扫 `status = 'PENDING_DELETION' AND deletion_due_at <= now`；每个用户一个事务，锁内复核仍到期才做：`completeDeletion`（邮箱、验证时间、到期时间、提醒标记、封禁时间置空，记 `deleted_at`，ID 与用户名留着、用户名永不释放）、删密码凭据、`UserProfile.erase()`（资料行保留、内容清空、隐私回默认，链接与关注领域子表删行）、令牌按用户删行（行里有邮箱和 IP）、撤销冷静期内登录的会话（`DELETION_COMPLETED`）；提交后给注销前的邮箱发「已注销」。单个用户失败只记日志、计数，留在冷静期等下次；有失败时任务回写失败。登录记录不删，按第 13 节的 190 天清理；旧用户名行不动，保留期到了自然失效。同一邮箱立刻可以注册与旧账号无关的新账号；旧用户名注册、改名都 409 `ALREADY_TAKEN`。
 - **到期前提醒**（XXL-Job `accountDeletionReminderJob`）：扫冷静期、`deletion_reminded_at` 为空、`now < 到期 <= now + 提前量` 的用户，锁内复核后先记 `deletion_reminded_at` 再发「将在 N 天后删除」，只发一次；发信被执行器拒收时把标记清回去、下次重发。取消、封禁、完成注销都清掉标记。
 - **头像**：`erase()` 同时清头像键；到期执行在加锁事务之前按前缀 `avatar/{userId}/` 删对象，删之前不加锁复读一次、仍到期才删（扫描之后刚取消的用户不丢头像）；删失败按该用户失败、下次重试（第 15 节）。
+- **外部身份**：到期执行时删行（`ExternalIdentityRepository.deleteAllByUserId`，同一事务），同一个第三方账号可以重新注册，得到的是新账号。
 - **邮件**（事件，PAP-104）：`security-mail.account-deletion-requested`、`-reminder`、`-cancelled`、`-completed`；都不放链接（怎么取消写成文字）；「将在 N 天后删除」与「已注销」两封不是请求触发的，不带操作上下文；「已注销」与匿名化同一事务登记，收件地址是置空之前的邮箱。正文与时区格式化归通知服务。
 - **配置**（jar 里的默认值，Nacos 不加键；非正数或提前量不短于冷静期启动失败）：
 
@@ -485,3 +507,28 @@ patra:
 - **解析结果**：先按当前用户名查，查不到再查此刻仍在 90 天保留期内的旧名（多条取改名时间最近的），给原主；四种状态原样带上，是不是正常账号由调用方判；不看主页可见性。按请求顺序，`username` 回显请求原文：原文相同的只出一行，原文不同而规范化后相同的各出一行。不存在、旧名已过期的省略。
 - **读法与索引**：两路都写范围谓词 `列 COLLATE "C" >= 前缀 AND < 前缀末码点加一`，不用 `LIKE`（`_` 是通配符，参数化的 `LIKE` 在通用计划下推不出索引范围）；库的排序规则是 `en_US.utf8`，按它的索引做不了前缀范围。用户名一路走 `UserDao.findActiveByUsernameRange` 与 `V2` 的部分索引 `idx_idn_user_username_prefix`（`username COLLATE "C"`，`WHERE status = 'ACTIVE'`）；昵称一路走 `UserDao.findActiveByDisplayNameRange`，联用户表，对应 `idx_idn_user_profile_display_name_prefix`（`(lower(display_name)) COLLATE "C"`，`WHERE display_name IS NOT NULL`）——状态在用户表，资料表上的索引做不到只收 `ACTIVE`，由联表过滤。解析是用户表、资料表、旧名表的 `IN` 查询。两个服务都不经 CommandBus，没有事务。
 - **调用方的义务**：只把 `accountStatus == ACTIVE` 的解析结果当成提及；「一条最多 @ 10 人」按解析出的不同 `userId` 计。联想结果已排除访客本人，参与者列表最好同样排除。渲染 `<@userId>` 时取名片走批量摘要，`profileVisible` 为假的人不要放出用户名与头像地址（第 16 节）。
+
+## 18. 第三方登录
+
+设计：`docs/patra/specs/2026-11-04-identity-social-login-design.md`（PAP-180～184），产品决策：`docs/patra/release-specs/v0.19-social-login.md` 第 4 节。
+
+- **流程**：浏览器只和门户打交道。门户转发 `GET /oauth2/authorization/{provider}`，从 302 的 `Location` 取 `state` 写短期 Cookie；回调时先核对 Cookie，再转发 `GET /login/oauth2/code/{provider}`（带 `X-Forwarded-For`、`User-Agent`、`X-Patra-Device-Id`，有会话再带 `Authorization`）。identity 跑官方 `oauth2Login`：state、nonce、PKCE、换令牌、验 `id_token` 都由框架完成，确认身份后令牌就丢弃。
+- **过滤器链**：`IdentityOAuth2SecurityConfiguration` 声明 `AdditionalSecurityFilterChain`（`@Order(1)`），只收三家的发起路径和回调路径，其余仍走安全 starter 的默认断言链。`STATELESS`，不建 `HttpSession`。
+- **注册信息**：`patra.identity.oauth.providers.<id>`（`application.yml`），`ConfiguredClientRegistrations` 建成 `ClientRegistration`；客户端 ID 或密钥没配的平台不注册，入口 404。不用 Boot 的 `spring.security.oauth2.client.registration`：它要求客户端 ID 非空，一家没配整个应用起不来。写明确的端点、不用发现文档，启动不联网；`redirect-uri` 是门户对外的完整地址 `{PATRA_OAUTH_REDIRECT_BASE_URL}/api/auth/oauth/callback/<id>`。出站客户端都带超时（连接 3 秒、读 5 秒），不用容器里的 `RestClient.Builder`：它带内部调用的拦截器，身份断言不能发给第三方。
+- **Redis 键**：
+
+| 键 | 类型 | 内容 | TTL |
+|---|---|---|---|
+| `idn:oauth:authz:<state>` | STRING | 授权请求 JSON（`state`、`nonce`、`code_verifier`、用途与发起人），`GETDEL` 取出即删 | 10 分钟 |
+| `idn:oauth:pending:<凭证哈希>` | STRING | 待补填记录 JSON | 30 分钟 |
+| `idn:oauth:code:<凭证哈希>` | HASH | 用户名、邮箱、验证码哈希、错误次数、时间 | 10 分钟，不超过待补填余量 |
+| `idn:oauth-code:cooldown:email:<h>`、`idn:oauth-code:hour:email:<h>`、`idn:oauth-code:hour:ip:<h>` | 通用限流脚本 | 同邮箱 60 秒冷却、每小时 5 封；同 IP 每小时 20 封 | 见脚本 |
+
+- **老用户**：按 `(provider, subject)` 找账号，永不按邮箱合并。事务里锁用户行（和封禁互斥）、更新账号标识与最近登录时间、建不带密码证明的会话；封禁 403，注销中照常建会话；提交后走新设备提醒（`NewDeviceLoginNotifier`，和密码登录共用）。
+- **首次注册**：账号在邮箱验证通过时才创建，之前只有 Redis 里的待补填记录，这是防预劫持的关键。凭证（`ticket`）只给发起的浏览器，门户写进 HttpOnly Cookie。验证码 6 位数字，只存和凭证绑定的哈希，错 5 次作废，绑定发码时的用户名和邮箱。邮箱已注册时不发码、不建账号。建好的账号邮箱已验证、没有密码凭据。
+- **绑定**：`POST /me/login-methods/{provider}/link` 先查状态、邮箱已验证、这一家没绑过、再认证，再用官方的 `OAuth2AuthorizationRequestResolver` 造授权请求，把发起的用户和会话记进它的属性。回调时现解断言（安全上下文里已经是框架的令牌），用户或会话对不上 403。
+- **解绑**：`LoginMethodPolicy` 判「没有密码且只剩这一种」，排在再认证之前（没有密码的人过不了再认证），事务里锁用户行后重判。
+- **再认证**：只认密码。第三方登录不写 `auth_at`，守卫按超时处理；没有密码的用户先经找回密码设置（重设处理器没有凭据行时会新建），之后 `POST /auth/reauth` 写入 `auth_at`。
+- **邮件**：`security-mail.registration-code`、`-login-method-linked`、`-login-method-unlinked`。
+- **隐私与合规**：只存平台、主体、账号标识、绑定与最近登录时间；头像、昵称不导入，平台给的用户名和邮箱只作预填。ORCID 公共 API 只允许非商业使用，要收费须换会员 API。
+- **测试**：`FakeProviderFixture` 用 WireMock 扮演三家，`OAuth2LoginFlowIT`、`OAuth2ProtocolAttackIT`、`TokenNotRetainedIT`、`ProviderLoginFlowIT`、`ProviderRegistrationFlowIT`、`ProviderLinkFlowIT`。真实三家在 mini 上手工验收。
