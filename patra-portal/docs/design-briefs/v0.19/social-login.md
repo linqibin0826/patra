@@ -301,6 +301,8 @@
 
 画布里的 G 是从官方 PNG（`Theme=Light, Show text=No`，@4x）裁出来的，因为画布不支持官方 SVG 里的 `foreignObject`。**前端落地时直接用官方 SVG。**
 
+**已落地（2026-11-04）**：`patra-portal/public/oauth/google.svg` 是 `signin-assets.zip` 里的 `Android + Web/SVG/Light/Theme=Light, Show text=No, Shape=Square, Platform=Android+Web.svg`，与官方文件逐字节相同。文件是 40px 的白底描边按钮，G 在正中占 20px，门户不改文件，用 `object-fit: none` 按原始大小居中裁出 G。
+
 ---
 
 ## 6. 邮件与隐私政策文案

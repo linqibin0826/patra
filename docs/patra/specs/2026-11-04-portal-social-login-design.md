@@ -35,7 +35,7 @@
 - 都不带 `__Host-` 前缀。前两个的 `Path` 不是 `/`，后两个的名字是契约定的或者没有保护价值。
 - 清除时写空值和 `Max-Age=0`，其余属性与写入时相同。
 - `patra_oauth_ticket` 只从 Cookie 读：identity 不把它绑定到浏览器，防注入全靠门户。查询串、请求体和浏览器自带的 `X-Patra-Registration-Ticket` 都不算数，有测试守。
-- 三家标识不改色（简报第 5 节）。Google 用官方 SVG 的 G，GitHub、ORCID 来自设计快照。
+- 三家标识不改色（简报第 5 节）。Google 是官方 `signin-assets.zip` 的 Light、无文字、Square 版 SVG，逐字节不改；它是 40px 的按钮底板，G 在正中占 20px，用 `object-fit: none` 裁出。GitHub、ORCID 来自设计快照。
 - `patra_oauth_return` 契约里没有：平台回调只带 `code` 和 `state`，发起页和 `next` 只能这样跨越第三方往返。读出后 `from` 校验枚举，`next` 重新过 `safeNextPath`。绑定写 `from=settings`。
 - `patra_oauth_signed_in` 契约里也没有：登录成功是整页跳转到任意 `next`，不适合往地址栏加参数。里面没有敏感内容。
 
