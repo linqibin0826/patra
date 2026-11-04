@@ -1,0 +1,9 @@
+[# th:replace="~{text/fragments/header}" /]
+你好，[(${displayName})]：
+
+你的 [(${siteName})] 账号刚刚解绑了 [(${providerName})] 账号 [(${accountLabel})]。
+
+[# th:replace="~{text/fragments/security-notice}" /]
+到安全设置查看登录方式：[(${securityUrl})]
+
+[# th:replace="~{text/fragments/footer}" /]

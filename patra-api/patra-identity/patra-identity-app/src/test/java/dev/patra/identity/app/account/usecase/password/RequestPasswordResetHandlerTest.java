@@ -42,6 +42,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InOrder;
 import org.springframework.transaction.TransactionException;
 import org.springframework.transaction.support.SimpleTransactionStatus;
@@ -76,6 +77,7 @@ class RequestPasswordResetHandlerTest {
           .username("chen-yu")
           .displayName("陈宇")
           .status(UserStatus.ACTIVE)
+          .hasPassword(true)
           .build();
 
   private final UserRepository users = mock(UserRepository.class);
@@ -178,6 +180,28 @@ class RequestPasswordResetHandlerTest {
     assertThat(result.email()).isEqualTo("chen.yu@example.com");
     assertThat(result.nextRequestAt()).isEqualTo(NOW.plusSeconds(60));
     verifyNoInteractions(loginThrottle);
+  }
+
+  @Test
+  @DisplayName("没有密码的用户（只用第三方登录）：邮件说设置密码，有密码的说重设")
+  void should_mark_mail_when_user_has_no_password() {
+    when(userReadPort.findAccount(42L))
+        .thenReturn(
+            Optional.of(
+                UserAccountReadModel.builder()
+                    .userId(42L)
+                    .email("chen.yu@example.com")
+                    .username("chen-yu")
+                    .displayName("陈宇")
+                    .status(UserStatus.ACTIVE)
+                    .hasPassword(false)
+                    .build()));
+
+    handler.handle(RequestPasswordResetCommand.of("chen.yu@example.com", "127.0.0.1"));
+
+    ArgumentCaptor<PasswordResetMail> mail = ArgumentCaptor.forClass(PasswordResetMail.class);
+    verify(emailDelivery).send(mail.capture());
+    assertThat(mail.getValue().settingPassword()).isTrue();
   }
 
   @Test

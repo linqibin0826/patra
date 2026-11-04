@@ -14,9 +14,15 @@ import lombok.Builder;
 /// @param displayName 收件人的昵称（没设时已回退成用户名）
 /// @param resetUrl 重设密码的链接，一次性令牌在 URL 片段 `#token=` 里
 /// @param linkExpiresAt 链接的过期时间：按发送时刻算剩余有效期，已过期的不必再发
+/// @param settingPassword 收件人还没有密码（只用第三方登录）：主题和正文说设置密码，不说重设
 @Builder
 public record PasswordResetMailEvent(
-    UUID eventId, String to, String displayName, String resetUrl, Instant linkExpiresAt)
+    UUID eventId,
+    String to,
+    String displayName,
+    String resetUrl,
+    Instant linkExpiresAt,
+    boolean settingPassword)
     implements SecurityMailEvent {
 
   /// 路由键。
