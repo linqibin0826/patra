@@ -42,6 +42,27 @@ public final class SessionIssuer {
     this.clock = Objects.requireNonNull(clock, "clock 不能为 null");
   }
 
+  /// 建会话，用户刚输过密码：再认证窗口从现在开始。
+  ///
+  /// @param userId 用户 ID
+  /// @param client 客户端信息
+  /// @param origin 请求来源，写进登录记录
+  /// @return 令牌和被挤掉的会话 ID
+  public IssuedUserSession issue(long userId, LoginClient client, ClientOrigin origin) {
+    return issue(userId, client, origin, true);
+  }
+
+  /// 建第三方登录的会话：没有密码证明，不开放再认证窗口。
+  ///
+  /// @param userId 用户 ID
+  /// @param client 客户端信息
+  /// @param origin 请求来源，写进登录记录
+  /// @return 令牌和被挤掉的会话 ID
+  public IssuedUserSession issueWithoutPasswordProof(
+      long userId, LoginClient client, ClientOrigin origin) {
+    return issue(userId, client, origin, false);
+  }
+
   /// 建会话。
   ///
   /// 1. 按客户端类型取有效期；2. 存登录记录拿到 ID；3. 以记录 ID 为会话 ID 建 Redis 会话；
@@ -50,8 +71,10 @@ public final class SessionIssuer {
   /// @param userId 用户 ID
   /// @param client 客户端信息
   /// @param origin 请求来源，写进登录记录
+  /// @param passwordVerified 这次登录是否输过密码
   /// @return 令牌和被挤掉的会话 ID
-  public IssuedUserSession issue(long userId, LoginClient client, ClientOrigin origin) {
+  private IssuedUserSession issue(
+      long userId, LoginClient client, ClientOrigin origin, boolean passwordVerified) {
     Objects.requireNonNull(client, "client 不能为 null");
     Objects.requireNonNull(origin, "origin 不能为 null");
     Instant now = clock.instant();
@@ -66,6 +89,7 @@ public final class SessionIssuer {
                 .accountType(AccountType.USER)
                 .client(client)
                 .now(now)
+                .passwordVerifiedAt(passwordVerified ? now : null)
                 .lifetime(lifetime)
                 .maxSessionsPerUser(policy.maxSessionsPerUser())
                 .build());

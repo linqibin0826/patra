@@ -7,6 +7,7 @@ import static org.mockito.Mockito.when;
 
 import dev.patra.identity.domain.session.exception.IdentityErrorTrait;
 import dev.patra.identity.domain.session.exception.ReauthenticationRequiredException;
+import dev.patra.identity.domain.session.model.vo.SessionPasswordProof;
 import dev.patra.identity.domain.session.policy.ReauthenticationPolicy;
 import dev.patra.identity.domain.session.port.store.SessionStorePort;
 import dev.patra.tool.core.error.trait.StandardErrorTrait;
@@ -41,8 +42,8 @@ class ReauthenticationGuardTest {
   @Test
   @DisplayName("窗口内通过")
   void should_pass_within_window() {
-    when(sessions.findAuthenticatedAt(AccountType.USER, 42L, 7001L))
-        .thenReturn(Optional.of(NOW.minus(Duration.ofMinutes(9))));
+    when(sessions.findPasswordProof(AccountType.USER, 42L, 7001L))
+        .thenReturn(Optional.of(SessionPasswordProof.of(NOW.minus(Duration.ofMinutes(9)))));
 
     assertThatCode(() -> guard.requireRecent(CURRENT)).doesNotThrowAnyException();
   }
@@ -50,8 +51,8 @@ class ReauthenticationGuardTest {
   @Test
   @DisplayName("超窗 403：FORBIDDEN + REAUTH_REQUIRED")
   void should_require_reauth_after_window() {
-    when(sessions.findAuthenticatedAt(AccountType.USER, 42L, 7001L))
-        .thenReturn(Optional.of(NOW.minus(Duration.ofMinutes(10))));
+    when(sessions.findPasswordProof(AccountType.USER, 42L, 7001L))
+        .thenReturn(Optional.of(SessionPasswordProof.of(NOW.minus(Duration.ofMinutes(10)))));
 
     assertThatThrownBy(() -> guard.requireRecent(CURRENT))
         .isInstanceOf(ReauthenticationRequiredException.class)
@@ -63,8 +64,18 @@ class ReauthenticationGuardTest {
   @Test
   @DisplayName("再认证时间远早于窗口（EPOCH）视作超窗")
   void should_treat_epoch_as_never_authenticated() {
-    when(sessions.findAuthenticatedAt(AccountType.USER, 42L, 7001L))
-        .thenReturn(Optional.of(Instant.EPOCH));
+    when(sessions.findPasswordProof(AccountType.USER, 42L, 7001L))
+        .thenReturn(Optional.of(SessionPasswordProof.of(Instant.EPOCH)));
+
+    assertThatThrownBy(() -> guard.requireRecent(CURRENT))
+        .isInstanceOf(ReauthenticationRequiredException.class);
+  }
+
+  @Test
+  @DisplayName("第三方登录的会话没有密码证明：403 REAUTH_REQUIRED，不是 401")
+  void should_require_reauth_when_session_has_no_password_proof() {
+    when(sessions.findPasswordProof(AccountType.USER, 42L, 7001L))
+        .thenReturn(Optional.of(SessionPasswordProof.none()));
 
     assertThatThrownBy(() -> guard.requireRecent(CURRENT))
         .isInstanceOf(ReauthenticationRequiredException.class);
@@ -73,7 +84,7 @@ class ReauthenticationGuardTest {
   @Test
   @DisplayName("会话已不在：401")
   void should_require_login_when_session_is_gone() {
-    when(sessions.findAuthenticatedAt(AccountType.USER, 42L, 7001L)).thenReturn(Optional.empty());
+    when(sessions.findPasswordProof(AccountType.USER, 42L, 7001L)).thenReturn(Optional.empty());
 
     assertThatThrownBy(() -> guard.requireRecent(CURRENT))
         .isInstanceOf(AuthenticationRequiredException.class);

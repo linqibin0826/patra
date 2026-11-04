@@ -136,12 +136,27 @@ class RedisSessionStoreIT {
   }
 
   @Test
-  @DisplayName("会话缺 auth_at 是数据损坏：和缺 user_id 一样直接报错，不给默认值")
-  void should_reject_session_without_auth_at() {
-    SessionToken token = store.create(newSession(42L, 7001L).build()).token();
-    redis.opsForHash().delete("idn:session:user:" + token.hash(), "auth_at");
+  @DisplayName("第三方登录的会话没有 auth_at：能读出空值，按会话 ID 也能读到")
+  void should_read_session_without_auth_at() {
+    SessionToken token = store.create(newSession(42L, 7001L).authenticatedAt(null).build()).token();
 
-    assertThatThrownBy(() -> store.findAndTouch(token)).isInstanceOf(NumberFormatException.class);
+    assertThat(redis.opsForHash().hasKey("idn:session:user:" + token.hash(), "auth_at")).isFalse();
+    assertThat(store.findAndTouch(token).orElseThrow().authenticatedAt()).isNull();
+    assertThat(store.find(AccountType.USER, 42L, 7001L).orElseThrow().authenticatedAt()).isNull();
+  }
+
+  @Test
+  @DisplayName("没有 auth_at 的会话换令牌：不判宽限期，直接换并写入 auth_at")
+  void should_rotate_session_without_auth_at() {
+    store.create(newSession(42L, 7001L).authenticatedAt(null).build());
+    clock.advance(Duration.ofMinutes(1));
+
+    Rotation rotation =
+        store.rotate(AccountType.USER, 42L, 7001L, Duration.ofSeconds(10)).orElseThrow();
+
+    assertThat(rotation.newToken()).isPresent();
+    assertThat(store.find(AccountType.USER, 42L, 7001L).orElseThrow().authenticatedAt())
+        .isEqualTo(START.plus(Duration.ofMinutes(1)));
   }
 
   @Test
@@ -585,6 +600,7 @@ class RedisSessionStoreIT {
         .accountType(AccountType.USER)
         .clientType(ClientType.WEB)
         .createdAt(clock.instant())
+        .authenticatedAt(clock.instant())
         .expiresAt(clock.instant().plus(ABSOLUTE))
         .idleTimeout(IDLE)
         .maxSessionsPerUser(10);

@@ -3,15 +3,15 @@ package dev.patra.identity.domain.session.port.store;
 import dev.patra.identity.domain.session.model.vo.ActiveUserSession;
 import dev.patra.identity.domain.session.model.vo.IssuedUserSession;
 import dev.patra.identity.domain.session.model.vo.NewUserSession;
+import dev.patra.identity.domain.session.model.vo.SessionPasswordProof;
 import dev.patra.identity.domain.session.model.vo.SessionRotation;
 import dev.patra.tool.core.security.AccountType;
 import dev.patra.tool.core.security.CurrentUser;
 import java.time.Duration;
-import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
-/// 会话存储：建会话、按令牌查会话、换令牌、读再认证时间、按用户列出活会话、按会话 ID 删、按用户删全部、按用户删除指定一条外的全部。
+/// 会话存储：建会话、按令牌查会话、换令牌、读密码证明、按用户列出活会话、按会话 ID 删、按用户删全部、按用户删除指定一条外的全部。
 ///
 /// Redis 暂时不可用时，所有方法都抛带 `DEP_UNAVAILABLE` 特征的异常（由适配器原样传出，映射成 503）。
 public interface SessionStorePort {
@@ -39,13 +39,14 @@ public interface SessionStorePort {
   Optional<SessionRotation> rotate(
       AccountType accountType, long userId, long sessionId, Duration grace);
 
-  /// 读一条会话最近一次用密码证明身份的时间，不续期。再认证守卫用。
+  /// 读一条会话的密码证明，不续期。再认证守卫用。
   ///
   /// @param accountType 账号类型
   /// @param userId 用户 ID
   /// @param sessionId 会话 ID
-  /// @return 再认证时间；会话不在或已过期时为空
-  Optional<Instant> findAuthenticatedAt(AccountType accountType, long userId, long sessionId);
+  /// @return 密码证明；会话不在或已过期时为空
+  Optional<SessionPasswordProof> findPasswordProof(
+      AccountType accountType, long userId, long sessionId);
 
   /// 按用户列出还活着的会话，不续期（登录设备列表，PAP-99）。
   ///

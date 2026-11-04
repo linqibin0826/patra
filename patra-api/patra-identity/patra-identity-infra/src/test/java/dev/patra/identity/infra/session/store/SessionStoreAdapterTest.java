@@ -48,6 +48,7 @@ class SessionStoreAdapterTest {
                 .accountType(AccountType.USER)
                 .client(LoginClient.of("web", "Kq3_z-0aB1cD2eF3gH4iJ5kL6mN7oP8qR9sT0uV1wXy"))
                 .now(NOW)
+                .passwordVerifiedAt(NOW)
                 .lifetime(SessionLifetime.of(Duration.ofDays(30), Duration.ofDays(180)))
                 .maxSessionsPerUser(10)
                 .build());
@@ -63,6 +64,7 @@ class SessionStoreAdapterTest {
     assertThat(session.clientType()).isEqualTo(ClientType.WEB);
     assertThat(session.deviceId()).isEqualTo("Kq3_z-0aB1cD2eF3gH4iJ5kL6mN7oP8qR9sT0uV1wXy");
     assertThat(session.createdAt()).isEqualTo(NOW);
+    assertThat(session.authenticatedAt()).isEqualTo(NOW);
     assertThat(session.expiresAt()).isEqualTo(NOW.plus(Duration.ofDays(180)));
     assertThat(session.idleTimeout()).isEqualTo(Duration.ofDays(30));
     assertThat(session.maxSessionsPerUser()).isEqualTo(10);
@@ -104,8 +106,8 @@ class SessionStoreAdapterTest {
   }
 
   @Test
-  @DisplayName("读再认证时间：取会话的 authenticatedAt；会话不在为空")
-  void should_find_authenticated_at_from_stored_session() {
+  @DisplayName("读密码证明：会话不在为空；会话在但没有 auth_at 时证明为空")
+  void should_find_password_proof_from_stored_session() {
     when(store.find(AccountType.USER, 42L, 7001L))
         .thenReturn(
             Optional.of(
@@ -120,10 +122,24 @@ class SessionStoreAdapterTest {
                     .authenticatedAt(NOW.plusSeconds(5))
                     .build()));
     when(store.find(AccountType.USER, 42L, 7002L)).thenReturn(Optional.empty());
+    when(store.find(AccountType.USER, 42L, 7003L))
+        .thenReturn(
+            Optional.of(
+                StoredSession.builder()
+                    .userId(42L)
+                    .sessionId(7003L)
+                    .accountType(AccountType.USER)
+                    .clientType(ClientType.WEB)
+                    .createdAt(NOW)
+                    .lastActiveAt(NOW)
+                    .expiresAt(NOW.plus(Duration.ofDays(180)))
+                    .build()));
 
-    assertThat(adapter.findAuthenticatedAt(AccountType.USER, 42L, 7001L))
+    assertThat(adapter.findPasswordProof(AccountType.USER, 42L, 7001L).orElseThrow().verifiedAt())
         .contains(NOW.plusSeconds(5));
-    assertThat(adapter.findAuthenticatedAt(AccountType.USER, 42L, 7002L)).isEmpty();
+    assertThat(adapter.findPasswordProof(AccountType.USER, 42L, 7002L)).isEmpty();
+    assertThat(adapter.findPasswordProof(AccountType.USER, 42L, 7003L).orElseThrow().verifiedAt())
+        .isEmpty();
   }
 
   @Test
