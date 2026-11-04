@@ -83,10 +83,24 @@ public class SecurityProblemWriter
     write(request, response, exception);
   }
 
-  /// 把异常写成 ProblemDetail 响应。
+  /// 把过滤器里处理业务时抛的异常写成 ProblemDetail：`detail` 保留异常自己的文案，和控制器路径一致。
   ///
-  /// `detail` 换成固定短句，`instance` 显式设成请求路径：这两个字段在控制器路径上
-  /// 分别来自异常消息和 Spring MVC，过滤器里都得自己处理。
+  /// 认证过滤器的成功处理器在 `ExceptionTranslationFilter` 之前运行，抛出的业务异常到不了全局异常处理器。
+  ///
+  /// @param request 当前请求
+  /// @param response 当前响应
+  /// @param exception 要输出的异常
+  /// @throws IOException 写响应失败时
+  public void writeProblem(
+      HttpServletRequest request, HttpServletResponse response, RuntimeException exception)
+      throws IOException {
+    ProblemDetailResponse adapted = problemDetailAdapter.adapt(exception, request);
+    writeAdapted(request, response, exception, adapted);
+  }
+
+  /// 把框架的安全异常写成 ProblemDetail 响应。
+  ///
+  /// `detail` 换成固定短句：这个字段在控制器路径上来自异常消息，框架的消息不给客户端看。
   ///
   /// @param request 当前请求
   /// @param response 当前响应
@@ -96,9 +110,25 @@ public class SecurityProblemWriter
       HttpServletRequest request, HttpServletResponse response, RuntimeException exception)
       throws IOException {
     ProblemDetailResponse adapted = problemDetailAdapter.adapt(exception, request);
+    adapted.problemDetail().setDetail(clientDetailFor(adapted.httpStatus()));
+    writeAdapted(request, response, exception, adapted);
+  }
+
+  /// 写响应。`instance` 显式设成请求路径：这个字段在控制器路径上来自 Spring MVC，过滤器里得自己处理。
+  ///
+  /// @param request 当前请求
+  /// @param response 当前响应
+  /// @param exception 原始异常，记日志用
+  /// @param adapted 适配好的 ProblemDetail
+  /// @throws IOException 写响应失败时
+  private void writeAdapted(
+      HttpServletRequest request,
+      HttpServletResponse response,
+      RuntimeException exception,
+      ProblemDetailResponse adapted)
+      throws IOException {
     HttpStatus status = adapted.httpStatus();
     ProblemDetail problemDetail = adapted.problemDetail();
-    problemDetail.setDetail(clientDetailFor(status));
     problemDetail.setInstance(URI.create(request.getRequestURI()));
 
     if (status.is5xxServerError()) {

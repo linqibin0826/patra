@@ -2,7 +2,9 @@ package dev.patra.tool.security.error;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import dev.patra.tool.core.error.DomainException;
 import dev.patra.tool.core.error.codes.HttpStdErrors;
+import dev.patra.tool.core.error.trait.StandardErrorTrait;
 import dev.patra.tool.security.authentication.MalformedIdentityException;
 import dev.patra.tool.web.autoconfigure.WebProperties;
 import dev.patra.tool.web.error.adapter.DefaultProblemDetailAdapter;
@@ -109,6 +111,26 @@ class SecurityProblemWriterTest {
         .containsEntry("detail", "Access denied")
         .containsEntry("instance", "/probe/me");
     assertThat(rawBody()).doesNotContain("probe internal reason");
+  }
+
+  @Test
+  @DisplayName("过滤器链外面抛不出去的领域异常：按它的特征出状态码，detail 保留领域文案")
+  void should_write_domain_problem_with_its_message() throws Exception {
+    writer.writeProblem(request, response, new ProbeForbiddenException("该账号已被封禁"));
+
+    assertThat(response.getStatus()).isEqualTo(403);
+    assertThat(body()).containsEntry("code", "TEST-0403").containsEntry("detail", "该账号已被封禁");
+  }
+
+  /// 带 `FORBIDDEN` 特征的领域异常。
+  private static final class ProbeForbiddenException extends DomainException {
+
+    /// 创建异常。
+    ///
+    /// @param message 领域文案
+    ProbeForbiddenException(String message) {
+      super(message, StandardErrorTrait.FORBIDDEN);
+    }
   }
 
   @Test

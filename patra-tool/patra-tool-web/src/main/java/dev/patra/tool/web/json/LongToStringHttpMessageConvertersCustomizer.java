@@ -32,6 +32,13 @@ public final class LongToStringHttpMessageConvertersCustomizer
         new JacksonJsonHttpMessageConverter(jsonMapper.rebuild().addModule(module).build());
   }
 
+  /// 派生出来的响应转换器：过滤器里直接写响应时用它，和控制器的输出保持一致。
+  ///
+  /// @return JSON 转换器
+  public JacksonJsonHttpMessageConverter jsonConverter() {
+    return jsonConverter;
+  }
+
   /// 用派生的转换器替换服务端的 JSON 转换器。
   ///
   /// @param builder 服务端转换器装配器
