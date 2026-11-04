@@ -90,19 +90,18 @@ public class ProviderLoginSuccessHandler implements AuthenticationSuccessHandler
   private Object login(HttpServletRequest request, ProviderAccount account) {
     ProviderLoginResult result =
         commandBus.handle(
-            CompleteProviderLoginCommand.builder()
-                .account(account)
-                .deviceId(request.getHeader(DEVICE_ID_HEADER))
-                .clientIp(ClientIp.from(request))
-                .userAgent(request.getHeader(HttpHeaders.USER_AGENT))
-                .build());
+            CompleteProviderLoginCommand.of(
+                account,
+                request.getHeader(DEVICE_ID_HEADER),
+                ClientIp.from(request),
+                request.getHeader(HttpHeaders.USER_AGENT)));
     return switch (result) {
       case ProviderLoginResult.Authenticated authenticated ->
           ProviderAuthenticatedResponse.of(
               authenticated.user().sessionToken(),
               CurrentUserResponse.from(authenticated.user().account()));
       case ProviderLoginResult.RegistrationRequired required ->
-          ProviderRegistrationRequiredResponse.of(required.ticket(), required.pending());
+          ProviderRegistrationRequiredResponse.from(required.ticket(), required.pending());
     };
   }
 

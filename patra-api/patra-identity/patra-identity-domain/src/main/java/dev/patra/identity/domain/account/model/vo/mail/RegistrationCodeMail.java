@@ -4,6 +4,7 @@ import dev.patra.identity.domain.account.model.vo.EmailAddress;
 import java.time.Instant;
 import java.util.Objects;
 import java.util.UUID;
+import lombok.Builder;
 
 /// 第三方首次注册的验证码：发给用户填的邮箱。这时候还没有账号。
 ///
@@ -12,6 +13,7 @@ import java.util.UUID;
 /// @param displayName 用户填的用户名，还没有账号也就没有昵称
 /// @param code 验证码原文，只在这封邮件里
 /// @param codeExpiresAt 验证码的过期时间
+@Builder
 public record RegistrationCodeMail(
     UUID eventId, EmailAddress to, String displayName, String code, Instant codeExpiresAt)
     implements OutgoingMail {
@@ -25,23 +27,18 @@ public record RegistrationCodeMail(
     Objects.requireNonNull(codeExpiresAt, "codeExpiresAt 不能为 null");
   }
 
-  /// 创建邮件，生成新的事件 ID。
-  ///
-  /// @param to 收件人
-  /// @param displayName 用户填的用户名
-  /// @param code 验证码原文
-  /// @param codeExpiresAt 验证码的过期时间
-  /// @return 邮件
-  public static RegistrationCodeMail of(
-      EmailAddress to, String displayName, String code, Instant codeExpiresAt) {
-    return new RegistrationCodeMail(UUID.randomUUID(), to, displayName, code, codeExpiresAt);
-  }
-
   /// 不输出收件人与验证码。
   ///
   /// @return 描述
   @Override
   public String toString() {
     return "RegistrationCodeMail[eventId=" + eventId + "]";
+  }
+
+  /// 构造器：不指定事件 ID 时用构造时生成的新 ID。
+  public static class RegistrationCodeMailBuilder {
+
+    /// 事件 ID，默认在创建构造器时生成。
+    private UUID eventId = UUID.randomUUID();
   }
 }

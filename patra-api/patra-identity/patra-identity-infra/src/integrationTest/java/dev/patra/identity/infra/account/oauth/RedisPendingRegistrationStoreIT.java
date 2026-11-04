@@ -89,12 +89,11 @@ class RedisPendingRegistrationStoreIT {
   }
 
   private static PendingCode pendingCode() {
-    return PendingCode.builder()
-        .username("chen-yu")
-        .email("chen@example.com")
-        .codeExpiresAt(Instant.parse("2026-11-04T08:10:00Z"))
-        .nextResendAt(Instant.parse("2026-11-04T08:01:00Z"))
-        .build();
+    return PendingCode.of(
+        "chen-yu",
+        "chen@example.com",
+        Instant.parse("2026-11-04T08:10:00Z"),
+        Instant.parse("2026-11-04T08:01:00Z"));
   }
 
   private static final RegistrationCode CODE = new RegistrationCode("483920");

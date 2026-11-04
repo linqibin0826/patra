@@ -107,12 +107,13 @@ public class LinkProviderAccountHandler
                           .findAccount(userId)
                           .orElseThrow(AuthenticationRequiredException::new);
                   emailDelivery.send(
-                      LoginMethodLinkedMail.of(
-                          locked.getEmail().orElseThrow(),
-                          read.displayName(),
-                          account.provider().displayName(),
-                          account.accountLabel(),
-                          origin.toNotice(now)));
+                      LoginMethodLinkedMail.builder()
+                          .to(locked.getEmail().orElseThrow())
+                          .displayName(read.displayName())
+                          .providerName(account.provider().displayName())
+                          .accountLabel(account.accountLabel())
+                          .notice(origin.toNotice(now))
+                          .build());
                   return true;
                 }));
     if (newlyLinked) {

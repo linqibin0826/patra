@@ -85,12 +85,13 @@ public class UnlinkProviderAccountHandler
           UserAccountReadModel read =
               userReadPort.findAccount(userId).orElseThrow(AuthenticationRequiredException::new);
           emailDelivery.send(
-              LoginMethodUnlinkedMail.of(
-                  locked.getEmail().orElseThrow(),
-                  read.displayName(),
-                  provider.displayName(),
-                  identity.get().getAccountLabel(),
-                  origin.toNotice(now)));
+              LoginMethodUnlinkedMail.builder()
+                  .to(locked.getEmail().orElseThrow())
+                  .displayName(read.displayName())
+                  .providerName(provider.displayName())
+                  .accountLabel(identity.get().getAccountLabel())
+                  .notice(origin.toNotice(now))
+                  .build());
         });
     log.info("已解绑第三方账号: userId={}, provider={}", userId, provider);
     return null;

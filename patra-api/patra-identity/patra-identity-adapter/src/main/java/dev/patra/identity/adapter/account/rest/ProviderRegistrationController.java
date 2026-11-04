@@ -62,12 +62,8 @@ public class ProviderRegistrationController {
       HttpServletRequest http) {
     return RegistrationCodeSentResponse.from(
         commandBus.handle(
-            SendRegistrationCodeCommand.builder()
-                .ticket(ticket)
-                .username(request.username())
-                .email(request.email())
-                .clientIp(ClientIp.from(http))
-                .build()));
+            SendRegistrationCodeCommand.of(
+                ticket, request.username(), request.email(), ClientIp.from(http))));
   }
 
   /// 提交验证码，建账号并登录。成功 201，和注册同构；422 验证码或凭证不可用，409 邮箱、用户名或第三方账号已被使用。

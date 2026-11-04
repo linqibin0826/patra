@@ -92,18 +92,18 @@ public class SendRegistrationCodeHandler
     RegistrationCode code = RegistrationCode.generate(random);
     pendingRegistrations.storeCode(
         command.ticket(),
-        PendingCode.builder()
-            .username(username.value())
-            .email(email.value())
-            .codeExpiresAt(codeExpiresAt)
-            .nextResendAt(nextResendAt)
-            .build(),
+        PendingCode.of(username.value(), email.value(), codeExpiresAt, nextResendAt),
         code,
         ttl);
     transactions.executeWithoutResult(
         status ->
             emailDelivery.send(
-                RegistrationCodeMail.of(email, username.value(), code.value(), codeExpiresAt)));
+                RegistrationCodeMail.builder()
+                    .to(email)
+                    .displayName(username.value())
+                    .code(code.value())
+                    .codeExpiresAt(codeExpiresAt)
+                    .build()));
     log.info("第三方注册验证码已登记: provider={}", registration.provider());
     return RegistrationCodeSent.of(email.value(), codeExpiresAt, nextResendAt);
   }

@@ -85,12 +85,7 @@ class SendRegistrationCodeHandlerTest {
   }
 
   private static SendRegistrationCodeCommand command() {
-    return SendRegistrationCodeCommand.builder()
-        .ticket(TICKET)
-        .username(" Chen-Yu ")
-        .email("Chen@Example.com")
-        .clientIp("203.0.113.9")
-        .build();
+    return SendRegistrationCodeCommand.of(TICKET, " Chen-Yu ", "Chen@Example.com", "203.0.113.9");
   }
 
   @BeforeEach
@@ -161,8 +156,7 @@ class SendRegistrationCodeHandlerTest {
   @Test
   @DisplayName("字段不合法：422，不查占用")
   void should_validate_fields_first() {
-    SendRegistrationCodeCommand invalid =
-        SendRegistrationCodeCommand.builder().ticket(TICKET).username("a").email("x").build();
+    SendRegistrationCodeCommand invalid = SendRegistrationCodeCommand.of(TICKET, "a", "x", null);
 
     assertThatThrownBy(() -> handler.handle(invalid))
         .isInstanceOf(InvalidUserFieldsException.class);

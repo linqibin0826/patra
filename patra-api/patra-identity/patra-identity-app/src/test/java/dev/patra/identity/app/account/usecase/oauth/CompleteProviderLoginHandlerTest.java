@@ -150,12 +150,7 @@ class CompleteProviderLoginHandlerTest {
   }
 
   private static CompleteProviderLoginCommand command(ProviderAccount account, String deviceId) {
-    return CompleteProviderLoginCommand.builder()
-        .account(account)
-        .deviceId(deviceId)
-        .clientIp("203.0.113.9")
-        .userAgent("UA")
-        .build();
+    return CompleteProviderLoginCommand.of(account, deviceId, "203.0.113.9", "UA");
   }
 
   @BeforeEach

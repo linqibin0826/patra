@@ -55,9 +55,26 @@ public final class SecurityMailFixture {
   /// @return 样本
   public static List<OutgoingMail> all() {
     return List.of(
-        RegistrationCodeMail.of(TO, "陈宇", "483920", LINK_EXPIRES),
-        LoginMethodLinkedMail.of(TO, "陈宇", "GitHub", "octocat", NOTICE),
-        LoginMethodUnlinkedMail.of(TO, "陈宇", "GitHub", "octocat", NOTICE),
+        RegistrationCodeMail.builder()
+            .to(TO)
+            .displayName("陈宇")
+            .code("483920")
+            .codeExpiresAt(LINK_EXPIRES)
+            .build(),
+        LoginMethodLinkedMail.builder()
+            .to(TO)
+            .displayName("陈宇")
+            .providerName("GitHub")
+            .accountLabel("octocat")
+            .notice(NOTICE)
+            .build(),
+        LoginMethodUnlinkedMail.builder()
+            .to(TO)
+            .displayName("陈宇")
+            .providerName("GitHub")
+            .accountLabel("octocat")
+            .notice(NOTICE)
+            .build(),
         EmailVerificationMail.builder()
             .to(TO)
             .displayName("陈宇")

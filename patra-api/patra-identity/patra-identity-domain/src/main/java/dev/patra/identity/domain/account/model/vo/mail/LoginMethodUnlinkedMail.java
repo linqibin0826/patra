@@ -4,6 +4,7 @@ import dev.patra.identity.domain.account.model.vo.EmailAddress;
 import dev.patra.identity.domain.session.model.vo.SecurityNotice;
 import java.util.Objects;
 import java.util.UUID;
+import lombok.Builder;
 
 /// 「解绑了一种第三方登录方式」的安全通知，发给当前邮箱。
 ///
@@ -13,6 +14,7 @@ import java.util.UUID;
 /// @param providerName 平台名，如 `GitHub`
 /// @param accountLabel 第三方账号标识
 /// @param notice 安全通知上下文：时间、设备、IP 与属地
+@Builder
 public record LoginMethodUnlinkedMail(
     UUID eventId,
     EmailAddress to,
@@ -32,29 +34,18 @@ public record LoginMethodUnlinkedMail(
     Objects.requireNonNull(notice, "notice 不能为 null");
   }
 
-  /// 创建邮件，生成新的事件 ID。
-  ///
-  /// @param to 收件人
-  /// @param displayName 收件人的昵称
-  /// @param providerName 平台名
-  /// @param accountLabel 第三方账号标识
-  /// @param notice 安全通知上下文
-  /// @return 邮件
-  public static LoginMethodUnlinkedMail of(
-      EmailAddress to,
-      String displayName,
-      String providerName,
-      String accountLabel,
-      SecurityNotice notice) {
-    return new LoginMethodUnlinkedMail(
-        UUID.randomUUID(), to, displayName, providerName, accountLabel, notice);
-  }
-
   /// 不输出收件人。
   ///
   /// @return 描述
   @Override
   public String toString() {
     return "LoginMethodUnlinkedMail[eventId=" + eventId + "]";
+  }
+
+  /// 构造器：不指定事件 ID 时用构造时生成的新 ID。
+  public static class LoginMethodUnlinkedMailBuilder {
+
+    /// 事件 ID，默认在创建构造器时生成。
+    private UUID eventId = UUID.randomUUID();
   }
 }

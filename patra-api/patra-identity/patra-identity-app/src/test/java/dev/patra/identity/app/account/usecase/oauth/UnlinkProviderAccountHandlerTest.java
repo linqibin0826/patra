@@ -98,7 +98,7 @@ class UnlinkProviderAccountHandlerTest {
           Clock.fixed(NOW, ZoneOffset.UTC));
 
   private static UnlinkProviderAccountCommand command() {
-    return UnlinkProviderAccountCommand.builder().provider(IdentityProvider.GITHUB).build();
+    return UnlinkProviderAccountCommand.of(IdentityProvider.GITHUB, null, null);
   }
 
   @BeforeEach

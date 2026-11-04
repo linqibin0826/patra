@@ -154,14 +154,11 @@ public class RedisPendingRegistrationStore implements PendingRegistrationPort {
   /// @param fields 字段
   /// @return 公开部分
   private static PendingCode toPendingCode(Map<Object, Object> fields) {
-    return PendingCode.builder()
-        .username(String.valueOf(fields.get("username")))
-        .email(String.valueOf(fields.get("email")))
-        .codeExpiresAt(
-            Instant.ofEpochMilli(Long.parseLong(String.valueOf(fields.get("expires_at")))))
-        .nextResendAt(
-            Instant.ofEpochMilli(Long.parseLong(String.valueOf(fields.get("next_resend_at")))))
-        .build();
+    return PendingCode.of(
+        String.valueOf(fields.get("username")),
+        String.valueOf(fields.get("email")),
+        Instant.ofEpochMilli(Long.parseLong(String.valueOf(fields.get("expires_at")))),
+        Instant.ofEpochMilli(Long.parseLong(String.valueOf(fields.get("next_resend_at")))));
   }
 
   /// 验证码的键。

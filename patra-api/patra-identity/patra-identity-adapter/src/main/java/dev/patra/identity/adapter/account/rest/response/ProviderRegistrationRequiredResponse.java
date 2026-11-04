@@ -23,12 +23,12 @@ public record ProviderRegistrationRequiredResponse(
     String suggestedEmail,
     Instant expiresAt) {
 
-  /// 从待补填记录创建。
+  /// 从待补填记录映射。
   ///
   /// @param ticket 待补填凭证
   /// @param pending 待补填记录
   /// @return 响应
-  public static ProviderRegistrationRequiredResponse of(
+  public static ProviderRegistrationRequiredResponse from(
       String ticket, PendingRegistration pending) {
     return ProviderRegistrationRequiredResponse.builder()
         .result("REGISTRATION_REQUIRED")

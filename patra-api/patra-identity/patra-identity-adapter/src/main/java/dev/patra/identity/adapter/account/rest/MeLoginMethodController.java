@@ -71,11 +71,7 @@ public class MeLoginMethodController {
       HttpServletRequest http,
       @RequestHeader(value = HttpHeaders.USER_AGENT, required = false) String userAgent) {
     commandBus.handle(
-        UnlinkProviderAccountCommand.builder()
-            .provider(providerOf(provider))
-            .clientIp(ClientIp.from(http))
-            .userAgent(userAgent)
-            .build());
+        UnlinkProviderAccountCommand.of(providerOf(provider), ClientIp.from(http), userAgent));
   }
 
   /// 路径里的平台名。

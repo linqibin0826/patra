@@ -3,6 +3,7 @@ package dev.patra.identity;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.patra.identity.app.account.usecase.deletion.ExecuteDueAccountDeletionsCommand;
+import dev.patra.identity.config.FakeProviderFixture;
 import dev.patra.tool.cqrs.CommandBus;
 import java.sql.Timestamp;
 import java.time.Duration;
@@ -50,7 +51,7 @@ class ProviderLoginFlowIT extends ProviderFlowITSupport {
         userIdOf(registerViaGithub(9003L, "login-dev", "login-dev", "flow.login.dev@example.com"));
     String device = "Kq3_z-0aB1cD2eF3gH4iJ5kL6mN7oP8qR9sT0uV1wXy";
     AuthorizationStart start = startLogin("github");
-    dev.patra.identity.config.FakeProviderFixture.stubGithub(9003L, "login-dev", null);
+    FakeProviderFixture.stubGithub(9003L, "login-dev", null);
     HttpHeaders headers = fromShenzhenChrome(noHeaders());
     headers.add("X-Patra-Device-Id", device);
 

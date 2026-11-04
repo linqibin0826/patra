@@ -7,6 +7,7 @@ import java.time.Duration;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import lombok.Builder;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.InternalAuthenticationServiceException;
 import org.springframework.security.oauth2.client.web.AuthorizationRequestRepository;
@@ -108,6 +109,7 @@ public class StoredAuthorizationRequestRepository
   /// @param additionalParameters 额外参数：`nonce`、`code_challenge`
   /// @param attributes 属性：注册 ID、`nonce` 原文、`code_verifier`、用途与发起人
   /// @param authorizationRequestUri 完整的授权地址
+  @Builder
   record StoredRequest(
       String authorizationUri,
       String clientId,
@@ -123,15 +125,16 @@ public class StoredAuthorizationRequestRepository
     /// @param request 授权请求
     /// @return 存储形状
     static StoredRequest from(OAuth2AuthorizationRequest request) {
-      return new StoredRequest(
-          request.getAuthorizationUri(),
-          request.getClientId(),
-          request.getRedirectUri(),
-          request.getScopes(),
-          request.getState(),
-          request.getAdditionalParameters(),
-          request.getAttributes(),
-          request.getAuthorizationRequestUri());
+      return StoredRequest.builder()
+          .authorizationUri(request.getAuthorizationUri())
+          .clientId(request.getClientId())
+          .redirectUri(request.getRedirectUri())
+          .scopes(request.getScopes())
+          .state(request.getState())
+          .additionalParameters(request.getAdditionalParameters())
+          .attributes(request.getAttributes())
+          .authorizationRequestUri(request.getAuthorizationRequestUri())
+          .build();
     }
 
     /// 还原成授权请求。
