@@ -64,6 +64,14 @@ describe("DeleteAccountCard / DeleteAccountDialog", () => {
     expect(dialog).toHaveTextContent("用户名 @chen-yu 永久保留、不能再被使用。");
   });
 
+  it("冷静期说明不假设有密码：只用第三方的人也能取消", async () => {
+    renderCard();
+    await userEvent.setup().click(screen.getByRole("button", { name: "注销账号…" }));
+    const dialog = await screen.findByRole("dialog");
+    expect(dialog).toHaveTextContent("15 天冷静期内重新登录，就可以取消注销。");
+    expect(dialog).not.toHaveTextContent("用邮箱和密码登录");
+  });
+
   it("第 2 步：要求输入用户名；不一致时按钮不可用，离开字段提示", async () => {
     renderCard();
     const { user, input } = await toStepTwo();

@@ -17,6 +17,8 @@ export const userSchema = z.object({
   deletionDueAt: z.string().nullable(),
   /// 上次改名 + 30 天；从没改过为 null，冷却过后仍是那个过去的时间
   nextUsernameChangeAt: z.string().nullable(),
+  /// 有没有密码：只用第三方登录的账号没有，再认证时要先设置（决策 E）
+  hasPassword: z.boolean(),
 });
 
 /// 当前登录的用户。`userId` 是字符串：后端的雪花 ID 超出 JS 的安全整数范围。

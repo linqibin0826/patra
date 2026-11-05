@@ -1,6 +1,8 @@
 import "server-only";
 import { cookies } from "next/headers";
 import type { NextRequest } from "next/server";
+import { safeNextPath } from "@/lib/auth/next-path";
+import { SIGNED_IN_FLAG_COOKIE } from "@/lib/auth/oauth-providers";
 
 /// 有效期 30 天，和会话的不活跃过期时间一致
 const MAX_AGE_SECONDS = 30 * 24 * 60 * 60;
@@ -124,4 +126,107 @@ export async function rewriteTrackingCookies<T extends { cookies: readonly Cooki
     store.set({ ...cookie.options, value: cookie.value });
   }
   return result;
+}
+
+/// 第三方登录的发起页：登录页、注册页，或绑定时的设置页
+export type OAuthFrom = "login" | "register" | "settings";
+
+/// 跨越第三方往返要记住的内容
+export interface OAuthReturn {
+  from: OAuthFrom;
+  /// 成功后回到哪里，读出时已经过 `safeNextPath`
+  next: string;
+}
+
+/// 发起到回调之间的 Cookie：`Path` 只给 OAuth 路由，10 分钟，和 identity 的授权请求活得一样久。`Path` 不是 `/`，
+/// 不能带 `__Host-` 前缀；`Lax`：第三方跳回来是顶层导航，Cookie 照常带上
+function oauthFlowCookie(name: string) {
+  return {
+    name,
+    httpOnly: true,
+    sameSite: "lax",
+    path: "/api/auth/oauth",
+    secure: secureEnabled(),
+  } as const;
+}
+
+const OAUTH_STATE_COOKIE = "patra_oauth_state";
+const OAUTH_RETURN_COOKIE = "patra_oauth_return";
+const OAUTH_FLOW_MAX_AGE_SECONDS = 10 * 60;
+
+/// 发起第三方授权时写入：`state` 证明回调是这个浏览器发起的，`ret` 记住发起页和 `next`
+export async function writeOAuthFlowCookies(state: string, ret: OAuthReturn): Promise<void> {
+  const store = await cookies();
+  const maxAge = OAUTH_FLOW_MAX_AGE_SECONDS;
+  store.set({ ...oauthFlowCookie(OAUTH_STATE_COOKIE), value: state, maxAge });
+  store.set({
+    ...oauthFlowCookie(OAUTH_RETURN_COOKIE),
+    value: new URLSearchParams({ from: ret.from, next: ret.next }).toString(),
+    maxAge,
+  });
+}
+
+/// 回调时读出：没有 `state` Cookie 时为 null；发起页不认识按登录页，`next` 重新校验
+export async function readOAuthFlow(): Promise<{ state: string | null; ret: OAuthReturn }> {
+  const store = await cookies();
+  const state = store.get(OAUTH_STATE_COOKIE)?.value;
+  const raw = new URLSearchParams(store.get(OAUTH_RETURN_COOKIE)?.value ?? "");
+  const from = raw.get("from");
+  return {
+    state: state ? state : null,
+    ret: {
+      from: from === "register" || from === "settings" ? from : "login",
+      next: safeNextPath(raw.get("next")),
+    },
+  };
+}
+
+/// 回调核对之后清掉，一次授权只用一次
+export async function clearOAuthFlowCookies(): Promise<void> {
+  const store = await cookies();
+  store.set({ ...oauthFlowCookie(OAUTH_STATE_COOKIE), value: "", maxAge: 0 });
+  store.set({ ...oauthFlowCookie(OAUTH_RETURN_COOKIE), value: "", maxAge: 0 });
+}
+
+/// 待补填凭据的 Cookie：只放 Cookie，不进地址栏；30 分钟，和 identity 的待补填记录一样
+function ticketCookie() {
+  return {
+    name: "patra_oauth_ticket",
+    httpOnly: true,
+    sameSite: "lax",
+    path: "/",
+    secure: secureEnabled(),
+  } as const;
+}
+
+const TICKET_MAX_AGE_SECONDS = 30 * 60;
+
+/// 写入待补填凭据
+export async function writeTicketCookie(ticket: string): Promise<void> {
+  (await cookies()).set({ ...ticketCookie(), value: ticket, maxAge: TICKET_MAX_AGE_SECONDS });
+}
+
+/// 读待补填凭据；没有或值为空时返回 null
+export async function readTicket(): Promise<string | null> {
+  const value = (await cookies()).get(ticketCookie().name)?.value;
+  return value ? value : null;
+}
+
+/// 账号建好后清掉
+export async function clearTicketCookie(): Promise<void> {
+  (await cookies()).set({ ...ticketCookie(), value: "", maxAge: 0 });
+}
+
+/// 第三方登录是整页跳转，落地页不知道刚登录过：写一个脚本能读的短期标记，下一页弹「已登录」后清掉（`SignedInToast`）。
+/// 名字和页面上读的那份共用（`oauth-providers.ts`）
+export async function writeSignedInFlag(): Promise<void> {
+  (await cookies()).set({
+    name: SIGNED_IN_FLAG_COOKIE,
+    value: "1",
+    httpOnly: false,
+    sameSite: "lax",
+    path: "/",
+    secure: secureEnabled(),
+    maxAge: 60,
+  });
 }

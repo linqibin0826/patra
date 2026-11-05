@@ -18,6 +18,8 @@ export interface GatewayRequestInit {
   token?: string;
   /// 浏览器来源：门户代表浏览器请求 identity 时传，写成 `X-Forwarded-For` 与 `User-Agent`
   client?: ClientOrigin;
+  /// 接口自己要的请求头，比如第三方登录的 `X-Patra-Device-Id`、`X-Patra-Registration-Ticket`
+  headers?: Record<string, string>;
   /// 默认 `manual`：网关不跟随下游的 3xx，原样交给门户（旧用户名的 301 要读响应体），跟随只会去请求
   /// 缺了服务前缀的地址
   redirect?: "follow" | "manual";
@@ -38,7 +40,7 @@ export async function gatewayFetch(path: string, init: GatewayRequestInit = {}):
   if (init.json !== undefined && init.body !== undefined) {
     throw new Error("json 和 body 只能给一个");
   }
-  const headers: Record<string, string> = { ...forwardingHeaders(init.client) };
+  const headers: Record<string, string> = { ...forwardingHeaders(init.client), ...init.headers };
   if (init.token) {
     headers.Authorization = `Bearer ${init.token}`;
   }

@@ -21,6 +21,17 @@ const newPasswordField = z
   .refine((value) => codePoints(value) >= 8, FIELD_MESSAGES.passwordTooShort)
   .refine((value) => codePoints(value) <= 64, FIELD_MESSAGES.passwordTooLong);
 
+/// 用户名：规则与后端同一条（`usernameIssue`），提交的是去空白、转小写之后的值
+const usernameField = z
+  .string()
+  .superRefine((value, ctx) => {
+    const issue = usernameIssue(value);
+    if (issue) {
+      ctx.addIssue({ code: "custom", message: usernameMessage(issue) });
+    }
+  })
+  .transform(normalizeUsername);
+
 /// 登录表单：后端的登录接口只检查密码非空，前端也只查这一条，不去空格
 export const loginSchema = z.object({
   email: emailField,
@@ -31,16 +42,7 @@ export const loginSchema = z.object({
 export const registerSchema = z
   .object({
     email: emailField,
-    /// 用户名：规则与后端同一条（`usernameIssue`），提交的是去空白、转小写之后的值
-    username: z
-      .string()
-      .superRefine((value, ctx) => {
-        const issue = usernameIssue(value);
-        if (issue) {
-          ctx.addIssue({ code: "custom", message: usernameMessage(issue) });
-        }
-      })
-      .transform(normalizeUsername),
+    username: usernameField,
     password: newPasswordField,
     confirmPassword: z.string().min(1, FIELD_MESSAGES.confirmRequired),
   })
@@ -48,6 +50,9 @@ export const registerSchema = z
     path: ["confirmPassword"],
     error: FIELD_MESSAGES.confirmMismatch,
   });
+
+/// 第三方首次注册的补填：用户名、邮箱，规则同注册页；没有密码（决策 E）
+export const providerRegistrationSchema = z.object({ username: usernameField, email: emailField });
 
 /// 表单里各字段的原始值
 export type LoginFormValues = z.input<typeof loginSchema>;

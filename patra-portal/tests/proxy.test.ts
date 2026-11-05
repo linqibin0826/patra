@@ -175,6 +175,12 @@ describe("已登录的人打开登录页、注册页时直接跳走", () => {
     });
   });
 
+  it("补填页同样会跳走", async () => {
+    fetchMock.mockResolvedValue(json(200, ME_RESPONSE));
+    const res = await proxy(signedIn("/register/complete?next=%2Fjournals"));
+    expect(res.headers.get("location")).toBe("http://portal.test/journals");
+  });
+
   it("next 出现多次时取第一个", async () => {
     fetchMock.mockResolvedValue(json(200, ME_RESPONSE));
     const res = await proxy(signedIn("/login?next=%2Fjournals&next=%2Fpapers"));

@@ -7,27 +7,38 @@ import { AuthLink } from "@/components/auth/AuthLink";
 import { FormAlert } from "@/components/auth/FormAlert";
 import { FormField } from "@/components/auth/FormField";
 import { PasswordInput } from "@/components/auth/PasswordInput";
+import { ProviderEntries } from "@/components/auth/ProviderEntries";
 import { UsernameField } from "@/components/auth/UsernameField";
 import { useAuthSubmit, useServerFieldErrors } from "@/components/auth/use-auth-submit";
 import { useBlurValidation } from "@/components/auth/use-blur-validation";
+import { useOAuthAlert } from "@/components/auth/use-oauth-alert";
 import { register as registerAccount } from "@/lib/auth/actions";
 import { registerSchema } from "@/lib/auth/form-schemas";
 import {
   FIELD_MESSAGES,
+  loginNoticeAlert,
   REGISTER_UNAVAILABLE_MESSAGE,
   TOAST_MESSAGES,
   usernameHint,
   usernameMessage,
 } from "@/lib/auth/messages";
 import { authPageHref } from "@/lib/auth/next-path";
+import type { OAuthNotice } from "@/lib/auth/oauth-notice";
 import { btnBlock, btnPrimary } from "@/lib/portal-ui";
 import { cn } from "@/lib/utils";
 import { useVerificationResendStore } from "@/store/verification-resend";
 
 /// 注册表单（v0.8 spec 第 9 节，v0.12 简报 §3.1）：提示条、邮箱、用户名、密码、确认密码、提交按钮、
-/// 去登录的链接。`next` 已经过 `safeNextPath`。
-export function RegisterForm({ next }: { next: string }) {
+/// 去登录的链接。`next` 已经过 `safeNextPath`。`oauth` 是第三方入口（决策 G）和从第三方回来的结果，不传时没有入口。
+export function RegisterForm({
+  next,
+  oauth,
+}: {
+  next: string;
+  oauth?: { enabled: boolean; notice: OAuthNotice | null };
+}) {
   const [alert, setAlert] = useState<string | null>(null);
+  const { oauthAlert, dismiss } = useOAuthAlert(oauth?.notice ?? null, loginNoticeAlert);
   const serverErrors = useServerFieldErrors();
   const {
     register,
@@ -107,6 +118,7 @@ export function RegisterForm({ next }: { next: string }) {
   function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setAlert(null);
+    dismiss();
     serverErrors.clear();
     void handleSubmit((values) =>
       submit({ email: values.email, username: values.username, password: values.password }),
@@ -121,9 +133,14 @@ export function RegisterForm({ next }: { next: string }) {
         method="post"
         noValidate
         onSubmit={onSubmit}
-        className={cn("flex flex-col gap-5", alert ? "mt-6" : "mt-8")}
+        className={cn("flex flex-col gap-5", alert || oauthAlert ? "mt-6" : "mt-8")}
       >
-        {alert && <FormAlert>{alert}</FormAlert>}
+        {alert ? (
+          <FormAlert>{alert}</FormAlert>
+        ) : (
+          oauthAlert && <FormAlert tone={oauthAlert.tone}>{oauthAlert.text}</FormAlert>
+        )}
+        {oauth?.enabled && <ProviderEntries page="register" next={next} />}
         <FormField id="register-email" label="邮箱" error={emailError}>
           {(control) => (
             <input

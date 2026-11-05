@@ -13,6 +13,7 @@ export const ME_RESPONSE = {
   status: "ACTIVE",
   deletionDueAt: null,
   nextUsernameChangeAt: null,
+  hasPassword: true,
   accountType: "user",
 } as const;
 
@@ -28,4 +29,5 @@ export const USER: CurrentUser = {
   status: ME_RESPONSE.status,
   deletionDueAt: ME_RESPONSE.deletionDueAt,
   nextUsernameChangeAt: ME_RESPONSE.nextUsernameChangeAt,
+  hasPassword: ME_RESPONSE.hasPassword,
 };
