@@ -74,7 +74,10 @@ export function LoginForm({
     successToast: TOAST_MESSAGES.loggedIn,
     onFailure: (failure, credentials) => {
       if (failure.reason === "invalid-fields") {
-        const first = serverErrors.showFieldErrors(failure.fieldErrors, credentials);
+        const first = serverErrors.showFieldErrors(failure.fieldErrors, {
+          email: credentials.email,
+          password: credentials.password,
+        });
         if (first) {
           setFocus(first);
           return;

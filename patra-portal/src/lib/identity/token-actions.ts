@@ -2,8 +2,10 @@
 
 import { z } from "zod";
 import { logUnexpectedResponse } from "@/lib/auth/gateway-response";
+import type { VerificationFailure } from "@/lib/auth/types";
 import { unexpectedProblem } from "@/lib/identity/mutation-failure";
 import { callIdentity } from "@/lib/identity/request";
+import { verificationFailureOf } from "@/lib/identity/verification-failure";
 
 /// 公开的找回密码与邮件落地页接口：不要求登录，有会话 Cookie 就带上令牌（验证邮箱要靠它保留本机会话）。
 /// 这些路径在网关上是公开的，不会回会话失效的 401；出现了按 `unavailable`。
@@ -18,16 +20,21 @@ export type ForgotResult =
   | { ok: true; email: string; nextRequestAt: string }
   | { ok: false; reason: "invalid" }
   | { ok: false; reason: "throttled"; retryAfterSeconds: number | null }
+  | VerificationFailure
   | Unavailable;
 
 const forgotSchema = z.object({ email: z.string().min(1), nextRequestAt: z.string().min(1) });
 
-/// 申请重设密码（`POST /auth/password/forgot`）：注册与否一律 202（防枚举）；422 邮箱格式；429 过于频繁。
-export async function requestPasswordReset(email: string): Promise<ForgotResult> {
+/// 申请重设密码（`POST /auth/password/forgot`）：注册与否一律 202（防枚举）；422 邮箱格式；429 过于频繁；
+/// 每次都要人机验证令牌，它的失败单独返回。
+export async function requestPasswordReset(
+  email: string,
+  verificationToken?: string,
+): Promise<ForgotResult> {
   const endpoint = `/patra-identity${FORGOT_PATH}`;
   const reply = await callIdentity(
     FORGOT_PATH,
-    { method: "POST", json: { email } },
+    { method: "POST", json: { email, verificationToken } },
     { auth: "optional" },
   );
   if (reply.kind === "ok") {
@@ -42,6 +49,10 @@ export async function requestPasswordReset(email: string): Promise<ForgotResult>
     return UNAVAILABLE;
   }
   const { problem } = reply;
+  const verification = verificationFailureOf(problem);
+  if (verification) {
+    return verification;
+  }
   if (problem.status === 422 && problem.errors.some((error) => error.field === "email")) {
     return { ok: false, reason: "invalid" };
   }

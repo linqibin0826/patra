@@ -25,6 +25,7 @@ import { readClientOrigin } from "@/lib/client-origin";
 import { canSendToken, gatewayFetch } from "@/lib/gateway";
 import { parseProblem } from "@/lib/identity/problem";
 import { userSchema } from "@/lib/identity/user-schema";
+import { verificationFailureOf } from "@/lib/identity/verification-failure";
 
 const REGISTER_ENDPOINT = "/patra-identity/auth/register";
 const LOGIN_ENDPOINT = "/patra-identity/auth/login";
@@ -34,7 +35,11 @@ const LOGOUT_ENDPOINT = "/patra-identity/auth/logout";
 const LOGOUT_TIMEOUT_MS = 5_000;
 
 /// 入参只校验形状，多余的字段被剥掉；长度和格式由后端校验，失败时回 422 并带原因码
-const credentialsSchema = z.object({ email: z.string(), password: z.string() });
+const credentialsSchema = z.object({
+  email: z.string(),
+  password: z.string(),
+  verificationToken: z.string().optional(),
+});
 const registrationSchema = credentialsSchema.extend({ username: z.string() });
 
 /// 422 里这几个字段的错误是给用户看的；`deviceId`、`clientType` 出错是门户自己的 bug
@@ -58,7 +63,7 @@ interface GatewayReply {
 /// 请求抛错时记日志，返回 null。设备标识 Cookie 在发请求前种好（没有或坏了就换新的）。
 async function submitCredentials(
   endpoint: string,
-  schema: z.ZodType<Record<string, string>>,
+  schema: z.ZodType<Record<string, string | undefined>>,
   input: unknown,
 ): Promise<GatewayReply | null> {
   const fields = schema.safeParse(input);
@@ -123,7 +128,7 @@ function taken(reply: GatewayReply): RegisterResult {
   return { ok: false, reason: "taken", email, username };
 }
 
-/// 注册：成功（201）时写入 Cookie、返回用户。422 返回字段错误，409 是邮箱和 / 或用户名已被占用；
+/// 注册：成功（201）时写入 Cookie、返回用户。人机验证的失败单独返回，422 返回字段错误，409 是邮箱和 / 或用户名已被占用；
 /// 其余状态码、超时和网络错误都是 `unavailable`。
 export async function register(input: RegisterInput): Promise<RegisterResult> {
   const reply = await submitCredentials(REGISTER_ENDPOINT, registrationSchema, input);
@@ -135,6 +140,10 @@ export async function register(input: RegisterInput): Promise<RegisterResult> {
     const user = await signIn(REGISTER_ENDPOINT, reply);
     return user ? { ok: true, user } : UNAVAILABLE;
   }
+  const verification = verificationFailureOf(parseProblem(reply.res, reply.body));
+  if (verification) {
+    return verification;
+  }
   if (status === 422) {
     return invalidFields(REGISTER_ENDPOINT, reply);
   }
@@ -145,7 +154,7 @@ export async function register(input: RegisterInput): Promise<RegisterResult> {
   return UNAVAILABLE;
 }
 
-/// 登录：成功（200）时写入 Cookie、返回用户。422 返回字段错误，401 是邮箱或密码不对，
+/// 登录：成功（200）时写入 Cookie、返回用户。人机验证的失败单独返回，422 返回字段错误，401 是邮箱或密码不对，
 /// 403 是账号被封禁，429 是尝试次数过多；其余状态码、超时和网络错误都是 `unavailable`。
 export async function login(input: Credentials): Promise<LoginResult> {
   const reply = await submitCredentials(LOGIN_ENDPOINT, credentialsSchema, input);
@@ -156,6 +165,10 @@ export async function login(input: Credentials): Promise<LoginResult> {
   if (status === 200) {
     const user = await signIn(LOGIN_ENDPOINT, reply);
     return user ? { ok: true, user } : UNAVAILABLE;
+  }
+  const verification = verificationFailureOf(parseProblem(reply.res, reply.body));
+  if (verification) {
+    return verification;
   }
   if (status === 422) {
     return invalidFields(LOGIN_ENDPOINT, reply);

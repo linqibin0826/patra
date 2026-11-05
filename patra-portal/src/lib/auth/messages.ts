@@ -113,10 +113,24 @@ export function loginAlertMessage(failure: LoginAlertFailure): string {
       return failure.retryAfterSeconds === null
         ? "尝试次数过多，请稍后再试"
         : `尝试次数过多，请 ${Math.max(1, Math.ceil(failure.retryAfterSeconds / 60))} 分钟后再试`;
+    case "verification-required":
+      return VERIFICATION_MESSAGES.required;
+    case "verification-failed":
+      return VERIFICATION_MESSAGES.failed;
+    case "verification-unavailable":
+      return VERIFICATION_MESSAGES.unavailable;
     case "unavailable":
       return "登录没有成功，请稍后再试";
   }
 }
+
+/// 人机验证的提示。要和账号锁定的“尝试次数过多”完全不同，用户能分清是验证问题。
+export const VERIFICATION_MESSAGES = {
+  required: "请先完成下面的人机验证，再重新提交",
+  failed: "人机验证没有通过，请重新验证。一直不通过的话，刷新页面再试",
+  unavailable: "人机验证暂时不可用，请稍后再试",
+  loadFailed: "人机验证加载失败。请刷新页面，或换一个网络再试",
+} as const;
 
 /// 重发验证邮件（简报 §3.4、§4.4）
 export const RESEND_MESSAGES = {
