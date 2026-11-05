@@ -15,6 +15,7 @@ import lombok.Builder;
 /// @param deviceId 设备标识，原始输入，可以为 `null`
 /// @param clientIp 客户端 IP，记进验证令牌的签发记录，可以为 `null`
 /// @param userAgent User-Agent，可以为 `null`；写进登录记录
+/// @param verificationToken 人机验证令牌，每次都必须带；这里允许为 `null`，由处理器报字段错误
 @Builder
 public record RegisterUserCommand(
     String email,
@@ -23,10 +24,11 @@ public record RegisterUserCommand(
     String clientType,
     String deviceId,
     String clientIp,
-    String userAgent)
+    String userAgent,
+    String verificationToken)
     implements Command<AuthenticatedUser> {
 
-  /// 不输出密码。
+  /// 不输出密码和人机验证令牌。
   ///
   /// @return 描述
   @Override

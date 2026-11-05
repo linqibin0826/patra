@@ -7,16 +7,20 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import dev.patra.identity.app.account.service.HumanVerificationGuard;
+import dev.patra.identity.domain.account.exception.HumanVerificationUnavailableException;
 import dev.patra.identity.domain.account.exception.PasswordResetLimitedException;
 import dev.patra.identity.domain.account.model.aggregate.EmailToken;
 import dev.patra.identity.domain.account.model.aggregate.User;
 import dev.patra.identity.domain.account.model.enums.EmailTokenPurpose;
+import dev.patra.identity.domain.account.model.enums.HumanVerificationAction;
 import dev.patra.identity.domain.account.model.enums.UserStatus;
 import dev.patra.identity.domain.account.model.read.UserAccountReadModel;
 import dev.patra.identity.domain.account.model.vo.EmailAddress;
@@ -53,6 +57,8 @@ import org.springframework.transaction.support.TransactionOperations;
 @DisplayName("RequestPasswordResetHandler 单元测试")
 class RequestPasswordResetHandlerTest {
 
+  private static final String VERIFICATION = "V".repeat(64);
+
   private static final Instant NOW = Instant.parse("2026-10-22T08:00:00Z");
   private static final EmailAddress EMAIL = EmailAddress.of("chen.yu@example.com");
   private static final EmailTokenSecret SECRET = new EmailTokenSecret("R".repeat(43));
@@ -88,8 +94,10 @@ class RequestPasswordResetHandlerTest {
   private final EmailDeliveryPort emailDelivery = mock(EmailDeliveryPort.class);
   private final LoginThrottlePort loginThrottle = mock(LoginThrottlePort.class);
   private final AtomicBoolean inTransaction = new AtomicBoolean(false);
+  private final HumanVerificationGuard verificationGuard = mock(HumanVerificationGuard.class);
   private final RequestPasswordResetHandler handler =
       new RequestPasswordResetHandler(
+          verificationGuard,
           users,
           userReadPort,
           passwordResetThrottle,
@@ -110,9 +118,53 @@ class RequestPasswordResetHandlerTest {
   }
 
   @Test
+  @DisplayName("人机验证在限流之前：没过的请求占不了找回密码的限流名额")
+  void verification_runs_before_throttle() {
+    doThrow(new HumanVerificationUnavailableException())
+        .when(verificationGuard)
+        .require(any(), any());
+
+    assertThatThrownBy(
+            () ->
+                handler.handle(
+                    RequestPasswordResetCommand.of(
+                        "chen.yu@example.com", "127.0.0.1", VERIFICATION)))
+        .isInstanceOf(HumanVerificationUnavailableException.class);
+
+    verifyNoInteractions(passwordResetThrottle, users);
+  }
+
+  @Test
+  @DisplayName("按找回密码操作校验令牌")
+  void passes_password_reset_action() {
+    handler.handle(
+        RequestPasswordResetCommand.of("chen.yu@example.com", "127.0.0.1", VERIFICATION));
+
+    verify(verificationGuard).require(HumanVerificationAction.PASSWORD_RESET, VERIFICATION);
+  }
+
+  @Test
+  @DisplayName("邮箱格式不对：422，不做人机验证")
+  void field_errors_win_over_verification() {
+    assertThatThrownBy(
+            () -> handler.handle(RequestPasswordResetCommand.of("nope", "127.0.0.1", VERIFICATION)))
+        .isInstanceOf(InvalidUserFieldsException.class);
+
+    verifyNoInteractions(verificationGuard);
+  }
+
+  @Test
+  @DisplayName("命令的 toString 不输出令牌原文")
+  void command_to_string_hides_verification_token() {
+    assertThat(RequestPasswordResetCommand.of("a@b.c", null, VERIFICATION).toString())
+        .doesNotContain(VERIFICATION);
+  }
+
+  @Test
   @DisplayName("邮箱格式不对：422，不限流、不查用户")
   void should_reject_invalid_email_format_before_throttling() {
-    assertThatThrownBy(() -> handler.handle(RequestPasswordResetCommand.of("nope", "127.0.0.1")))
+    assertThatThrownBy(
+            () -> handler.handle(RequestPasswordResetCommand.of("nope", "127.0.0.1", VERIFICATION)))
         .isInstanceOf(InvalidUserFieldsException.class);
     verifyNoInteractions(passwordResetThrottle, users);
   }
@@ -120,7 +172,8 @@ class RequestPasswordResetHandlerTest {
   @Test
   @DisplayName("限流在查用户之前计数：未注册的邮箱也计")
   void should_count_throttle_before_looking_up_user() {
-    handler.handle(RequestPasswordResetCommand.of(" Chen.Yu@Example.com ", "127.0.0.1"));
+    handler.handle(
+        RequestPasswordResetCommand.of(" Chen.Yu@Example.com ", "127.0.0.1", VERIFICATION));
 
     InOrder order = inOrder(passwordResetThrottle, users);
     order.verify(passwordResetThrottle).acquireRequest(EMAIL, "127.0.0.1", NOW);
@@ -135,7 +188,9 @@ class RequestPasswordResetHandlerTest {
 
     assertThatThrownBy(
             () ->
-                handler.handle(RequestPasswordResetCommand.of("chen.yu@example.com", "127.0.0.1")))
+                handler.handle(
+                    RequestPasswordResetCommand.of(
+                        "chen.yu@example.com", "127.0.0.1", VERIFICATION)))
         .isInstanceOf(PasswordResetLimitedException.class)
         .satisfies(
             e ->
@@ -162,7 +217,8 @@ class RequestPasswordResetHandlerTest {
         .send(any());
 
     PasswordResetRequested result =
-        handler.handle(RequestPasswordResetCommand.of("chen.yu@example.com", "127.0.0.1"));
+        handler.handle(
+            RequestPasswordResetCommand.of("chen.yu@example.com", "127.0.0.1", VERIFICATION));
 
     InOrder order = inOrder(users, emailTokenIssuer, emailDelivery);
     order.verify(users).findByIdForUpdate(42L);
@@ -197,7 +253,8 @@ class RequestPasswordResetHandlerTest {
                     .hasPassword(false)
                     .build()));
 
-    handler.handle(RequestPasswordResetCommand.of("chen.yu@example.com", "127.0.0.1"));
+    handler.handle(
+        RequestPasswordResetCommand.of("chen.yu@example.com", "127.0.0.1", VERIFICATION));
 
     ArgumentCaptor<PasswordResetMail> mail = ArgumentCaptor.forClass(PasswordResetMail.class);
     verify(emailDelivery).send(mail.capture());
@@ -210,7 +267,8 @@ class RequestPasswordResetHandlerTest {
     when(users.findByEmail(EMAIL)).thenReturn(Optional.empty());
 
     PasswordResetRequested result =
-        handler.handle(RequestPasswordResetCommand.of("chen.yu@example.com", "127.0.0.1"));
+        handler.handle(
+            RequestPasswordResetCommand.of("chen.yu@example.com", "127.0.0.1", VERIFICATION));
 
     assertThat(result)
         .isEqualTo(PasswordResetRequested.of("chen.yu@example.com", NOW.plusSeconds(60)));
@@ -223,11 +281,15 @@ class RequestPasswordResetHandlerTest {
     PasswordResetRequested expected =
         PasswordResetRequested.of("chen.yu@example.com", NOW.plusSeconds(60));
     when(users.findByIdForUpdate(42L)).thenReturn(Optional.empty());
-    assertThat(handler.handle(RequestPasswordResetCommand.of("chen.yu@example.com", "127.0.0.1")))
+    assertThat(
+            handler.handle(
+                RequestPasswordResetCommand.of("chen.yu@example.com", "127.0.0.1", VERIFICATION)))
         .isEqualTo(expected);
 
     when(users.findByIdForUpdate(42L)).thenReturn(Optional.of(user(UserStatus.BANNED)));
-    assertThat(handler.handle(RequestPasswordResetCommand.of("chen.yu@example.com", "127.0.0.1")))
+    assertThat(
+            handler.handle(
+                RequestPasswordResetCommand.of("chen.yu@example.com", "127.0.0.1", VERIFICATION)))
         .isEqualTo(expected);
     verifyNoInteractions(emailTokenIssuer, emailDelivery);
   }
@@ -237,7 +299,8 @@ class RequestPasswordResetHandlerTest {
   void should_not_send_for_banned_user() {
     when(users.findByEmail(EMAIL)).thenReturn(Optional.of(user(UserStatus.BANNED)));
 
-    handler.handle(RequestPasswordResetCommand.of("chen.yu@example.com", "127.0.0.1"));
+    handler.handle(
+        RequestPasswordResetCommand.of("chen.yu@example.com", "127.0.0.1", VERIFICATION));
 
     verifyNoInteractions(emailTokenIssuer, emailDelivery);
   }
@@ -248,7 +311,8 @@ class RequestPasswordResetHandlerTest {
     when(users.findByEmail(EMAIL)).thenReturn(Optional.of(user(UserStatus.PENDING_DELETION)));
     when(users.findByIdForUpdate(42L)).thenReturn(Optional.of(user(UserStatus.PENDING_DELETION)));
 
-    handler.handle(RequestPasswordResetCommand.of("chen.yu@example.com", "127.0.0.1"));
+    handler.handle(
+        RequestPasswordResetCommand.of("chen.yu@example.com", "127.0.0.1", VERIFICATION));
 
     verify(emailDelivery).send(any(PasswordResetMail.class));
     verify(emailTokenIssuer).issue(eq(EmailTokenPurpose.PASSWORD_RESET), eq(42L), eq(EMAIL), any());

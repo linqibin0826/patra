@@ -16,13 +16,16 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import dev.patra.identity.app.account.service.HumanVerificationGuard;
 import dev.patra.identity.app.account.usecase.login.AuthenticatedUser;
+import dev.patra.identity.domain.account.exception.HumanVerificationUnavailableException;
 import dev.patra.identity.domain.account.exception.UserIdentifierTakenException;
 import dev.patra.identity.domain.account.model.aggregate.EmailToken;
 import dev.patra.identity.domain.account.model.aggregate.User;
 import dev.patra.identity.domain.account.model.aggregate.UserPasswordCredential;
 import dev.patra.identity.domain.account.model.aggregate.UserProfile;
 import dev.patra.identity.domain.account.model.enums.EmailTokenPurpose;
+import dev.patra.identity.domain.account.model.enums.HumanVerificationAction;
 import dev.patra.identity.domain.account.model.enums.UserStatus;
 import dev.patra.identity.domain.account.model.read.UserAccountReadModel;
 import dev.patra.identity.domain.account.model.vo.EmailAddress;
@@ -75,6 +78,8 @@ import org.springframework.transaction.support.TransactionOperations;
 /// RegisterUserHandler 单元测试。
 @DisplayName("RegisterUserHandler 单元测试")
 class RegisterUserHandlerTest {
+
+  private static final String VERIFICATION = "V".repeat(64);
 
   private static final PasswordHash HASH =
       PasswordHash.of("$argon2id$v=19$m=19456,t=2,p=1$c2FsdA$aGFzaA");
@@ -144,6 +149,7 @@ class RegisterUserHandlerTest {
   private final EmailDeliveryPort emailDelivery = mock(EmailDeliveryPort.class);
   private final EmailResendThrottlePort emailResendThrottle = mock(EmailResendThrottlePort.class);
   private final Clock clock = Clock.fixed(NOW, ZoneOffset.UTC);
+  private final HumanVerificationGuard verificationGuard = mock(HumanVerificationGuard.class);
   private final RegisterUserHandler handler = handler(TransactionOperations.withoutTransaction());
 
   /// 按给定的事务操作建处理器。
@@ -152,6 +158,7 @@ class RegisterUserHandlerTest {
   /// @return 处理器
   private RegisterUserHandler handler(TransactionOperations transactions) {
     return new RegisterUserHandler(
+        verificationGuard,
         users,
         profiles,
         credentials,
@@ -214,6 +221,53 @@ class RegisterUserHandlerTest {
   /// @return 命令
   private static RegisterUserCommand command(String email, String username, String password) {
     return RegisterUserCommand.builder().email(email).username(username).password(password).build();
+  }
+
+  @Test
+  @DisplayName("字段不合法：先报字段错误，不做人机验证")
+  void field_errors_win_over_verification() {
+    assertThatThrownBy(() -> handler.handle(command("nope", "chen-yu", "correct horse battery")))
+        .isInstanceOf(InvalidUserFieldsException.class);
+
+    verifyNoInteractions(verificationGuard);
+  }
+
+  @Test
+  @DisplayName("人机验证在查占用之前：没过的请求探测不了邮箱和用户名，也不做哈希")
+  void verification_runs_before_uniqueness_check() {
+    doThrow(new HumanVerificationUnavailableException())
+        .when(verificationGuard)
+        .require(any(), any());
+
+    assertThatThrownBy(
+            () ->
+                handler.handle(command("chen.yu@example.com", "chen-yu", "correct horse battery")))
+        .isInstanceOf(HumanVerificationUnavailableException.class);
+
+    verifyNoInteractions(users, formerUsernames, passwordHashing);
+  }
+
+  @Test
+  @DisplayName("按注册操作校验令牌")
+  void passes_register_action() {
+    stubHappyPath();
+
+    handler.handle(
+        RegisterUserCommand.builder()
+            .email("chen.yu@example.com")
+            .username("chen-yu")
+            .password("correct horse battery")
+            .verificationToken(VERIFICATION)
+            .build());
+
+    verify(verificationGuard).require(HumanVerificationAction.REGISTER, VERIFICATION);
+  }
+
+  @Test
+  @DisplayName("命令的 toString 不输出令牌原文")
+  void command_to_string_hides_verification_token() {
+    assertThat(RegisterUserCommand.builder().verificationToken(VERIFICATION).build().toString())
+        .doesNotContain(VERIFICATION);
   }
 
   @Test
