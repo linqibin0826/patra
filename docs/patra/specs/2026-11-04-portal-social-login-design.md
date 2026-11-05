@@ -109,6 +109,24 @@
 
 撞车的「去登录」到 `/login?next=/settings/security`，邮箱经 `auth-handoff` 带过去（`notice: "email-clash"`），焦点在密码框。验证码输入框不写 `maxLength`：浏览器会先截断粘贴的内容，带空格的验证码就丢位了。
 
+### 6.1 邮箱撞车时就地绑定
+
+接口见后端工程设计第 2.3.1 节。撞车块多一个选项「验证这个邮箱，并绑定到已有账号」，只在 `/code` 回 `ALREADY_REGISTERED` 时出现。选择后发 `/link-code`，进绑定的输码步，复用验证码表单；刷新页面时按 `pendingCode.purpose` 回到对应的步骤。
+
+`/link-code` 对未注册、未验证、封禁的邮箱也回 202，只是不发信，所以这一步不提「已发送」和垃圾邮件：说明写「如果这个邮箱可以绑定，你会收到验证码；收不到就先用原方式登录，到设置页绑定」，倒计时写「N 秒后可重发」。
+
+| 结果 | 表现 |
+|---|---|
+| 成功 200 | 写会话、清 `ticket`，提示「已绑定 GitHub，已登录」，回 `next`；冷静期账号去取消注销页 |
+| 错码 `INVALID` | 字段错误，同注册 |
+| `EXPIRED` | 提示条，锁住输入，只能重发 |
+| `ticket` 失效（含重放） | 结果页「这次绑定已失效」 |
+| 409 `PROVIDER_ACCOUNT_TAKEN` | 结果页「这个账号已经绑定了」 |
+| 409 `PROVIDER_ALREADY_LINKED` | 结果页「没有绑定」，说明先用原方式登录再解绑 |
+| 发码 429、5xx | 留在撞车块，提示条 |
+
+这几个结果页沿用现有样式，没有单独的画板。
+
 ## 7. 设置页「登录方式」
 
 `/settings/security` 的卡片顺序：登录方式 → 修改密码（`hasPassword` 为 true 才有）→ 登录设备。列表走 `/api/me/login-methods` + `useLoginMethodsQuery`，第一行是「邮箱和密码」，之后按 Google、GitHub、ORCID 固定顺序。

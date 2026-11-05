@@ -32,6 +32,8 @@ function freshState() {
     linked: [],
     /// 再认证窗口开着
     reauthed: false,
+    /// 就地绑定提交验证码时的冲突：taken 第三方账号已绑给别人、already 目标账号已绑这一家
+    linkConflict: null,
     states: new Set(),
     tickets: new Map(),
     log: [],
@@ -142,14 +144,11 @@ function handleRegistration(req, res, path, body) {
     if (body.email === TAKEN_EMAIL) {
       return problem(res, 409, { errors: [{ field: "email", code: "ALREADY_REGISTERED" }] });
     }
-    pending.pendingCode = {
-      username: body.username,
-      email: body.email,
-      codeExpiresAt: "2099-01-01T00:10:00Z",
-      nextResendAt: new Date(Date.now() + 60_000).toISOString(),
-    };
-    const { username: _username, ...sent } = pending.pendingCode;
-    return json(res, 202, sent);
+    return sendCode(res, pending, "REGISTER", body.username, body.email);
+  }
+  if (path === "/link-code") {
+    // 邮箱未注册、未验证、封禁时响应也一样，只是不发信
+    return sendCode(res, pending, "LINK", null, body.email);
   }
   if (body.code === EXPIRED_CODE) {
     return problem(res, 422, { errors: [{ field: "code", code: "EXPIRED" }] });
@@ -157,8 +156,32 @@ function handleRegistration(req, res, path, body) {
   if (body.code !== RIGHT_CODE) {
     return problem(res, 422, { errors: [{ field: "code", code: "INVALID" }] });
   }
+  if (path === "/link") {
+    if (state.linkConflict === "taken") {
+      return problem(res, 409, { traits: ["CONFLICT", "PROVIDER_ACCOUNT_TAKEN"] });
+    }
+    if (state.linkConflict === "already") {
+      return problem(res, 409, { traits: ["CONFLICT", "PROVIDER_ALREADY_LINKED"] });
+    }
+    // 凭证用过就作废，重放回 422 ticket
+    state.tickets.delete(req.headers["x-patra-registration-ticket"]);
+    return json(res, 200, { sessionToken: "patra_user_chen_yu", user: user() });
+  }
   state.hasPassword = false;
   return json(res, 201, { sessionToken: "patra_user_chen_yu", user: user() });
+}
+
+/// 发码，记下用途：刷新页面时靠它回到对应的步骤
+function sendCode(res, pending, purpose, username, email) {
+  pending.pendingCode = {
+    purpose,
+    username,
+    email,
+    codeExpiresAt: "2099-01-01T00:10:00Z",
+    nextResendAt: new Date(Date.now() + 60_000).toISOString(),
+  };
+  const { purpose: _purpose, username: _username, ...sent } = pending.pendingCode;
+  return json(res, 202, sent);
 }
 
 function handleLinkMethods(req, res, path) {

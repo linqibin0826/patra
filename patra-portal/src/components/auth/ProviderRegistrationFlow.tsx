@@ -10,7 +10,7 @@ import {
   type RegistrationFillIssue,
 } from "@/components/auth/RegistrationFillForm";
 import { StateIcon } from "@/components/auth/StateIcon";
-import { REGISTRATION_MESSAGES } from "@/lib/auth/messages";
+import { LINK_MESSAGES, REGISTRATION_MESSAGES } from "@/lib/auth/messages";
 import { authPageHref } from "@/lib/auth/next-path";
 import { providerName } from "@/lib/auth/oauth-providers";
 import type { PendingRegistration } from "@/lib/auth/registration-types";
@@ -25,9 +25,35 @@ function resendAt(nextResendAt: string): number {
   return Date.parse(nextResendAt) || Date.now() + DEFAULT_WAIT_MS;
 }
 
-/// 第三方首次注册（画板 Complete）：补填 → 验证码 → 建好账号；任何一步发现记录过期都到过期态，两个标签页并发时到
-/// 「已经建好了」。两步来回切换时用户名和邮箱留在这里。刷新页面时 `pendingCode` 有值就直接回到验证码步。
-/// `next` 已经过 `safeNextPath`。
+/// 流程走不下去时的结果页：图标、标题、说明，回登录页
+function RegistrationResult({
+  tone,
+  title,
+  description,
+  loginHref,
+}: {
+  tone: "danger" | "info";
+  title: string;
+  description: string;
+  loginHref: string;
+}) {
+  return (
+    <AuthShell
+      icon={<StateIcon icon={tone === "danger" ? CircleAlert : Info} tone={tone} />}
+      title={title}
+      description={description}
+      back={loginHref}
+    >
+      <Link replace href={loginHref} className={cn(btnPrimary, btnBlock, "mt-8")}>
+        {REGISTRATION_MESSAGES.backToLogin}
+      </Link>
+    </AuthShell>
+  );
+}
+
+/// 第三方首次注册（画板 Complete）：补填 → 验证码 → 建好账号；邮箱撞车时可以改走就地绑定：验证这个邮箱，绑定到已有账号并
+/// 登录。任何一步发现记录过期都到过期态，两个标签页并发时到「已经建好了」。两步来回切换时用户名和邮箱留在这里。刷新页面时
+/// 按 `pendingCode.purpose` 回到对应的验证码步。`next` 已经过 `safeNextPath`。
 export function ProviderRegistrationFlow({
   pending,
   next,
@@ -37,8 +63,23 @@ export function ProviderRegistrationFlow({
 }) {
   const loginHref = authPageHref("/login", next);
   const initial = pending === "expired" ? null : pending;
-  const [step, setStep] = useState<"fill" | "code" | "expired" | "taken">(
-    initial === null ? "expired" : initial.pendingCode ? "code" : "fill",
+  const [step, setStep] = useState<
+    | "fill"
+    | "code"
+    | "expired"
+    | "taken"
+    | "link-code"
+    | "link-expired"
+    | "link-taken"
+    | "already-linked"
+  >(
+    initial === null
+      ? "expired"
+      : initial.pendingCode?.purpose === "LINK"
+        ? "link-code"
+        : initial.pendingCode
+          ? "code"
+          : "fill",
   );
   const [email, setEmail] = useState(initial?.pendingCode?.email ?? initial?.suggestedEmail ?? "");
   const [username, setUsername] = useState(
@@ -51,18 +92,14 @@ export function ProviderRegistrationFlow({
 
   if (initial === null || step === "expired") {
     return (
-      <AuthShell
-        icon={<StateIcon icon={CircleAlert} tone="danger" />}
+      <RegistrationResult
+        tone="danger"
         title={REGISTRATION_MESSAGES.expiredTitle}
         description={REGISTRATION_MESSAGES.expiredDescription(
           initial ? providerName(initial.provider) : null,
         )}
-        back={loginHref}
-      >
-        <Link replace href={loginHref} className={cn(btnPrimary, btnBlock, "mt-8")}>
-          {REGISTRATION_MESSAGES.backToLogin}
-        </Link>
-      </AuthShell>
+        loginHref={loginHref}
+      />
     );
   }
 
@@ -70,16 +107,45 @@ export function ProviderRegistrationFlow({
 
   if (step === "taken") {
     return (
-      <AuthShell
-        icon={<StateIcon icon={Info} tone="info" />}
+      <RegistrationResult
+        tone="info"
         title={REGISTRATION_MESSAGES.takenTitle}
         description={REGISTRATION_MESSAGES.takenDescription(name)}
-        back={loginHref}
-      >
-        <Link replace href={loginHref} className={cn(btnPrimary, btnBlock, "mt-8")}>
-          {REGISTRATION_MESSAGES.backToLogin}
-        </Link>
-      </AuthShell>
+        loginHref={loginHref}
+      />
+    );
+  }
+
+  if (step === "link-expired") {
+    return (
+      <RegistrationResult
+        tone="danger"
+        title={LINK_MESSAGES.expiredTitle}
+        description={LINK_MESSAGES.expiredDescription(name)}
+        loginHref={loginHref}
+      />
+    );
+  }
+
+  if (step === "link-taken") {
+    return (
+      <RegistrationResult
+        tone="info"
+        title={LINK_MESSAGES.takenTitle}
+        description={LINK_MESSAGES.takenDescription(name)}
+        loginHref={loginHref}
+      />
+    );
+  }
+
+  if (step === "already-linked") {
+    return (
+      <RegistrationResult
+        tone="danger"
+        title={LINK_MESSAGES.alreadyLinkedTitle}
+        description={LINK_MESSAGES.alreadyLinkedDescription(name)}
+        loginHref={loginHref}
+      />
     );
   }
 
@@ -87,6 +153,33 @@ export function ProviderRegistrationFlow({
   function backToFill(reason: RegistrationFillIssue | null) {
     setIssue(reason);
     setStep("fill");
+  }
+
+  if (step === "link-code") {
+    return (
+      <AuthShell
+        title={LINK_MESSAGES.title}
+        description={
+          <>
+            验证 <b className="font-medium text-fg-1 [overflow-wrap:anywhere]">{email}</b>。
+            {LINK_MESSAGES.description}
+          </>
+        }
+        back={loginHref}
+      >
+        <RegistrationCodeForm
+          next={next}
+          email={email}
+          flow={{ kind: "link", providerName: name }}
+          nextResend={nextResend}
+          onResent={(at) => setNextResend(resendAt(at))}
+          onExpired={() => setStep("link-expired")}
+          onProviderTaken={() => setStep("link-taken")}
+          onAlreadyLinked={() => setStep("already-linked")}
+          onBackToFill={backToFill}
+        />
+      </AuthShell>
+    );
   }
 
   if (step === "code") {
@@ -104,11 +197,12 @@ export function ProviderRegistrationFlow({
         <RegistrationCodeForm
           next={next}
           email={email}
-          username={username}
+          flow={{ kind: "register", username }}
           nextResend={nextResend}
           onResent={(at) => setNextResend(resendAt(at))}
           onExpired={() => setStep("expired")}
           onProviderTaken={() => setStep("taken")}
+          onAlreadyLinked={() => setStep("already-linked")}
           onBackToFill={backToFill}
         />
       </AuthShell>
@@ -134,7 +228,14 @@ export function ProviderRegistrationFlow({
           setIssue(null);
           setStep("code");
         }}
+        onLinkSent={(target, at) => {
+          setEmail(target);
+          setNextResend(resendAt(at));
+          setIssue(null);
+          setStep("link-code");
+        }}
         onExpired={() => setStep("expired")}
+        onLinkExpired={() => setStep("link-expired")}
       />
     </AuthShell>
   );

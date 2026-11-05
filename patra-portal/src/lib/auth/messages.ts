@@ -429,7 +429,7 @@ export const REGISTRATION_MESSAGES = {
   clashTitle: "这个邮箱已经注册过 Patra。",
   clashNoChange: "我们没有建新账号，也没有改动原账号。",
   clashHow: (name: string) =>
-    `如果是你的账号：先用原来的方式登录，再到「设置 › 安全」绑定 ${name}。以后就能用 ${name} 账号登录它了。`,
+    `如果是你的账号：可以验证这个邮箱直接绑定，也可以先用原来的方式登录，再到「设置 › 安全」绑定 ${name}。以后就能用 ${name} 账号登录它了。`,
   toLogin: "去登录",
   changeEmail: "换一个邮箱",
   codeTitle: "输入验证码",
@@ -509,3 +509,25 @@ export const LOGIN_METHOD_MESSAGES = {
 export function unlinkedToast(provider: Provider): string {
   return `已解绑 ${providerName(provider)}。通知邮件已发到你的邮箱。`;
 }
+
+/// 第三方首次登录邮箱撞车时就地绑定。发码接口对未注册、未验证、封禁的邮箱也回 202，只是不发信：这里不能说「已发送」
+export const LINK_MESSAGES = {
+  entry: "验证这个邮箱，并绑定到已有账号",
+  entryBusy: "处理中…",
+  title: "验证这个邮箱",
+  description: "如果这个邮箱可以绑定，你会收到验证码；收不到就先用原方式登录，到设置页绑定。",
+  submit: "完成绑定",
+  back: "返回修改邮箱",
+  /// 重发冷却：不说「已发送」
+  wait: (seconds: number) => `${seconds} 秒后可重发`,
+  signedIn: (name: string) => `已绑定 ${name}，已登录`,
+  expiredTitle: "这次绑定已失效",
+  expiredDescription: (name: string) =>
+    `可能是等得太久，或已经在另一个标签页完成。请重新用 ${name} 账号登录。`,
+  takenTitle: "这个账号已经绑定了",
+  takenDescription: (name: string) =>
+    `你的 ${name} 账号已经绑定了 Patra 账号，可能是在另一个标签页。重新用它登录就行。`,
+  alreadyLinkedTitle: "没有绑定",
+  alreadyLinkedDescription: (name: string) =>
+    `这个 Patra 账号已经绑定了另一个 ${name} 账号，每家只能绑一个。要换账号，先用原方式登录，到「设置 › 安全」解绑现在这个。`,
+} as const;

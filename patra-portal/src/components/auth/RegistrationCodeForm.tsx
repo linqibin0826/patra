@@ -5,35 +5,54 @@ import { FormAlert } from "@/components/auth/FormAlert";
 import { FormField } from "@/components/auth/FormField";
 import type { RegistrationFillIssue } from "@/components/auth/RegistrationFillForm";
 import { useAuthSubmit } from "@/components/auth/use-auth-submit";
-import { REGISTRATION_MESSAGES, resendWaitMessage, TOAST_MESSAGES } from "@/lib/auth/messages";
-import { postRegistrationCode, postRegistrationComplete } from "@/lib/auth/post-registration";
+import {
+  LINK_MESSAGES,
+  REGISTRATION_MESSAGES,
+  resendWaitMessage,
+  TOAST_MESSAGES,
+} from "@/lib/auth/messages";
+import {
+  postLink,
+  postLinkCode,
+  postRegistrationCode,
+  postRegistrationComplete,
+} from "@/lib/auth/post-registration";
+import type { CompleteResult, LinkResult } from "@/lib/auth/registration-types";
 import { btnBlock, btnPrimary, btnText } from "@/lib/portal-ui";
 import { useCountdown } from "@/lib/use-countdown";
 import { useReadyAnnouncement } from "@/lib/use-ready-announcement";
 import { cn } from "@/lib/utils";
 
+/// 这一步要做什么：建账号要连用户名一起重发；绑定到已有账号只看邮箱
+export type RegistrationCodeFlow =
+  | { kind: "register"; username: string }
+  | { kind: "link"; providerName: string };
+
 interface RegistrationCodeFormProps {
   next: string;
   email: string;
-  /// 发码时提交的用户名，重发要连它一起交
-  username: string;
+  flow: RegistrationCodeFlow;
   /// 下次可以重发的时刻（毫秒时间戳）
   nextResend: number | null;
   onResent: (nextResendAt: string) => void;
   onExpired: () => void;
   onProviderTaken: () => void;
+  /// 绑定时目标账号已经绑了这一家的另一个账号
+  onAlreadyLinked: () => void;
   onBackToFill: (issue: RegistrationFillIssue | null) => void;
 }
 
-/// 验证码步（画板 Complete）：6 位数字，填回发起的页面才建账号（决策 D）。验证码失效后锁住输入，只能重发。
+/// 验证码步（画板 Complete）：6 位数字，填回发起的页面才建账号或绑定（决策 D）。验证码失效后锁住输入，只能重发。
+/// 绑定时发码接口不说明信发没发，这一步不提「已发送」和垃圾邮件。
 export function RegistrationCodeForm({
   next,
   email,
-  username,
+  flow,
   nextResend,
   onResent,
   onExpired,
   onProviderTaken,
+  onAlreadyLinked,
   onBackToFill,
 }: RegistrationCodeFormProps) {
   const inputRef = useRef<HTMLInputElement | null>(null);
@@ -46,6 +65,7 @@ export function RegistrationCodeForm({
   const until = limitedUntil ?? nextResend;
   const left = useCountdown(until);
   const announcement = useReadyAnnouncement(left > 0);
+  const linking = flow.kind === "link";
 
   /// 这个码不能再用了：提示后只能重发
   function lock(message: string) {
@@ -59,10 +79,13 @@ export function RegistrationCodeForm({
     return result.email ? "email-clash" : "username-race";
   }
 
-  const { submitting, submit } = useAuthSubmit({
+  const { submitting, submit } = useAuthSubmit<
+    { code: string },
+    Exclude<CompleteResult | LinkResult, { ok: true }>
+  >({
     next,
-    action: postRegistrationComplete,
-    successToast: TOAST_MESSAGES.registered,
+    action: linking ? postLink : postRegistrationComplete,
+    successToast: linking ? LINK_MESSAGES.signedIn(flow.providerName) : TOAST_MESSAGES.registered,
     onFailure: (failure) => {
       switch (failure.reason) {
         case "code-invalid":
@@ -75,6 +98,9 @@ export function RegistrationCodeForm({
           return;
         case "provider-taken":
           onProviderTaken();
+          return;
+        case "already-linked":
+          onAlreadyLinked();
           return;
         case "expired":
           onExpired();
@@ -106,12 +132,14 @@ export function RegistrationCodeForm({
     void submit({ code });
   }
 
-  /// 重发：同样的用户名和邮箱再交一次，旧码作废
+  /// 重发：同样的内容再交一次，旧码作废
   async function resend() {
     if (resending) return;
     setResending(true);
     setAlert(null);
-    const result = await postRegistrationCode({ username, email });
+    const result = linking
+      ? await postLinkCode({ email })
+      : await postRegistrationCode({ username: flow.username, email });
     setResending(false);
     if (result.ok) {
       setLimitedUntil(null);
@@ -173,14 +201,22 @@ export function RegistrationCodeForm({
         aria-disabled={submitting || locked || undefined}
         className={cn(btnPrimary, btnBlock, "mt-1")}
       >
-        {submitting ? REGISTRATION_MESSAGES.verifying : REGISTRATION_MESSAGES.complete}
+        {submitting
+          ? REGISTRATION_MESSAGES.verifying
+          : linking
+            ? LINK_MESSAGES.submit
+            : REGISTRATION_MESSAGES.complete}
       </button>
       <div className="flex flex-col items-start gap-2 text-sm leading-5 text-fg-3">
-        <span>{REGISTRATION_MESSAGES.spam}</span>
+        {!linking && <span>{REGISTRATION_MESSAGES.spam}</span>}
         {resending ? (
           <span>{REGISTRATION_MESSAGES.sending}</span>
         ) : left > 0 ? (
-          <span>{resendWaitMessage(left, limitedUntil !== null)}</span>
+          <span>
+            {linking && limitedUntil === null
+              ? LINK_MESSAGES.wait(left)
+              : resendWaitMessage(left, limitedUntil !== null)}
+          </span>
         ) : (
           <button type="button" className={btnText} onClick={() => void resend()}>
             {REGISTRATION_MESSAGES.resend}
@@ -190,7 +226,7 @@ export function RegistrationCodeForm({
           {announcement}
         </span>
         <button type="button" className={btnText} onClick={() => onBackToFill(null)}>
-          {REGISTRATION_MESSAGES.backToFill}
+          {linking ? LINK_MESSAGES.back : REGISTRATION_MESSAGES.backToFill}
         </button>
       </div>
     </form>

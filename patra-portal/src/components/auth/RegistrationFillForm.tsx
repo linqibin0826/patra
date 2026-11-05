@@ -13,6 +13,7 @@ import { useServerFieldErrors } from "@/components/auth/use-auth-submit";
 import { useBlurValidation } from "@/components/auth/use-blur-validation";
 import { providerRegistrationSchema } from "@/lib/auth/form-schemas";
 import {
+  LINK_MESSAGES,
   REGISTRATION_MESSAGES,
   resendWaitMessage,
   usernameHint,
@@ -20,7 +21,7 @@ import {
 } from "@/lib/auth/messages";
 import { authPageHref } from "@/lib/auth/next-path";
 import { providerName } from "@/lib/auth/oauth-providers";
-import { postRegistrationCode } from "@/lib/auth/post-registration";
+import { postLinkCode, postRegistrationCode } from "@/lib/auth/post-registration";
 import type { PendingRegistration } from "@/lib/auth/registration-types";
 import { btnBlock, btnPrimary, btnSecondary, btnText } from "@/lib/portal-ui";
 import { cn } from "@/lib/utils";
@@ -40,11 +41,15 @@ interface RegistrationFillFormProps {
   email: string;
   issue: RegistrationFillIssue | null;
   onSent: (values: { username: string; email: string }, nextResendAt: string) => void;
+  /// 选择就地绑定，验证码请求已受理
+  onLinkSent: (email: string, nextResendAt: string) => void;
   onExpired: () => void;
+  /// 选择就地绑定时记录已失效
+  onLinkExpired: () => void;
 }
 
 /// 补填步（画板 Complete）：已确认的第三方账号、用户名、邮箱。邮箱撞车不建账号也不合并（决策 D），在字段下方引导先用
-/// 原方式登录再绑定。用户名和邮箱提交时绑定验证码，下一步不能换。
+/// 原方式登录再绑定，或就地验证这个邮箱并绑定。用户名和邮箱提交时绑定验证码，下一步不能换。
 export function RegistrationFillForm({
   pending,
   loginHref,
@@ -52,13 +57,16 @@ export function RegistrationFillForm({
   email: initialEmail,
   issue,
   onSent,
+  onLinkSent,
   onExpired,
+  onLinkExpired,
 }: RegistrationFillFormProps) {
   const name = providerName(pending.provider);
   const [alert, setAlert] = useState<string | null>(null);
   const [clash, setClash] = useState(issue === "email-clash");
   const [raced, setRaced] = useState(issue === "username-race" ? initialUsername : null);
   const [busy, setBusy] = useState(false);
+  const [linkBusy, setLinkBusy] = useState(false);
   const serverErrors = useServerFieldErrors();
   const {
     register,
@@ -124,6 +132,38 @@ export function RegistrationFillForm({
         setAlert(REGISTRATION_MESSAGES.sendFailed);
         return;
       }
+      case "throttled":
+        setAlert(resendWaitMessage(result.retryAfterSeconds ?? 60, true));
+        return;
+      default:
+        setAlert(REGISTRATION_MESSAGES.sendFailed);
+    }
+  }
+
+  /// 撞车块里选择就地绑定：验证当前这个邮箱，通过后绑定到已有账号并登录
+  async function startLink() {
+    if (linkBusy) return;
+    const target = email.trim();
+    setLinkBusy(true);
+    setAlert(null);
+    const result = await postLinkCode({ email: target });
+    setLinkBusy(false);
+    if (result.ok) {
+      onLinkSent(target, result.nextResendAt);
+      return;
+    }
+    switch (result.reason) {
+      case "expired":
+        onLinkExpired();
+        return;
+      case "invalid-fields":
+        setClash(false);
+        if (serverErrors.showFieldErrors(result.fieldErrors, { email: target })) {
+          setFocus("email");
+          return;
+        }
+        setAlert(REGISTRATION_MESSAGES.sendFailed);
+        return;
       case "throttled":
         setAlert(resendWaitMessage(result.retryAfterSeconds ?? 60, true));
         return;
@@ -233,6 +273,14 @@ export function RegistrationFillForm({
             >
               {REGISTRATION_MESSAGES.toLogin}
             </Link>
+            <button
+              type="button"
+              aria-disabled={linkBusy || undefined}
+              onClick={() => void startLink()}
+              className={cn(btnSecondary, "px-3.5 py-1.5 text-sm max-[880px]:w-full")}
+            >
+              {linkBusy ? LINK_MESSAGES.entryBusy : LINK_MESSAGES.entry}
+            </button>
             <button
               type="button"
               className={btnText}

@@ -52,9 +52,23 @@ describe("fetchPendingRegistration", () => {
     expect(init?.headers).toMatchObject({ "X-Patra-Registration-Ticket": "ticket-1" });
   });
 
+  it("绑定用的 pendingCode：purpose 是 LINK，username 为 null", async () => {
+    resetCookieJar({ patra_oauth_ticket: "ticket-1" });
+    const pendingCode = {
+      purpose: "LINK",
+      email: "chen@example.com",
+      username: null,
+      codeExpiresAt: "2026-11-04T09:20:00Z",
+      nextResendAt: "2026-11-04T09:11:00Z",
+    };
+    fetchMock.mockResolvedValue(Response.json({ ...PENDING, pendingCode }));
+    await expect(fetchPendingRegistration()).resolves.toMatchObject({ pendingCode });
+  });
+
   it("pendingCode 有值时原样带回，带提交时的用户名", async () => {
     resetCookieJar({ patra_oauth_ticket: "ticket-1" });
     const pendingCode = {
+      purpose: "REGISTER",
       email: "chen@example.com",
       username: "chen-yu",
       codeExpiresAt: "2026-11-04T09:20:00Z",
@@ -76,11 +90,27 @@ describe("fetchPendingRegistration", () => {
     ["其他状态码", () => new Response(null, { status: 500 })],
     ["响应体不对", () => Response.json({ provider: "wechat" })],
     [
-      "pendingCode 缺用户名",
+      "pendingCode 的 purpose 不认识",
       () =>
         Response.json({
           ...PENDING,
           pendingCode: {
+            purpose: "OTHER",
+            username: "chen-yu",
+            email: "chen@example.com",
+            codeExpiresAt: "2026-11-04T09:20:00Z",
+            nextResendAt: "2026-11-04T09:11:00Z",
+          },
+        }),
+    ],
+    [
+      "注册用的 pendingCode 缺用户名",
+      () =>
+        Response.json({
+          ...PENDING,
+          pendingCode: {
+            purpose: "REGISTER",
+            username: null,
             email: "chen@example.com",
             codeExpiresAt: "2026-11-04T09:20:00Z",
             nextResendAt: "2026-11-04T09:11:00Z",
