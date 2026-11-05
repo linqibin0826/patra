@@ -89,6 +89,25 @@ describe.each([
   });
 });
 
+describe("提交的超时", () => {
+  /// 后端校验令牌最坏要 10 秒（连接 2 秒 + 读 3 秒，重试一次），门户不能比它先放弃：
+  /// 否则用户看到“没有成功”，后端却可能已经把账号建好了
+  const timeoutSpy = () => vi.spyOn(AbortSignal, "timeout");
+
+  it.each([
+    ["login", () => login(CREDENTIALS)],
+    ["register", () => register(REGISTRATION)],
+    ["requestPasswordReset", () => requestPasswordReset(CREDENTIALS.email, VERIFICATION)],
+  ] as const)("%s 等 15 秒", async (_name, call) => {
+    const spy = timeoutSpy();
+    respondWith(401, { status: 401 });
+
+    await call();
+
+    expect(spy).toHaveBeenCalledWith(15_000);
+  });
+});
+
 describe("requestPasswordReset", () => {
   it("把令牌放进请求体", async () => {
     respondWith(202, { email: CREDENTIALS.email, nextRequestAt: "2026-11-05T10:00:00Z" });

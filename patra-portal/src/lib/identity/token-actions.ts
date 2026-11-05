@@ -5,7 +5,10 @@ import { logUnexpectedResponse } from "@/lib/auth/gateway-response";
 import type { VerificationFailure } from "@/lib/auth/types";
 import { unexpectedProblem } from "@/lib/identity/mutation-failure";
 import { callIdentity } from "@/lib/identity/request";
-import { verificationFailureOf } from "@/lib/identity/verification-failure";
+import {
+  VERIFIED_SUBMIT_TIMEOUT_MS,
+  verificationFailureOf,
+} from "@/lib/identity/verification-failure";
 
 /// 公开的找回密码与邮件落地页接口：不要求登录，有会话 Cookie 就带上令牌（验证邮箱要靠它保留本机会话）。
 /// 这些路径在网关上是公开的，不会回会话失效的 401；出现了按 `unavailable`。
@@ -34,7 +37,7 @@ export async function requestPasswordReset(
   const endpoint = `/patra-identity${FORGOT_PATH}`;
   const reply = await callIdentity(
     FORGOT_PATH,
-    { method: "POST", json: { email, verificationToken } },
+    { method: "POST", json: { email, verificationToken }, timeoutMs: VERIFIED_SUBMIT_TIMEOUT_MS },
     { auth: "optional" },
   );
   if (reply.kind === "ok") {

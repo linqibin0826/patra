@@ -25,7 +25,10 @@ import { readClientOrigin } from "@/lib/client-origin";
 import { canSendToken, gatewayFetch } from "@/lib/gateway";
 import { parseProblem } from "@/lib/identity/problem";
 import { userSchema } from "@/lib/identity/user-schema";
-import { verificationFailureOf } from "@/lib/identity/verification-failure";
+import {
+  VERIFIED_SUBMIT_TIMEOUT_MS,
+  verificationFailureOf,
+} from "@/lib/identity/verification-failure";
 
 const REGISTER_ENDPOINT = "/patra-identity/auth/register";
 const LOGIN_ENDPOINT = "/patra-identity/auth/login";
@@ -76,6 +79,7 @@ async function submitCredentials(
       method: "POST",
       json: { ...fields.data, deviceId },
       client: await readClientOrigin(),
+      timeoutMs: VERIFIED_SUBMIT_TIMEOUT_MS,
     });
     return { res, body: await readJson(res) };
   } catch (error) {

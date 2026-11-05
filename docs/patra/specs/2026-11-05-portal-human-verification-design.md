@@ -125,6 +125,8 @@ interface WidgetProps {
 | `verification-failed` | 422，`errors` 含 `verificationToken` / `VERIFICATION_FAILED` |
 | `verification-unavailable` | 503，`traits` 含 `VERIFICATION_UNAVAILABLE` |
 
+这三个请求的超时是 15 秒，不用默认的 10 秒。后端校验令牌最坏要 10 秒，门户不能比它先放弃，否则用户看到“没有成功”，后端却可能已经把账号建好了。
+
 判断放在现有的字段错误处理之前：`verificationToken` 不在 `USER_FIELDS` 里，不判断的话会被当成门户的 bug 记日志并返回 `unavailable`。
 
 ### 5.4 文案（`src/lib/auth/messages.ts`）

@@ -82,7 +82,9 @@ test.describe("页面接管表单之前就提交：邮箱、密码不进地址�
     await page.getByLabel("密码", { exact: true }).fill("correct horse");
     await page.getByLabel("确认密码").fill("correct horse");
     const submitted = page.waitForRequest((request) => request.isNavigationRequest());
-    await page.getByRole("button", { name: "注册" }).click();
+    // 服务端渲染的按钮在拿到人机验证令牌之前带 aria-disabled，Playwright 会一直等它可用；
+    // 这里测的是脚本还没接管时浏览器的原生提交，真实浏览器不看 aria-disabled
+    await page.getByRole("button", { name: "注册" }).click({ force: true });
     const request = await submitted;
     expect(request.method()).toBe("POST");
     expect(new URL(request.url()).search).toBe("?next=%2Fjournals%2F7");
