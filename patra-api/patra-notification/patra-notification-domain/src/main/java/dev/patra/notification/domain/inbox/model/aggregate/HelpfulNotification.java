@@ -16,11 +16,13 @@ import java.util.Objects;
 import lombok.AccessLevel;
 import lombok.Getter;
 
-/// 有帮助的合并条目：同一条内容在北京时间同一天被点的所有次数合成一条（PAP-144 spec 6）。
+/// 作者在「有帮助」标签里看到的一条提醒：同一条内容在北京时间同一天被点，都合并成这一条（PAP-144 spec 6）。
 ///
-/// 记的是「点过的人 → 他第一次点的时刻」：人数 = 人数；最近一位 = 第一次点得最晚的人，条目的时间就是这个时刻。
-/// 同一个人的第二条消息（取消后再点）不算又有人点。合并只取每人的最小时刻、正文只取最晚的一条，所以结果与消息
-/// 到达的先后、重复几次都无关。
+/// 消息可能重复，也可能不按点击顺序到达。合并结果只取决于「谁在什么时刻点过」，与到达先后、重复几次都无关：
+///
+/// - 人数：点过的不同用户数，取消不减，取消后再点也不加；
+/// - 显示的人和时间：第一次点得最晚的人，以及他第一次点的时刻；
+/// - 点经验时的正文：取时刻最晚的一条。
 @Getter
 public final class HelpfulNotification {
 
@@ -34,6 +36,10 @@ public final class HelpfulNotification {
   private final SubjectOwner owner;
   private final LocalDate day;
 
+  /// 点过的人 → 他第一次点的时刻。
+  ///
+  /// 不只存用户 ID：要靠时刻选出显示哪个人、显示什么时间。消息不保证按点击顺序到达，
+  /// 只记最后到的是谁会选错人。
   @Getter(AccessLevel.NONE)
   private final Map<Long, Instant> marks;
 
