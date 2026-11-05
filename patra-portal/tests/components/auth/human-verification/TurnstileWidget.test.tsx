@@ -148,6 +148,23 @@ describe("TurnstileWidget", () => {
     await waitFor(() => expect(api.render).toHaveBeenCalledOnce());
   });
 
+  it("脚本请求静默挂起：超时后再次挂载会重新加载，不会卡在没结束的请求上", async () => {
+    vi.useFakeTimers();
+    const first = renderWidget();
+    act(() => {
+      vi.advanceTimersByTime(15_000);
+    });
+    expect(scripts()).toHaveLength(0);
+    first.unmount();
+    vi.useRealTimers();
+
+    renderWidget();
+    expect(scripts()).toHaveLength(1);
+    scriptLoaded();
+
+    await waitFor(() => expect(api.render).toHaveBeenCalledOnce());
+  });
+
   it("渲染出来之前就预留高度，提交按钮不会被顶下去", () => {
     const { container } = renderWidget();
 

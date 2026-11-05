@@ -32,16 +32,19 @@ declare global {
   }
 }
 
-/// 进行中的加载。失败时清空，下次挂载才能重试
+/// 进行中的加载和它的脚本标签。失败或超时后清空，下次挂载才能重试
 let loading: Promise<TurnstileApi> | null = null;
+let pendingScript: HTMLScriptElement | null = null;
 
 /// 加载官方脚本，整个页面只注入一次。
 function loadScript(): Promise<TurnstileApi> {
   loading ??= new Promise<TurnstileApi>((resolve, reject) => {
     const script = document.createElement("script");
+    pendingScript = script;
     script.src = SCRIPT_URL;
     script.async = true;
     script.onload = () => {
+      pendingScript = null;
       if (window.turnstile) {
         resolve(window.turnstile);
       } else {
@@ -50,6 +53,7 @@ function loadScript(): Promise<TurnstileApi> {
       }
     };
     script.onerror = () => {
+      pendingScript = null;
       script.remove();
       reject(new Error("脚本加载失败"));
     };
@@ -59,6 +63,15 @@ function loadScript(): Promise<TurnstileApi> {
     throw error;
   });
   return loading;
+}
+
+/// 放弃还没结束的加载。请求静默挂起时既不 `onload` 也不 `onerror`，不放弃的话下次挂载也只能等这个请求。
+function abandonPendingLoad() {
+  if (pendingScript) {
+    pendingScript.remove();
+    pendingScript = null;
+    loading = null;
+  }
 }
 
 interface TurnstileWidgetProps extends HumanVerificationWidgetProps {
@@ -83,7 +96,10 @@ export function TurnstileWidget({
 
   useEffect(() => {
     let active = true;
-    const timer = setTimeout(() => handlers.current.onLoadError(), LOAD_TIMEOUT_MS);
+    const timer = setTimeout(() => {
+      abandonPendingLoad();
+      handlers.current.onLoadError();
+    }, LOAD_TIMEOUT_MS);
     loadScript()
       .then((api) => {
         if (!active || !container.current) return;
