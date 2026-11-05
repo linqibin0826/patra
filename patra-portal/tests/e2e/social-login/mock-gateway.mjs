@@ -268,6 +268,18 @@ function route(req, res, url, body) {
     return handleRegistration(req, res, inner.slice("/auth/oauth/registration".length), body);
   }
   if (inner.startsWith("/me/login-methods")) return handleLinkMethods(req, res, inner);
+  // Cloudflare 官方的 always-pass 测试站点标识，组件是真实加载的
+  if (inner === "/auth/human-verification") {
+    return json(res, 200, { provider: "turnstile", siteKey: "1x00000000000000000000AA" });
+  }
+  // 没带令牌时要求验证，带了令牌时按密码错误回应，够测登录页的人机验证流程
+  if (inner === "/auth/login") {
+    return body.verificationToken
+      ? problem(res, 401)
+      : problem(res, 422, {
+          errors: [{ field: "verificationToken", code: "VERIFICATION_REQUIRED" }],
+        });
+  }
   if (inner === "/auth/me") {
     return req.headers.authorization ? json(res, 200, user()) : problem(res, 401);
   }

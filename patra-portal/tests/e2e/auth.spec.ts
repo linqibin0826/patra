@@ -1,5 +1,10 @@
 import { expect, type Page, test } from "@playwright/test";
-import { freshAccount, ROUND_TRIP, waitForTakeover } from "@tests/e2e/support/account";
+import {
+  freshAccount,
+  ROUND_TRIP,
+  waitForTakeover,
+  waitForVerification,
+} from "@tests/e2e/support/account";
 
 /// 真人点一下要按住一会儿。Playwright 默认的点击按下就松开，测不出按住期间页面的挤动
 const PRESS = { delay: 100 };
@@ -110,7 +115,9 @@ test.describe("账号：注册、登录、退出", () => {
       await page.getByLabel("用户名").fill(account.username);
       await page.getByLabel("密码", { exact: true }).fill(account.password);
       await page.getByLabel("确认密码").fill(account.password);
-      await page.getByRole("button", { name: "注册" }).click();
+      const submit = page.getByRole("button", { name: "注册" });
+      await waitForVerification(submit);
+      await submit.click();
 
       await expect(page).toHaveURL(SOURCE, ROUND_TRIP);
       await expect(page.getByText("注册成功，已登录")).toBeVisible();

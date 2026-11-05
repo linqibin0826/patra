@@ -120,5 +120,6 @@ export function TurnstileWidget({
     }
   }, [resetKey]);
 
-  return <div ref={container} className="w-full" />;
+  // 组件要几秒才渲染出来，预留高度，免得提交按钮被顶下去
+  return <div ref={container} className="min-h-17.5 w-full" />;
 }

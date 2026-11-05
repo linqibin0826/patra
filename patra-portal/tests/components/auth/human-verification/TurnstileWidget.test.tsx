@@ -148,6 +148,12 @@ describe("TurnstileWidget", () => {
     await waitFor(() => expect(api.render).toHaveBeenCalledOnce());
   });
 
+  it("渲染出来之前就预留高度，提交按钮不会被顶下去", () => {
+    const { container } = renderWidget();
+
+    expect(container.firstElementChild?.className).toContain("min-h-17.5");
+  });
+
   it("两个组件只注入一次脚本", () => {
     renderWidget();
     renderWidget();
