@@ -84,6 +84,7 @@ test("B 读了全文后 70 秒内，文献页的看过与读过全文各加一",
 });
 
 test("首页有「热读」标签，切过去有内容或说明句", async ({ page }) => {
+  test.skip(!process.env.PATRA_GATEWAY_BASE_URL, "未设置 PATRA_GATEWAY_BASE_URL：跳过热读冒烟");
   await visit(page, "/?tab=hot");
   await expect(page.getByRole("tab", { name: /热读/ })).toHaveAttribute("aria-selected", "true");
   await expect(page.locator("[data-section=explore-feed]")).toContainText(

@@ -21,6 +21,7 @@ import {
 
 /// v0.13 文献库（PAP-114）：连 mini 上的后端跑。新注册的账号邮箱未验证，私人收藏照样能用（release spec 2.1.1）
 test.describe("收藏与文献库", () => {
+  test.skip(!process.env.PATRA_GATEWAY_BASE_URL, "未设置 PATRA_GATEWAY_BASE_URL：跳过文献库冒烟");
   test.describe.configure({ mode: "serial" });
   // 开发模式下每页第一次打开要现编译，一条用例走五六个页面，30 秒不够
   test.setTimeout(120_000);
