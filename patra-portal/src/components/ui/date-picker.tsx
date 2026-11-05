@@ -1,14 +1,16 @@
 "use client";
 
-import { CalendarDays } from "lucide-react";
+import { CalendarDays, X } from "lucide-react";
 import { type KeyboardEvent, type Ref, useEffect, useRef, useState } from "react";
 import { Calendar } from "@/components/ui/calendar";
 import { ResponsivePopover } from "@/components/ui/popover";
 import { daysBetween, parseDateInput } from "@/lib/date-input";
+import { useMediaQuery } from "@/lib/use-media-query";
 import { cn } from "@/lib/utils";
 
 // 日期选择（画布「表单控件重设计」）：输入框可直接敲，失焦或回车时规范成 `YYYY-MM-DD`，认不出的原文交给表单
-// 由 schema 报错；右端按钮（或输入框里按 ↓）打开日历，桌面是浮层、≤ 880px 是底部抽屉（`ResponsivePopover`）。
+// 由 schema 报错；右端按钮（或输入框里按 ↓）打开日历，焦点落在选中日或今天；桌面是浮层、≤ 880px 是底部抽屉（`ResponsivePopover`），
+// 抽屉有把手、字段名和关闭按钮，这些只加在日期选择上（文献库的抽屉不用）。
 
 interface DatePickerProps {
   id: string;
@@ -61,17 +63,20 @@ export function DatePicker({
 }: DatePickerProps) {
   const [text, setText] = useState(value);
   const [open, setOpen] = useState(false);
+  const narrow = useMediaQuery("(max-width: 880px)");
   const selected = validDate(value);
   const referenceDate = validDate(reference?.date);
   const earliest = referenceDate && referenceDate > min ? referenceDate : min;
   // 日历打开时停在哪个月：已选日，或参照日，或今天；夹在可选范围内（参照日改晚后，旧的选中日可能已在范围外）
-  const startOf = () => {
-    const base = selected ?? referenceDate ?? today;
+  const startOf = (chosen: string | undefined) => {
+    const base = chosen ?? referenceDate ?? today;
     return toDate(base < earliest ? earliest : base > today ? today : base);
   };
-  const [month, setMonth] = useState(startOf);
+  const [month, setMonth] = useState(() => startOf(selected));
   const boxRef = useRef<HTMLDivElement>(null);
   const ownInputRef = useRef<HTMLInputElement | null>(null);
+  const calendarBoxRef = useRef<HTMLDivElement>(null);
+  const calendarButtonRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => setText(value), [value]);
 
@@ -81,10 +86,11 @@ export function DatePicker({
     if (next !== value) {
       onChange(next);
     }
+    return next;
   };
 
-  const openCalendar = () => {
-    setMonth(startOf());
+  const openCalendar = (chosen: string | undefined) => {
+    setMonth(startOf(chosen));
     setOpen(true);
   };
 
@@ -101,7 +107,8 @@ export function DatePicker({
       commit();
     } else if (event.key === "ArrowDown" && !open) {
       event.preventDefault();
-      openCalendar();
+      // 刚敲的字还没进 `value`，这里按规范化后的结果定月份
+      openCalendar(validDate(commit()));
     }
   };
 
@@ -153,12 +160,13 @@ export function DatePicker({
           className="h-full min-w-0 flex-1 bg-transparent p-0 font-mono text-ink-900 text-sm tracking-wide outline-none placeholder:text-fg-4 disabled:cursor-not-allowed disabled:text-fg-2 max-[880px]:text-md"
         />
         <button
+          ref={calendarButtonRef}
           type="button"
           aria-label={`打开日历：${sheetTitle}`}
           aria-haspopup="dialog"
           aria-expanded={open}
           disabled={disabled}
-          onClick={() => (open ? setOpen(false) : openCalendar())}
+          onClick={() => (open ? setOpen(false) : openCalendar(selected))}
           className={cn(
             "flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-md text-fg-3 transition-colors duration-150 hover:bg-bg-sunken hover:text-fg-1 disabled:cursor-not-allowed disabled:bg-transparent disabled:text-fg-4 max-[880px]:size-10",
             open && "bg-bg-sunken text-fg-1",
@@ -171,29 +179,54 @@ export function DatePicker({
         open={open}
         onOpenChange={setOpen}
         anchor={boxRef}
-        finalFocus={ownInputRef}
+        // react-day-picker 把可 Tab 到的那个日格设成 `tabindex=0`：选中日，其次今天，再次本月第一个可选日
+        initialFocus={() =>
+          calendarBoxRef.current?.querySelector<HTMLElement>(
+            '[role="grid"] button[tabindex="0"]',
+          ) ?? null
+        }
+        // 抽屉是手机上用的：焦点回数字输入框可能弹出键盘盖住页面，所以回日历按钮
+        finalFocus={narrow ? calendarButtonRef : ownInputRef}
         title={`${sheetTitle}：选择日期`}
         className="w-78 p-3"
       >
-        <p
-          aria-hidden="true"
-          className="mb-3 hidden font-semibold text-fg-1 text-md leading-6 max-[880px]:block"
-        >
-          {sheetTitle}
-        </p>
-        <Calendar
-          mode="single"
-          required={false}
-          selected={selected ? toDate(selected) : undefined}
-          onSelect={(date) => date && choose(toIso(date))}
-          month={month}
-          onMonthChange={setMonth}
-          startMonth={toDate(earliest)}
-          endMonth={toDate(today)}
-          today={toDate(today)}
-          disabled={[{ before: toDate(earliest) }, { after: toDate(today) }]}
-          modifiers={referenceDate ? { reference: toDate(referenceDate) } : undefined}
-        />
+        {narrow && (
+          <>
+            <div
+              data-slot="sheet-handle"
+              aria-hidden="true"
+              className="-mt-1 mx-auto mb-3.5 h-1 w-9 shrink-0 rounded-full bg-paper-400"
+            />
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <p aria-hidden="true" className="font-semibold text-fg-1 text-md leading-6">
+                {sheetTitle}
+              </p>
+              <button
+                type="button"
+                aria-label="关闭"
+                onClick={() => setOpen(false)}
+                className="flex size-10 shrink-0 cursor-pointer items-center justify-center rounded-md text-fg-3 transition-colors duration-150 hover:bg-bg-sunken hover:text-fg-1"
+              >
+                <X className="size-4.5" aria-hidden="true" />
+              </button>
+            </div>
+          </>
+        )}
+        <div ref={calendarBoxRef}>
+          <Calendar
+            mode="single"
+            required={false}
+            selected={selected ? toDate(selected) : undefined}
+            onSelect={(date) => date && choose(toIso(date))}
+            month={month}
+            onMonthChange={setMonth}
+            startMonth={toDate(earliest)}
+            endMonth={toDate(today)}
+            today={toDate(today)}
+            disabled={[{ before: toDate(earliest) }, { after: toDate(today) }]}
+            modifiers={referenceDate ? { reference: toDate(referenceDate) } : undefined}
+          />
+        </div>
         <div className="mt-2.5 flex items-center justify-between gap-2 border-border-subtle border-t pt-2.5 text-fg-3 text-xs">
           <span>{footNote}</span>
           <span className="flex gap-0.5">

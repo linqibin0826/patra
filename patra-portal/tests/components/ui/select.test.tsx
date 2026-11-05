@@ -78,4 +78,36 @@ describe("Select", () => {
     await user.keyboard("{ArrowDown}{Enter}");
     expect(onValueChange).toHaveBeenCalledWith("published");
   });
+
+  it("外层 fieldset 禁用：触发器点不了，也按禁用的样子显示", () => {
+    render(
+      <fieldset disabled>
+        <Select items={SORTS} value="journal">
+          <SelectTrigger aria-label="排序">
+            <SelectValue />
+          </SelectTrigger>
+        </Select>
+      </fieldset>,
+    );
+    const trigger = screen.getByRole("combobox", { name: "排序" });
+    expect(trigger).toBeDisabled();
+    expect(trigger).toHaveClass(
+      "disabled:cursor-not-allowed",
+      "disabled:border-border-default",
+      "disabled:bg-bg-sunken",
+      "disabled:text-fg-2",
+      "disabled:shadow-none",
+    );
+  });
+
+  it("Select 自身禁用也走原生 disabled，和 fieldset 禁用共用同一套样式", () => {
+    render(
+      <Select items={SORTS} value="journal" disabled>
+        <SelectTrigger aria-label="排序">
+          <SelectValue />
+        </SelectTrigger>
+      </Select>,
+    );
+    expect(screen.getByRole("combobox", { name: "排序" })).toBeDisabled();
+  });
 });
