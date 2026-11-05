@@ -53,4 +53,35 @@ describe("readClientOrigin", () => {
   it("从当前请求的请求头里取", async () => {
     await expect(readClientOrigin()).resolves.toEqual({ ip: "10.0.0.7", userAgent: "UA/2" });
   });
+  describe("cf-connecting-ip", () => {
+    it("合法时优先于 x-forwarded-for", () => {
+      const origin = clientOriginFromHeaders(
+        new Headers({ "cf-connecting-ip": "113.92.157.29", "x-forwarded-for": "192.168.97.1" }),
+      );
+
+      expect(origin.ip).toBe("113.92.157.29");
+    });
+
+    it("IPv4 映射地址还原成 IPv4", () => {
+      const origin = clientOriginFromHeaders(
+        new Headers({ "cf-connecting-ip": "::ffff:113.92.157.29" }),
+      );
+
+      expect(origin.ip).toBe("113.92.157.29");
+    });
+
+    it.each(["not-an-ip", "1.2.3.4, 5.6.7.8"])("值是 %s 时退回 x-forwarded-for", (value) => {
+      const origin = clientOriginFromHeaders(
+        new Headers({ "cf-connecting-ip": value, "x-forwarded-for": "192.168.97.1" }),
+      );
+
+      expect(origin.ip).toBe("192.168.97.1");
+    });
+
+    it("没有这个头时走 x-forwarded-for", () => {
+      const origin = clientOriginFromHeaders(new Headers({ "x-forwarded-for": "192.168.97.1" }));
+
+      expect(origin.ip).toBe("192.168.97.1");
+    });
+  });
 });
