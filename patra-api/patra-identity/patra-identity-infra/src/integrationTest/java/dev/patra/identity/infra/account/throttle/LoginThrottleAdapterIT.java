@@ -8,6 +8,7 @@ import dev.patra.identity.domain.account.exception.LoginTemporarilyLockedExcepti
 import dev.patra.identity.domain.account.model.vo.EmailAddress;
 import dev.patra.identity.domain.account.policy.LoginThrottlePolicy;
 import dev.patra.identity.domain.account.port.throttle.LoginAttempt;
+import dev.patra.identity.domain.account.port.throttle.LoginThrottleStatus;
 import dev.patra.identity.domain.session.exception.TemporarilyUnavailableException;
 import dev.patra.tool.core.security.AccountType;
 import dev.patra.tool.test.container.initializer.RedisContainerInitializer;
@@ -60,6 +61,49 @@ class LoginThrottleAdapterIT {
   @AfterAll
   static void disconnect() {
     connectionFactory.destroy();
+  }
+
+  @Test
+  @DisplayName("状态：失败两次后读到 2 次，没有锁")
+  void status_returns_failures_and_no_lock_after_two_failures() {
+    LoginThrottleAdapter adapter = new LoginThrottleAdapter(redis, () -> DEFAULT_POLICY);
+    EmailAddress email = uniqueEmail();
+    for (int i = 0; i < 2; i++) {
+      adapter.recordFailure(adapter.begin(AccountType.USER, email));
+    }
+
+    LoginThrottleStatus status = adapter.status(AccountType.USER, email);
+
+    assertThat(status.failures()).isEqualTo(2);
+    assertThat(status.lockRemaining()).isEmpty();
+  }
+
+  @Test
+  @DisplayName("状态：锁定期内读到锁的剩余时间")
+  void status_returns_lock_remaining_when_locked() {
+    LoginThrottleAdapter adapter = new LoginThrottleAdapter(redis, () -> DEFAULT_POLICY);
+    EmailAddress email = uniqueEmail();
+    for (int i = 0; i < 5; i++) {
+      adapter.recordFailure(adapter.begin(AccountType.USER, email));
+    }
+
+    LoginThrottleStatus status = adapter.status(AccountType.USER, email);
+
+    assertThat(status.lockRemaining()).isPresent();
+    assertThat(status.lockRemaining().orElseThrow())
+        .isPositive()
+        .isLessThan(FIFTEEN_MINUTES.plusSeconds(1));
+  }
+
+  @Test
+  @DisplayName("状态：没有记录的邮箱读到 0 次、没有锁")
+  void status_returns_zero_for_unknown_email() {
+    LoginThrottleAdapter adapter = new LoginThrottleAdapter(redis, () -> DEFAULT_POLICY);
+
+    LoginThrottleStatus status = adapter.status(AccountType.USER, uniqueEmail());
+
+    assertThat(status.failures()).isZero();
+    assertThat(status.lockRemaining()).isEmpty();
   }
 
   @Test
