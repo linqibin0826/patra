@@ -39,7 +39,8 @@ public class PasswordResetController {
       @RequestBody ForgotPasswordRequest request, HttpServletRequest http) {
     return PasswordResetRequestedResponse.from(
         commandBus.handle(
-            RequestPasswordResetCommand.of(request.email(), ClientIp.from(http), null)));
+            RequestPasswordResetCommand.of(
+                request.email(), ClientIp.from(http), request.verificationToken())));
   }
 
   /// 提交新密码：成功 200（不自动登录）；令牌不可用或密码不合规 422；429 过于频繁。

@@ -297,6 +297,21 @@ class GatewayAuthenticationIT {
         .isEqualTo(CurrentUser.of(4221L, 9221L, AccountType.USER, ClientType.WEB));
   }
 
+  /// 读当前人机验证厂商：匿名放行，门户渲染登录页时还没有会话。
+  @Test
+  void human_verification_endpoint_is_public() {
+    identity.stubFor(get(urlPathEqualTo("/auth/human-verification")).willReturn(okJson("{}")));
+
+    restClient
+        .get()
+        .uri("/patra-identity/auth/human-verification")
+        .exchange()
+        .expectStatus()
+        .isOk();
+
+    identity.verify(1, getRequestedFor(urlPathEqualTo("/auth/human-verification")));
+  }
+
   /// 找回密码的申请与提交、改邮箱的确认与撤销都是邮件链接或匿名操作：匿名转发且不带 Authorization。
   @Test
   void should_forward_password_reset_and_email_change_links_anonymously() {

@@ -7,11 +7,14 @@ import static org.mockito.Mockito.when;
 
 import dev.patra.identity.app.account.usecase.login.AuthenticatedUser;
 import dev.patra.identity.app.account.usecase.login.LoginUserCommand;
+import dev.patra.identity.app.account.usecase.query.HumanVerificationQueryService;
+import dev.patra.identity.app.account.usecase.query.HumanVerificationView;
 import dev.patra.identity.app.account.usecase.query.UserQueryService;
 import dev.patra.identity.app.account.usecase.reauth.ReauthenticateUserCommand;
 import dev.patra.identity.app.account.usecase.reauth.Reauthenticated;
 import dev.patra.identity.app.account.usecase.register.RegisterUserCommand;
 import dev.patra.identity.domain.account.exception.CurrentPasswordMismatchException;
+import dev.patra.identity.domain.account.exception.HumanVerificationUnavailableException;
 import dev.patra.identity.domain.account.exception.InvalidCredentialsException;
 import dev.patra.identity.domain.account.exception.LoginTemporarilyLockedException;
 import dev.patra.identity.domain.account.exception.UserBannedException;
@@ -39,6 +42,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.json.JsonCompareMode;
 import org.springframework.test.web.servlet.client.RestTestClient;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
@@ -51,12 +55,15 @@ import tools.jackson.databind.json.JsonMapper;
 class AuthControllerIT {
 
   private static final JsonMapper JSON = JsonMapper.builder().build();
+  private static final String VERIFICATION = "V".repeat(64);
 
   @Autowired private RestTestClient restClient;
 
   @MockitoBean private CommandBus commandBus;
 
   @MockitoBean private UserQueryService userQueryService;
+
+  @MockitoBean private HumanVerificationQueryService humanVerificationQueryService;
 
   /// 一个正常、未验证邮箱、没改过名的账号读模型。
   ///
@@ -71,6 +78,123 @@ class AuthControllerIT {
         .displayName("chen-yu")
         .status(UserStatus.ACTIVE)
         .build();
+  }
+
+  @Test
+  @DisplayName("登录把人机验证令牌交给命令")
+  void login_passes_verification_token_to_command() {
+    when(commandBus.handle(any(LoginUserCommand.class)))
+        .thenReturn(AuthenticatedUser.of("patra_user_x", account(1L)));
+
+    restClient
+        .post()
+        .uri("/auth/login")
+        .contentType(MediaType.APPLICATION_JSON)
+        .body(
+            Map.of(
+                "email",
+                "chen.yu@example.com",
+                "password",
+                "correct horse",
+                "verificationToken",
+                VERIFICATION))
+        .exchange()
+        .expectStatus()
+        .isOk();
+
+    ArgumentCaptor<LoginUserCommand> command = ArgumentCaptor.forClass(LoginUserCommand.class);
+    verify(commandBus).handle(command.capture());
+    assertThat(command.getValue().verificationToken()).isEqualTo(VERIFICATION);
+  }
+
+  @Test
+  @DisplayName("注册把人机验证令牌交给命令")
+  void register_passes_verification_token_to_command() {
+    when(commandBus.handle(any(RegisterUserCommand.class)))
+        .thenReturn(AuthenticatedUser.of("patra_user_x", account(1L)));
+
+    restClient
+        .post()
+        .uri("/auth/register")
+        .contentType(MediaType.APPLICATION_JSON)
+        .body(
+            Map.of(
+                "email",
+                "chen.yu@example.com",
+                "username",
+                "chen-yu",
+                "password",
+                "correct horse battery",
+                "verificationToken",
+                VERIFICATION))
+        .exchange()
+        .expectStatus()
+        .isCreated();
+
+    ArgumentCaptor<RegisterUserCommand> command =
+        ArgumentCaptor.forClass(RegisterUserCommand.class);
+    verify(commandBus).handle(command.capture());
+    assertThat(command.getValue().verificationToken()).isEqualTo(VERIFICATION);
+  }
+
+  @Test
+  @DisplayName("读当前厂商：返回线上值和站点标识，不缓存，没有任何密钥")
+  void get_human_verification_returns_provider_and_site_key() {
+    when(humanVerificationQueryService.current())
+        .thenReturn(HumanVerificationView.of("turnstile", "site-key-value"));
+
+    restClient
+        .get()
+        .uri("/auth/human-verification")
+        .exchange()
+        .expectStatus()
+        .isOk()
+        .expectHeader()
+        .value(HttpHeaders.CACHE_CONTROL, value -> assertThat(value).contains("no-store"))
+        .expectBody()
+        .json(
+            "{\"provider\":\"turnstile\",\"siteKey\":\"site-key-value\"}", JsonCompareMode.STRICT);
+  }
+
+  @Test
+  @DisplayName("需要验证：422，字段错误带原因码")
+  void verification_required_maps_to_422_with_field_code() {
+    when(commandBus.handle(any(LoginUserCommand.class)))
+        .thenThrow(
+            new InvalidUserFieldsException(List.of(UserFieldViolations.verificationRequired())));
+
+    restClient
+        .post()
+        .uri("/auth/login")
+        .contentType(MediaType.APPLICATION_JSON)
+        .body(Map.of("email", "chen.yu@example.com", "password", "x"))
+        .exchange()
+        .expectStatus()
+        .isEqualTo(422)
+        .expectBody()
+        .jsonPath("$.errors[0].field")
+        .isEqualTo("verificationToken")
+        .jsonPath("$.errors[0].code")
+        .isEqualTo("VERIFICATION_REQUIRED");
+  }
+
+  @Test
+  @DisplayName("验证不了：503，traits 带原因码，门户据此和账号锁定区分")
+  void verification_unavailable_maps_to_503_with_trait() {
+    when(commandBus.handle(any(LoginUserCommand.class)))
+        .thenThrow(new HumanVerificationUnavailableException());
+
+    restClient
+        .post()
+        .uri("/auth/login")
+        .contentType(MediaType.APPLICATION_JSON)
+        .body(Map.of("email", "chen.yu@example.com", "password", "x"))
+        .exchange()
+        .expectStatus()
+        .isEqualTo(503)
+        .expectBody()
+        .jsonPath("$.traits[?(@ == 'VERIFICATION_UNAVAILABLE')]")
+        .exists();
   }
 
   @Test

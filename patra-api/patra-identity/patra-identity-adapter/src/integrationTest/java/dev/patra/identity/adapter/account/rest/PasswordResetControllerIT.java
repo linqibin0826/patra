@@ -75,6 +75,28 @@ class PasswordResetControllerIT {
   }
 
   @Test
+  @DisplayName("申请：把人机验证令牌交给命令")
+  void forgot_passes_verification_token_to_command() {
+    when(commandBus.handle(any(RequestPasswordResetCommand.class)))
+        .thenReturn(PasswordResetRequested.of("chen.yu@example.com", Instant.EPOCH));
+    String verification = "V".repeat(64);
+
+    restClient
+        .post()
+        .uri("/auth/password/forgot")
+        .contentType(MediaType.APPLICATION_JSON)
+        .body(Map.of("email", "chen.yu@example.com", "verificationToken", verification))
+        .exchange()
+        .expectStatus()
+        .isAccepted();
+
+    ArgumentCaptor<RequestPasswordResetCommand> command =
+        ArgumentCaptor.forClass(RequestPasswordResetCommand.class);
+    verify(commandBus).handle(command.capture());
+    assertThat(command.getValue().verificationToken()).isEqualTo(verification);
+  }
+
+  @Test
   @DisplayName("申请：邮箱格式不对 422")
   void should_render_request_field_errors() {
     when(commandBus.handle(any(RequestPasswordResetCommand.class)))
