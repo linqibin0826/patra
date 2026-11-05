@@ -8,6 +8,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
 
 import com.github.tomakehurst.wiremock.WireMockServer;
+import com.github.tomakehurst.wiremock.http.Fault;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSHeader;
@@ -133,6 +134,28 @@ public final class FakeProviderFixture {
                     .withStatus(status)
                     .withHeader("Content-Type", "application/json")
                     .withBody(body)));
+  }
+
+  /// 让 GitHub 的令牌端点回指定的状态和响应体。真实的 GitHub 拒绝授权码时回 200，错误写在 JSON 里。
+  ///
+  /// @param status 状态码
+  /// @param contentType 响应类型
+  /// @param body 响应体
+  public static void stubGithubTokenResponse(int status, String contentType, String body) {
+    SERVER.stubFor(
+        post(urlPathEqualTo("/github/token"))
+            .willReturn(
+                aResponse()
+                    .withStatus(status)
+                    .withHeader("Content-Type", contentType)
+                    .withBody(body)));
+  }
+
+  /// 让 GitHub 的令牌端点断开连接：模拟真正的网络错误。
+  public static void stubGithubTokenConnectionFailure() {
+    SERVER.stubFor(
+        post(urlPathEqualTo("/github/token"))
+            .willReturn(aResponse().withFault(Fault.CONNECTION_RESET_BY_PEER)));
   }
 
   /// 让 GitHub 的令牌和资料端点回一个账号。

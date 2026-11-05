@@ -1,6 +1,7 @@
 package dev.patra.identity.config;
 
 import dev.patra.identity.adapter.account.security.DiscardingAuthorizedClientRepository;
+import dev.patra.identity.adapter.account.security.ProviderErrorAwareTokenResponseConverter;
 import java.net.ProxySelector;
 import java.net.http.HttpClient;
 import java.time.Duration;
@@ -73,12 +74,17 @@ public class IdentityOAuth2ClientConfiguration {
         OAuth2AuthorizationRequestRedirectFilter.DEFAULT_AUTHORIZATION_REQUEST_BASE_URI);
   }
 
-  /// 换令牌的客户端。消息转换器和错误处理器都是框架要求的，和它的默认值一样，只多了超时。
+  /// 换令牌的客户端。消息转换器和错误处理器都是框架要求的，和它的默认值一样，只多了超时，
+  /// 以及认出平台用 2xx 回的拒绝（GitHub）。
   ///
   /// @return 客户端
   @Bean
   public OAuth2AccessTokenResponseClient<OAuth2AuthorizationCodeGrantRequest>
       accessTokenResponseClient() {
+    OAuth2AccessTokenResponseHttpMessageConverter tokenResponseConverter =
+        new OAuth2AccessTokenResponseHttpMessageConverter();
+    tokenResponseConverter.setAccessTokenResponseConverter(
+        new ProviderErrorAwareTokenResponseConverter());
     RestClientAuthorizationCodeTokenResponseClient client =
         new RestClientAuthorizationCodeTokenResponseClient();
     client.setRestClient(
@@ -87,8 +93,7 @@ public class IdentityOAuth2ClientConfiguration {
             .configureMessageConverters(
                 converters -> {
                   converters.addCustomConverter(new FormHttpMessageConverter());
-                  converters.addCustomConverter(
-                      new OAuth2AccessTokenResponseHttpMessageConverter());
+                  converters.addCustomConverter(tokenResponseConverter);
                 })
             .defaultStatusHandler(new OAuth2ErrorResponseErrorHandler())
             .build());

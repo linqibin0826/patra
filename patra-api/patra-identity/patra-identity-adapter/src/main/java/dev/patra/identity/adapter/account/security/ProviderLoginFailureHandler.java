@@ -60,12 +60,28 @@ public class ProviderLoginFailureHandler implements AuthenticationFailureHandler
         return new ProviderAuthorizationCancelledException();
       }
       if (OUTBOUND_FAILURE_CODES.contains(code)) {
-        return new TemporarilyUnavailableException(exception);
+        // 框架把平台用 2xx 回的拒绝也归到这里（GitHub 拒绝授权码就这样），要分开：这是授权没成功，不是平台不可用
+        return refusedByProvider(exception)
+            ? new ProviderAuthorizationRejectedException()
+            : new TemporarilyUnavailableException(exception);
       }
       if (CALLBACK_FAILURE_CODES.contains(code)) {
         return new TemporarilyUnavailableException();
       }
     }
     return new ProviderAuthorizationRejectedException();
+  }
+
+  /// 原因链里有没有平台的拒绝。
+  ///
+  /// @param exception 框架的认证异常
+  /// @return 有时为 `true`
+  private static boolean refusedByProvider(AuthenticationException exception) {
+    for (Throwable cause = exception; cause != null; cause = cause.getCause()) {
+      if (cause instanceof ProviderTokenRefusedException) {
+        return true;
+      }
+    }
+    return false;
   }
 }
