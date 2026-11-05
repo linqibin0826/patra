@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import "@testing-library/jest-dom/vitest";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Dialog } from "@/components/ui/dialog";
@@ -41,6 +41,22 @@ const openCalendar = async (user: ReturnType<typeof userEvent.setup>) => {
   return screen.findByRole("grid");
 };
 
+/// 让 `matchMedia` 命中窄屏
+function stubNarrow(narrow: boolean) {
+  vi.stubGlobal(
+    "matchMedia",
+    vi.fn(() => ({
+      matches: narrow,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+    })),
+  );
+}
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
+
 describe("DatePicker：直接输入", () => {
   it("常见写法失焦后规范成 YYYY-MM-DD", () => {
     const onChange = vi.fn();
@@ -75,7 +91,117 @@ describe("DatePicker：直接输入", () => {
   });
 });
 
+describe("DatePicker：日历的初始焦点", () => {
+  it("输入框按 ↓ 打开：焦点落在选中日", async () => {
+    const user = userEvent.setup();
+    render(<Harness value="2026-09-28" />);
+    input().focus();
+    await user.keyboard("{ArrowDown}");
+    const grid = await screen.findByRole("grid");
+    await waitFor(() =>
+      expect(within(grid).getByRole("button", { name: /9月28日/ })).toHaveFocus(),
+    );
+  });
+
+  it("没选日期时点按钮打开：焦点落在今天", async () => {
+    const user = userEvent.setup();
+    render(<Harness />);
+    const grid = await openCalendar(user);
+    await waitFor(() =>
+      expect(within(grid).getByRole("button", { name: /11月2日/ })).toHaveFocus(),
+    );
+  });
+
+  it("选中日在可选范围外：焦点落在当月第一个可选日", async () => {
+    const user = userEvent.setup();
+    render(<Harness value="2026-04-13" reference={{ date: "2026-05-11", label: "投稿" }} />);
+    const grid = await openCalendar(user);
+    await waitFor(() =>
+      expect(within(grid).getByRole("button", { name: /5月11日/ })).toHaveFocus(),
+    );
+  });
+
+  it("参照日晚于今天、没有日格可去：焦点退回弹层里第一个可聚焦元素", async () => {
+    const user = userEvent.setup();
+    render(<Harness reference={{ date: "2026-12-01", label: "投稿" }} />);
+    await user.click(screen.getByRole("button", { name: "打开日历：首轮决定日期" }));
+    const dialog = await screen.findByRole("dialog");
+    await waitFor(() => expect(dialog.contains(document.activeElement)).toBe(true));
+  });
+});
+
+describe("DatePicker：窄屏抽屉", () => {
+  it("顶部有把手和字段名，点关闭按钮收起", async () => {
+    stubNarrow(true);
+    const user = userEvent.setup();
+    render(<Harness value="2026-09-28" />);
+    await openCalendar(user);
+    const sheet = screen.getByRole("dialog");
+    expect(sheet.querySelector('[data-slot="sheet-handle"]')).toBeInTheDocument();
+    expect(within(sheet).getByText("首轮决定日期")).toBeInTheDocument();
+    await user.click(within(sheet).getByRole("button", { name: "关闭" }));
+    await waitFor(() => expect(screen.queryByRole("grid")).not.toBeInTheDocument());
+  });
+
+  it("选完日期焦点回日历按钮，不回数字输入框", async () => {
+    stubNarrow(true);
+    const user = userEvent.setup();
+    render(<Harness value="2026-09-28" />);
+    const grid = await openCalendar(user);
+    await user.click(within(grid).getByRole("button", { name: /9月30日/ }));
+    await waitFor(() => expect(screen.queryByRole("grid")).not.toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "打开日历：首轮决定日期" })).toHaveFocus(),
+    );
+    expect(input()).not.toHaveFocus();
+  });
+
+  it("桌面选完日期焦点回输入框", async () => {
+    stubNarrow(false);
+    const user = userEvent.setup();
+    render(<Harness value="2026-09-28" />);
+    const grid = await openCalendar(user);
+    await user.click(within(grid).getByRole("button", { name: /9月30日/ }));
+    await waitFor(() => expect(input()).toHaveFocus());
+  });
+
+  it("桌面浮层没有把手、字段名和关闭按钮", async () => {
+    stubNarrow(false);
+    const user = userEvent.setup();
+    render(<Harness value="2026-09-28" />);
+    await openCalendar(user);
+    const popup = screen.getByRole("dialog");
+    expect(popup.querySelector('[data-slot="sheet-handle"]')).not.toBeInTheDocument();
+    expect(within(popup).queryByText("首轮决定日期")).not.toBeInTheDocument();
+    expect(within(popup).queryByRole("button", { name: "关闭" })).not.toBeInTheDocument();
+  });
+});
+
 describe("DatePicker：日历", () => {
+  it("输入框敲完按 ↓：先规范化，日历开在刚敲的月份", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(<Harness value="2026-09-28" onChange={onChange} />);
+    await user.clear(input());
+    await user.type(input(), "2024/3/15{ArrowDown}");
+    await screen.findByRole("grid");
+    expect(onChange).toHaveBeenLastCalledWith("2024-03-15");
+    expect(input()).toHaveValue("2024-03-15");
+    expect(screen.getByRole("combobox", { name: "选择年份" })).toHaveTextContent("2024 年");
+    expect(screen.getByRole("combobox", { name: "选择月份" })).toHaveTextContent("3 月");
+  });
+
+  it("认不出的文字按 ↓：原文交给表单，日历开在今天所在月", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(<Harness value="2026-09-28" onChange={onChange} />);
+    await user.clear(input());
+    await user.type(input(), "2026/9/31{ArrowDown}");
+    await screen.findByRole("grid");
+    expect(onChange).toHaveBeenLastCalledWith("2026/9/31");
+    expect(screen.getByRole("combobox", { name: "选择月份" })).toHaveTextContent("11 月");
+  });
+
   it("打开后标题是年、月两个下拉", async () => {
     const user = userEvent.setup();
     render(<Harness value="2026-09-28" />);

@@ -10,9 +10,10 @@ import { cn } from "@/lib/utils";
 
 const Select = SelectPrimitive.Root;
 
-/// 表单触发器的外框与门户 `FIELD_BOX` 同一套：内凹描边、悬停加深、聚焦或展开时陶土描边加光晕、出错变红、禁用凹陷
+/// 表单触发器的外框与门户 `FIELD_BOX` 同一套：内凹描边、悬停加深、聚焦或展开时陶土描边加光晕、出错变红、禁用凹陷。
+/// 禁用用原生 `disabled:`：外层 fieldset 禁用时 base-ui 不知情，不会有 `data-disabled`
 const FIELD_TRIGGER =
-  "group/select flex h-11 w-full min-w-0 cursor-pointer items-center gap-2 rounded-lg border border-border-strong bg-bg-elevated pr-3 pl-4 text-left text-md leading-6 text-ink-900 shadow-inset outline-none ring-clay-500/15 transition-[border-color,box-shadow,background-color] duration-200 hover:border-ink-500 focus-visible:border-border-focus data-popup-open:border-border-focus data-popup-open:ring-4 aria-invalid:border-status-danger aria-invalid:ring-rust-500/15 data-disabled:cursor-not-allowed data-disabled:border-border-default data-disabled:bg-bg-sunken data-disabled:text-fg-2 data-disabled:shadow-none max-[880px]:text-lg";
+  "group/select flex h-11 w-full min-w-0 cursor-pointer items-center gap-2 rounded-lg border border-border-strong bg-bg-elevated pr-3 pl-4 text-left text-md leading-6 text-ink-900 shadow-inset outline-none ring-clay-500/15 transition-[border-color,box-shadow,background-color] duration-200 hover:border-ink-500 focus-visible:border-border-focus data-popup-open:border-border-focus data-popup-open:ring-4 aria-invalid:border-status-danger aria-invalid:ring-rust-500/15 disabled:cursor-not-allowed disabled:border-border-default disabled:bg-bg-sunken disabled:text-fg-2 disabled:shadow-none max-[880px]:text-lg";
 
 /// 紧凑触发器（工具条）：32 高、radius-md、paper-50 底
 const COMPACT_TRIGGER =
