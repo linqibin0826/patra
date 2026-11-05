@@ -49,6 +49,97 @@ class ThrottledPasswordCheckTest {
   }
 
   @Test
+  @DisplayName("密码不匹配：调用失败回调")
+  void calls_on_failure_when_password_mismatch() {
+    AtomicInteger failures = new AtomicInteger();
+
+    assertThatThrownBy(
+            () ->
+                check.run(
+                    EMAIL,
+                    PASSWORD,
+                    Optional::empty,
+                    MismatchException::new,
+                    failures::incrementAndGet))
+        .isInstanceOf(MismatchException.class);
+
+    assertThat(failures).hasValue(1);
+  }
+
+  @Test
+  @DisplayName("这次失败触发上锁：抛 429 之前也调用失败回调")
+  void calls_on_failure_before_throwing_locked() {
+    when(loginThrottle.recordFailure(ATTEMPT)).thenReturn(Optional.of(Duration.ofMinutes(15)));
+    AtomicInteger failures = new AtomicInteger();
+
+    assertThatThrownBy(
+            () ->
+                check.run(
+                    EMAIL,
+                    PASSWORD,
+                    Optional::empty,
+                    MismatchException::new,
+                    failures::incrementAndGet))
+        .isInstanceOf(LoginTemporarilyLockedException.class);
+
+    assertThat(failures).hasValue(1);
+  }
+
+  @Test
+  @DisplayName("密码超长：不做校验，也调用失败回调")
+  void calls_on_failure_when_password_too_long() {
+    PlainPassword tooLong = PlainPassword.of("a".repeat(PasswordPolicy.MAX_LOGIN_LENGTH + 1));
+    AtomicInteger failures = new AtomicInteger();
+
+    assertThatThrownBy(
+            () ->
+                check.run(
+                    EMAIL,
+                    tooLong,
+                    Optional::empty,
+                    MismatchException::new,
+                    failures::incrementAndGet))
+        .isInstanceOf(MismatchException.class);
+
+    assertThat(failures).hasValue(1);
+  }
+
+  @Test
+  @DisplayName("校验通过：不调用失败回调")
+  void does_not_call_on_failure_on_success() {
+    AtomicInteger failures = new AtomicInteger();
+
+    check.run(
+        EMAIL,
+        PASSWORD,
+        () -> Optional.of("matched"),
+        MismatchException::new,
+        failures::incrementAndGet);
+
+    assertThat(failures).hasValue(0);
+  }
+
+  @Test
+  @DisplayName("校验中途出错：按取消结算，不调用失败回调")
+  void does_not_call_on_failure_when_cancelled() {
+    AtomicInteger failures = new AtomicInteger();
+
+    assertThatThrownBy(
+            () ->
+                check.run(
+                    EMAIL,
+                    PASSWORD,
+                    () -> {
+                      throw new TemporarilyUnavailableException();
+                    },
+                    MismatchException::new,
+                    failures::incrementAndGet))
+        .isInstanceOf(TemporarilyUnavailableException.class);
+
+    assertThat(failures).hasValue(0);
+  }
+
+  @Test
   @DisplayName("校验通过：先开始、再校验、后结算，只按成功结算一次，返回校验结果")
   void should_settle_success_exactly_once_when_check_matches() {
     Supplier<Optional<String>> matched =

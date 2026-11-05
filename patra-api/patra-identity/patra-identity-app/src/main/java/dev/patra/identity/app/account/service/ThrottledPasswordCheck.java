@@ -45,6 +45,25 @@ public class ThrottledPasswordCheck {
       PlainPassword password,
       Supplier<Optional<T>> check,
       Supplier<? extends RuntimeException> mismatch) {
+    return run(email, password, check, mismatch, () -> {});
+  }
+
+  /// 执行一次受限制的校验，按失败结算之后、抛异常之前调用回调。取消结算不调用。
+  ///
+  /// @param email 失败限制按它计
+  /// @param password 明文密码，用来判断是否超过登录长度上限
+  /// @param check 校验；通过时返回调用方要的结果，不通过时返回空，不通过也要耗时一样
+  /// @param mismatch 校验不通过且没有处于锁定期时要抛的异常
+  /// @param onFailure 按失败结算之后的回调，不应抛异常
+  /// @param <T> 校验结果的类型
+  /// @return 校验结果
+  /// @throws LoginTemporarilyLockedException 锁定期内、在途已满，或这次失败触发上锁
+  public <T> T run(
+      EmailAddress email,
+      PlainPassword password,
+      Supplier<Optional<T>> check,
+      Supplier<? extends RuntimeException> mismatch,
+      Runnable onFailure) {
     LoginAttempt attempt = loginThrottle.begin(AccountType.USER, email);
     Optional<T> matched;
     try {
@@ -56,6 +75,7 @@ public class ThrottledPasswordCheck {
     }
     if (matched.isEmpty()) {
       Optional<Duration> lock = loginThrottle.recordFailure(attempt);
+      onFailure.run();
       if (lock.isPresent()) {
         throw new LoginTemporarilyLockedException(lock.get());
       }

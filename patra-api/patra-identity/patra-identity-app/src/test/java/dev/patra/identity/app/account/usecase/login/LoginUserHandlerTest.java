@@ -14,13 +14,16 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import dev.patra.identity.app.account.service.HumanVerificationGuard;
 import dev.patra.identity.app.account.service.NewDeviceLoginNotifier;
 import dev.patra.identity.app.account.service.ThrottledPasswordCheck;
+import dev.patra.identity.domain.account.exception.HumanVerificationUnavailableException;
 import dev.patra.identity.domain.account.exception.InvalidCredentialsException;
 import dev.patra.identity.domain.account.exception.LoginTemporarilyLockedException;
 import dev.patra.identity.domain.account.exception.UserBannedException;
 import dev.patra.identity.domain.account.model.aggregate.User;
 import dev.patra.identity.domain.account.model.aggregate.UserPasswordCredential;
+import dev.patra.identity.domain.account.model.enums.HumanVerificationProvider;
 import dev.patra.identity.domain.account.model.enums.UserStatus;
 import dev.patra.identity.domain.account.model.read.UserAccountReadModel;
 import dev.patra.identity.domain.account.model.vo.EmailAddress;
@@ -29,6 +32,7 @@ import dev.patra.identity.domain.account.model.vo.RequestOrigin;
 import dev.patra.identity.domain.account.model.vo.Username;
 import dev.patra.identity.domain.account.model.vo.mail.NewDeviceLoginMail;
 import dev.patra.identity.domain.account.model.vo.mail.OutgoingMail;
+import dev.patra.identity.domain.account.policy.HumanVerificationPolicy;
 import dev.patra.identity.domain.account.policy.PasswordPolicy;
 import dev.patra.identity.domain.account.port.hashing.PasswordHashingPort;
 import dev.patra.identity.domain.account.port.mail.EmailDeliveryPort;
@@ -36,6 +40,7 @@ import dev.patra.identity.domain.account.port.read.UserReadPort;
 import dev.patra.identity.domain.account.port.repository.UserPasswordCredentialRepository;
 import dev.patra.identity.domain.account.port.repository.UserRepository;
 import dev.patra.identity.domain.account.port.throttle.LoginAttempt;
+import dev.patra.identity.domain.account.port.throttle.LoginIpFailurePort;
 import dev.patra.identity.domain.account.port.throttle.LoginThrottlePort;
 import dev.patra.identity.domain.account.service.ClientOriginResolver;
 import dev.patra.identity.domain.session.exception.InvalidUserFieldsException;
@@ -128,6 +133,9 @@ class LoginUserHandlerTest {
           .ipRegion("澳大利亚")
           .build();
   private static final LoginAttempt ATTEMPT = LoginAttempt.of(AccountType.USER, EMAIL, "ticket");
+  private static final String CLIENT_IP = "113.92.157.29";
+  private static final String VERIFICATION = "V".repeat(64);
+  private static final Duration IP_FAILURE_WINDOW = Duration.ofMinutes(15);
 
   private static final UserAccountReadModel ACCOUNT =
       UserAccountReadModel.builder()
@@ -150,6 +158,8 @@ class LoginUserHandlerTest {
   private final UserLoginRecordRepository records = mock(UserLoginRecordRepository.class);
   private final NewDeviceMailThrottlePort newDeviceThrottle = mock(NewDeviceMailThrottlePort.class);
   private final EmailDeliveryPort emailDelivery = mock(EmailDeliveryPort.class);
+  private final HumanVerificationGuard verificationGuard = mock(HumanVerificationGuard.class);
+  private final LoginIpFailurePort ipFailures = mock(LoginIpFailurePort.class);
   private final List<String> events = new ArrayList<>();
   private final LoginUserHandler handler =
       new LoginUserHandler(
@@ -158,6 +168,11 @@ class LoginUserHandlerTest {
           userReadPort,
           passwordHashing,
           new ThrottledPasswordCheck(loginThrottle),
+          verificationGuard,
+          ipFailures,
+          () ->
+              HumanVerificationPolicy.of(
+                  HumanVerificationProvider.TURNSTILE, 3, 5, IP_FAILURE_WINDOW),
           sessionIssuer,
           resolver,
           new NewDeviceLoginNotifier(
@@ -181,6 +196,100 @@ class LoginUserHandlerTest {
         .thenReturn(IssuedUserSession.of("patra_user_x", List.of()));
     when(userReadPort.findAccount(42L)).thenReturn(Optional.of(ACCOUNT));
     when(resolver.resolve(any())).thenReturn(ORIGIN);
+  }
+
+  @Test
+  @DisplayName("人机验证在开始尝试之前")
+  void guard_runs_before_throttle_begin() {
+    when(passwordHashing.matches(any(), any())).thenReturn(true);
+
+    handler.handle(verifiedCommand());
+
+    InOrder order = inOrder(verificationGuard, loginThrottle);
+    order.verify(verificationGuard).requireForLogin(EMAIL, CLIENT_IP, VERIFICATION);
+    order.verify(loginThrottle).begin(AccountType.USER, EMAIL);
+  }
+
+  @Test
+  @DisplayName("人机验证没过：不开始尝试，不做哈希，不占失败限制名额")
+  void guard_failure_skips_password_check() {
+    doThrow(new HumanVerificationUnavailableException())
+        .when(verificationGuard)
+        .requireForLogin(any(), any(), any());
+
+    assertThatThrownBy(() -> handler.handle(verifiedCommand()))
+        .isInstanceOf(HumanVerificationUnavailableException.class);
+
+    verifyNoInteractions(loginThrottle, passwordHashing, ipFailures);
+  }
+
+  @Test
+  @DisplayName("字段不合法：不做人机验证")
+  void field_errors_skip_guard() {
+    assertThatThrownBy(() -> handler.handle(command("not-an-email", "any", null, null)))
+        .isInstanceOf(InvalidUserFieldsException.class);
+
+    verifyNoInteractions(verificationGuard);
+  }
+
+  @Test
+  @DisplayName("密码错误：记一次 IP 失败")
+  void records_ip_failure_on_wrong_password() {
+    when(passwordHashing.matches(any(), any())).thenReturn(false);
+
+    assertThatThrownBy(() -> handler.handle(verifiedCommand()))
+        .isInstanceOf(InvalidCredentialsException.class);
+
+    verify(ipFailures).record(CLIENT_IP, IP_FAILURE_WINDOW);
+  }
+
+  @Test
+  @DisplayName("邮箱不存在：同样记一次 IP 失败，撞库试的大多是不存在的邮箱")
+  void records_ip_failure_on_unknown_email() {
+    when(users.findByEmail(EMAIL)).thenReturn(Optional.empty());
+
+    assertThatThrownBy(() -> handler.handle(verifiedCommand()))
+        .isInstanceOf(InvalidCredentialsException.class);
+
+    verify(ipFailures).record(CLIENT_IP, IP_FAILURE_WINDOW);
+  }
+
+  @Test
+  @DisplayName("登录成功：不动 IP 计数，否则攻击者用自己的账号登录一次就能清掉")
+  void does_not_record_ip_failure_on_success() {
+    when(passwordHashing.matches(any(), any())).thenReturn(true);
+
+    handler.handle(verifiedCommand());
+
+    verifyNoInteractions(ipFailures);
+  }
+
+  @Test
+  @DisplayName("记 IP 失败出错：只记日志，仍然返回密码错误")
+  void ip_record_failure_does_not_hide_invalid_credentials() {
+    when(passwordHashing.matches(any(), any())).thenReturn(false);
+    doThrow(new TemporarilyUnavailableException()).when(ipFailures).record(any(), any());
+
+    assertThatThrownBy(() -> handler.handle(verifiedCommand()))
+        .isInstanceOf(InvalidCredentialsException.class);
+  }
+
+  @Test
+  @DisplayName("命令的 toString 不输出令牌原文")
+  void command_to_string_hides_verification_token() {
+    assertThat(verifiedCommand().toString()).doesNotContain(VERIFICATION);
+  }
+
+  /// 带 IP 和令牌的登录命令。
+  ///
+  /// @return 命令
+  private static LoginUserCommand verifiedCommand() {
+    return LoginUserCommand.builder()
+        .email("chen.yu@example.com")
+        .password("correct horse")
+        .clientIp(CLIENT_IP)
+        .verificationToken(VERIFICATION)
+        .build();
   }
 
   @Test
@@ -483,6 +592,11 @@ class LoginUserHandlerTest {
             userReadPort,
             passwordHashing,
             new ThrottledPasswordCheck(loginThrottle),
+            verificationGuard,
+            ipFailures,
+            () ->
+                HumanVerificationPolicy.of(
+                    HumanVerificationProvider.TURNSTILE, 3, 5, IP_FAILURE_WINDOW),
             sessionIssuer,
             resolver,
             new NewDeviceLoginNotifier(
