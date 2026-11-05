@@ -1,2 +1,5 @@
 # 每个测试方法结束后等事件发布登记表清空，见 IdentitySecurityMailDrainTestExecutionListener
 org.springframework.test.context.TestExecutionListener=dev.patra.identity.config.IdentitySecurityMailDrainTestExecutionListener
+
+# 把人机验证厂商的地址指到 WireMock，见 HumanVerificationFixture
+org.springframework.context.ApplicationContextInitializer=dev.patra.identity.config.HumanVerificationFixture$Initializer

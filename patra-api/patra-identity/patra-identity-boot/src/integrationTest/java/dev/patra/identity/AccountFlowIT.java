@@ -3,6 +3,7 @@ package dev.patra.identity;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
+import dev.patra.identity.config.HumanVerificationFixture;
 import dev.patra.identity.config.IdentityITPostgreSQLContainerInitializer;
 import dev.patra.identity.config.IdentitySecurityMailITSpringConfig;
 import dev.patra.tool.test.container.initializer.RabbitMQContainerInitializer;
@@ -99,7 +100,8 @@ class AccountFlowIT {
                     "id", 1,
                     "userId", "1",
                     "status", "BANNED",
-                    "role", "ADMIN"))
+                    "role", "ADMIN",
+                    "verificationToken", HumanVerificationFixture.REGISTER))
             .exchange()
             .expectBody(String.class)
             .returnResult();
@@ -248,7 +250,9 @@ class AccountFlowIT {
         .post()
         .uri(uri)
         .contentType(MediaType.APPLICATION_JSON)
-        .body(Map.of("email", email, "username", usernameFor(email), "password", password))
+        .body(
+            HumanVerificationFixture.withToken(
+                uri, Map.of("email", email, "username", usernameFor(email), "password", password)))
         .exchange()
         .expectBody(String.class)
         .returnResult();
@@ -264,7 +268,7 @@ class AccountFlowIT {
         .post()
         .uri(uri)
         .contentType(MediaType.APPLICATION_JSON)
-        .body(body)
+        .body(HumanVerificationFixture.withToken(uri, body))
         .exchange()
         .expectBody(String.class)
         .returnResult();

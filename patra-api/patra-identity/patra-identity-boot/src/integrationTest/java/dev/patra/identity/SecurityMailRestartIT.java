@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
 import dev.patra.identity.api.account.event.EmailVerificationMailEvent;
+import dev.patra.identity.config.HumanVerificationFixture;
 import dev.patra.identity.config.IdentityITPostgreSQLContainerInitializer;
 import dev.patra.identity.config.IdentitySecurityMailITFixture;
 import dev.patra.identity.config.IdentitySecurityMailITSpringConfig;
@@ -141,7 +142,15 @@ class SecurityMailRestartIT {
     HttpResponse<String> registered =
         post(
             "/auth/register",
-            Map.of("email", email, "username", username, "password", "Correct-Horse-02"));
+            Map.of(
+                "email",
+                email,
+                "username",
+                username,
+                "password",
+                "Correct-Horse-02",
+                "verificationToken",
+                HumanVerificationFixture.REGISTER));
     assertThat(registered.statusCode()).as(registered.body()).isEqualTo(201);
   }
 

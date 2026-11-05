@@ -3,6 +3,7 @@ package dev.patra.identity;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.patra.identity.api.account.event.SecurityMailEvent;
+import dev.patra.identity.config.HumanVerificationFixture;
 import dev.patra.identity.config.IdentityClockITSpringConfig;
 import dev.patra.identity.config.IdentityITMinIOContainerInitializer;
 import dev.patra.identity.config.IdentityITPostgreSQLContainerInitializer;
@@ -115,6 +116,13 @@ abstract class IdentityFlowITSupport {
     return post("/auth/login", Map.of("email", email, "password", password), new HttpHeaders());
   }
 
+  /// 是否自动给登录、注册、找回密码补上人机验证令牌。专门测人机验证的流程测试关掉它。
+  ///
+  /// @return 要补时为 `true`
+  boolean autoVerification() {
+    return true;
+  }
+
   /// 发一个 JSON 请求。
   ///
   /// @param method 方法
@@ -127,7 +135,9 @@ abstract class IdentityFlowITSupport {
     RestClient.RequestBodySpec spec =
         rawClient().method(method).uri(uri).headers(h -> h.addAll(headers));
     if (body != null) {
-      spec.contentType(MediaType.APPLICATION_JSON).body(JSON.writeValueAsString(body));
+      Map<String, Object> sent =
+          autoVerification() ? HumanVerificationFixture.withToken(uri, body) : body;
+      spec.contentType(MediaType.APPLICATION_JSON).body(JSON.writeValueAsString(sent));
     }
     return spec.exchange(IdentityFlowITSupport::toRaw);
   }

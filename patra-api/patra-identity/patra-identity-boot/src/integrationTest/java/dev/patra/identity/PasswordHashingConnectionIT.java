@@ -7,6 +7,7 @@ import static org.mockito.Mockito.doAnswer;
 
 import com.zaxxer.hikari.HikariDataSource;
 import com.zaxxer.hikari.HikariPoolMXBean;
+import dev.patra.identity.config.HumanVerificationFixture;
 import dev.patra.identity.config.IdentityITPostgreSQLContainerInitializer;
 import dev.patra.identity.config.IdentitySecurityMailITFixture;
 import dev.patra.identity.config.IdentitySecurityMailITSpringConfig;
@@ -98,7 +99,9 @@ class PasswordHashingConnectionIT {
         .post()
         .uri(uri)
         .contentType(MediaType.APPLICATION_JSON)
-        .body(Map.of("email", email, "username", usernameFor(email), "password", password))
+        .body(
+            HumanVerificationFixture.withToken(
+                uri, Map.of("email", email, "username", usernameFor(email), "password", password)))
         .exchange();
   }
 

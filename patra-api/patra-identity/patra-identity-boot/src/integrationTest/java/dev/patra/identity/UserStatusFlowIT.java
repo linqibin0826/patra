@@ -2,6 +2,7 @@ package dev.patra.identity;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import dev.patra.identity.config.HumanVerificationFixture;
 import dev.patra.identity.config.IdentityITPostgreSQLContainerInitializer;
 import dev.patra.identity.config.IdentitySecurityMailITSpringConfig;
 import dev.patra.tool.core.security.AccountType;
@@ -100,7 +101,16 @@ class UserStatusFlowIT {
   /// @return 响应
   private EntityExchangeResult<String> register(String email, String username) {
     return post(
-        "/auth/register", Map.of("email", email, "username", username, "password", PASSWORD));
+        "/auth/register",
+        Map.of(
+            "email",
+            email,
+            "username",
+            username,
+            "password",
+            PASSWORD,
+            "verificationToken",
+            HumanVerificationFixture.REGISTER));
   }
 
   /// 登录。
@@ -109,7 +119,15 @@ class UserStatusFlowIT {
   /// @param password 密码
   /// @return 响应
   private EntityExchangeResult<String> login(String email, String password) {
-    return post("/auth/login", Map.of("email", email, "password", password));
+    return post(
+        "/auth/login",
+        Map.of(
+            "email",
+            email,
+            "password",
+            password,
+            "verificationToken",
+            HumanVerificationFixture.LOGIN));
   }
 
   /// 发一个 JSON POST。

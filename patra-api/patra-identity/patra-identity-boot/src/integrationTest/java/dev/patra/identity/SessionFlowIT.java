@@ -2,6 +2,7 @@ package dev.patra.identity;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import dev.patra.identity.config.HumanVerificationFixture;
 import dev.patra.identity.config.IdentityITPostgreSQLContainerInitializer;
 import dev.patra.identity.config.IdentitySecurityMailITSpringConfig;
 import dev.patra.identity.infra.session.store.SessionToken;
@@ -11,7 +12,6 @@ import dev.patra.tool.core.security.CurrentUser;
 import dev.patra.tool.security.test.TestIdentity;
 import dev.patra.tool.test.container.initializer.RabbitMQContainerInitializer;
 import dev.patra.tool.test.container.initializer.RedisContainerInitializer;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -306,7 +306,7 @@ class SessionFlowIT {
         .post()
         .uri(uri)
         .contentType(MediaType.APPLICATION_JSON)
-        .body(new HashMap<>(body))
+        .body(HumanVerificationFixture.withToken(uri, body))
         .exchange()
         .expectBody(String.class)
         .returnResult();
