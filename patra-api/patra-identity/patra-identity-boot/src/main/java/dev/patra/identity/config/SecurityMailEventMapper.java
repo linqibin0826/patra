@@ -9,6 +9,7 @@ import dev.patra.identity.api.account.event.EmailChangeRevertedMailEvent;
 import dev.patra.identity.api.account.event.EmailChangedConfirmationMailEvent;
 import dev.patra.identity.api.account.event.EmailChangedNoticeMailEvent;
 import dev.patra.identity.api.account.event.EmailVerificationMailEvent;
+import dev.patra.identity.api.account.event.LoginMethodLinkCodeMailEvent;
 import dev.patra.identity.api.account.event.LoginMethodLinkedMailEvent;
 import dev.patra.identity.api.account.event.LoginMethodUnlinkedMailEvent;
 import dev.patra.identity.api.account.event.NewDeviceLoginMailEvent;
@@ -27,6 +28,7 @@ import dev.patra.identity.domain.account.model.vo.mail.EmailChangeRevertedMail;
 import dev.patra.identity.domain.account.model.vo.mail.EmailChangedConfirmationMail;
 import dev.patra.identity.domain.account.model.vo.mail.EmailChangedNoticeMail;
 import dev.patra.identity.domain.account.model.vo.mail.EmailVerificationMail;
+import dev.patra.identity.domain.account.model.vo.mail.LoginMethodLinkCodeMail;
 import dev.patra.identity.domain.account.model.vo.mail.LoginMethodLinkedMail;
 import dev.patra.identity.domain.account.model.vo.mail.LoginMethodUnlinkedMail;
 import dev.patra.identity.domain.account.model.vo.mail.NewDeviceLoginMail;
@@ -129,6 +131,17 @@ public final class SecurityMailEventMapper {
               .code(m.code())
               .codeExpiresAt(m.codeExpiresAt())
               .build();
+      case LoginMethodLinkCodeMail m ->
+          LoginMethodLinkCodeMailEvent.builder()
+              .eventId(m.eventId())
+              .to(m.to().value())
+              .displayName(m.displayName())
+              .username(m.username())
+              .code(m.code())
+              .codeExpiresAt(m.codeExpiresAt())
+              .providerName(m.providerName())
+              .accountLabel(m.accountLabel())
+              .build();
       case LoginMethodLinkedMail m ->
           LoginMethodLinkedMailEvent.builder()
               .eventId(m.eventId())
@@ -203,6 +216,7 @@ public final class SecurityMailEventMapper {
       case AccountDeletionReminderMailEvent _ -> AccountDeletionReminderMailEvent.ROUTING_KEY;
       case AccountDeletionCompletedMailEvent _ -> AccountDeletionCompletedMailEvent.ROUTING_KEY;
       case RegistrationCodeMailEvent _ -> RegistrationCodeMailEvent.ROUTING_KEY;
+      case LoginMethodLinkCodeMailEvent _ -> LoginMethodLinkCodeMailEvent.ROUTING_KEY;
       case LoginMethodLinkedMailEvent _ -> LoginMethodLinkedMailEvent.ROUTING_KEY;
       case LoginMethodUnlinkedMailEvent _ -> LoginMethodUnlinkedMailEvent.ROUTING_KEY;
     };

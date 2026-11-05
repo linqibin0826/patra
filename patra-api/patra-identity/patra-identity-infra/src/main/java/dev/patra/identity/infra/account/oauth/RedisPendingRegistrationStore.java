@@ -1,5 +1,6 @@
 package dev.patra.identity.infra.account.oauth;
 
+import dev.patra.identity.domain.account.model.enums.RegistrationCodePurpose;
 import dev.patra.identity.domain.account.model.vo.CodeCheck;
 import dev.patra.identity.domain.account.model.vo.EmailTokenSecret;
 import dev.patra.identity.domain.account.model.vo.PendingCode;
@@ -30,6 +31,9 @@ import tools.jackson.databind.json.JsonMapper;
 @Component
 @RequiredArgsConstructor
 public class RedisPendingRegistrationStore implements PendingRegistrationPort {
+
+  /// 绑定用途没有用户名，HASH 里存空串：注册用的用户名不可能是空串。
+  private static final String NO_USERNAME = "";
 
   private static final RedisScript<Long> STORE_CODE_SCRIPT =
       RedisScript.of(new ClassPathResource("redis/oauth-code-store.lua"), Long.class);
@@ -76,7 +80,7 @@ public class RedisPendingRegistrationStore implements PendingRegistrationPort {
   /// 写一个验证码，覆盖旧的。
   ///
   /// @param ticket 凭证原文
-  /// @param pendingCode 绑定的用户名、邮箱和时间
+  /// @param pendingCode 绑定的用途、用户名、邮箱和时间
   /// @param code 验证码
   /// @param ttl 有效期
   @Override
@@ -88,7 +92,8 @@ public class RedisPendingRegistrationStore implements PendingRegistrationPort {
             redis.execute(
                 STORE_CODE_SCRIPT,
                 List.of(codeKey(ticketHash)),
-                pendingCode.username(),
+                pendingCode.purpose().name(),
+                pendingCode.username() == null ? NO_USERNAME : pendingCode.username(),
                 pendingCode.email(),
                 code.hash(ticketHash),
                 Long.toString(pendingCode.codeExpiresAt().toEpochMilli()),
@@ -115,10 +120,12 @@ public class RedisPendingRegistrationStore implements PendingRegistrationPort {
   ///
   /// @param ticket 凭证原文
   /// @param code 提交的验证码
+  /// @param purpose 期望的用途
   /// @param maxAttempts 最多错几次
   /// @return 校验结果
   @Override
-  public CodeCheck verifyCode(String ticket, RegistrationCode code, int maxAttempts) {
+  public CodeCheck verifyCode(
+      String ticket, RegistrationCode code, RegistrationCodePurpose purpose, int maxAttempts) {
     String ticketHash = new EmailTokenSecret(ticket).hash();
     List<?> result =
         execute(
@@ -127,10 +134,11 @@ public class RedisPendingRegistrationStore implements PendingRegistrationPort {
                     VERIFY_CODE_SCRIPT,
                     List.of(codeKey(ticketHash)),
                     code.hash(ticketHash),
-                    Integer.toString(maxAttempts)));
+                    Integer.toString(maxAttempts),
+                    purpose.name()));
     return switch (String.valueOf(result.getFirst())) {
       case "MATCH" ->
-          new CodeCheck.Matched(String.valueOf(result.get(1)), String.valueOf(result.get(2)));
+          new CodeCheck.Matched(usernameOf(result.get(1)), String.valueOf(result.get(2)));
       case "MISMATCH" -> new CodeCheck.Mismatch();
       default -> new CodeCheck.NoActiveCode();
     };
@@ -154,11 +162,24 @@ public class RedisPendingRegistrationStore implements PendingRegistrationPort {
   /// @param fields 字段
   /// @return 公开部分
   private static PendingCode toPendingCode(Map<Object, Object> fields) {
-    return PendingCode.of(
-        String.valueOf(fields.get("username")),
-        String.valueOf(fields.get("email")),
-        Instant.ofEpochMilli(Long.parseLong(String.valueOf(fields.get("expires_at")))),
-        Instant.ofEpochMilli(Long.parseLong(String.valueOf(fields.get("next_resend_at")))));
+    return PendingCode.builder()
+        .purpose(RegistrationCodePurpose.valueOf(String.valueOf(fields.get("purpose"))))
+        .username(usernameOf(fields.get("username")))
+        .email(String.valueOf(fields.get("email")))
+        .codeExpiresAt(
+            Instant.ofEpochMilli(Long.parseLong(String.valueOf(fields.get("expires_at")))))
+        .nextResendAt(
+            Instant.ofEpochMilli(Long.parseLong(String.valueOf(fields.get("next_resend_at")))))
+        .build();
+  }
+
+  /// 存储里的用户名转回来：绑定用途存的是空串。
+  ///
+  /// @param stored 存储里的值
+  /// @return 用户名；绑定用途为 `null`
+  private static String usernameOf(Object stored) {
+    String username = String.valueOf(stored);
+    return NO_USERNAME.equals(username) ? null : username;
   }
 
   /// 验证码的键。

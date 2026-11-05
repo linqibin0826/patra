@@ -1,18 +1,17 @@
 package dev.patra.identity.app.account.usecase.oauth;
 
+import dev.patra.identity.app.account.service.PendingRegistrationCodes;
+import dev.patra.identity.app.account.service.PendingRegistrationCodes.IssuedCode;
 import dev.patra.identity.app.account.usecase.query.PendingRegistrationQueryService;
 import dev.patra.identity.domain.account.exception.RegistrationCodeLimitedException;
 import dev.patra.identity.domain.account.exception.UserIdentifierTakenException;
+import dev.patra.identity.domain.account.model.enums.RegistrationCodePurpose;
 import dev.patra.identity.domain.account.model.vo.EmailAddress;
-import dev.patra.identity.domain.account.model.vo.PendingCode;
 import dev.patra.identity.domain.account.model.vo.PendingRegistration;
-import dev.patra.identity.domain.account.model.vo.RegistrationCode;
 import dev.patra.identity.domain.account.model.vo.Username;
 import dev.patra.identity.domain.account.model.vo.mail.RegistrationCodeMail;
-import dev.patra.identity.domain.account.policy.ProviderRegistrationPolicy;
 import dev.patra.identity.domain.account.policy.UsernamePolicy;
 import dev.patra.identity.domain.account.port.mail.EmailDeliveryPort;
-import dev.patra.identity.domain.account.port.oauth.PendingRegistrationPort;
 import dev.patra.identity.domain.account.port.repository.FormerUsernameRepository;
 import dev.patra.identity.domain.account.port.repository.UserRepository;
 import dev.patra.identity.domain.account.port.throttle.RegistrationCodeThrottlePort;
@@ -20,9 +19,7 @@ import dev.patra.identity.domain.session.exception.InvalidUserFieldsException;
 import dev.patra.identity.domain.session.model.vo.UserFieldViolations;
 import dev.patra.tool.core.error.field.FieldViolation;
 import dev.patra.tool.cqrs.CommandHandler;
-import java.security.SecureRandom;
 import java.time.Clock;
-import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -43,16 +40,14 @@ public class SendRegistrationCodeHandler
     implements CommandHandler<SendRegistrationCodeCommand, RegistrationCodeSent> {
 
   private final PendingRegistrationQueryService pendingQueries;
-  private final PendingRegistrationPort pendingRegistrations;
+  private final PendingRegistrationCodes codes;
   private final UserRepository users;
   private final FormerUsernameRepository formerUsernames;
   private final UsernamePolicy usernamePolicy;
-  private final ProviderRegistrationPolicy policy;
   private final RegistrationCodeThrottlePort throttle;
   private final EmailDeliveryPort emailDelivery;
   private final TransactionOperations transactions;
   private final Clock clock;
-  private final SecureRandom random = new SecureRandom();
 
   /// 发验证码。
   ///
@@ -86,39 +81,25 @@ public class SendRegistrationCodeHandler
             wait -> {
               throw new RegistrationCodeLimitedException(wait);
             });
-    Duration ttl = codeTtl(registration, now);
-    Instant codeExpiresAt = now.plus(ttl);
-    Instant nextResendAt = now.plus(policy.resendCooldown());
-    RegistrationCode code = RegistrationCode.generate(random);
-    pendingRegistrations.storeCode(
-        command.ticket(),
-        PendingCode.of(username.value(), email.value(), codeExpiresAt, nextResendAt),
-        code,
-        ttl);
+    IssuedCode issued =
+        codes.issue(
+            command.ticket(),
+            registration,
+            RegistrationCodePurpose.REGISTER,
+            username.value(),
+            email.value(),
+            now);
     transactions.executeWithoutResult(
         status ->
             emailDelivery.send(
                 RegistrationCodeMail.builder()
                     .to(email)
                     .displayName(username.value())
-                    .code(code.value())
-                    .codeExpiresAt(codeExpiresAt)
+                    .code(issued.code().value())
+                    .codeExpiresAt(issued.pendingCode().codeExpiresAt())
                     .build()));
     log.info("第三方注册验证码已登记: provider={}", registration.provider());
-    return RegistrationCodeSent.of(email.value(), codeExpiresAt, nextResendAt);
-  }
-
-  /// 验证码的有效期，不超过待补填记录的余量：记录没了，码也没用了。
-  ///
-  /// @param registration 待补填记录
-  /// @param now 当前时间
-  /// @return 有效期
-  /// @throws InvalidUserFieldsException 记录已经到期
-  private Duration codeTtl(PendingRegistration registration, Instant now) {
-    Duration remaining = Duration.between(now, registration.expiresAt());
-    if (remaining.isZero() || remaining.isNegative()) {
-      throw new InvalidUserFieldsException(List.of(UserFieldViolations.ticketInvalid()));
-    }
-    return remaining.compareTo(policy.codeTtl()) < 0 ? remaining : policy.codeTtl();
+    return RegistrationCodeSent.of(
+        email.value(), issued.pendingCode().codeExpiresAt(), issued.pendingCode().nextResendAt());
   }
 }

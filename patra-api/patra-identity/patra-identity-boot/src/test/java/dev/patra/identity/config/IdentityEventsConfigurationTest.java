@@ -32,7 +32,7 @@ class IdentityEventsConfigurationTest {
       configuration.eventExternalizationConfiguration(mapper);
 
   @Test
-  @DisplayName("16 封安全邮件都外送：映射成集成事件，目标 identity.events、路由键按种类")
+  @DisplayName("17 封安全邮件都外送：映射成集成事件，目标 identity.events、路由键按种类")
   void should_externalize_every_security_mail() {
     for (OutgoingMail mail : SecurityMailFixture.all()) {
       assertThat(externalization.supports(mail)).as(mail.getClass().getSimpleName()).isTrue();

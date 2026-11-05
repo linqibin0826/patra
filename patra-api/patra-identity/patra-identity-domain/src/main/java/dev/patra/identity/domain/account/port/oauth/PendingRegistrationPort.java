@@ -1,5 +1,6 @@
 package dev.patra.identity.domain.account.port.oauth;
 
+import dev.patra.identity.domain.account.model.enums.RegistrationCodePurpose;
 import dev.patra.identity.domain.account.model.vo.CodeCheck;
 import dev.patra.identity.domain.account.model.vo.PendingCode;
 import dev.patra.identity.domain.account.model.vo.PendingRegistration;
@@ -28,7 +29,7 @@ public interface PendingRegistrationPort {
   /// 写一个验证码，覆盖旧的：旧码作废，错误次数重新算。
   ///
   /// @param ticket 凭证原文
-  /// @param pendingCode 绑定的用户名、邮箱和时间
+  /// @param pendingCode 绑定的用途、用户名、邮箱和时间
   /// @param code 验证码，存储里只有哈希
   /// @param ttl 有效期
   void storeCode(String ticket, PendingCode pendingCode, RegistrationCode code, Duration ttl);
@@ -39,13 +40,15 @@ public interface PendingRegistrationPort {
   /// @return 公开部分；没有时为空
   Optional<PendingCode> findCode(String ticket);
 
-  /// 原子地校验验证码：对了立刻用掉，错满次数作废。
+  /// 原子地校验验证码：对了立刻用掉，错满次数作废；用途不符按没有可用的码处理，不计错误次数。
   ///
   /// @param ticket 凭证原文
   /// @param code 提交的验证码
+  /// @param purpose 期望的用途
   /// @param maxAttempts 最多错几次
   /// @return 校验结果
-  CodeCheck verifyCode(String ticket, RegistrationCode code, int maxAttempts);
+  CodeCheck verifyCode(
+      String ticket, RegistrationCode code, RegistrationCodePurpose purpose, int maxAttempts);
 
   /// 删掉待补填记录和它的验证码。
   ///

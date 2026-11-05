@@ -124,6 +124,16 @@ public final class User {
     return emailVerifiedAt != null;
   }
 
+  /// 能否证明邮箱归属后绑定第三方账号（v0.19 决策 D）。
+  ///
+  /// 邮箱未验证的账号绝不行：可能是抢注的，抢注者的密码还留着，绑上去就是预劫持。注销中的账号和登录分流一致，可以。
+  ///
+  /// @return 可以绑定时为 `true`
+  public boolean canReceiveProviderLink() {
+    return isEmailVerified()
+        && (status == UserStatus.ACTIVE || status == UserStatus.PENDING_DELETION);
+  }
+
   /// 是否正常。
   ///
   /// @return 正常时为 `true`

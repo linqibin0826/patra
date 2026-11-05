@@ -14,12 +14,14 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import dev.patra.identity.app.account.service.PendingRegistrationCodes;
 import dev.patra.identity.app.account.usecase.login.AuthenticatedUser;
 import dev.patra.identity.app.account.usecase.query.PendingRegistrationQueryService;
 import dev.patra.identity.domain.account.exception.ProviderAccountTakenException;
 import dev.patra.identity.domain.account.exception.UserIdentifierTakenException;
 import dev.patra.identity.domain.account.model.aggregate.User;
 import dev.patra.identity.domain.account.model.enums.IdentityProvider;
+import dev.patra.identity.domain.account.model.enums.RegistrationCodePurpose;
 import dev.patra.identity.domain.account.model.enums.UserStatus;
 import dev.patra.identity.domain.account.model.read.UserAccountReadModel;
 import dev.patra.identity.domain.account.model.vo.CodeCheck;
@@ -88,15 +90,17 @@ class CompleteProviderRegistrationHandlerTest {
   private final CompleteProviderRegistrationHandler handler =
       new CompleteProviderRegistrationHandler(
           new PendingRegistrationQueryService(pending),
-          pending,
-          ProviderRegistrationPolicy.builder()
-              .pendingTtl(Duration.ofMinutes(30))
-              .codeTtl(Duration.ofMinutes(10))
-              .maxCodeAttempts(5)
-              .resendCooldown(Duration.ofSeconds(60))
-              .perEmailHourly(5)
-              .perIpHourly(20)
-              .build(),
+          new PendingRegistrationCodes(
+              pending,
+              ProviderRegistrationPolicy.builder()
+                  .pendingTtl(Duration.ofMinutes(30))
+                  .codeTtl(Duration.ofMinutes(10))
+                  .maxCodeAttempts(5)
+                  .resendCooldown(Duration.ofSeconds(60))
+                  .perEmailHourly(5)
+                  .perIpHourly(20)
+                  .linkPerEmailDaily(10)
+                  .build()),
           users,
           profiles,
           formerUsernames,
@@ -125,7 +129,7 @@ class CompleteProviderRegistrationHandlerTest {
   @BeforeEach
   void stubHappyPath() {
     when(pending.find(TICKET)).thenReturn(Optional.of(PENDING));
-    when(pending.verifyCode(eq(TICKET), any(), eq(5)))
+    when(pending.verifyCode(eq(TICKET), any(), eq(RegistrationCodePurpose.REGISTER), eq(5)))
         .thenAnswer(
             invocation -> {
               events.add("verify");
@@ -191,7 +195,8 @@ class CompleteProviderRegistrationHandlerTest {
   @Test
   @DisplayName("验证码不对：422 INVALID，什么都不写")
   void should_reject_wrong_code() {
-    when(pending.verifyCode(eq(TICKET), any(), eq(5))).thenReturn(new CodeCheck.Mismatch());
+    when(pending.verifyCode(eq(TICKET), any(), eq(RegistrationCodePurpose.REGISTER), eq(5)))
+        .thenReturn(new CodeCheck.Mismatch());
 
     assertThatThrownBy(() -> handler.handle(command("483920")))
         .isInstanceOfSatisfying(
@@ -206,7 +211,8 @@ class CompleteProviderRegistrationHandlerTest {
   @Test
   @DisplayName("没有可用的验证码：422 EXPIRED，门户提示重发")
   void should_report_expired_when_no_active_code() {
-    when(pending.verifyCode(eq(TICKET), any(), eq(5))).thenReturn(new CodeCheck.NoActiveCode());
+    when(pending.verifyCode(eq(TICKET), any(), eq(RegistrationCodePurpose.REGISTER), eq(5)))
+        .thenReturn(new CodeCheck.NoActiveCode());
 
     assertThatThrownBy(() -> handler.handle(command("483920")))
         .isInstanceOfSatisfying(
@@ -223,7 +229,7 @@ class CompleteProviderRegistrationHandlerTest {
     assertThatThrownBy(() -> handler.handle(command("12ab")))
         .isInstanceOf(InvalidUserFieldsException.class);
 
-    verify(pending, never()).verifyCode(anyString(), any(), eq(5));
+    verify(pending, never()).verifyCode(anyString(), any(), any(), eq(5));
   }
 
   @Test

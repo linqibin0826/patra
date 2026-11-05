@@ -10,6 +10,7 @@ import dev.patra.identity.domain.account.model.vo.mail.EmailChangeRevertedMail;
 import dev.patra.identity.domain.account.model.vo.mail.EmailChangedConfirmationMail;
 import dev.patra.identity.domain.account.model.vo.mail.EmailChangedNoticeMail;
 import dev.patra.identity.domain.account.model.vo.mail.EmailVerificationMail;
+import dev.patra.identity.domain.account.model.vo.mail.LoginMethodLinkCodeMail;
 import dev.patra.identity.domain.account.model.vo.mail.LoginMethodLinkedMail;
 import dev.patra.identity.domain.account.model.vo.mail.LoginMethodUnlinkedMail;
 import dev.patra.identity.domain.account.model.vo.mail.NewDeviceLoginMail;
@@ -50,7 +51,7 @@ public final class SecurityMailFixture {
 
   private SecurityMailFixture() {}
 
-  /// 16 种各一封，每次调用都是新的事件 ID。
+  /// 17 种各一封，每次调用都是新的事件 ID。
   ///
   /// @return 样本
   public static List<OutgoingMail> all() {
@@ -60,6 +61,15 @@ public final class SecurityMailFixture {
             .displayName("陈宇")
             .code("483920")
             .codeExpiresAt(LINK_EXPIRES)
+            .build(),
+        LoginMethodLinkCodeMail.builder()
+            .to(TO)
+            .displayName("陈宇")
+            .username("chen-yu")
+            .code("483920")
+            .codeExpiresAt(LINK_EXPIRES)
+            .providerName("GitHub")
+            .accountLabel("octocat")
             .build(),
         LoginMethodLinkedMail.builder()
             .to(TO)

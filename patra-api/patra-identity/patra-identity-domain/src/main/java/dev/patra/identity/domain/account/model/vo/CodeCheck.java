@@ -5,7 +5,7 @@ public sealed interface CodeCheck {
 
   /// 对了，验证码已用掉。
   ///
-  /// @param username 发码时绑定的用户名
+  /// @param username 发码时绑定的用户名；绑定用途没有，为 `null`
   /// @param email 发码时绑定的邮箱
   record Matched(String username, String email) implements CodeCheck {}
 

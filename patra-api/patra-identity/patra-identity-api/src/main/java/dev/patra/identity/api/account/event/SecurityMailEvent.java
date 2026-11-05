@@ -24,6 +24,7 @@ public sealed interface SecurityMailEvent extends IntegrationEvent
         AccountDeletionReminderMailEvent,
         AccountDeletionCompletedMailEvent,
         RegistrationCodeMailEvent,
+        LoginMethodLinkCodeMailEvent,
         LoginMethodLinkedMailEvent,
         LoginMethodUnlinkedMailEvent {
 

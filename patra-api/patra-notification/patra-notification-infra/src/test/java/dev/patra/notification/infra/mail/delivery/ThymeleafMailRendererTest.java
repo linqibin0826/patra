@@ -78,7 +78,7 @@ class ThymeleafMailRendererTest {
   void should_render_every_kind_without_leftover_expressions() {
     List<OutgoingMail> all = all();
 
-    assertThat(all).extracting(OutgoingMail::template).hasSize(16).doesNotHaveDuplicates();
+    assertThat(all).extracting(OutgoingMail::template).hasSize(17).doesNotHaveDuplicates();
     for (OutgoingMail mail : all) {
       RenderedMail rendered = renderer.render(mail);
       assertThat(rendered.subject()).as(mail.template()).isEqualTo(mail.subject());
@@ -153,6 +153,24 @@ class ThymeleafMailRendererTest {
         .contains("请立即修改密码")
         .doesNotContain("/settings/security")
         .doesNotContainPattern("\\sth:[a-z]+=");
+  }
+
+  @Test
+  @DisplayName("就地绑定的验证码：写明把哪个第三方账号绑到哪个账号，不要告诉别人，不是你在操作账号不会有变化")
+  void should_render_login_method_link_code() {
+    RenderedMail rendered = renderer.render(loginMethodLinkCode());
+
+    assertThat(rendered.subject()).isEqualTo("绑定登录方式的验证码");
+    for (String body : List.of(rendered.text(), rendered.html())) {
+      assertThat(body)
+          .contains("483920")
+          .contains("GitHub")
+          .contains("octocat")
+          .contains("chen-yu")
+          .contains(VALIDITY)
+          .contains("不要把验证码告诉任何人")
+          .contains("账号不会有任何变化");
+    }
   }
 
   @Test
@@ -426,7 +444,7 @@ class ThymeleafMailRendererTest {
         .contains(VALIDITY);
   }
 
-  /// 16 类各一封。
+  /// 17 类各一封。
   ///
   /// @return 邮件
   private static List<OutgoingMail> all() {
@@ -445,6 +463,7 @@ class ThymeleafMailRendererTest {
         reminder(),
         completed(),
         registrationCode(),
+        loginMethodLinkCode(),
         loginMethodMail(SecurityMailKind.LOGIN_METHOD_LINKED),
         loginMethodMail(SecurityMailKind.LOGIN_METHOD_UNLINKED));
   }
@@ -469,6 +488,24 @@ class ThymeleafMailRendererTest {
   /// @return 邮件
   private static OutgoingMail registrationCode() {
     return linkMail(SecurityMailKind.REGISTRATION_CODE, Map.of("code", "483920"), null);
+  }
+
+  /// 就地绑定的验证码。
+  ///
+  /// @return 邮件
+  private static OutgoingMail loginMethodLinkCode() {
+    return linkMail(
+        SecurityMailKind.LOGIN_METHOD_LINK_CODE,
+        Map.of(
+            "code",
+            "483920",
+            "username",
+            "chen-yu",
+            "providerName",
+            "GitHub",
+            "accountLabel",
+            "octocat"),
+        null);
   }
 
   /// 绑定或解绑登录方式。

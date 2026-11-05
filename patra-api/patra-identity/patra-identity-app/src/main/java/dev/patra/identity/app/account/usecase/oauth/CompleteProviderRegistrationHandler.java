@@ -1,5 +1,6 @@
 package dev.patra.identity.app.account.usecase.oauth;
 
+import dev.patra.identity.app.account.service.PendingRegistrationCodes;
 import dev.patra.identity.app.account.usecase.login.AuthenticatedUser;
 import dev.patra.identity.app.account.usecase.query.PendingRegistrationQueryService;
 import dev.patra.identity.domain.account.exception.ProviderAccountTakenException;
@@ -7,6 +8,7 @@ import dev.patra.identity.domain.account.exception.UserIdentifierTakenException;
 import dev.patra.identity.domain.account.model.aggregate.ExternalIdentity;
 import dev.patra.identity.domain.account.model.aggregate.User;
 import dev.patra.identity.domain.account.model.aggregate.UserProfile;
+import dev.patra.identity.domain.account.model.enums.RegistrationCodePurpose;
 import dev.patra.identity.domain.account.model.read.UserAccountReadModel;
 import dev.patra.identity.domain.account.model.vo.CodeCheck;
 import dev.patra.identity.domain.account.model.vo.EmailAddress;
@@ -14,8 +16,6 @@ import dev.patra.identity.domain.account.model.vo.PendingRegistration;
 import dev.patra.identity.domain.account.model.vo.RegistrationCode;
 import dev.patra.identity.domain.account.model.vo.RequestOrigin;
 import dev.patra.identity.domain.account.model.vo.Username;
-import dev.patra.identity.domain.account.policy.ProviderRegistrationPolicy;
-import dev.patra.identity.domain.account.port.oauth.PendingRegistrationPort;
 import dev.patra.identity.domain.account.port.read.UserReadPort;
 import dev.patra.identity.domain.account.port.repository.ExternalIdentityRepository;
 import dev.patra.identity.domain.account.port.repository.FormerUsernameRepository;
@@ -56,8 +56,7 @@ public class CompleteProviderRegistrationHandler
     implements CommandHandler<CompleteProviderRegistrationCommand, AuthenticatedUser> {
 
   private final PendingRegistrationQueryService pendingQueries;
-  private final PendingRegistrationPort pendingRegistrations;
-  private final ProviderRegistrationPolicy policy;
+  private final PendingRegistrationCodes codes;
   private final UserRepository users;
   private final UserProfileRepository profiles;
   private final FormerUsernameRepository formerUsernames;
@@ -75,7 +74,7 @@ public class CompleteProviderRegistrationHandler
   @Override
   public AuthenticatedUser handle(CompleteProviderRegistrationCommand command) {
     List<FieldViolation> violations = new ArrayList<>();
-    Optional<RegistrationCode> parsed = parseCode(command.code(), violations);
+    Optional<RegistrationCode> parsed = codes.parse(command.code(), violations);
     violations.addAll(LoginClient.validate(command.clientType(), command.deviceId()));
     if (!violations.isEmpty()) {
       throw new InvalidUserFieldsException(violations);
@@ -83,9 +82,7 @@ public class CompleteProviderRegistrationHandler
     LoginClient client = LoginClient.of(command.clientType(), command.deviceId());
     PendingRegistration registration = pendingQueries.require(command.ticket());
     CodeCheck.Matched matched =
-        verified(
-            pendingRegistrations.verifyCode(
-                command.ticket(), parsed.orElseThrow(), policy.maxCodeAttempts()));
+        codes.verify(command.ticket(), parsed.orElseThrow(), RegistrationCodePurpose.REGISTER);
     EmailAddress email = EmailAddress.of(matched.email());
     Username username = Username.of(matched.username());
     // 解析 UA 与属地是纯计算：放在事务之外
@@ -121,44 +118,12 @@ public class CompleteProviderRegistrationHandler
                               () -> new IllegalStateException("刚保存的用户读不回来: " + saved.getId()));
                   return AuthenticatedUser.of(session.token(), account);
                 }));
-    deletePendingQuietly(command.ticket());
+    codes.deletePendingQuietly(command.ticket());
     log.info(
         "前台用户已用第三方账号注册: userId={}, provider={}",
         authenticated.account().userId(),
         registration.provider());
     return authenticated;
-  }
-
-  /// 解析验证码。
-  ///
-  /// @param rawCode 原始输入
-  /// @param violations 字段错误，不合法时往里加
-  /// @return 验证码；不合法时为空
-  private static Optional<RegistrationCode> parseCode(
-      String rawCode, List<FieldViolation> violations) {
-    if (rawCode == null || rawCode.isBlank()) {
-      violations.add(UserFieldViolations.codeRequired());
-      return Optional.empty();
-    }
-    Optional<RegistrationCode> parsed = RegistrationCode.parse(rawCode);
-    if (parsed.isEmpty()) {
-      violations.add(UserFieldViolations.codeInvalidFormat());
-    }
-    return parsed;
-  }
-
-  /// 校验结果转成通过的那一种，其余抛字段错误。
-  ///
-  /// @param check 校验结果
-  /// @return 通过的结果
-  private static CodeCheck.Matched verified(CodeCheck check) {
-    return switch (check) {
-      case CodeCheck.Matched matched -> matched;
-      case CodeCheck.Mismatch _ ->
-          throw new InvalidUserFieldsException(List.of(UserFieldViolations.codeInvalid()));
-      case CodeCheck.NoActiveCode _ ->
-          throw new InvalidUserFieldsException(List.of(UserFieldViolations.codeExpired()));
-    };
   }
 
   /// 再查一次占用：发码之后邮箱或用户名可能被别人抢了。并发撞唯一约束由仓储转成同一个异常。
@@ -176,17 +141,6 @@ public class CompleteProviderRegistrationHandler
     }
     if (!taken.isEmpty()) {
       throw new UserIdentifierTakenException(taken);
-    }
-  }
-
-  /// 删待补填记录。失败只记日志：账号已经建好，记录会自己过期，重复注册由唯一约束挡住。
-  ///
-  /// @param ticket 凭证原文
-  private void deletePendingQuietly(String ticket) {
-    try {
-      pendingRegistrations.delete(ticket);
-    } catch (RuntimeException e) {
-      log.warn("注册完成后删待补填记录失败，等它自己过期: {}", e.getMessage());
     }
   }
 }

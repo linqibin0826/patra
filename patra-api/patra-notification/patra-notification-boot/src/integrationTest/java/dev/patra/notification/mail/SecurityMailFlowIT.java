@@ -17,6 +17,7 @@ import dev.patra.identity.api.account.event.EmailChangeRevertedMailEvent;
 import dev.patra.identity.api.account.event.EmailChangedConfirmationMailEvent;
 import dev.patra.identity.api.account.event.EmailChangedNoticeMailEvent;
 import dev.patra.identity.api.account.event.EmailVerificationMailEvent;
+import dev.patra.identity.api.account.event.LoginMethodLinkCodeMailEvent;
 import dev.patra.identity.api.account.event.LoginMethodLinkedMailEvent;
 import dev.patra.identity.api.account.event.LoginMethodUnlinkedMailEvent;
 import dev.patra.identity.api.account.event.NewDeviceLoginMailEvent;
@@ -84,7 +85,7 @@ class SecurityMailFlowIT extends SecurityMailITSupport {
     List<Sample> samples = allKinds();
     samples.forEach(sample -> publish(sample.event(), sample.routingKey()));
 
-    assertThat(greenMail.waitForIncomingEmail(20_000, 16)).isTrue();
+    assertThat(greenMail.waitForIncomingEmail(20_000, 17)).isTrue();
     for (Sample sample : samples) {
       List<MimeMessage> mails = mailsTo(sample.event().to());
       assertThat(mails).as(sample.routingKey()).hasSize(1);
@@ -100,7 +101,7 @@ class SecurityMailFlowIT extends SecurityMailITSupport {
       assertThat(mail.getHeader("List-Unsubscribe-Post")).as(sample.routingKey()).isNull();
     }
     List<UUID> ids = samples.stream().map(sample -> sample.event().eventId()).toList();
-    await().atMost(Duration.ofSeconds(10)).until(() -> deliveryRows(ids) == 16);
+    await().atMost(Duration.ofSeconds(10)).until(() -> deliveryRows(ids) == 17);
     assertThat(ids).allSatisfy(id -> assertThat(processedRows(id)).isEqualTo(1));
   }
 
@@ -458,6 +459,19 @@ class SecurityMailFlowIT extends SecurityMailITSupport {
                 .build(),
             RegistrationCodeMailEvent.ROUTING_KEY,
             "你的 Patra 注册验证码"),
+        new Sample(
+            LoginMethodLinkCodeMailEvent.builder()
+                .eventId(UUID.randomUUID())
+                .to("login-method-link-code@example.com")
+                .displayName("陈宇")
+                .username("chen-yu")
+                .code("483920")
+                .codeExpiresAt(LATER)
+                .providerName("GitHub")
+                .accountLabel("octocat")
+                .build(),
+            LoginMethodLinkCodeMailEvent.ROUTING_KEY,
+            "绑定登录方式的验证码"),
         new Sample(
             LoginMethodLinkedMailEvent.builder()
                 .eventId(UUID.randomUUID())

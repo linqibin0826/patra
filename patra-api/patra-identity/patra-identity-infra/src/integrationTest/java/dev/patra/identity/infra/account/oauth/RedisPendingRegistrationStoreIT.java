@@ -3,6 +3,7 @@ package dev.patra.identity.infra.account.oauth;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.patra.identity.domain.account.model.enums.IdentityProvider;
+import dev.patra.identity.domain.account.model.enums.RegistrationCodePurpose;
 import dev.patra.identity.domain.account.model.vo.CodeCheck;
 import dev.patra.identity.domain.account.model.vo.EmailTokenSecret;
 import dev.patra.identity.domain.account.model.vo.PendingCode;
@@ -89,13 +90,17 @@ class RedisPendingRegistrationStoreIT {
   }
 
   private static PendingCode pendingCode() {
-    return PendingCode.of(
-        "chen-yu",
-        "chen@example.com",
-        Instant.parse("2026-11-04T08:10:00Z"),
-        Instant.parse("2026-11-04T08:01:00Z"));
+    return PendingCode.builder()
+        .purpose(RegistrationCodePurpose.REGISTER)
+        .username("chen-yu")
+        .email("chen@example.com")
+        .codeExpiresAt(Instant.parse("2026-11-04T08:10:00Z"))
+        .nextResendAt(Instant.parse("2026-11-04T08:01:00Z"))
+        .build();
   }
 
+  private static final RegistrationCodePurpose REGISTER = RegistrationCodePurpose.REGISTER;
+  private static final RegistrationCodePurpose LINK = RegistrationCodePurpose.LINK;
   private static final RegistrationCode CODE = new RegistrationCode("483920");
   private static final RegistrationCode WRONG = new RegistrationCode("000000");
 
@@ -122,9 +127,10 @@ class RedisPendingRegistrationStoreIT {
   void should_match_only_once() {
     String ticket = ticketWithCode();
 
-    assertThat(store.verifyCode(ticket, CODE, 5))
+    assertThat(store.verifyCode(ticket, CODE, REGISTER, 5))
         .isEqualTo(new CodeCheck.Matched("chen-yu", "chen@example.com"));
-    assertThat(store.verifyCode(ticket, CODE, 5)).isInstanceOf(CodeCheck.NoActiveCode.class);
+    assertThat(store.verifyCode(ticket, CODE, REGISTER, 5))
+        .isInstanceOf(CodeCheck.NoActiveCode.class);
     assertThat(store.findCode(ticket)).isEmpty();
   }
 
@@ -134,30 +140,67 @@ class RedisPendingRegistrationStoreIT {
     String ticket = ticketWithCode();
 
     for (int i = 0; i < 4; i++) {
-      assertThat(store.verifyCode(ticket, WRONG, 5)).isInstanceOf(CodeCheck.Mismatch.class);
+      assertThat(store.verifyCode(ticket, WRONG, REGISTER, 5))
+          .isInstanceOf(CodeCheck.Mismatch.class);
     }
-    assertThat(store.verifyCode(ticket, WRONG, 5)).isInstanceOf(CodeCheck.NoActiveCode.class);
-    assertThat(store.verifyCode(ticket, CODE, 5)).isInstanceOf(CodeCheck.NoActiveCode.class);
+    assertThat(store.verifyCode(ticket, WRONG, REGISTER, 5))
+        .isInstanceOf(CodeCheck.NoActiveCode.class);
+    assertThat(store.verifyCode(ticket, CODE, REGISTER, 5))
+        .isInstanceOf(CodeCheck.NoActiveCode.class);
+  }
+
+  @Test
+  @DisplayName("绑定用途的码：用户名为 null 能读回；对了返回邮箱")
+  void should_store_link_code_without_username() {
+    String ticket = store.create(PENDING, Duration.ofMinutes(30));
+    PendingCode linkCode =
+        PendingCode.builder()
+            .purpose(LINK)
+            .email("chen@example.com")
+            .codeExpiresAt(Instant.parse("2026-11-04T08:10:00Z"))
+            .nextResendAt(Instant.parse("2026-11-04T08:01:00Z"))
+            .build();
+
+    store.storeCode(ticket, linkCode, CODE, Duration.ofMinutes(10));
+
+    assertThat(store.findCode(ticket)).contains(linkCode);
+    assertThat(store.verifyCode(ticket, CODE, LINK, 5))
+        .isEqualTo(new CodeCheck.Matched(null, "chen@example.com"));
+  }
+
+  @Test
+  @DisplayName("用途不符：按没有可用的码处理，不计错误次数，码还在")
+  void should_treat_other_purpose_as_no_code_without_counting() {
+    String ticket = ticketWithCode();
+
+    for (int i = 0; i < 6; i++) {
+      assertThat(store.verifyCode(ticket, CODE, LINK, 5))
+          .isInstanceOf(CodeCheck.NoActiveCode.class);
+    }
+
+    assertThat(store.verifyCode(ticket, WRONG, REGISTER, 5)).isInstanceOf(CodeCheck.Mismatch.class);
+    assertThat(store.verifyCode(ticket, CODE, REGISTER, 5)).isInstanceOf(CodeCheck.Matched.class);
   }
 
   @Test
   @DisplayName("重发：旧码作废，错误次数重新算")
   void should_replace_old_code_on_resend() {
     String ticket = ticketWithCode();
-    store.verifyCode(ticket, WRONG, 5);
+    store.verifyCode(ticket, WRONG, REGISTER, 5);
     RegistrationCode next = new RegistrationCode("111111");
 
     store.storeCode(ticket, pendingCode(), next, Duration.ofMinutes(10));
 
-    assertThat(store.verifyCode(ticket, CODE, 5)).isInstanceOf(CodeCheck.Mismatch.class);
-    assertThat(store.verifyCode(ticket, next, 5)).isInstanceOf(CodeCheck.Matched.class);
+    assertThat(store.verifyCode(ticket, CODE, REGISTER, 5)).isInstanceOf(CodeCheck.Mismatch.class);
+    assertThat(store.verifyCode(ticket, next, REGISTER, 5)).isInstanceOf(CodeCheck.Matched.class);
   }
 
   @Test
   @DisplayName("没发过码：NoActiveCode；删掉待补填记录时验证码一起删")
   void should_have_no_code_when_not_sent_or_deleted() {
     String fresh = store.create(PENDING, Duration.ofMinutes(30));
-    assertThat(store.verifyCode(fresh, CODE, 5)).isInstanceOf(CodeCheck.NoActiveCode.class);
+    assertThat(store.verifyCode(fresh, CODE, REGISTER, 5))
+        .isInstanceOf(CodeCheck.NoActiveCode.class);
 
     String ticket = ticketWithCode();
     store.delete(ticket);

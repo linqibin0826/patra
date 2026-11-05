@@ -107,7 +107,7 @@ GET /login/oauth2/code/{provider}?<平台给的查询串原样转发>    公开
 | 场景 | 状态 | `code` | `traits` |
 |---|---|---|---|
 | 用户在平台上点了拒绝 | 422 | `IDN-0422` | `RULE_VIOLATION`、`OAUTH_CANCELLED` |
-| `state` 不存在或已用过、`id_token` 签名 / nonce / 受众 / 签发方不对、平台拒绝授权码 | 422 | `IDN-0422` | `RULE_VIOLATION`、`OAUTH_REJECTED` |
+| `state` 不存在或已用过、`id_token` 签名 / nonce / 受众 / 签发方不对、平台拒绝授权码（含 GitHub 用 200 回错误） | 422 | `IDN-0422` | `RULE_VIOLATION`、`OAUTH_REJECTED` |
 | 封禁账号登录 | 403 | `IDN-0403` | `FORBIDDEN` |
 | 绑定：回调时没带会话或会话已失效 | 401 | `IDN-0401` | |
 | 绑定：当前用户或会话与发起时不一致 | 403 | `IDN-0403` | `FORBIDDEN`、`LINK_SESSION_MISMATCH` |
@@ -134,11 +134,11 @@ GET /auth/oauth/registration
   "suggestedUsername": "octocat",
   "suggestedEmail": null,
   "expiresAt": "2026-11-04T09:30:00Z",
-  "pendingCode": { "username": "chen-yu", "email": "chen@example.com", "codeExpiresAt": "...", "nextResendAt": "..." }
+  "pendingCode": { "purpose": "REGISTER", "username": "chen-yu", "email": "chen@example.com", "codeExpiresAt": "...", "nextResendAt": "..." }
 }
 ```
 
-`pendingCode` 没发过码或已失效时为 `null`；有值时刷新页面可以直接回到输验证码这一步，重发要提交的用户名和邮箱都在里面。
+`pendingCode` 没发过码或已失效时为 `null`；有值时刷新页面可以直接回到输验证码这一步，重发要提交的用户名和邮箱都在里面。`purpose` 是 `REGISTER` 或 `LINK`（第 2.3.1 节，`username` 为 `null`）。
 
 **提交用户名、邮箱并发验证码（重发也调它）：**
 
@@ -180,6 +180,48 @@ POST /auth/oauth/registration/complete
 | 同一个第三方账号已注册（两个标签页并发） | 409 | `IDN-0409`，`PROVIDER_ACCOUNT_TAKEN` |
 
 结果：`email_verified_at` 有值，没有密码凭据（`hasPassword: false`），会话不开放再认证窗口。
+
+### 2.3.1 邮箱撞车时就地绑定
+
+`POST /auth/oauth/registration/code` 回 409 `ALREADY_REGISTERED` 时，门户除了现有提示，再给一个选项：验证这个邮箱并绑定到已有账号。两个接口都公开，都带 `X-Patra-Registration-Ticket`，头缺失或失效同第 2.3 节。
+
+**发验证码（重发也调它）：**
+
+```text
+POST /auth/oauth/registration/link-code
+{ "email": "chen@example.com" }
+```
+
+凭证有效、邮箱格式合法时**一律** `202`，结构同 `/code`：`{ "email": "...", "codeExpiresAt": "...", "nextResendAt": "..." }`。
+
+| 场景 | 状态 | 内容 |
+|---|---|---|
+| 邮箱格式不合法 | 422 | `errors[{ email, ... }]` |
+| 发送太频繁（和 `/code` 共用冷却与小时配额；另有同邮箱每天 10 封，只计这个接口） | 429 | `IDN-0429`，`QUOTA_EXCEEDED`，`Retry-After`、`retryAfterSeconds`；只看邮箱，和账号状态无关 |
+
+邮箱没注册、对方邮箱未验证、账号已封禁时，**响应一样，只是不发信**。门户文案不能说「已发送」，要说「如果这个邮箱可以绑定，你会收到验证码；收不到就先用原方式登录，到设置页绑定」。
+
+**提交验证码，绑定并登录：**
+
+```text
+POST /auth/oauth/registration/link
+{ "code": "483920", "clientType": "web", "deviceId": "..." }
+```
+
+成功 `200`，和登录同构：`{ "sessionToken": "...", "user": { ... } }`。用户名、邮箱不用再传，绑在验证码上。门户写会话 Cookie，清 `patra_oauth_ticket`。`user.status` 为 `PENDING_DELETION` 时进取消注销页。
+
+| 场景 | 状态 | 内容 |
+|---|---|---|
+| 验证码为空 / 不是 6 位数字 | 422 | `errors[{ code, REQUIRED \| INVALID_FORMAT }]` |
+| 验证码不对 | 422 | `errors[{ code, INVALID }]` |
+| 没有可用的验证码：过期、已用、错满 5 次 | 422 | `errors[{ code, EXPIRED }]`，门户提示重新发送 |
+| 这个第三方账号已绑给别的账号（并发、另一个标签页） | 409 | `IDN-0409`，`PROVIDER_ACCOUNT_TAKEN` |
+| 目标账号已绑了这一家的另一个账号 | 409 | `IDN-0409`，`PROVIDER_ALREADY_LINKED` |
+| 凭证已用过（重放） | 422 | `errors[{ ticket, INVALID }]` |
+
+结果：外部身份写好，发绑定安全邮件，会话不写 `auth_at`，不算再认证。
+
+**怎么做到不多泄露**：不符合条件时也生成一个验证码存进 Redis，只是不发出去。于是 `pendingCode`、错误次数、过期都和正常情况一样，错码 `INVALID`、错满 `EXPIRED`，看不出区别。万一猜中这个没发出去的码（五次机会，百万分之五），事务里复核到不符合条件，也回 `INVALID`。两个路径的耗时差一次登记邮件的写库，和 `/auth/password/forgot` 一样不再抹平。
 
 ### 2.4 设置页登录方式
 
@@ -365,6 +407,8 @@ return new AdditionalSecurityFilterChain(http.build());
 | `invalid_token_response`、`invalid_user_info_response`、`server_error`、`temporarily_unavailable`，以及 `InternalAuthenticationServiceException`（Redis） | 503 |
 | 其余（`authorization_request_not_found`、`invalid_state_parameter`、`invalid_id_token`、`invalid_nonce`、`invalid_grant` 等） | `OAUTH_REJECTED` |
 
+GitHub 拒绝授权码时回 2xx，错误写在 JSON 里（框架报 `Missing required parameter: access_token`，只有 2xx 且 JSON 里没有 `access_token` 才走到这里），框架归成 `invalid_token_response`。令牌响应的转换器看到 `error` 字段就抛 `ProviderTokenRefusedException`，失败处理器顺着原因链认出它，按 `OAUTH_REJECTED` 处理，并记一条 `WARN` 带错误码（`bad_verification_code`、`incorrect_client_credentials` 排查要用）。其余 `invalid_token_response`（连不上、5xx、响应读不了）仍是 503。
+
 `StandardErrorTrait` 没有 400，所以协议失败用 `RULE_VIOLATION`（422）。`OAuth2Error` 的描述不进响应。回调查询串带来的 `server_error`、`temporarily_unavailable`，描述是匿名请求写的，只进 `debug` 日志；换令牌、取资料失败的描述来自服务端，随 503 进 `ERROR` 日志，方便排查。
 
 ## 6. 授权请求存储（决策 B）
@@ -427,6 +471,7 @@ Redis：
 | `idn:oauth:code:<ticket 的 SHA-256>` | HASH | `username`、`email`、`code_hash`、`attempts`、`expires_at`、`next_resend_at` | 10 分钟，不超过待补填记录的余量 |
 | `idn:oauth-code:cooldown:email:<h>` | | 同邮箱 60 秒冷却 | 走 `action-throttle.lua` |
 | `idn:oauth-code:hour:email:<h>` | | 同邮箱每小时 5 封 | 同上 |
+| `idn:oauth-code:day:link:email:<h>` | | 就地绑定同邮箱每天 10 封 | 同上 |
 | `idn:oauth-code:hour:ip:<h>` | | 同 IP 每小时 20 封 | 同上 |
 
 - `ticket`：32 字节 `SecureRandom`，base64url，43 个字符，Redis 里只存哈希。
@@ -440,6 +485,22 @@ Redis：
 **不建密码凭据，不签 `EMAIL_VERIFY` 令牌，不发验证邮件**：邮箱刚证明过。
 
 撞上已注册邮箱不是账号合并：第 2.3 节在发码前就拒绝，事务里再拒绝一次。
+
+### 7.3.1 就地绑定（决策 D 的补充）
+
+验证码记录多一个 `purpose`（`REGISTER` / `LINK`）。`oauth-code-verify.lua` 按期望的用途校验：用途不符按 `NONE` 处理，不计错误次数。一个凭证同一时间只有一个验证码，重发或换用途都覆盖旧的。
+
+`SendProviderLinkCodeHandler`：读待补填 → 校验邮箱 → 限流（和注册共用 `RegistrationCodeThrottlePort`，放在判断资格之前：配额不因账号状态而不同）→ 判断资格 → 写验证码 → 有资格才在短事务里登记 `LoginMethodLinkCodeMail`。
+
+资格（`User.canReceiveProviderLink`）：`ACTIVE` 或 `PENDING_DELETION`，且邮箱已验证。
+
+`LinkPendingRegistrationHandler`：校验字段 → 读待补填 → 校验验证码（对了就用掉，并发只有一个赢）→ 解析来源（事务外）→ 事务里按邮箱找用户、锁行、复核资格（不符合回 `code` / `INVALID`）→ `(provider, subject)` 已有：是这个账号的按登录处理，不再发邮件；别人的 `PROVIDER_ACCOUNT_TAKEN` → `(user_id, provider)` 已有 `PROVIDER_ALREADY_LINKED` → `insertIfAbsent`，`false` 按 `PROVIDER_ACCOUNT_TAKEN` → 登记 `LoginMethodLinkedMail` → 建不带密码证明的会话（写 Redis，不随事务回滚，所以排最后）→ 提交后删待补填记录。
+
+**不要求再认证**：能收这个邮箱的人本来也能走找回密码。不走新设备提醒：绑定安全邮件已经带了设备和位置。
+
+**猜码的余量和每日上限**：找回密码的令牌是 32 字节随机数，这里只有 6 位数字，猜中就能登录别人的账号，所以比注册多一道：`/link-code` 同邮箱每天 10 封（`idn:oauth-code:day:link:email:<h>`，配置项 `link-per-email-daily`）。每封错 5 次，一天 50 次机会，连续猜一个月约 0.15%；只有小时上限时约 1.8%。
+
+超限回和其他限流一样的 429，不做成「202 但不发信」：配额只按邮箱计，排在判断资格之前，有资格、未验证、没注册的邮箱到第 11 封都是同样的 429、同样的等待时间，看不出账号状态。如果假装 202，真用户当天收不到信也不知道原因。代价是别人可以耗光某个邮箱当天的配额，这期间本人仍可以先用原方式登录，到设置页绑定。
 
 ### 7.4 绑定与解绑（决策 E）
 
@@ -513,6 +574,7 @@ CREATE TABLE idn_user_external_identity
 | `login-method-linked` | 绑定成功 | 平台名、账号标识、操作上下文 | 发 |
 | `login-method-unlinked` | 解绑成功 | 平台名、账号标识、操作上下文 | 发 |
 
+- `login-method-link-code`（就地绑定的验证码）：事实是验证码、过期时间、平台名、第三方账号标识、Patra 用户名；过期不发。这是这条路唯一的凭证，所以要写明「把 GitHub 账号 octocat 绑定到你的 Patra 账号 chen-yu」，「不要把验证码告诉任何人；不是你在操作就忽略这封邮件，账号不会有变化」，防止被诱导转发。
 - 没有密码的用户申请重设时，`PasswordResetMailEvent.settingPassword` 为真，主题和正文说「设置密码」。注销两封的「用这个邮箱和密码登录」改成「重新登录」：只用第三方的人也要看得懂。
 - 验证码那封写明「不要把验证码告诉任何人；如果不是你在注册 Patra，忽略这封邮件，不会有账号被创建」。收件人还没有账号，`displayName` 用提交的用户名。
 - 验证码和现有一次性令牌链接一样，在事件里只待到 broker 确认（`completion-mode: delete`）。
@@ -563,6 +625,8 @@ CREATE TABLE idn_user_external_identity
 3. 第三方注册的账号走一遍找回密码：外部身份不变，邮箱仍已验证（确认重设流程不碰外部身份）。
 4. 填已注册邮箱：不发码（捕获队列里没有 `registration-code`），原账号所有列不变。
 5. 错 5 次后验证码作废，正确的码也进不去。
+
+就地绑定（`ProviderInPlaceLinkFlowIT`）：有资格的账号收到码、绑定并登录、再登录进同一账号、收到绑定邮件；未验证、封禁、未注册的邮箱响应和错码行为都一样，且没有信；错误验证码不绑；凭证重放被拒；注册用途的码不能用来绑定；目标账号已绑同一家、第三方账号已绑别人时 409；新会话没有 `auth_at`。
 
 ## 13. 被替代的 v0.12 决策
 

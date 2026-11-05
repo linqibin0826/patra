@@ -1,6 +1,8 @@
 package dev.patra.identity.adapter.account.rest;
 
 import dev.patra.identity.adapter.account.rest.request.CompleteProviderRegistrationRequest;
+import dev.patra.identity.adapter.account.rest.request.LinkPendingRegistrationRequest;
+import dev.patra.identity.adapter.account.rest.request.SendProviderLinkCodeRequest;
 import dev.patra.identity.adapter.account.rest.request.SendRegistrationCodeRequest;
 import dev.patra.identity.adapter.account.rest.response.AuthenticatedUserResponse;
 import dev.patra.identity.adapter.account.rest.response.CurrentUserResponse;
@@ -8,6 +10,8 @@ import dev.patra.identity.adapter.account.rest.response.PendingRegistrationRespo
 import dev.patra.identity.adapter.account.rest.response.RegistrationCodeSentResponse;
 import dev.patra.identity.app.account.usecase.login.AuthenticatedUser;
 import dev.patra.identity.app.account.usecase.oauth.CompleteProviderRegistrationCommand;
+import dev.patra.identity.app.account.usecase.oauth.LinkPendingRegistrationCommand;
+import dev.patra.identity.app.account.usecase.oauth.SendProviderLinkCodeCommand;
 import dev.patra.identity.app.account.usecase.oauth.SendRegistrationCodeCommand;
 import dev.patra.identity.app.account.usecase.query.PendingRegistrationQueryService;
 import dev.patra.tool.cqrs.CommandBus;
@@ -83,6 +87,52 @@ public class ProviderRegistrationController {
     AuthenticatedUser result =
         commandBus.handle(
             CompleteProviderRegistrationCommand.builder()
+                .ticket(ticket)
+                .code(request.code())
+                .clientType(request.clientType())
+                .deviceId(request.deviceId())
+                .clientIp(ClientIp.from(http))
+                .userAgent(userAgent)
+                .build());
+    return AuthenticatedUserResponse.of(
+        result.sessionToken(), CurrentUserResponse.from(result.account()));
+  }
+
+  /// 邮箱撞车时就地绑定：发验证码，重发也调它。凭证有效、邮箱格式合法时一律 202，没资格的邮箱只是不发信；
+  /// 422 字段或凭证不合法，429 过于频繁（带 `Retry-After`）。
+  ///
+  /// @param ticket 待补填凭证，可以没有
+  /// @param request 请求体
+  /// @param http 原始请求，取客户端 IP 给限流
+  /// @return 邮箱和时间
+  @PostMapping("/link-code")
+  @ResponseStatus(HttpStatus.ACCEPTED)
+  public RegistrationCodeSentResponse sendLinkCode(
+      @RequestHeader(value = TICKET_HEADER, required = false) String ticket,
+      @RequestBody SendProviderLinkCodeRequest request,
+      HttpServletRequest http) {
+    return RegistrationCodeSentResponse.from(
+        commandBus.handle(
+            SendProviderLinkCodeCommand.of(ticket, request.email(), ClientIp.from(http))));
+  }
+
+  /// 邮箱撞车时就地绑定：提交验证码，绑到已有账号并登录。成功 200；422 验证码或凭证不可用，
+  /// 409 第三方账号已被别人绑定，或这个账号已经绑过同平台的另一个账号。
+  ///
+  /// @param ticket 待补填凭证，可以没有
+  /// @param request 请求体
+  /// @param http 原始请求，取客户端 IP
+  /// @param userAgent `User-Agent` 头，可以没有
+  /// @return 会话令牌和账号信息
+  @PostMapping("/link")
+  public AuthenticatedUserResponse link(
+      @RequestHeader(value = TICKET_HEADER, required = false) String ticket,
+      @RequestBody LinkPendingRegistrationRequest request,
+      HttpServletRequest http,
+      @RequestHeader(value = HttpHeaders.USER_AGENT, required = false) String userAgent) {
+    AuthenticatedUser result =
+        commandBus.handle(
+            LinkPendingRegistrationCommand.builder()
                 .ticket(ticket)
                 .code(request.code())
                 .clientType(request.clientType())

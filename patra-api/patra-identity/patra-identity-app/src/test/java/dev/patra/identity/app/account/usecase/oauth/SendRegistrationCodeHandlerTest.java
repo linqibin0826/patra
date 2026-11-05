@@ -11,10 +11,12 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import dev.patra.identity.app.account.service.PendingRegistrationCodes;
 import dev.patra.identity.app.account.usecase.query.PendingRegistrationQueryService;
 import dev.patra.identity.domain.account.exception.RegistrationCodeLimitedException;
 import dev.patra.identity.domain.account.exception.UserIdentifierTakenException;
 import dev.patra.identity.domain.account.model.enums.IdentityProvider;
+import dev.patra.identity.domain.account.model.enums.RegistrationCodePurpose;
 import dev.patra.identity.domain.account.model.vo.EmailAddress;
 import dev.patra.identity.domain.account.model.vo.PendingCode;
 import dev.patra.identity.domain.account.model.vo.PendingRegistration;
@@ -58,18 +60,20 @@ class SendRegistrationCodeHandlerTest {
   private final SendRegistrationCodeHandler handler =
       new SendRegistrationCodeHandler(
           new PendingRegistrationQueryService(pending),
-          pending,
+          new PendingRegistrationCodes(
+              pending,
+              ProviderRegistrationPolicy.builder()
+                  .pendingTtl(Duration.ofMinutes(30))
+                  .codeTtl(Duration.ofMinutes(10))
+                  .maxCodeAttempts(5)
+                  .resendCooldown(Duration.ofSeconds(60))
+                  .perEmailHourly(5)
+                  .perIpHourly(20)
+                  .linkPerEmailDaily(10)
+                  .build()),
           users,
           formerUsernames,
           new UsernamePolicy(),
-          ProviderRegistrationPolicy.builder()
-              .pendingTtl(Duration.ofMinutes(30))
-              .codeTtl(Duration.ofMinutes(10))
-              .maxCodeAttempts(5)
-              .resendCooldown(Duration.ofSeconds(60))
-              .perEmailHourly(5)
-              .perIpHourly(20)
-              .build(),
           throttle,
           emailDelivery,
           new RecordingTransactions(events),
@@ -122,6 +126,7 @@ class SendRegistrationCodeHandlerTest {
     ArgumentCaptor<PendingCode> bound = ArgumentCaptor.forClass(PendingCode.class);
     ArgumentCaptor<RegistrationCode> code = ArgumentCaptor.forClass(RegistrationCode.class);
     verify(pending).storeCode(eq(TICKET), bound.capture(), code.capture(), any());
+    assertThat(bound.getValue().purpose()).isEqualTo(RegistrationCodePurpose.REGISTER);
     assertThat(bound.getValue().username()).isEqualTo("chen-yu");
     assertThat(bound.getValue().email()).isEqualTo("chen@example.com");
     ArgumentCaptor<RegistrationCodeMail> mail = ArgumentCaptor.forClass(RegistrationCodeMail.class);

@@ -1,0 +1,13 @@
+[# th:replace="~{text/fragments/header}" /]
+你好，[(${displayName})]：
+
+有人正在把 [(${providerName})] 账号 [(${accountLabel})] 绑定到你的 [(${siteName})] 账号 [(${username})]。绑定后，用这个 [(${providerName})] 账号就能登录你的账号。
+
+如果是你本人在操作，在页面上输入下面的验证码：
+
+[(${code})]
+
+验证码 [(${linkExpiresAt})] 前有效。不要把验证码告诉任何人，包括自称 [(${siteName})] 工作人员的人。
+如果不是你在操作，忽略这封邮件即可，账号不会有任何变化。
+
+[# th:replace="~{text/fragments/footer}" /]

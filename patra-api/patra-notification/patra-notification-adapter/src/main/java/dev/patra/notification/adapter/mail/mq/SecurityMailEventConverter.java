@@ -9,6 +9,7 @@ import dev.patra.identity.api.account.event.EmailChangeRevertedMailEvent;
 import dev.patra.identity.api.account.event.EmailChangedConfirmationMailEvent;
 import dev.patra.identity.api.account.event.EmailChangedNoticeMailEvent;
 import dev.patra.identity.api.account.event.EmailVerificationMailEvent;
+import dev.patra.identity.api.account.event.LoginMethodLinkCodeMailEvent;
 import dev.patra.identity.api.account.event.LoginMethodLinkedMailEvent;
 import dev.patra.identity.api.account.event.LoginMethodUnlinkedMailEvent;
 import dev.patra.identity.api.account.event.NewDeviceLoginMailEvent;
@@ -24,7 +25,7 @@ import java.util.Map;
 
 /// identity 的安全邮件事件 → 领域的 {@link SecurityMail}。
 ///
-/// 对 sealed 的 16 种穷举，identity 加一种而这里没跟上时编译不过。`facts` 的键与模板变量同名；
+/// 对 sealed 的 17 种穷举，identity 加一种而这里没跟上时编译不过。`facts` 的键与模板变量同名；
 /// 事件的 `securitySettingsUrl` 进模板变量 `securityUrl`。
 final class SecurityMailEventConverter {
 
@@ -102,6 +103,16 @@ final class SecurityMailEventConverter {
       case RegistrationCodeMailEvent e ->
           base(e, SecurityMailKind.REGISTRATION_CODE)
               .facts(Map.of("code", e.code()))
+              .linkExpiresAt(e.codeExpiresAt())
+              .build();
+      case LoginMethodLinkCodeMailEvent e ->
+          base(e, SecurityMailKind.LOGIN_METHOD_LINK_CODE)
+              .facts(
+                  Map.of(
+                      "code", e.code(),
+                      "username", e.username(),
+                      "providerName", e.providerName(),
+                      "accountLabel", e.accountLabel()))
               .linkExpiresAt(e.codeExpiresAt())
               .build();
       case LoginMethodLinkedMailEvent e ->

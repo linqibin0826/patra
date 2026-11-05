@@ -46,6 +46,25 @@ class UserTest {
   }
 
   @Test
+  @DisplayName("就地绑定的资格：邮箱已验证的正常或注销中账号；未验证、封禁、已注销都不行")
+  void should_allow_provider_link_only_for_verified_active_or_pending_deletion() {
+    User unverified = User.register(EMAIL, USERNAME);
+    assertThat(unverified.canReceiveProviderLink()).isFalse();
+
+    User verified = User.register(EMAIL, USERNAME);
+    verified.markEmailVerified(T0);
+    assertThat(verified.canReceiveProviderLink()).isTrue();
+
+    verified.requestDeletion(T0, COOLING);
+    assertThat(verified.canReceiveProviderLink()).isTrue();
+
+    User banned = User.register(EMAIL, USERNAME);
+    banned.markEmailVerified(T0);
+    banned.ban(T0);
+    assertThat(banned.canReceiveProviderLink()).isFalse();
+  }
+
+  @Test
   @DisplayName("ACTIVE → BANNED → ACTIVE；重复封禁保留第一次时间，重复解封不变")
   void should_walk_active_banned_active() {
     User user = User.register(EMAIL, USERNAME);

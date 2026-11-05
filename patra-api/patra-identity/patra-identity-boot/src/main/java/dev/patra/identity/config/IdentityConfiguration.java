@@ -278,6 +278,7 @@ public class IdentityConfiguration {
         .resendCooldown(registration.resendCooldown())
         .perEmailHourly(registration.perEmailHourly())
         .perIpHourly(registration.perIpHourly())
+        .linkPerEmailDaily(registration.linkPerEmailDaily())
         .build();
   }
 
