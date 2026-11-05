@@ -132,6 +132,20 @@ export const VERIFICATION_MESSAGES = {
   loadFailed: "人机验证加载失败。请刷新页面，或换一个网络再试",
 } as const;
 
+/// 人机验证失败的提示，别的失败返回 null。
+export function verificationMessage(reason: string): string | null {
+  switch (reason) {
+    case "verification-required":
+      return VERIFICATION_MESSAGES.required;
+    case "verification-failed":
+      return VERIFICATION_MESSAGES.failed;
+    case "verification-unavailable":
+      return VERIFICATION_MESSAGES.unavailable;
+    default:
+      return null;
+  }
+}
+
 /// 重发验证邮件（简报 §3.4、§4.4）
 export const RESEND_MESSAGES = {
   sent: "验证邮件已发送",

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { ForgotPasswordForm } from "@/components/auth/ForgotPasswordForm";
+import { readHumanVerification } from "@/lib/auth/human-verification";
 import { safeNextPath } from "@/lib/auth/next-path";
 
 export const metadata: Metadata = { title: "找回密码 · Patra", robots: { index: false } };
@@ -12,5 +13,10 @@ export default async function ForgotPasswordPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const raw = (await searchParams).next;
-  return <ForgotPasswordForm next={safeNextPath(Array.isArray(raw) ? raw[0] : raw)} />;
+  return (
+    <ForgotPasswordForm
+      next={safeNextPath(Array.isArray(raw) ? raw[0] : raw)}
+      verification={await readHumanVerification()}
+    />
+  );
 }

@@ -9,10 +9,18 @@ import { AuthLink } from "@/components/auth/AuthLink";
 import { AuthShell } from "@/components/auth/AuthShell";
 import { FormAlert } from "@/components/auth/FormAlert";
 import { FormField } from "@/components/auth/FormField";
+import { HumanVerificationWidget } from "@/components/auth/human-verification/HumanVerificationWidget";
+import { useHumanVerification } from "@/components/auth/human-verification/use-human-verification";
 import { StateIcon } from "@/components/auth/StateIcon";
 import { type ForgotPasswordFormValues, forgotPasswordSchema } from "@/lib/auth/form-schemas";
-import { FIELD_MESSAGES, FORGOT_MESSAGES, resendWaitMessage } from "@/lib/auth/messages";
+import {
+  FIELD_MESSAGES,
+  FORGOT_MESSAGES,
+  resendWaitMessage,
+  verificationMessage,
+} from "@/lib/auth/messages";
 import { authPageHref } from "@/lib/auth/next-path";
+import type { HumanVerificationConfig } from "@/lib/auth/types";
 import { requestPasswordReset } from "@/lib/identity/token-actions";
 import { orUnavailable } from "@/lib/or-unavailable";
 import { btnBlock, btnPrimary, btnSecondary, btnText } from "@/lib/portal-ui";
@@ -31,7 +39,15 @@ interface Wait {
 
 /// 忘记密码页（简报 §3.17、§4.10）：输入态 → 已发送态（注册与否都一样）。自己渲染专注布局外壳，因为标题与
 /// 副文案随态切换。冷却只在本页内存里，换页丢失可以接受（再点得到 429）。`next` 已经过 `safeNextPath`。
-export function ForgotPasswordForm({ next }: { next: string }) {
+/// 人机验证每次都要，重新发送也要新令牌：倒计时结束后才显示组件，免得用户等的时候令牌过期。
+export function ForgotPasswordForm({
+  next,
+  verification = null,
+}: {
+  next: string;
+  verification?: HumanVerificationConfig | null;
+}) {
+  const humanVerification = useHumanVerification(true);
   const loginHref = authPageHref("/login", next);
   // 挂载时读一次登录页带来的邮箱，读完在 effect 里清空（不在渲染期清：被丢弃的渲染会把它带走）
   const [initialEmail] = useState(() => useAuthHandoffStore.getState().email ?? "");
@@ -58,11 +74,12 @@ export function ForgotPasswordForm({ next }: { next: string }) {
 
   /// 发出申请：首次与「重新发送」共用
   async function send(email: string) {
-    if (busy) return;
+    if (busy || humanVerification.token === null) return;
     setBusy(true);
     setAlert(null);
-    const result = await orUnavailable(requestPasswordReset(email));
+    const result = await orUnavailable(requestPasswordReset(email, humanVerification.token));
     setBusy(false);
+    humanVerification.reset();
     if (result.ok) {
       setSentTo(result.email);
       setWait({
@@ -87,7 +104,7 @@ export function ForgotPasswordForm({ next }: { next: string }) {
         return;
       }
       default:
-        setAlert(FORGOT_MESSAGES.failed);
+        setAlert(verificationMessage(result.reason) ?? FORGOT_MESSAGES.failed);
     }
   }
 
@@ -113,20 +130,25 @@ export function ForgotPasswordForm({ next }: { next: string }) {
           {alert && <FormAlert>{alert}</FormAlert>}
           <span>{FORGOT_MESSAGES.spam}</span>
           <span aria-live="polite">
-            {busy ? (
-              FORGOT_MESSAGES.submitting
-            ) : left > 0 && wait ? (
-              wait.limited ? (
-                resendWaitMessage(left, true)
-              ) : (
-                `${left} 秒后可重新发送`
-              )
-            ) : (
-              <button type="button" onClick={() => void send(sentTo)} className={btnText}>
-                {FORGOT_MESSAGES.resend}
-              </button>
-            )}
+            {busy
+              ? FORGOT_MESSAGES.submitting
+              : left > 0 && wait
+                ? wait.limited
+                  ? resendWaitMessage(left, true)
+                  : `${left} 秒后可重新发送`
+                : !humanVerification.blocked && (
+                    <button type="button" onClick={() => void send(sentTo)} className={btnText}>
+                      {FORGOT_MESSAGES.resend}
+                    </button>
+                  )}
           </span>
+          {!busy && left <= 0 && (
+            <HumanVerificationWidget
+              config={verification}
+              action="password_reset"
+              verification={humanVerification}
+            />
+          )}
           <button
             type="button"
             onClick={() => {
@@ -173,10 +195,15 @@ export function ForgotPasswordForm({ next }: { next: string }) {
             />
           )}
         </FormField>
+        <HumanVerificationWidget
+          config={verification}
+          action="password_reset"
+          verification={humanVerification}
+        />
         <div className="mt-1">
           <button
             type="submit"
-            aria-disabled={busy || undefined}
+            aria-disabled={busy || humanVerification.blocked || undefined}
             className={cn(btnPrimary, btnBlock)}
           >
             {busy ? FORGOT_MESSAGES.submitting : FORGOT_MESSAGES.submit}
