@@ -173,7 +173,7 @@ class TurnstileAdapterIT {
   void unavailable_on_read_timeout() {
     REMOTE.stubFor(
         post(urlEqualTo(PATH))
-            .willReturn(okJson(successBody(HOSTNAME, "login")).withFixedDelay(1_000)));
+            .willReturn(okJson(successBody(HOSTNAME, "login")).withFixedDelay(5_000)));
 
     assertThat(verify()).isEqualTo(HumanVerificationResult.UNAVAILABLE);
   }
@@ -236,6 +236,21 @@ class TurnstileAdapterIT {
   }
 
   @Test
+  @DisplayName("接口地址被刷新成非法值：验证不了，不抛异常")
+  void unavailable_when_base_url_invalid() {
+    TurnstileAdapter adapter =
+        new TurnstileAdapter(
+            RestClient.builder()
+                .requestFactory(new JdkClientHttpRequestFactory(HttpClient.newHttpClient()))
+                .build(),
+            JsonMapper.builder().build(),
+            () -> TurnstileSettings.of("not a url", CREDENTIAL, Set.of(HOSTNAME)));
+
+    assertThat(adapter.verify(VERIFICATION, HumanVerificationAction.LOGIN))
+        .isEqualTo(HumanVerificationResult.UNAVAILABLE);
+  }
+
+  @Test
   @DisplayName("provider 是 Turnstile")
   void provider_is_turnstile() {
     assertThat(adapterWith(CREDENTIAL).provider().wireValue()).isEqualTo("turnstile");
@@ -248,14 +263,14 @@ class TurnstileAdapterIT {
     return adapterWith(CREDENTIAL).verify(VERIFICATION, HumanVerificationAction.LOGIN);
   }
 
-  /// 指向 WireMock 的适配器，读超时 200 毫秒。
+  /// 指向 WireMock 的适配器，读超时 2 秒，高负载下第一个请求也够用。
   ///
   /// @param secret 密钥
   /// @return 适配器
   private TurnstileAdapter adapterWith(String secret) {
     JdkClientHttpRequestFactory factory =
         new JdkClientHttpRequestFactory(HttpClient.newHttpClient());
-    factory.setReadTimeout(Duration.ofMillis(200));
+    factory.setReadTimeout(Duration.ofSeconds(2));
     return new TurnstileAdapter(
         RestClient.builder().requestFactory(factory).build(),
         JsonMapper.builder().build(),

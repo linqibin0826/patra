@@ -23,7 +23,7 @@ import tools.jackson.databind.json.JsonMapper;
 /// 人机验证的装配。
 ///
 /// 启动时缺凭据或门槛不合法直接失败。刷新配置不走这里：切到缺凭据的厂商时校验返回“验证不了”，
-/// 邮箱门槛被改成不小于锁定门槛时按“锁定门槛减一”生效，都不会让登录报 500，也不会放行。
+/// 其他不合法的值见 {@link #currentPolicy}，都不会让登录报 500，也不会放行。
 ///
 /// 出站用自己建的 `RestClient`，不用容器里的 `RestClient.Builder`：它带内部调用的拦截器，身份断言不能发给第三方。
 @Slf4j
@@ -104,26 +104,54 @@ public class HumanVerificationConfiguration {
     return new HumanVerificationProviderNotice(properties);
   }
 
-  /// 按配置的当前值构造参数。邮箱门槛不小于锁定门槛时按“锁定门槛减一”生效并打 ERROR，至少为 1。
+  /// 按配置的当前值构造参数。刷新时新值在校验前就写入了，这里兜住不合法的值，不让登录报 500：
+  /// 门槛小于 1、窗口不是正数、厂商为空都按默认值生效；邮箱门槛不小于锁定门槛时按“锁定门槛减一”生效，至少为 1。
+  /// 这些情况都打 ERROR。
   ///
   /// @param properties 人机验证配置
   /// @param throttle 登录失败限制配置
   /// @return 参数
   static HumanVerificationPolicy currentPolicy(
       HumanVerificationProperties properties, LoginThrottleProperties throttle) {
-    int emailThreshold = properties.getEmailFailureThreshold();
-    if (emailThreshold >= throttle.getMaxFailures()) {
-      log.error(
-          "email-failure-threshold={} 不小于 login-throttle.max-failures={}，按锁定门槛减一生效",
-          emailThreshold,
-          throttle.getMaxFailures());
-      emailThreshold = Math.max(1, throttle.getMaxFailures() - 1);
+    HumanVerificationProvider provider = properties.getProvider();
+    if (provider == null) {
+      log.error("provider 为空，按默认值生效");
+      provider = HumanVerificationProperties.DEFAULT_PROVIDER;
+    }
+    int ipThreshold = properties.getIpFailureThreshold();
+    if (ipThreshold < 1) {
+      log.error("ip-failure-threshold={} 小于 1，按默认值生效", ipThreshold);
+      ipThreshold = HumanVerificationProperties.DEFAULT_IP_FAILURE_THRESHOLD;
+    }
+    Duration ipWindow = properties.getIpFailureWindow();
+    if (ipWindow == null || ipWindow.isZero() || ipWindow.isNegative()) {
+      log.error("ip-failure-window={} 不是正数，按默认值生效", ipWindow);
+      ipWindow = HumanVerificationProperties.DEFAULT_IP_FAILURE_WINDOW;
     }
     return HumanVerificationPolicy.of(
-        properties.getProvider(),
-        emailThreshold,
-        properties.getIpFailureThreshold(),
-        properties.getIpFailureWindow());
+        provider, currentEmailThreshold(properties, throttle), ipThreshold, ipWindow);
+  }
+
+  /// 邮箱门槛的当前值，兜住不合法的值。
+  ///
+  /// @param properties 人机验证配置
+  /// @param throttle 登录失败限制配置
+  /// @return 门槛，至少为 1
+  private static int currentEmailThreshold(
+      HumanVerificationProperties properties, LoginThrottleProperties throttle) {
+    int threshold = properties.getEmailFailureThreshold();
+    if (threshold < 1) {
+      log.error("email-failure-threshold={} 小于 1，按默认值生效", threshold);
+      threshold = HumanVerificationProperties.DEFAULT_EMAIL_FAILURE_THRESHOLD;
+    }
+    if (threshold >= throttle.getMaxFailures()) {
+      log.error(
+          "email-failure-threshold={} 不小于 login-throttle.max-failures={}，按锁定门槛减一生效",
+          threshold,
+          throttle.getMaxFailures());
+      return Math.max(1, throttle.getMaxFailures() - 1);
+    }
+    return threshold;
   }
 
   /// 各厂商的站点标识，没配的不放进去。

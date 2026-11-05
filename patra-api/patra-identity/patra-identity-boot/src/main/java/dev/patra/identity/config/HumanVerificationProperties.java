@@ -8,6 +8,7 @@ import jakarta.validation.constraints.NotNull;
 import java.time.Duration;
 import java.util.Set;
 import lombok.Data;
+import lombok.ToString;
 import org.hibernate.validator.constraints.time.DurationMin;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.validation.annotation.Validated;
@@ -21,22 +22,33 @@ import org.springframework.validation.annotation.Validated;
 @ConfigurationProperties(prefix = "patra.identity.human-verification")
 public class HumanVerificationProperties {
 
+  /// 默认厂商。
+  static final HumanVerificationProvider DEFAULT_PROVIDER = HumanVerificationProvider.TURNSTILE;
+
+  /// 邮箱门槛的默认值。
+  static final int DEFAULT_EMAIL_FAILURE_THRESHOLD = 3;
+
+  /// IP 门槛的默认值。
+  static final int DEFAULT_IP_FAILURE_THRESHOLD = 5;
+
+  /// IP 窗口的默认值。
+  static final Duration DEFAULT_IP_FAILURE_WINDOW = Duration.ofMinutes(15);
+
   /// 当前厂商。没有“关闭”这个值。
-  @NotNull
-  private volatile HumanVerificationProvider provider = HumanVerificationProvider.TURNSTILE;
+  @NotNull private volatile HumanVerificationProvider provider = DEFAULT_PROVIDER;
 
   /// 同一邮箱失败多少次后要验证，必须小于 `login-throttle.max-failures`。
   @Min(1)
-  private volatile int emailFailureThreshold = 3;
+  private volatile int emailFailureThreshold = DEFAULT_EMAIL_FAILURE_THRESHOLD;
 
   /// 同一 IP 失败多少次后要验证。
   @Min(1)
-  private volatile int ipFailureThreshold = 5;
+  private volatile int ipFailureThreshold = DEFAULT_IP_FAILURE_THRESHOLD;
 
   /// IP 失败计数的窗口，从第一次失败算起。
   @NotNull
   @DurationMin(nanos = 1)
-  private volatile Duration ipFailureWindow = Duration.ofMinutes(15);
+  private volatile Duration ipFailureWindow = DEFAULT_IP_FAILURE_WINDOW;
 
   /// Turnstile 的配置。
   @Valid private final Turnstile turnstile = new Turnstile();
@@ -55,7 +67,7 @@ public class HumanVerificationProperties {
     private volatile String siteKey;
 
     /// 服务端密钥。
-    private volatile String secret;
+    @ToString.Exclude private volatile String secret;
 
     /// 允许的站点域名。
     private volatile Set<String> allowedHostnames = Set.of();
@@ -72,7 +84,7 @@ public class HumanVerificationProperties {
     private volatile String siteKey;
 
     /// 签名密钥。
-    private volatile String appSecret;
+    @ToString.Exclude private volatile String appSecret;
 
     /// 允许的来源。
     private volatile Set<String> allowedOrigins = Set.of();

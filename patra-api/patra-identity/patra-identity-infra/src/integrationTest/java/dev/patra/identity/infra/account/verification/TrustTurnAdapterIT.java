@@ -168,7 +168,7 @@ class TrustTurnAdapterIT {
   void unavailable_on_read_timeout() {
     REMOTE.stubFor(
         post(urlEqualTo(PATH))
-            .willReturn(okJson(successBody(SITE_KEY, "login", ORIGIN)).withFixedDelay(1_000)));
+            .willReturn(okJson(successBody(SITE_KEY, "login", ORIGIN)).withFixedDelay(5_000)));
 
     assertThat(verify()).isEqualTo(HumanVerificationResult.UNAVAILABLE);
     REMOTE.verify(1, postRequestedFor(urlEqualTo(PATH)));
@@ -256,6 +256,22 @@ class TrustTurnAdapterIT {
   }
 
   @Test
+  @DisplayName("接口地址被刷新成非法值：验证不了，不抛异常")
+  void unavailable_when_base_url_invalid() {
+    TrustTurnAdapter adapter =
+        new TrustTurnAdapter(
+            RestClient.builder()
+                .requestFactory(new JdkClientHttpRequestFactory(HttpClient.newHttpClient()))
+                .build(),
+            JsonMapper.builder().build(),
+            () -> TrustTurnSettings.of("not a url", SITE_KEY, SIGNING_INPUT, Set.of(ORIGIN)),
+            Clock.fixed(NOW, ZoneOffset.UTC));
+
+    assertThat(adapter.verify(TICKET, HumanVerificationAction.LOGIN))
+        .isEqualTo(HumanVerificationResult.UNAVAILABLE);
+  }
+
+  @Test
   @DisplayName("provider 是 TRUSTTURN")
   void provider_is_trust_turn() {
     assertThat(adapterWith(SIGNING_INPUT).provider().wireValue()).isEqualTo("trustturn");
@@ -268,14 +284,14 @@ class TrustTurnAdapterIT {
     return adapterWith(SIGNING_INPUT).verify(TICKET, HumanVerificationAction.LOGIN);
   }
 
-  /// 指向 WireMock 的适配器，读超时 200 毫秒，时钟固定。
+  /// 指向 WireMock 的适配器，读超时 2 秒，高负载下第一个请求也够用，时钟固定。
   ///
   /// @param appSecret 签名密钥
   /// @return 适配器
   private TrustTurnAdapter adapterWith(String appSecret) {
     JdkClientHttpRequestFactory factory =
         new JdkClientHttpRequestFactory(HttpClient.newHttpClient());
-    factory.setReadTimeout(Duration.ofMillis(200));
+    factory.setReadTimeout(Duration.ofSeconds(2));
     return new TrustTurnAdapter(
         RestClient.builder().requestFactory(factory).build(),
         JsonMapper.builder().build(),

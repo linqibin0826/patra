@@ -6,6 +6,7 @@ import dev.patra.identity.domain.account.model.enums.HumanVerificationProvider;
 import dev.patra.identity.domain.account.policy.HumanVerificationPolicy;
 import dev.patra.identity.domain.account.port.verification.HumanVerificationPort;
 import java.time.Clock;
+import java.time.Duration;
 import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -111,6 +112,59 @@ class HumanVerificationConfigurationTest {
 
     assertThat(policy.emailFailureThreshold()).isEqualTo(throttle.getMaxFailures() - 1);
     assertThat(output).contains("email-failure-threshold");
+  }
+
+  @Test
+  @DisplayName("运行中门槛被刷新成 0：按默认值生效，不抛异常，登录不报 500")
+  void policy_falls_back_when_thresholds_refreshed_to_zero(CapturedOutput output) {
+    HumanVerificationProperties properties = new HumanVerificationProperties();
+    properties.setEmailFailureThreshold(0);
+    properties.setIpFailureThreshold(0);
+
+    HumanVerificationPolicy policy =
+        HumanVerificationConfiguration.currentPolicy(properties, new LoginThrottleProperties());
+
+    assertThat(policy.emailFailureThreshold()).isEqualTo(3);
+    assertThat(policy.ipFailureThreshold()).isEqualTo(5);
+    assertThat(output).contains("ip-failure-threshold");
+  }
+
+  @Test
+  @DisplayName("运行中窗口被刷新成 0 或空：按默认值生效，不抛异常")
+  void policy_falls_back_when_window_refreshed_to_invalid() {
+    HumanVerificationProperties properties = new HumanVerificationProperties();
+    LoginThrottleProperties throttle = new LoginThrottleProperties();
+
+    properties.setIpFailureWindow(Duration.ZERO);
+    assertThat(HumanVerificationConfiguration.currentPolicy(properties, throttle).ipFailureWindow())
+        .isEqualTo(Duration.ofMinutes(15));
+
+    properties.setIpFailureWindow(null);
+    assertThat(HumanVerificationConfiguration.currentPolicy(properties, throttle).ipFailureWindow())
+        .isEqualTo(Duration.ofMinutes(15));
+  }
+
+  @Test
+  @DisplayName("运行中厂商被刷新成空：回到默认的 Turnstile，不抛异常")
+  void policy_falls_back_when_provider_refreshed_to_null() {
+    HumanVerificationProperties properties = new HumanVerificationProperties();
+    properties.setProvider(null);
+
+    assertThat(
+            HumanVerificationConfiguration.currentPolicy(properties, new LoginThrottleProperties())
+                .provider())
+        .isEqualTo(HumanVerificationProvider.TURNSTILE);
+  }
+
+  @Test
+  @DisplayName("配置对象的 toString 不输出密钥")
+  void properties_to_string_hides_credentials() {
+    HumanVerificationProperties properties = new HumanVerificationProperties();
+    properties.getTurnstile().setSecret("turnstile-secret-value");
+    properties.getTrustTurn().setAppSecret("trustturn-secret-value");
+
+    assertThat(properties.toString())
+        .doesNotContain("turnstile-secret-value", "trustturn-secret-value");
   }
 
   @Test

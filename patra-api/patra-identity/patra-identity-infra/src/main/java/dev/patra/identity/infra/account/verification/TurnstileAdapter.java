@@ -17,7 +17,6 @@ import org.springframework.http.MediaType;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestClient;
-import org.springframework.web.client.RestClientException;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
@@ -118,7 +117,7 @@ public final class TurnstileAdapter implements HumanVerificationPort {
                       new Reply(
                           response.getStatusCode(),
                           new String(response.getBody().readAllBytes(), StandardCharsets.UTF_8)));
-    } catch (RestClientException e) {
+    } catch (RuntimeException e) {
       log.warn("调 Turnstile 校验接口失败: {}", e.getClass().getSimpleName());
       return Optional.empty();
     }

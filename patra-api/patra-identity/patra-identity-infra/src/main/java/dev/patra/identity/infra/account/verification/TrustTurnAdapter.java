@@ -17,7 +17,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
 import org.springframework.web.client.RestClient;
-import org.springframework.web.client.RestClientException;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
@@ -93,7 +92,7 @@ public final class TrustTurnAdapter implements HumanVerificationPort {
     Reply reply;
     try {
       reply = consume(current, token, action);
-    } catch (RestClientException e) {
+    } catch (RuntimeException e) {
       log.warn("调 TRUSTTURN 校验接口失败: {}", e.getClass().getSimpleName());
       return HumanVerificationResult.UNAVAILABLE;
     }

@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -37,6 +38,12 @@ class HumanVerificationFlowIT extends IdentityFlowITSupport {
   /// 每个用例从默认的桩开始。
   @BeforeEach
   void resetVerification() {
+    HumanVerificationFixture.reset();
+  }
+
+  /// 恢复默认的桩：服务器整个 JVM 共用，留着 500 的桩会让后面的流程测试注册时全部 503。
+  @AfterEach
+  void restoreVerification() {
     HumanVerificationFixture.reset();
   }
 
