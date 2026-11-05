@@ -1,11 +1,16 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, waitFor } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { USER } from "@tests/fixtures/user";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import "@testing-library/jest-dom/vitest";
 import { ProviderRegistrationFlow } from "@/components/auth/ProviderRegistrationFlow";
-import { postRegistrationCode, postRegistrationComplete } from "@/lib/auth/post-registration";
+import {
+  postLink,
+  postLinkCode,
+  postRegistrationCode,
+  postRegistrationComplete,
+} from "@/lib/auth/post-registration";
 import type { PendingRegistration, SendCodeResult } from "@/lib/auth/registration-types";
 import { queryKeys } from "@/lib/query-keys";
 import { useAuthHandoffStore } from "@/store/auth-handoff";
@@ -13,6 +18,8 @@ import { useAuthHandoffStore } from "@/store/auth-handoff";
 const router = { replace: vi.fn(), prefetch: vi.fn() };
 vi.mock("next/navigation", () => ({ useRouter: () => router }));
 vi.mock("@/lib/auth/post-registration", () => ({
+  postLink: vi.fn(),
+  postLinkCode: vi.fn(),
   postRegistrationCode: vi.fn(),
   postRegistrationComplete: vi.fn(),
 }));
@@ -36,6 +43,15 @@ const ORCID: PendingRegistration = {
   accountLabel: "0000-0002-1825-0097",
   suggestedUsername: null,
   suggestedEmail: null,
+};
+const LINK_ENTRY = "验证这个邮箱，并绑定到已有账号";
+/// 刷新回来时的绑定验证码：已经过了重发冷却
+const LINK_PENDING_READY = {
+  purpose: "LINK" as const,
+  username: null,
+  email: "chen.yu@example.com",
+  codeExpiresAt: "2099-01-01T00:10:00Z",
+  nextResendAt: "2000-01-01T00:00:00Z",
 };
 const SENT = {
   ok: true,
@@ -127,7 +143,7 @@ describe("补填步", () => {
     const clash = await screen.findByRole("alert");
     expect(clash).toHaveTextContent("这个邮箱已经注册过 Patra。");
     expect(clash).toHaveTextContent(
-      "如果是你的账号：先用原来的方式登录，再到「设置 › 安全」绑定 GitHub。",
+      "如果是你的账号：可以验证这个邮箱直接绑定，也可以先用原来的方式登录，再到「设置 › 安全」绑定 GitHub。",
     );
     const toLogin = screen.getByRole("link", { name: "去登录" });
     expect(toLogin).toHaveAttribute("href", "/login?next=%2Fsettings%2Fsecurity");
@@ -371,6 +387,7 @@ describe("验证码步", () => {
 
 describe("重发", () => {
   const PENDING_CODE = {
+    purpose: "REGISTER" as const,
     email: "chen@example.com",
     username: "chen-yu",
     codeExpiresAt: "2026-11-04T09:20:00Z",
@@ -427,5 +444,227 @@ describe("过期态", () => {
     expect(
       screen.getByText("等得太久了，账号没有建。请回到登录页，重新用第三方账号登录，再填一次。"),
     ).toBeInTheDocument();
+  });
+});
+
+describe("就地绑定", () => {
+  const LINK_SENT = { ...SENT, email: "cat@example.com" };
+
+  /// 补填步提交后撞车
+  async function toClash() {
+    const view = renderFlow(GITHUB);
+    vi.mocked(postRegistrationCode).mockResolvedValue({
+      ok: false,
+      reason: "taken",
+      email: true,
+      username: false,
+    });
+    await view.user.click(screen.getByRole("button", { name: "发送验证码" }));
+    await screen.findByRole("alert");
+    return view;
+  }
+
+  /// 撞车后选择就地绑定，进到验证码步
+  async function toLinkStep() {
+    const view = await toClash();
+    vi.mocked(postLinkCode).mockResolvedValueOnce(LINK_SENT);
+    await view.user.click(screen.getByRole("button", { name: LINK_ENTRY }));
+    await screen.findByRole("heading", { name: "验证这个邮箱" });
+    return view;
+  }
+
+  /// 输入完整的验证码并提交
+  async function submitLinkCode(user: ReturnType<typeof userEvent.setup>) {
+    await user.type(screen.getByLabelText("验证码"), "483920");
+    await user.click(screen.getByRole("button", { name: "完成绑定" }));
+  }
+
+  it("只有撞车才有这个选项", async () => {
+    renderFlow(GITHUB);
+    expect(screen.queryByRole("button", { name: LINK_ENTRY })).not.toBeInTheDocument();
+    cleanup();
+    await toClash();
+    expect(screen.getByRole("button", { name: LINK_ENTRY })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "去登录" })).toHaveFocus();
+  });
+
+  it("用户名被占用但邮箱没撞车：没有这个选项", async () => {
+    const { user } = renderFlow(GITHUB);
+    vi.mocked(postRegistrationCode).mockResolvedValue({
+      ok: false,
+      reason: "taken",
+      email: false,
+      username: true,
+    });
+    await user.click(screen.getByRole("button", { name: "发送验证码" }));
+    await screen.findByText("这个用户名已被使用");
+    expect(screen.queryByRole("button", { name: LINK_ENTRY })).not.toBeInTheDocument();
+  });
+
+  it("选择后：用当前邮箱发码，文案不说已发送", async () => {
+    await toLinkStep();
+    expect(postLinkCode).toHaveBeenCalledWith({ email: "cat@example.com" });
+    expect(screen.getByText("cat@example.com")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        /如果这个邮箱可以绑定，你会收到验证码；收不到就先用原方式登录，到设置页绑定/,
+      ),
+    ).toBeInTheDocument();
+    expect(document.body.textContent).not.toContain("已发");
+    expect(document.body.textContent).not.toContain("垃圾邮件");
+    expect(screen.getByText(/^\d+ 秒后可重发$/)).toBeInTheDocument();
+  });
+
+  it("发码：进行中不能重复点", async () => {
+    const { user } = await toClash();
+    let answer: (value: typeof LINK_SENT) => void = () => {};
+    vi.mocked(postLinkCode).mockReturnValue(
+      new Promise((resolve) => {
+        answer = resolve;
+      }),
+    );
+    await user.click(screen.getByRole("button", { name: LINK_ENTRY }));
+    const busy = screen.getByRole("button", { name: "处理中…" });
+    expect(busy).toHaveAttribute("aria-disabled", "true");
+    await user.click(busy);
+    expect(postLinkCode).toHaveBeenCalledTimes(1);
+    answer(LINK_SENT);
+    await screen.findByRole("heading", { name: "验证这个邮箱" });
+  });
+
+  it.each([
+    [{ ok: false, reason: "throttled", retryAfterSeconds: 900 }, "发送太频繁，请 15 分钟后再试"],
+    [{ ok: false, reason: "unavailable" }, "验证码没有发出去，请稍后再试"],
+  ] as const)("发码失败 %j：留在撞车块，显示原因", async (result, message) => {
+    const { user } = await toClash();
+    vi.mocked(postLinkCode).mockResolvedValue(result);
+    await user.click(screen.getByRole("button", { name: LINK_ENTRY }));
+    expect(await screen.findByText(message)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: LINK_ENTRY })).toBeInTheDocument();
+  });
+
+  it("发码时记录过期：绑定的过期态", async () => {
+    const { user } = await toClash();
+    vi.mocked(postLinkCode).mockResolvedValue({ ok: false, reason: "expired" });
+    await user.click(screen.getByRole("button", { name: LINK_ENTRY }));
+    expect(await screen.findByRole("heading", { name: "这次绑定已失效" })).toBeInTheDocument();
+  });
+
+  it("成功：写入当前用户，提示已绑定，跳 next", async () => {
+    const { user, client } = await toLinkStep();
+    vi.mocked(postLink).mockResolvedValue({ ok: true, user: USER });
+    await submitLinkCode(user);
+    await waitFor(() => expect(router.replace).toHaveBeenCalledWith("/papers/1"));
+    expect(postLink).toHaveBeenCalledWith({ code: "483920" });
+    expect(postRegistrationComplete).not.toHaveBeenCalled();
+    expect(client.getQueryData(queryKeys.currentUser)).toEqual(USER);
+    expect(toast.success).toHaveBeenCalledWith("已绑定 GitHub，已登录");
+  });
+
+  it("冷静期账号：去取消注销页，不弹已绑定", async () => {
+    const { user } = await toLinkStep();
+    vi.mocked(postLink).mockResolvedValue({
+      ok: true,
+      user: { ...USER, status: "PENDING_DELETION" },
+    });
+    await submitLinkCode(user);
+    await waitFor(() =>
+      expect(router.replace).toHaveBeenCalledWith("/account/deletion-pending?next=%2Fpapers%2F1"),
+    );
+    expect(toast.success).not.toHaveBeenCalled();
+  });
+
+  it("错码：字段错误", async () => {
+    const { user } = await toLinkStep();
+    vi.mocked(postLink).mockResolvedValue({ ok: false, reason: "code-invalid" });
+    await submitLinkCode(user);
+    expect(await screen.findByText("验证码不正确")).toBeInTheDocument();
+    expect(screen.getByLabelText("验证码")).toHaveFocus();
+  });
+
+  it("验证码失效：提示重发，输入锁住；重发解锁", async () => {
+    const { user } = renderFlow({ ...GITHUB, pendingCode: LINK_PENDING_READY });
+    vi.mocked(postLink).mockResolvedValue({ ok: false, reason: "code-expired" });
+    await submitLinkCode(user);
+    expect(await screen.findByRole("alert")).toHaveTextContent("这个验证码已失效，请重新发送一个");
+    expect(screen.getByLabelText("验证码")).toHaveAttribute("readonly");
+    vi.mocked(postLinkCode).mockResolvedValue(LINK_SENT);
+    await user.click(screen.getByRole("button", { name: "重新发送" }));
+    await waitFor(() => expect(screen.getByLabelText("验证码")).not.toHaveAttribute("readonly"));
+    expect(postLinkCode).toHaveBeenCalledWith({ email: LINK_PENDING_READY.email });
+    expect(postRegistrationCode).not.toHaveBeenCalled();
+    expect(screen.getByText(/^\d+ 秒后可重发$/)).toBeInTheDocument();
+  });
+
+  it("重放（凭证已用过）：绑定的过期态，回登录页", async () => {
+    const { user } = await toLinkStep();
+    vi.mocked(postLink).mockResolvedValue({ ok: false, reason: "expired" });
+    await submitLinkCode(user);
+    expect(await screen.findByRole("heading", { name: "这次绑定已失效" })).toBeInTheDocument();
+    expect(
+      screen.getByText("可能是等得太久，或已经在另一个标签页完成。请重新用 GitHub 账号登录。"),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "回到登录页" })).toHaveAttribute(
+      "href",
+      "/login?next=%2Fpapers%2F1",
+    );
+  });
+
+  it("第三方账号已绑给别的账号：结果页", async () => {
+    const { user } = await toLinkStep();
+    vi.mocked(postLink).mockResolvedValue({ ok: false, reason: "provider-taken" });
+    await submitLinkCode(user);
+    expect(await screen.findByRole("heading", { name: "这个账号已经绑定了" })).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "你的 GitHub 账号已经绑定了 Patra 账号，可能是在另一个标签页。重新用它登录就行。",
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("目标账号已绑这一家：结果页，说明怎么换", async () => {
+    const { user } = await toLinkStep();
+    vi.mocked(postLink).mockResolvedValue({ ok: false, reason: "already-linked" });
+    await submitLinkCode(user);
+    expect(await screen.findByRole("heading", { name: "没有绑定" })).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "这个 Patra 账号已经绑定了另一个 GitHub 账号，每家只能绑一个。要换账号，先用原方式登录，到「设置 › 安全」解绑现在这个。",
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("服务错误：提示条，留在这一步", async () => {
+    const { user } = await toLinkStep();
+    vi.mocked(postLink).mockResolvedValue({ ok: false, reason: "unavailable" });
+    await submitLinkCode(user);
+    expect(await screen.findByRole("alert")).toHaveTextContent("没有验证成功，请稍后再试");
+    expect(screen.getByLabelText("验证码")).toHaveValue("483920");
+  });
+
+  it("重发限流：按限流说", async () => {
+    const { user } = renderFlow({ ...GITHUB, pendingCode: LINK_PENDING_READY });
+    vi.mocked(postLinkCode).mockResolvedValue({
+      ok: false,
+      reason: "throttled",
+      retryAfterSeconds: 900,
+    });
+    await user.click(screen.getByRole("button", { name: "重新发送" }));
+    expect(await screen.findByText("发送太频繁，请 15 分钟后再试")).toBeInTheDocument();
+  });
+
+  it("刷新回来：purpose 是 LINK 时回到绑定的输码步", () => {
+    renderFlow({ ...GITHUB, pendingCode: LINK_PENDING_READY });
+    expect(screen.getByRole("heading", { name: "验证这个邮箱" })).toBeInTheDocument();
+    expect(screen.getByText(LINK_PENDING_READY.email)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "完成绑定" })).toBeInTheDocument();
+  });
+
+  it("返回修改邮箱：回补填步，邮箱还在，用户名回到预填值", async () => {
+    const { user } = renderFlow({ ...GITHUB, pendingCode: LINK_PENDING_READY });
+    await user.click(screen.getByRole("button", { name: "返回修改邮箱" }));
+    expect(screen.getByRole("heading", { name: "还差一步" })).toBeInTheDocument();
+    expect(screen.getByLabelText("邮箱")).toHaveValue(LINK_PENDING_READY.email);
+    expect(screen.getByLabelText("用户名")).toHaveValue("octocat");
   });
 });

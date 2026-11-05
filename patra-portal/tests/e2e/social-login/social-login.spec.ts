@@ -271,6 +271,149 @@ test.describe("首次注册", () => {
   });
 });
 
+test.describe("邮箱撞车时就地绑定", () => {
+  const ENTRY = "验证这个邮箱，并绑定到已有账号";
+  const TAKEN = "lin.zhiyuan@example.com";
+
+  /// 从入口走到撞车块
+  async function toClash(page: Page, path = "/login") {
+    await toFillStep(page, "GitHub", path);
+    await page.getByLabel("邮箱").fill(TAKEN);
+    await page.getByRole("button", { name: "发送验证码" }).click();
+    await expect(page.getByRole("button", { name: ENTRY })).toBeVisible(ROUND_TRIP);
+  }
+
+  /// 从撞车块选择就地绑定，走到输码步
+  async function toLinkStep(page: Page, path = "/login") {
+    await toClash(page, path);
+    await page.getByRole("button", { name: ENTRY }).click();
+    await expect(page.getByRole("heading", { name: "验证这个邮箱" })).toBeVisible(ROUND_TRIP);
+    await waitForTakeover(page, "form");
+  }
+
+  /// 提交验证码
+  async function submitCode(page: Page, code: string) {
+    await page.getByLabel("验证码").fill(code);
+    await page.getByRole("button", { name: "完成绑定" }).click();
+  }
+
+  test("选项入口 → 错码 → 对的码：绑定并登录，回到发起时的页面", async ({
+    page,
+    context,
+    request,
+  }) => {
+    await toClash(page, "/login?next=%2Fjournals");
+    await expectNoHorizontalScroll(page);
+    const box = await page.getByRole("button", { name: ENTRY }).boundingBox();
+    expect(box?.height).toBeGreaterThanOrEqual(32);
+    await page.getByRole("button", { name: ENTRY }).click();
+
+    await expect(page.getByRole("heading", { name: "验证这个邮箱" })).toBeVisible(ROUND_TRIP);
+    await expect(page.getByText(TAKEN)).toBeVisible();
+    await expect(page.getByRole("main")).toContainText(
+      "如果这个邮箱可以绑定，你会收到验证码；收不到就先用原方式登录，到设置页绑定",
+    );
+    await expect(page.getByRole("main")).not.toContainText("已发送");
+    await expect(page.getByText(/^\d+ 秒后可重发$/)).toBeVisible();
+    await expectNoHorizontalScroll(page);
+    const log = await gatewayLog(request);
+    const sent = log.filter((item) => item.path.endsWith("/registration/link-code")).pop();
+    expect(sent?.body).toEqual({ email: TAKEN });
+
+    await submitCode(page, "483921");
+    await expect(page.getByText("验证码不正确")).toBeVisible(ROUND_TRIP);
+    await expect(page.getByLabel("验证码")).toBeFocused();
+
+    await submitCode(page, "483920");
+    await expect(page).toHaveURL("/journals", ROUND_TRIP);
+    await expect(page.getByText("已绑定 GitHub，已登录").first()).toBeVisible(ROUND_TRIP);
+    const cookies = await context.cookies();
+    expect(cookies.some((cookie) => cookie.name === "patra_session")).toBe(true);
+    expect(cookies.some((cookie) => cookie.name === "patra_oauth_ticket")).toBe(false);
+    const linked = (await gatewayLog(request))
+      .filter((item) => item.path.endsWith("/registration/link"))
+      .pop();
+    expect(linked?.body).toMatchObject({ code: "483920", clientType: "web" });
+    expect(linked?.body.deviceId).toMatch(/^[A-Za-z0-9_-]{43}$/);
+    expect((await gatewayLog(request)).some((item) => item.path.endsWith("/complete"))).toBe(false);
+  });
+
+  test("验证码失效：提示重发，输入锁住", async ({ page }) => {
+    await toLinkStep(page);
+    await submitCode(page, "000000");
+    await expect(formAlert(page)).toHaveText("这个验证码已失效，请重新发送一个", ROUND_TRIP);
+    await expect(page.getByLabel("验证码")).not.toBeEditable();
+    await expect(page.getByRole("button", { name: "完成绑定" })).toHaveAttribute(
+      "aria-disabled",
+      "true",
+    );
+  });
+
+  test("刷新：回到绑定的输码步，不是注册的", async ({ page }) => {
+    await toLinkStep(page);
+    await page.reload();
+    await expect(page.getByRole("heading", { name: "验证这个邮箱" })).toBeVisible(ROUND_TRIP);
+    await expect(page.getByText(TAKEN)).toBeVisible();
+    await expect(page.getByRole("button", { name: "完成绑定" })).toBeVisible();
+    await expect(page.getByRole("main")).not.toContainText("已发送");
+    await waitForTakeover(page, "form");
+    await submitCode(page, "483920");
+    await expect(page).toHaveURL("/", ROUND_TRIP);
+  });
+
+  test("重放：凭证用过后再提交，到已失效页", async ({ page, context }) => {
+    await toLinkStep(page);
+    // 另一个标签页已经停在同一步
+    const other = await context.newPage();
+    await other.goto("/register/complete");
+    await expect(other.getByRole("heading", { name: "验证这个邮箱" })).toBeVisible(ROUND_TRIP);
+    await waitForTakeover(other, "form");
+    const ticket = (await context.cookies()).find((c) => c.name === "patra_oauth_ticket");
+
+    await submitCode(page, "483920");
+    await expect(page).toHaveURL("/", ROUND_TRIP);
+
+    // 把用过的凭证放回去再交，请求才会到 identity
+    await context.addCookies([
+      { name: "patra_oauth_ticket", value: ticket?.value ?? "", url: "http://localhost:4030" },
+    ]);
+    await submitCode(other, "483920");
+    await expect(other.getByRole("heading", { name: "这次绑定已失效" })).toBeVisible(ROUND_TRIP);
+    await expect(other.getByRole("link", { name: "回到登录页" })).toBeVisible();
+  });
+
+  for (const [conflict, heading] of [
+    ["taken", "这个账号已经绑定了"],
+    ["already", "没有绑定"],
+  ] as const) {
+    test(`冲突 ${conflict}：结果页，没有登录`, async ({ page, context, request }) => {
+      await toLinkStep(page);
+      await request.post(`${MOCK}/__update`, { data: { linkConflict: conflict } });
+      await submitCode(page, "483920");
+      await expect(page.getByRole("heading", { name: heading })).toBeVisible(ROUND_TRIP);
+      const cookies = await context.cookies();
+      expect(cookies.some((cookie) => cookie.name === "patra_session")).toBe(false);
+    });
+  }
+
+  test("注入：邮箱和 ticket 都改不了发给 identity 的凭证", async ({ page, context, request }) => {
+    await toClash(page);
+    const own = (await context.cookies()).find((c) => c.name === "patra_oauth_ticket")?.value;
+    await page.evaluate(async () => {
+      await fetch("/api/auth/oauth/registration/link-code?ticket=stolen", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-Patra-Registration-Ticket": "stolen" },
+        body: JSON.stringify({ email: "lin.zhiyuan@example.com", ticket: "stolen" }),
+      });
+    });
+    const sent = (await gatewayLog(request))
+      .filter((item) => item.path.endsWith("/registration/link-code"))
+      .pop();
+    expect(sent?.ticket).toBe(own);
+    expect(sent?.body).toEqual({ email: "lin.zhiyuan@example.com" });
+  });
+});
+
 test.describe("防注入", () => {
   test("别人的 ticket 放进地址栏：不算数，也不发给网关", async ({ page, browser, request }) => {
     // 攻击者走完授权，拿到自己的 ticket

@@ -1,4 +1,9 @@
-import type { CompleteResult, SendCodeResult } from "@/lib/auth/registration-types";
+import type {
+  CompleteResult,
+  LinkResult,
+  SendCodeResult,
+  SendLinkCodeResult,
+} from "@/lib/auth/registration-types";
 
 const UNAVAILABLE = { ok: false, reason: "unavailable" } as const;
 
@@ -36,4 +41,16 @@ export function postRegistrationComplete(input: { code: string }): Promise<Compl
   return readResult<CompleteResult>(
     fetch("/api/auth/oauth/registration/complete", jsonPost(input)),
   );
+}
+
+/// 浏览器端发绑定用的验证码，重发也调它
+export function postLinkCode(input: { email: string }): Promise<SendLinkCodeResult> {
+  return readResult<SendLinkCodeResult>(
+    fetch("/api/auth/oauth/registration/link-code", jsonPost(input)),
+  );
+}
+
+/// 浏览器端提交绑定用的验证码
+export function postLink(input: { code: string }): Promise<LinkResult> {
+  return readResult<LinkResult>(fetch("/api/auth/oauth/registration/link", jsonPost(input)));
 }
