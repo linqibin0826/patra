@@ -57,7 +57,7 @@ cd.yml 里决定“要不要部署”的那个条件，写得很细：
 
 要部署哪些服务、各自的端口、镜像名、健康检查地址，都记在 `services.json` 里。打包和部署脚本都只按名字来这里查，自己不写死清单。
 
-<CodeRef at="patra-infra/cd/services.json@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="1-23" />
+<CodeRef at="patra-infra/cd/services.json@8140a9d9482324670b63f00ab3c62690102196c5" lines="1-23" />
 
 所以“新增一个服务”变成纯配置工作：加一个条目，再在 compose 里加一个小节，workflow 的逻辑不用改。
 
@@ -106,7 +106,9 @@ cd.yml 里决定“要不要部署”的那个条件，写得很细：
 
 记账的位置是 mini 上的一个文件，每个服务各一份，内容是一个提交号：
 
-<CodeRef at="patra-infra/cd/deploy.sh@2197850b5a624ed4dbaa97df71e144c343e28baa" lines="105-135" />
+<CodeRef at="patra-infra/cd/deploy.sh@7dc80d272f808228d2fb32897c8857f0faae94ff" lines="122-153" />
+
+循环结束后，脚本还会给这次名单里的每个服务清一次旧镜像：每部署一次，本机就多一个以提交号为 tag 的镜像，不清理磁盘会被慢慢吃满。所以每个服务只留最近 3 个 tag，外加 `latest` 和上一个好版本，更旧的删掉。真要回滚到一个已被删掉的版本，脚本会从镜像仓库把它拉回来。
 
 ## 部署不能被打断
 

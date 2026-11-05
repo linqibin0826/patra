@@ -46,7 +46,7 @@ export function LibraryItem({
   onNoteSaved,
   onNoteDone,
 }: LibraryItemProps) {
-  const { item, paper, stats } = entry;
+  const { item, paper, stats, views } = entry;
   const extra = (
     <>
       <Membership item={item} collections={collections} currentCollectionId={currentCollectionId} />
@@ -69,7 +69,7 @@ export function LibraryItem({
       action={menu}
       detailedDate
       summary={false}
-      stats={<PaperStats paperKey={paper.id} stats={stats} />}
+      stats={<PaperStats paperKey={paper.id} stats={stats} viewerCount={views} />}
     >
       {extra}
     </PaperListItem>

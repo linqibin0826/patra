@@ -1,0 +1,199 @@
+---
+title: 物化视图：写入时就汇总，所以汇总表只能存幂等的值
+summary: ClickHouse 的物化视图是插入触发器：每写进一批，就对这一批算一次、追加进汇总表。它在明细表合并去重之前就算完了，重复事件会被算进汇总，所以重复要在批次层面拦住，汇总表只放 max / min；跨批的判断（整个会话是不是真人）它做不了，留到查询时 JOIN。
+type: concept
+difficulty: advanced
+tags: [analytics, database]
+prerequisites: [analytics-batch-insert-dedup-token]
+topics: [analytics-pipeline]
+sources:
+  - version: v0.18
+    issue: PAP-168
+    pr: 373
+personalEnv: false
+---
+
+<Diagnose
+  question="同一个事件 e1 先在一次写入里进了 events，崩溃重启后，它又出现在另一次写入里，两次写入的令牌不同。块令牌能把第二份挡住吗？"
+  options={["能：e1 的 event_id 一样，ClickHouse 认得出来", "不能：块令牌只认整批，两次写入的令牌不同", "能：只要两次写入都在最近 1,000 次之内"]}
+  answer="B"
+  ifRight="对。令牌不同，第二份照样写进去。这篇讲：这一份重复会在什么时候、以什么方式混进汇总表。"
+  ifWrong="答案是 B。块令牌按整批认，不看每行的 event_id；去重窗口记的是令牌，令牌不同就是新的一批。这题考的是块令牌能挡什么、挡不住什么，先读块令牌那篇。"
+  suggest="analytics-batch-insert-dedup-token"
+/>
+
+<Callout kind="lead">
+
+ClickHouse 的物化视图是一个**插入触发器**：每当一批数据写进源表，它就对这一批跑一次 `SELECT`，把结果追加进另一张目标表。
+
+</Callout>
+
+## 它不是定时刷新的视图
+
+很多数据库里的物化视图是「把一条查询的结果存下来，定时或手动刷新」，例如 PostgreSQL 要执行 `REFRESH MATERIALIZED VIEW` 才会重算整张结果。
+
+ClickHouse 的不一样：它从不重算，也从不回头看源表里已有的数据。它只在写入那一刻，拿**刚写进来的这一批**算一次。所以计数接口查汇总表时，数据已经是写入时就汇总好的，不用每次扫明细。
+
+Patra 的明细表 `events` 上挂了三个物化视图，各自写一张汇总表：
+
+| 汇总表 | 一行代表 | 用来 |
+|---|---|---|
+| `article_session_reads` | 一篇文献 × 一个会话 × 一个人 × 一天 | 「N 人看过」「N 人读过全文」、热读、看过还看了 |
+| `session_quality` | 一个会话 | 判断这个会话是不是真人会话 |
+| `daily_person_activity` | 一个人 × 一天 | 日活、留存 |
+
+## 目标表：只存「有没有过」
+
+以文献 × 会话这张为例，表和物化视图写在同一个建表脚本里：
+
+<CodeRef at="patra-api/patra-analytics/patra-analytics-infra/src/main/resources/clickhouse/V3__article_session_reads.sql@8140a9d9482324670b63f00ab3c62690102196c5" lines="3-27" />
+
+```sql
+CREATE TABLE IF NOT EXISTS article_session_reads (
+    article_id    UInt64,
+    session_id    UUID,
+    person_id     String,
+    day           Date,
+    is_synthetic  Bool,
+    viewed        SimpleAggregateFunction(max, UInt8),
+    fulltext      SimpleAggregateFunction(max, UInt8)
+) ENGINE = AggregatingMergeTree
+ORDER BY (article_id, session_id, person_id, day, is_synthetic)
+SETTINGS non_replicated_deduplication_window = 1000;
+
+-- 查看类事件（埋点方案 §6.8）；全文 = 全文阅读或下载 PDF。列名写明：SELECT * 不含计算列
+CREATE MATERIALIZED VIEW IF NOT EXISTS article_session_reads_mv TO article_session_reads AS
+SELECT
+    article_id,
+    session_id,
+    person_id,
+    toDate(derived_at, 'Asia/Shanghai') AS day,
+    is_synthetic,
+    1 AS viewed,
+    event_name IN ('fulltext_read', 'pdf_downloaded') AS fulltext
+FROM events
+WHERE article_id != 0
+  AND event_name IN ('article_viewed', 'fulltext_read', 'pdf_downloaded', 'article_collected');
+```
+
+- **`AggregatingMergeTree`**：后台合并时，把排序键相同的多行聚合成一行。合并之前，同一个键可能有好几行，所以查询时还要再按键聚合一次（`max(viewed)`）。
+- **`SimpleAggregateFunction(max, UInt8)`**：告诉引擎，合并时这一列取最大值。`viewed` 只有 0 和 1，取最大值就是「这个会话里看过没有」。
+- **`SELECT` 里列名写明**：`article_id`、`person_id` 是 `events` 上的计算列（`MATERIALIZED`），`SELECT *` 不会带上它们。
+
+`daily_person_activity` 里连 `user_id` 都写成了 `SimpleAggregateFunction(max, UInt64)`：ClickHouse 26.x 不允许 `AggregatingMergeTree` 有既不在排序键里、也不是聚合函数的列。同一个 `person_id` 的 `user_id` 不变，取最大值不改变它。这一处和设计文档里的写法不同，以代码为准。
+
+## 坑：物化视图先于去重
+
+明细表 `events` 用 `ReplacingMergeTree`，后台合并时同一个 `event_id` 只留一行。听起来重复事件迟早会被清掉。可物化视图是在**写入那一刻**算的，等不到合并：
+
+<Stepper
+  title="一份重复的 e1，怎么混进汇总表"
+  nodes={[
+    { id: "batch", label: "写入批次" },
+    { id: "events", label: "events", sub: "ReplacingMergeTree" },
+    { id: "mv", label: "物化视图", sub: "只看这一批" },
+    { id: "max", label: "汇总 · max", sub: "Patra 的做法" },
+    { id: "sum", label: "汇总 · sum", sub: "假想的做法" }
+  ]}
+  links={[
+    { from: "batch", to: "events" },
+    { from: "events", to: "mv" },
+    { from: "mv", to: "max" },
+    { from: "mv", to: "sum" }
+  ]}
+  steps={[
+    { caption: "批次 A（令牌 TA）里有事件 e1：B 在会话 s1 里打开了文献 42。批次写进 events。", focus: ["batch", "events"], links: ["batch>events"], tokens: [{ id: "a", label: "e1", at: "events" }], notes: [{ at: "events", text: "e1 · 1 行" }] },
+    { caption: "物化视图对批次 A 跑一遍：两张汇总表各加一行。max 表记 viewed = 1，假想的 sum 表记打开次数 = 1。", focus: ["mv", "max", "sum"], links: ["events>mv", "mv>max", "mv>sum"], notes: [{ at: "events", text: "e1 · 1 行" }, { at: "max", text: "viewed = 1", tone: "ok" }, { at: "sum", text: "次数 = 1", tone: "ok" }] },
+    { caption: "提交偏移量前崩溃，重拉后 e1 的副本出现在批次 B 里（令牌 TB）。令牌对不上，写进了 events。", focus: ["batch", "events"], links: ["batch>events"], tokens: [{ id: "b", label: "e1 副本", at: "events" }], notes: [{ at: "events", text: "e1 · 2 行（未合并）", tone: "wait" }, { at: "max", text: "viewed = 1", tone: "ok" }, { at: "sum", text: "次数 = 1", tone: "ok" }] },
+    { caption: "物化视图对批次 B 又跑一遍。它只看得到批次 B 这几行，不知道 e1 算过：max 表又加一行 viewed = 1，sum 表的次数变成 2。", focus: ["mv", "max", "sum"], links: ["events>mv", "mv>max", "mv>sum"], notes: [{ at: "events", text: "e1 · 2 行（未合并）", tone: "wait" }, { at: "max", text: "两行 · 都是 1", tone: "wait" }, { at: "sum", text: "次数 = 2", tone: "bad" }] },
+    { caption: "过了一阵，events 后台合并，两行 e1 合成一行。明细表里的重复清掉了。", focus: ["events"], notes: [{ at: "events", text: "e1 · 1 行", tone: "ok" }, { at: "max", text: "两行 · 都是 1", tone: "wait" }, { at: "sum", text: "次数 = 2", tone: "bad" }] },
+    { caption: "汇总表各自合并：max(1, 1) = 1，B 还是只算 1 个读者；sum 表 1 + 1 = 2，永远多算一次，再也纠正不回来。", focus: ["max", "sum"], notes: [{ at: "events", text: "e1 · 1 行", tone: "ok" }, { at: "max", text: "viewed = 1", tone: "ok" }, { at: "sum", text: "次数 = 2", tone: "bad" }] }
+  ]}
+  guesses={[
+    { before: 4, question: "物化视图处理批次 B 时，会发现 e1 已经算过吗？", options: ["不会：它只看得到批次 B 刚写进来的这几行", "会：它按 event_id 回 events 查过一遍", "会：它等 events 合并完重复之后才算"], answer: "A", explain: "物化视图是插入触发器，输入只有这一批，不读源表里已有的数据，也不等合并。重复在它眼里就是一条新事件。" },
+    { before: 6, question: "events 里的重复已经合并掉了。sum 表里那个 2 会变回 1 吗？", options: ["会：汇总表会跟着源表的合并重新计算", "会：下一次查询时会从明细重新汇总", "不会：汇总表从不回头看源表"], answer: "C", explain: "源表合并只改源表自己。汇总表里的 1 + 1 在写入时就定了，之后它只和自己的行合并，sum 合并出来还是 2。" }
+  ]}
+/>
+
+<Callout kind="insight" label="怎么认出它">
+
+源表的去重发生在**合并时**，物化视图的汇总发生在**写入时**，写入永远在合并之前。凡是「源表靠合并去重 + 物化视图做汇总」的组合，都要先问一句：同一条数据来两次，汇总列算出来一样吗？
+
+</Callout>
+
+所以 Patra 两头堵：
+
+1. **重复尽量在批次层面拦住**：重试同一批时，块令牌让整批被丢弃，明细表和三张汇总表都不会多出一份。
+2. **漏过去的，让它算两次也无所谓**：三张汇总表的列全是 `max` / `min`（「有没有过」「最早一次」），同一事件来几次结果都一样；对外的数字都是按人去重的人数。汇总表里**不放** `sum`、`count` 这类会被重复放大的列，日活表也没有「当天事件条数」。
+
+## 重试时还有一个坑：明细写成了，汇总没写成
+
+一次写入要写四张表：先写 `events`，再由三个物化视图写三张汇总表。假如 `events` 写成了，某张汇总表写失败，整条写入报错，消费者带**同一个令牌**重试。这时会发生什么，取决于一个设置：
+
+<Compare
+  title="带同一令牌重试，开不开 deduplicate_blocks_in_dependent_materialized_views"
+  failureLabel="第 2 步某张汇总表写失败，整条写入报错，带同一令牌重试"
+  variants={[
+    { label: "不开", steps: ["带令牌 T 写进 events", "物化视图把这批写进三张汇总表", "写入返回成功，提交偏移量"], results: [{ label: "events", value: "一份", tone: "ok" }, { label: "三张汇总表", value: "一份", tone: "ok" }], verdict: { tone: "ok", head: "顺利时没区别。", text: "不出错的时候，开不开这个设置结果一样。" }, failure: { after: 1, results: [{ label: "events", value: "一份", tone: "ok" }, { label: "写失败的那张汇总表", value: "永久缺这一批", tone: "bad" }], verdict: { tone: "bad", head: "汇总少了，而且没人知道。", text: "重试时 events 认出令牌 T，把整批当成重复丢掉；源表这批被丢弃，物化视图也跟着被跳过。写入「成功」返回，偏移量提交，这一批再也不会来。" } } },
+    { label: "开（Patra）", steps: ["带令牌 T 写进 events", "物化视图把这批写进三张汇总表", "写入返回成功，提交偏移量"], results: [{ label: "events", value: "一份", tone: "ok" }, { label: "三张汇总表", value: "一份", tone: "ok" }], verdict: { tone: "ok", head: "顺利时没区别。", text: "不出错的时候，开不开这个设置结果一样。" }, failure: { after: 1, results: [{ label: "events", value: "一份", tone: "ok" }, { label: "三张汇总表", value: "补齐，各一份", tone: "ok" }], verdict: { tone: "ok", head: "补上了。", text: "源表认出重复照样丢弃，但物化视图仍然执行，每张汇总表各自按令牌判断：已经写成的跳过，没写成的这次补上。" } } }
+  ]}
+/>
+
+Patra 的每次写入都带着这个设置：
+
+<CodeRef at="patra-api/patra-analytics/patra-analytics-infra/src/main/java/dev/patra/analytics/infra/ingest/support/ClickHouseInserts.java@8140a9d9482324670b63f00ab3c62690102196c5" lines="17-24" />
+
+```java
+  public static InsertSettings settings(String token) {
+    return new InsertSettings()
+        .setDeduplicationToken(token)
+        .serverSetting("deduplicate_blocks_in_dependent_materialized_views", "1")
+        .serverSetting("input_format_null_as_default", "1")
+        .serverSetting("date_time_input_format", "best_effort")
+        .serverSetting("input_format_json_read_objects_as_strings", "1");
+  }
+```
+
+这就是为什么三张汇总表也都设了 `non_replicated_deduplication_window = 1000`：它们要能自己记住令牌。集成测试专门造过这个场景：先删掉 `article_session_reads` 让写入失败，重建表后带同一令牌重试，断言四张表各有一行。
+
+## 物化视图只看得到这一批：跨批的判断留给查询
+
+「看过人数」只数**真人会话**：会话里至少有一条浏览器事件，并且没有一条被判为爬虫。可一个会话的事件会分散在很多批里，爬虫标记可能在第十批才出现。物化视图每次只看到一批，没法回答「整个会话里有没有爬虫事件」。
+
+做法是把判断拆成两半：物化视图只记每个会话的特征，每批各记一行，合并时取最大值；判断留到查询时做。
+
+<CodeRef at="patra-api/patra-analytics/patra-analytics-infra/src/main/resources/clickhouse/V4__session_quality.sql@8140a9d9482324670b63f00ab3c62690102196c5" lines="11-17" />
+
+```sql
+CREATE MATERIALIZED VIEW IF NOT EXISTS session_quality_mv TO session_quality AS
+SELECT
+    session_id,
+    source = 'client' AS has_client,
+    toUInt8(is_bot) AS has_bot,
+    toDate(derived_at, 'Asia/Shanghai') AS first_day
+FROM events;
+```
+
+查询时按 `session_id` 分组，`HAVING max(has_client) = 1 AND max(has_bot) = 0` 就是真人会话，再和 `article_session_reads` 连起来数人。爬虫事件照样写进文献 × 会话表，排除放在查询里：口径哪天改了，只改查询，不用重算汇总。
+
+## 放在数据分层里看
+
+业界常把数据仓库分成几层，Patra 这一版用的是同样的思路：
+
+| 层 | 业界叫法 | Patra 里是 |
+|---|---|---|
+| 明细层 | ODS + DWD | `events`：一行一条富化事件，按天分区，90 天后整个分区丢掉 |
+| 汇总层 | DWS | 三张物化视图汇总表，写入时生成；两张文献 / 会话表长期保留，日活表 400 天 |
+| 应用层 | ADS | 计数接口查汇总表、外面套 Redis 60 秒缓存；热读与看过还看了由定时任务算好写进 PG 快照 |
+
+物化视图就是明细层到汇总层的那根管子。它省掉了每次查询扫明细，代价是这篇讲的两条：汇总列必须幂等，跨批的判断做不了。
+
+<Transfer
+  prompt="产品想在面板上加「每篇文献每天被打开了多少次」（次数，不是人数）。有人提议在 article_session_reads 上加一列 opens SimpleAggregateFunction(sum, UInt64)，物化视图每条事件写 1。你同意吗？你会怎么做？"
+  points={[
+    { label: "不能用 sum", text: "重复事件（令牌没挡住的那部分、模拟器的重发）会被物化视图各算一次，events 合并去重后 sum 也纠正不回来，次数会偏多。" },
+    { label: "从明细按 event_id 去重数", text: "次数直接在 events 上按天、按文献 uniqExact(event_id)，重复只算一次；明细只留 90 天，超过的就看不到了。" },
+    { label: "要长期保留就存去重状态", text: "一般做法是汇总表存 AggregateFunction(uniqExact, UUID) 这类去重状态，合并时求并集，代价是体积比一个数字大得多。" },
+    { label: "口径先写清", text: "打开次数要不要排除爬虫会话、合成流量，和「看过人数」用同一套规则，写进埋点方案再动手。" }
+  ]}
+/>

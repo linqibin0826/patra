@@ -10,11 +10,14 @@ import dev.patra.identity.domain.account.model.vo.mail.EmailChangeRevertedMail;
 import dev.patra.identity.domain.account.model.vo.mail.EmailChangedConfirmationMail;
 import dev.patra.identity.domain.account.model.vo.mail.EmailChangedNoticeMail;
 import dev.patra.identity.domain.account.model.vo.mail.EmailVerificationMail;
+import dev.patra.identity.domain.account.model.vo.mail.LoginMethodLinkedMail;
+import dev.patra.identity.domain.account.model.vo.mail.LoginMethodUnlinkedMail;
 import dev.patra.identity.domain.account.model.vo.mail.NewDeviceLoginMail;
 import dev.patra.identity.domain.account.model.vo.mail.OutgoingMail;
 import dev.patra.identity.domain.account.model.vo.mail.PasswordChangedMail;
 import dev.patra.identity.domain.account.model.vo.mail.PasswordResetDoneMail;
 import dev.patra.identity.domain.account.model.vo.mail.PasswordResetMail;
+import dev.patra.identity.domain.account.model.vo.mail.RegistrationCodeMail;
 import dev.patra.identity.domain.session.model.vo.SecurityNotice;
 import java.time.Instant;
 import java.util.List;
@@ -47,11 +50,31 @@ public final class SecurityMailFixture {
 
   private SecurityMailFixture() {}
 
-  /// 13 种各一封，每次调用都是新的事件 ID。
+  /// 16 种各一封，每次调用都是新的事件 ID。
   ///
   /// @return 样本
   public static List<OutgoingMail> all() {
     return List.of(
+        RegistrationCodeMail.builder()
+            .to(TO)
+            .displayName("陈宇")
+            .code("483920")
+            .codeExpiresAt(LINK_EXPIRES)
+            .build(),
+        LoginMethodLinkedMail.builder()
+            .to(TO)
+            .displayName("陈宇")
+            .providerName("GitHub")
+            .accountLabel("octocat")
+            .notice(NOTICE)
+            .build(),
+        LoginMethodUnlinkedMail.builder()
+            .to(TO)
+            .displayName("陈宇")
+            .providerName("GitHub")
+            .accountLabel("octocat")
+            .notice(NOTICE)
+            .build(),
         EmailVerificationMail.builder()
             .to(TO)
             .displayName("陈宇")

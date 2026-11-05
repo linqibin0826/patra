@@ -6,6 +6,8 @@
 
 另外两个按类路径条件生效：`SecurityAuditingAutoConfiguration`（类路径有 `patra-tool-jpa` 时把当前用户接到 JPA 审计）和 `SecurityForwardingAutoConfiguration`（类路径有 `patra-tool-http-client` 时把身份断言转发给下游）。`src/testFixtures` 提供测试用的公钥注入（`TestIdentityAssertionEnvironmentPostProcessor`）。
 
+过滤器链的取舍：应用声明普通的 `SecurityFilterChain` 时默认链让位（网关）；只想给几个路径多加一条（identity 的 `oauth2Login`）时，工厂方法的返回类型写 `AdditionalSecurityFilterChain`，默认链留着。认证过滤器的成功处理器里抛的业务异常到不了全局异常处理器，用 `SecurityProblemWriter.writeProblem` 写。
+
 ## 配置（前缀 `patra.security`）
 
 | 键 | 类型 | 默认值 | 说明 |

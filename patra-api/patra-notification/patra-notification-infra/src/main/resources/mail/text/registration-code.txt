@@ -1,0 +1,11 @@
+[# th:replace="~{text/fragments/header}" /]
+你好，[(${displayName})]：
+
+在 [(${siteName})] 的注册页面输入下面的验证码，完成注册：
+
+[(${code})]
+
+验证码 [(${linkExpiresAt})] 前有效。不要把验证码告诉任何人。
+如果不是你在注册，忽略这封邮件即可，不会有账号被创建。
+
+[# th:replace="~{text/fragments/footer}" /]

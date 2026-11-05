@@ -1,0 +1,125 @@
+---
+title: 埋点工具全景：分析平台、采集管线与 CDP 各管哪一段
+summary: 神策、GrowingIO、GA4、Mixpanel、Amplitude、PostHog、Snowplow、Segment 常被放在一起比，其实它们管的不是同一段：有的是从 SDK 到报表一条龙的分析平台，有的只负责把干净的事件送进你自己的数仓，有的专门把数据收齐再分发给别的工具。这篇按官方文档的自我介绍把它们归位，再看 Patra 自建的每一段对应业界哪一类。
+type: concept
+difficulty: basic
+tags: [analytics, backend]
+prerequisites: [analytics-tracking-methods]
+topics: [analytics-pipeline]
+sources:
+  - version: v0.18
+    issue: PAP-164
+    pr: 373
+personalEnv: false
+---
+
+<Diagnose
+  question="一家公司已经用 Mixpanel 看漏斗和留存，有人提议「换成 Segment 更好」。这两个工具是同一类、可以直接互相替换吗？"
+  options={["不是一类：Segment 负责收数据再转发给别的工具，本身不以做分析报表为主", "是一类：都是产品分析平台，只是界面和价格不同", "是一类：都是开源工具，区别只在部署方式"]}
+  answer="A"
+  ifRight="对。Segment 按官方说法是客户数据平台（CDP），把数据收齐、清洗后送到下游工具，Mixpanel 这类分析平台正是它的下游之一。这篇把八个常见工具按「管哪一段」归位。"
+  ifWrong="答案是 A。Segment 的官方文档说它收集网站、App、服务端的第一方数据，再发给你用的业务工具，分析报表交给下游的分析平台做。上一篇讲了埋点方式（事件怎么被记下来），这篇讲记下来之后由谁收、谁存、谁分析。"
+  suggest="analytics-tracking-methods"
+/>
+
+<Callout kind="lead">
+
+埋点工具按管的那一段分三类：**分析平台**从 SDK、存储到报表一条龙；**采集管线**负责把校验、富化过的事件送进你自己的数仓或数据湖；**客户数据平台（CDP）**负责把各处的数据收齐，再分发给其他工具。
+
+</Callout>
+
+同一家厂商可能同时有几类产品，所以下面说的是「这个产品的主业是哪一段」，依据是各家官方文档对自己的介绍。
+
+## 先看一条行为数据要经过哪几段
+
+不管用谁的工具，一条行为事件都要走过这几段。全景篇里 Patra 的管线也是这几段，只是每一段都自己搭：
+
+<Structure
+  title="一条行为数据经过的四段，和各类工具覆盖的范围"
+  intro="点方块看这一段做什么、哪些工具在这一段。"
+  nodes={[
+    { id: "sdk", label: "采集", sub: "SDK / 服务端上报", col: 1, desc: "在网页、App 或服务端把事件记下来。代码埋点、全埋点、可视化埋点都发生在这一段。几乎每家都提供自己的 SDK。" },
+    { id: "pipe", label: "管线", sub: "接收、校验、富化", col: 2, desc: "收下事件、按格式校验、补上地区和设备信息、处理坏数据。Snowplow 的主业就在这一段，并把结果交给你的存储。" },
+    { id: "store", label: "存储", sub: "明细与汇总", col: 3, desc: "把上亿条事件存下来、能快速汇总。分析平台自带存储；采集管线则把数据写进你自己的数仓或数据湖。" },
+    { id: "ui", label: "分析", sub: "报表、漏斗、留存", col: 4, desc: "给产品和运营看的界面：事件分析、漏斗、留存、分群。神策分析、GrowingIO、GA4、Mixpanel、Amplitude、PostHog 都以这一段为主要卖点。" },
+    { id: "dest", label: "其他工具", sub: "广告、营销、数仓", col: 3, row: 2, desc: "CDP 的下游：同一份数据可以同时送去分析平台、营销工具和数仓。Segment 的主业是收齐再分发。" }
+  ]}
+  edges={[
+    { from: "sdk", to: "pipe" },
+    { from: "pipe", to: "store" },
+    { from: "store", to: "ui" },
+    { from: "pipe", to: "dest", label: "CDP 分发", desc: "CDP 把收来的数据按配置转发给多个下游，自己不以出报表为主。" }
+  ]}
+/>
+
+## 分析平台：从 SDK 到报表一条龙
+
+这类工具给你 SDK，事件发到它们那里存，打开网页就能看漏斗和留存。差别主要在部署方式、数据存在哪、开不开源。
+
+- **神策分析**：神策数据的分析产品。官方手册里有 Web 全埋点、可视化全埋点、数据质量校验、测试项目与正式项目分开等完整文档（见 [神策分析手册](https://manual.sensorsdata.cn/sa/docs/)）。官网首页称自己是「大数据分析与营销科技解决方案服务商」，并展示等级保护和国产软硬件的适配认证。部署方式本文没在官方页面查到明确说法，不写。
+- **GrowingIO**：官网称自己是「面向企业的数据智能增长平台」，核心是「GrowingIO 分析云」，产品分增长分析和客户数据平台两块，常见问题里写明提供 SaaS 与私有化部署两种方式（据 [GrowingIO 官网](https://www.growingio.com/)）。它的采集 SDK 在 GitHub 上公开，Android 无埋点 SDK 用 Apache 2.0 许可，开源的是 SDK，不是整个平台。
+- **GA4（Google Analytics 4）**：Google 官网说它免费提供（「free of charge」），另有进阶版 Analytics 360（据 [Google Analytics 官网](https://marketingplatform.google.com/about/analytics/)）。原始事件可以导出到 BigQuery，标准版每天导出上限 100 万条事件，360 版每天最多 200 亿条（据 [GA4 BigQuery 导出说明](https://support.google.com/analytics/answer/9358801?hl=en)）。用户级数据的保留期标准版只能选 2 个月或 14 个月，只影响探索和漏斗报告，不影响标准的汇总报告（据 [GA4 数据保留](https://support.google.com/analytics/answer/7667196?hl=en)）。
+- **Mixpanel**：官方文档称自己是产品分析，建立在事件、用户、属性三个概念上（据 [What is Mixpanel](https://docs.mixpanel.com/docs/what-is-mixpanel)）。数据默认存在它在 Google Cloud 上的美国服务器，可以在建项目时选欧盟数据驻留；选错了只能新建项目迁移（据 [Mixpanel EU 数据驻留](https://docs.mixpanel.com/docs/privacy/eu-residency)）。
+- **Amplitude**：官方文档称自己是「基于事件的分析工具」（据 [What is Amplitude](https://amplitude.com/docs/get-started/what-is-amplitude)），同时提供自动采集和精确埋点两种方式。
+- **PostHog**：开源，任何人都可以自己部署；免费的自部署版用 Docker Compose、MIT 许可，但官方不为自部署提供支持，付费功能只在它的云服务上（据 [PostHog 自部署文档](https://posthog.com/docs/self-host)）。它公开了自己的架构：采集服务把事件写进 Kafka，处理后再写进 ClickHouse（据 [How PostHog works](https://posthog.com/docs/how-posthog-works)）。这和 Patra 选的 Kafka + ClickHouse 是同一个骨架。
+
+## 采集管线：把干净的事件送进你自己的仓库
+
+**Snowplow** 不以报表界面为主业。它的文档开头一句话是把校验、富化过的事件级数据实时送到你的数仓、数据湖或消息流（据 [Snowplow 文档首页](https://docs.snowplow.io/docs/)），可以部署在你自己的云上或它的云上。管线里每个事件都按 JSON Schema 校验，schema 放在叫 Iglu 的 schema 注册中心里；校验没过的事件不进主表，单独存放（据 [Snowplow schemas](https://docs.snowplow.io/docs/fundamentals/schemas/) 与 [Snowplow failed events](https://docs.snowplow.io/docs/fundamentals/failed-events/)）。
+
+说它「开源」要加限定：Snowplow 已把新版管线组件改成「源码可得」（source-available）的 Snowplow Limited Use License，测试或合成数据、个人学习研究可以用，**在生产环境处理真实数据要买商业许可**（据 [Snowplow 许可 FAQ](https://docs.snowplow.io/docs/resources/limited-use-license-faq/)）。
+
+## CDP：收齐，再分发
+
+**Segment**（现属 Twilio）的官方文档称自己是客户数据平台（CDP），负责收集、清洗、激活客户数据（据 [Segment 文档](https://www.twilio.com/docs/segment)）：从网站、App、服务端收第一方数据，再发给你用的各种业务工具。它的 Protocols 功能用 JSON Schema 写埋点方案，不符合方案的事件会产生违规记录，可以选择拦下来，转进单独的隔离来源（据 [Segment Protocols](https://www.twilio.com/docs/segment/protocols)）。这一点和 Snowplow 的 Iglu 一样，都是「格式写成机器能校验的规格」，在「埋点治理」那篇细讲。
+
+## 一张表归位
+
+| 工具 | 主业 | 部署与数据在哪 | 开源情况 |
+|---|---|---|---|
+| 神策分析 | 分析平台 | 本文没查到官方说法 | 采集 SDK 在 GitHub 公开 |
+| GrowingIO | 分析平台，另有 CDP 产品 | SaaS 或私有化 | 采集 SDK 开源（Apache 2.0） |
+| GA4 | 分析平台 | 用 Google 的服务；原始事件可导出到 BigQuery | 本文不涉及 |
+| Mixpanel | 分析平台 | 托管，默认美国，可选欧盟 | 本文不涉及 |
+| Amplitude | 分析平台 | 本文不涉及 | 本文不涉及 |
+| PostHog | 分析平台 | 云服务，或自己部署（官方不支持） | 开源，自部署版 MIT |
+| Snowplow | 采集管线 | 你的云或它的云，数据进你的数仓 | 新版源码可得，生产要商业许可 |
+| Segment | CDP | 托管，数据转发给下游工具 | 本文不涉及 |
+
+「本文不涉及」的格子是没在官方页面查到确切说法的，宁可空着，不凭印象填。这本身也是读这类比较时的一个习惯：网上的选型文章经常把某家的定位、价格写成定论，引用前回到官方文档核对一遍。
+
+<Quiz
+  questions={[
+    {
+      question: "一家公司要把同一份用户行为数据，同时送进分析平台、营销邮件工具和自己的数仓。最对口的是哪一类工具？",
+      options: ["再多接一个分析平台，让两家分析平台互相同步", "采集管线，把数据送进数仓后让营销工具自己去数仓里读", "CDP，收一次数据，按配置分发给多个下游工具"],
+      answer: "C",
+      explain: "收齐再分发正是 CDP 的主业，Segment 的文档就是这么介绍自己的。采集管线的落点是你的数仓，营销工具要再接一层；分析平台之间互相同步更不是常规做法。"
+    },
+    {
+      question: "团队要求：所有事件必须先按 schema 严格校验，坏事件留着排查，干净数据进公司自己的数仓，报表用现有的 BI 工具做。哪个最贴近这个需求？",
+      options: ["Snowplow 这类采集管线", "GA4 加上它的增强型衡量", "Mixpanel 加上它的 Autocapture"],
+      answer: "A",
+      explain: "按 schema 校验、坏事件单独存放、结果写进你的数仓，是 Snowplow 文档描述的主线；报表交给 BI 工具。GA4、Mixpanel 是自带存储和界面的分析平台，自动采集也不解决严格校验。"
+    }
+  ]}
+/>
+
+## Patra 对应哪一类
+
+Patra 不用上面任何一个，每一段都自己搭（为什么这么选，在「自建还是买 SaaS」那篇讲）。拿上面的分类对照，Patra 的各段分别像：
+
+- **采集**：门户按埋点方案代码埋点，服务端事件由门户发、浏览器事件经门户自己的路径转发。对应各家 SDK 做的事。
+- **管线**：采集端点按 JSON Schema 校验、补地区和设备信息、判爬虫，坏事件进 `events.dlq`。这一段的思路最接近 Snowplow：schema 校验加坏数据单独存放。
+- **存储**：Kafka 缓冲，ClickHouse 存明细和物化视图汇总。骨架和 PostHog 公开的架构一样。
+- **分析**：给作者看的运营看板是自己在 Grafana 上搭的（PAP-172），数据来自 ClickHouse 里预先算好的应用层表；面向读者的计数、热读、看过还看了，是 Patra 自己的应用层，这是现成分析平台不直接提供的部分。
+
+<Transfer
+  prompt="一家国内的医疗健康 App 想做行为分析：数据比较敏感，希望留在自己的机房；团队有两个后端、没有专职数据工程师；产品经理希望下个月就能看漏斗。按这篇的分类，你会先看哪一类工具，要向厂商核实哪几件事？"
+  points={[
+    { label: "先看分析平台", text: "团队小、要快出漏斗，自带存储和界面的分析平台最省事；自己搭管线加存储加界面，两个后端撑不住。" },
+    { label: "核实部署方式", text: "数据要留在自己机房，就要找能私有化或自部署的，并到官方文档或合同里确认，不信二手选型文章；比如 GrowingIO 官网写了支持私有化，PostHog 可自部署但官方不提供支持。" },
+    { label: "核实敏感数据处理", text: "自动采集会不会采到表单内容、能不能关；Mixpanel 就明说处理高度敏感数据的站点不建议开 Autocapture。" },
+    { label: "核实数据能不能拿走", text: "原始事件能不能导出、导出有没有上限，比如 GA4 标准版每天导出 100 万条的上限，决定以后能不能换工具或自己再加工。" }
+  ]}
+/>

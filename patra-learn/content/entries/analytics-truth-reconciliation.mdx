@@ -1,0 +1,187 @@
+---
+title: 真值对账：模拟器知道正确答案
+summary: 流量是模拟器造的，所以它知道每篇文献每天被几个真人看过。把这份真值和 ClickHouse 按同一口径算出的数逐行比，就能验证去重、切天、真人会话判定有没有算错。Patra 在 mini 上灌 1 亿条后对账：看过人数误差 0.001%，读过全文人数误差 0。
+type: concept
+difficulty: advanced
+tags: [analytics, testing, database]
+prerequisites: [analytics-traffic-models, analytics-replacing-mergetree-uniqexact]
+topics: [analytics-pipeline]
+sources:
+  - version: v0.18
+    issue: PAP-171
+    pr: 373
+personalEnv: false
+---
+
+<Diagnose
+  question="events 表是 ReplacingMergeTree，故意把 1% 的事件原样重发了一次（同一个 event_id）。刚写完、后台还没合并时，count() 和 uniqExact(event_id) 是什么关系？"
+  options={["count() 比 uniqExact(event_id) 多出约 1%", "两者相等，写入时就去重了", "uniqExact(event_id) 比 count() 多出约 1%"]}
+  answer="A"
+  ifRight="对。ReplacingMergeTree 要等后台合并才去重，合并前重复行都在，count() 会多；uniqExact 按 event_id 数，不受影响。这篇讲怎么用这类口径去核对整条管线。"
+  ifWrong="答案是 A。ReplacingMergeTree 不在写入时去重，合并前重复行都还在，所以 count() 多出那 1%；uniqExact(event_id) 按 ID 数不同的值，始终是去重后的条数。重复行怎么数，先读讲 ReplacingMergeTree 与 uniqExact 的那篇。"
+  suggest="analytics-replacing-mergetree-uniqexact"
+/>
+
+<Callout kind="lead">
+
+真值对账是拿「造数据的一方自己记下的正确答案」去核对管线的输出：两边按完全相同的口径算同一个数，差多少就说明管线哪里算错了多少。
+
+</Callout>
+
+## 为什么能有「正确答案」
+
+测管线最难的地方是不知道对的数应该是多少。线上流量来自真实读者，没人知道某篇文献昨天到底被几个人看过。
+
+模拟器不一样：每个会话是它生成的，每条事件发没发到、哪天发的、谁发的，它都知道。所以它可以一边发，一边记下**真值**：每个（北京时间日期，文献）有多少个不同的真人看过、多少个读过全文。等管线把数据算进 ClickHouse，用同一个口径查一遍，逐行比。
+
+这能一次验证一串环节：采集端点的爬虫判定、Kafka 到 ClickHouse 的去重、按北京时间切天、物化视图的汇总、真人会话的判定、按人去重。任何一环算错，数字就对不上。
+
+## 口径必须和线上一模一样
+
+对账要验的是线上「N 人看过」那个数（计数接口的查询），所以真值的口径和它逐条对齐：
+
+- **看过**：有过查看类事件（`article_viewed`、`fulltext_read`、`pdf_downloaded`、`article_collected`）的人数。**读过全文**：有过 `fulltext_read` 或 `pdf_downloaded` 的人数。
+- **人**：登录用户按 `u:{user_id}`，访客按 `d:{device_id}`；同一个人一天里看同一篇多少次都只算 1。
+- **日期**：按事件时间的北京时间切，跨午夜的会话两边各算。
+- **只数真人会话**：会话里至少有一条浏览器事件，且没有一条被判为爬虫。
+
+最后一条有个容易想错的地方。模拟器私下知道每个会话是不是爬虫，但真值**不用**这份私下的身份，而是对实际送达的事件套一遍采集端点的同一套规则：
+
+<Quiz
+  title="你猜"
+  questions={[
+    {
+      question: "一个伪装成浏览器的爬虫只爬了 20 篇就走了，没跨过「5 分钟超过 30 篇」的频率阈值。模拟器知道它是爬虫。真值里算不算它看过的那 20 篇？",
+      options: ["不算，模拟器知道它是爬虫，真值就该排除", "算，管线按规则认不出它，真值也照算", "只算前 10 篇，按阈值比例折算"],
+      answer: "B",
+      explain: "对账要回答的是「管线有没有按定好的规则算对」，不是「规则能认出多少爬虫」。规则认不出的爬虫，管线会算进去，真值也要算进去，两边才可比；规则本身的识别率是另一个问题，要用别的办法评估。"
+    }
+  ]}
+/>
+
+## 账本只记已确认送达的事件
+
+真值如果把「发了但没到」的事件也记上，就会冤枉管线。所以账本只记**确认送达**的：实时压测在收到采集端点的 202 之后记；灌历史一块写入失败、重试用尽时整次运行中止，那一天的真值不会写出。
+
+<CodeRef at="patra-api/patra-analytics/patra-analytics-simulator/src/main/java/dev/patra/analytics/simulator/truth/TruthLedger.java@8140a9d9482324670b63f00ab3c62690102196c5" lines="44-62" />
+
+```java
+  public synchronized void accept(SimSession session, List<SimEvent> delivered) {
+    if (delivered.stream().noneMatch(e -> e.name().source() == EventSource.CLIENT)
+        || delivered.stream().anyMatch(e -> e.botReason() != null)) {
+      return;
+    }
+    int person = session.person().index();
+    for (SimEvent event : delivered) {
+      if (!event.name().isView()) {
+        continue;
+      }
+      long pair = ((long) event.articleIndex() << 32) | (person & 0xFFFF_FFFFL);
+      DayBuffer buffer =
+          days.computeIfAbsent(BeijingDays.of(dayInstant.apply(event)), d -> new DayBuffer());
+      buffer.viewed.add(pair);
+      if (event.name().isFulltext()) {
+        buffer.fulltext.add(pair);
+      }
+    }
+  }
+```
+
+传进来的 `delivered` 已经按采集端点的规则打好了爬虫标记。开头两行就是「真人会话」的判定：没有浏览器事件、或有一条爬虫事件，整个会话不记。之后每条查看类事件把（文献，人）两个整数下标拼成一个 `long` 放进当天的缓冲，一天结束时排序、去重、数人数。1 亿条事件、一天约 100 万条，这样存比存对象省得多。
+
+还有一类事件既不算送达也不算失败：请求超时、重试 5 次仍没拿到 202 的，服务端可能其实已经收下了。模拟器把它们记为**结果不明**，单独计数，下面核对条数时会用到。
+
+## 误差用绝对差之和
+
+对账按天查 ClickHouse（每天一条查询，避开 `patra` 账号每条查询 1 GiB 的内存上限），和真值按（日期，文献）逐行对齐，两边缺的行当 0：
+
+<CodeRef at="patra-api/patra-analytics/patra-analytics-simulator/src/main/java/dev/patra/analytics/simulator/truth/Comparison.java@c3df651e18fcd34d66a1ece0e2cea00c78e9d881" lines="31-57" />
+
+```java
+  Comparison add(List<TruthRow> truth, List<TruthRow> actual) {
+    Map<String, TruthRow> expected = index(truth);
+    Map<String, TruthRow> found = index(actual);
+    TreeSet<String> keys = new TreeSet<>(expected.keySet());
+    keys.addAll(found.keySet());
+    for (String key : keys) {
+      TruthRow e = expected.get(key);
+      TruthRow a = found.get(key);
+      int ev = e != null ? e.viewers() : 0;
+      int ef = e != null ? e.fulltextReaders() : 0;
+      int av = a != null ? a.viewers() : 0;
+      int af = a != null ? a.fulltextReaders() : 0;
+      truthViewers += ev;
+      truthFulltext += ef;
+      actualViewers += av;
+      actualFulltext += af;
+      viewerDiff += Math.abs(av - ev);
+      fulltextDiff += Math.abs(af - ef);
+      if (ev != av || ef != af) {
+        mismatched++;
+        if (samples.size() < SAMPLE_LIMIT) {
+          samples.add(key + " 真值 " + ev + "/" + ef + "，ClickHouse " + av + "/" + af);
+        }
+      }
+    }
+    return this;
+  }
+```
+
+误差 = Σ|ClickHouse − 真值| ÷ Σ真值，看过、读过全文各算一个，都不超过 1% 判通过。为什么不直接比两边的合计？假设一篇文献多算了 5 人、另一篇少算了 5 人，合计一样，差值是 0，可两行都是错的。用绝对差之和，正负不会互相抵消。程序同时输出不一致的行数和前 10 行样本，出了问题可以直接拿行去查。
+
+## 人数对上了还不够，条数也要核对
+
+「看过人数」按人去重，这让它对丢数据很不敏感：一个人一天看了某篇三次，丢掉其中两条事件，人数还是 1。丢掉整类事件、或者丢掉 1% 的查看事件，人数几乎不动。所以对账另加一条条数判定：
+
+<CodeRef at="patra-api/patra-analytics/patra-analytics-simulator/src/main/java/dev/patra/analytics/simulator/truth/Reconciler.java@c3df651e18fcd34d66a1ece0e2cea00c78e9d881" lines="247-257" />
+
+```java
+  static ReconcileResult judge(
+      ReconcileResult rows, long delivered, long uncertain, long unique, long written) {
+    boolean countsMatch = unique >= delivered && unique <= delivered + uncertain;
+    return rows.toBuilder()
+        .writtenRows(written)
+        .deliveredEvents(delivered)
+        .uncertainEvents(uncertain)
+        .uniqueEvents(unique)
+        .passed(rows.passed() && countsMatch)
+        .build();
+  }
+```
+
+ClickHouse 里去重后的条数，不能少于模拟器确认送达的条数（少了就是丢了），也不能多于「送达 + 结果不明」（多了就是去重漏了，或者混进了别的数据）。结果不明的那些可能到了、可能没到，所以只放宽上限。
+
+去重后的条数怎么数也有讲究：按天各算一次 `uniqExact(event_id)` 再求和。每天一个分区，同一事件的重发落在同一天；对 1 亿个 UUID 一次性 `uniqExact` 要几 GB 内存，会撞上 1 GiB 的上限。也不用 `count() − uniqExact` 当去重的证据：ReplacingMergeTree 后台合并会把重复行合掉，这个差值会随时间降到 0，今天查和明天查不一样，不是稳定的证据。
+
+## 故意重发 1%，证明去重真的起作用
+
+如果模拟器从不重发，去重逻辑写错了也对得上账。所以它故意把 1% 的事件原样再发一次（`event_id` 等内容完全不变），模拟「至少一次」投递里的重复：
+
+- **灌历史**：重发的副本放进同一天的**下一次写入**，带不同的去重令牌。真实的重复也是这样来的：Kafka 重投的消息落在另一批里，块令牌拦不住，只能靠 `event_id` 去重。
+- **实时压测**：成功送达后 2～10 秒，在另一个请求里再发。
+
+选哪 1% 看 `event_id` 的低位对 100 取余，同一条事件每次运行都同样地被选中。去重有效的证据是两件事同时成立：写入行数比去重后的条数多出这 1%，而对账误差仍在 1% 以内。
+
+## 在 mini 上的结果
+
+2026-11-02 在 mini 上正式灌入 1.0232 亿条之后对账：
+
+| 项 | 结果 |
+|---|---|
+| 看过人数误差 | 0.001% |
+| 读过全文人数误差 | 0 |
+| 写入行数（含重发） | 103,342,637 |
+| 去重后条数 | 102,320,830 |
+
+故意重发的 1% 全部被去重。看过人数那 0.001% 的误差不是管线算错，而是对账查询自己的 bug：差了 26 行，原因是一个零点之后才被标记的伪装爬虫，单独写在「对账差了 26 行」那篇坑里。
+
+<Transfer
+  prompt="一个广告平台要验证它的点击计费管线：点击事件经 Kafka 进数仓，按「每个广告每天的去重点击数」计费，同一用户 30 秒内重复点击只算 1 次，作弊点击要剔除。你会怎么设计一套真值对账？"
+  points={[
+    { label: "造流量并记真值", text: "模拟器按真实分布造点击，包括 30 秒内的重复点击和作弊流量，边发边按计费口径记每个（广告，天）的应计点击数。" },
+    { label: "口径完全一致", text: "真值的去重窗口、切天时区、作弊判定都套用线上同一套规则，看送达的事件判定，而不是模拟器私下知道谁在作弊。" },
+    { label: "只记确认送达", text: "只把拿到成功响应的点击记进真值；超时等结果不明的单独计数，核对条数时放宽上限。" },
+    { label: "绝对差与条数", text: "逐行比对，误差用绝对差之和；另外核对去重后的总条数在「送达」到「送达 + 结果不明」之间。" },
+    { label: "故意制造重复", text: "主动重发一部分点击，确认去重之后对账仍然相等，否则测不出去重是否生效。" }
+  ]}
+/>

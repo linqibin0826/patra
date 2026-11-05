@@ -108,7 +108,7 @@ Patra 的 CD 把「构建镜像」从云端搬回了部署机：领到任务的 
 
 如果部署目标换成别的芯片，或者要同时部署到多种芯片的机器上，这个决定就该重新看。`deploy.sh` 里还有一处把 arm64 写死的断言，也要跟着改。
 
-<CodeRef at="patra-infra/cd/deploy.sh@2197850b5a624ed4dbaa97df71e144c343e28baa" lines="56-59" />
+<CodeRef at="patra-infra/cd/deploy.sh@7dc80d272f808228d2fb32897c8857f0faae94ff" lines="59-62" />
 
 <Transfer
   prompt="假设下个月部署目标从 Apple 芯片的 Mac mini 换成一台 x86 的云服务器，同样自己托管 runner。这个决策里哪些还成立，哪些要改？"

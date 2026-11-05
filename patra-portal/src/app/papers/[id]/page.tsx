@@ -7,12 +7,16 @@ import { FullTextCrumbStatus } from "@/components/portal/fulltext/FullTextCrumbS
 import { FullTextTocButton, FullTextTocCard } from "@/components/portal/fulltext/FullTextNav";
 import { FullTextSection } from "@/components/portal/fulltext/FullTextSection";
 import { FullTextSkeleton, TocCardSkeleton } from "@/components/portal/fulltext/FullTextSkeleton";
+import { AlsoReadSection } from "@/components/portal/paper-detail/AlsoReadSection";
+import { AlsoReadSkeleton } from "@/components/portal/paper-detail/AlsoReadSkeleton";
 import { CrumbStatus } from "@/components/portal/paper-detail/CrumbStatus";
 import { FactCellsSkeleton, FullTextFacts } from "@/components/portal/paper-detail/PaperFacts";
-import { PaperInteractionFacts } from "@/components/portal/paper-detail/PaperInteractionFacts";
+import { PaperReaders } from "@/components/portal/paper-detail/PaperReaders";
 import { PublicationDetailView } from "@/components/portal/paper-detail/PublicationDetailView";
 import { RecordSection } from "@/components/portal/paper-detail/RecordSection";
 import { TopNav } from "@/components/portal/TopNav";
+import { readPageFacts } from "@/lib/analytics/server/context";
+import { trackServerEvent } from "@/lib/analytics/server/send";
 import { PAPER_DISCUSSION_COPY } from "@/lib/discussion/copy";
 import { parseDiscussionView } from "@/lib/discussion/server";
 import { paperMetadata } from "@/lib/page-metadata";
@@ -47,6 +51,12 @@ export default async function PaperDetailPage({
   if (!paper) {
     notFound(); // 非数字 id 或 BE 404 → [id]/not-found.tsx
   }
+  // 埋点：响应之后发 Article Viewed。预取只渲染到 loading.tsx、不进这里；Server Action 的回渲染不发（spec §2.3）
+  trackServerEvent(
+    { name: "article_viewed", properties: { article_id: paper.id } },
+    await readPageFacts(),
+    { path: `/papers/${paper.id}`, type: "article" },
+  );
   // 全文走独立接口：详情先出，事实条的全文三格、全文区块、目录卡、目录按钮各自在 Suspense 里后到（共用一次请求）；
   // 讨论区（`?comment=` 是单楼视图、`?sort=latest` 是最新）也在自己的 Suspense 里
 
@@ -64,11 +74,7 @@ export default async function PaperDetailPage({
               <FullTextCrumbStatus paper={paper} />
             </Suspense>
           }
-          interactionFacts={
-            <Suspense fallback={null}>
-              <PaperInteractionFacts paperId={paper.id} />
-            </Suspense>
-          }
+          readers={<PaperReaders paperId={paper.id} />}
           fullTextFacts={
             deriveFullTextState(paper) === "full" && (
               <Suspense fallback={<FactCellsSkeleton />}>
@@ -93,6 +99,11 @@ export default async function PaperDetailPage({
               copy={PAPER_DISCUSSION_COPY}
               basePath={`/papers/${id}`}
             />
+          }
+          alsoRead={
+            <Suspense fallback={<AlsoReadSkeleton />}>
+              <AlsoReadSection paperId={paper.id} />
+            </Suspense>
           }
           tocButton={
             deriveFullTextState(paper) === "full" && (

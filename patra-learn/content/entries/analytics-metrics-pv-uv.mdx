@@ -1,0 +1,177 @@
+---
+title: PV 与 UV：数次数，还是数人
+summary: PV 数页面被看了多少次，UV 数有多少个不同的人看过。难点全在 UV 的「人」怎么认、哪些人不算。这篇讲两者的定义、Patra 怎么认人，用 2026-10-28 的合成数据跑一遍 PV、UV、PV/UV 比和按设备、省份拆分，最后讲 UV 为什么不能跨天相加、拆开的 UV 为什么一般加不回总数。
+type: concept
+difficulty: basic
+tags: [analytics, database]
+prerequisites: [analytics-metrics-overview, analytics-device-and-session]
+topics: [analytics-pipeline]
+sources:
+  - version: v0.18
+    issue: PAP-171
+    pr: 373
+personalEnv: false
+---
+
+<Diagnose
+  question="B 没登录，周一用同一台电脑打开了 3 个页面，周二又打开了 2 个页面。按天看，周一、周二的 UV 各是 1。把周一周二合起来看，UV 是多少？"
+  options={["1：同一台设备两天合起来也只算一个人", "2：周一一个、周二一个，两天相加", "5：五次页面浏览，每次都算一个访客"]}
+  answer="A"
+  ifRight="对。UV 按人去重，跨天也一样；能认出两天是同一个人，靠的是设备 ID。这篇讲 PV、UV 各数什么，以及「人」是怎么认出来的。"
+  ifWrong="答案是 A。UV 数的是不同的人，B 两天用的是同一台设备、同一个设备 ID，合起来还是 1 个人。这题考的是行为数据怎么认出「同一个人」，先读设备 ID 与会话那篇。"
+  suggest="analytics-device-and-session"
+/>
+
+<Callout kind="lead">
+
+PV（page view，页面浏览量）数页面被看了多少次；UV（unique visitor，独立访客数）数有多少个不同的人看过。PV 数次数，UV 数人。
+
+</Callout>
+
+## 数次数，还是数人
+
+一个人打开文献页、刷新两次、又点回首页：PV 是 4，UV 是 1。
+
+PV、UV 是国内互联网公司最常用的叫法。Google Analytics 4 里对应的是 **Views**（「用户看到的网页或应用屏幕数，同一个页面重复看也计数」）和 **Active users**（「访问过网站或应用的不同用户数」）（[GA4 帮助：Analytics dimensions and metrics](https://support.google.com/analytics/answer/9143382)）。名字不同，意思一样：一个数次数，一个数去重后的人。
+
+两者回答的问题不同：
+
+- **PV** 回答「流量有多大」：服务器扛多少请求、广告位有多少展示机会，看的是它。
+- **UV** 回答「有多少人」：产品覆盖了多少人，看的是它。
+
+PV 很容易被推高：刷新、爬虫、一个人反复打开同一页都会让它涨。UV 不怕刷新，可它有自己的难处：先得认出谁是谁。
+
+## UV 的「人」是认出来的
+
+浏览器不会告诉网站「我是谁」。业界的通行做法是首次访问时发一个设备 Cookie，之后带着这个 Cookie 来的都算同一个访客；登录用户直接按账号认。Patra 在明细表里把这两种身份写成一列 `person_id`：
+
+<CodeRef at="patra-api/patra-analytics/patra-analytics-infra/src/main/resources/clickhouse/V1__events.sql@8140a9d9482324670b63f00ab3c62690102196c5" lines="28-29" />
+
+```sql
+    article_id      UInt64 MATERIALIZED toUInt64OrZero(JSONExtractString(properties, 'article_id')),
+    person_id       String MATERIALIZED if(user_id != 0, concat('u:', toString(user_id)), concat('d:', device_id))
+```
+
+有账号是 `u:` 加用户 ID，没登录是 `d:` 加设备 ID。之后所有 UV 都是 `uniqExact(person_id)`。
+
+这种认法有几处天然会数错，所有用 Cookie 认人的工具都一样：
+
+- **清了 Cookie、换了浏览器**：同一个人拿到新设备 ID，多算一个。
+- **手机和电脑都没登录**：两台设备，算两个人。
+- **先当访客、后登录**：登录前是 `d:…`，登录后是 `u:…`，同一天也算两个人。
+
+所以 UV 永远是「认出来的人数」，不是真实的人数。报 UV 时说清怎么认人，就是在写口径。
+
+## 2026-10-28 的 PV 和 UV
+
+下面的查询在明细表上数 10-28（北京时间）这一天的 PV、UV，排除爬虫，只看模拟器灌的合成数据：
+
+```sql
+SELECT
+    uniqExactIf(event_id, event_name = 'page_viewed')   AS pv,
+    uniqExactIf(person_id, event_name = 'page_viewed')  AS uv,
+    round(pv / uv, 2)                                   AS pv_per_uv,
+    uniqExactIf(event_id, event_name = 'article_viewed') AS article_views,
+    uniqExact(session_id)                                AS sessions
+FROM events
+WHERE toYYYYMMDD(derived_at, 'Asia/Shanghai') = 20261028
+  AND is_synthetic AND NOT is_bot
+FORMAT PrettyCompactMonoBlock
+```
+
+2026-11-02 在 mini 上跑出来，耗时约 2 秒：
+
+| 列 | 结果 | 意思 |
+|---|---|---|
+| `pv` | 130,482 | 浏览器上报的页面浏览次数 |
+| `uv` | 40,386 | 有页面浏览的不同的人 |
+| `pv_per_uv` | 3.23 | 平均每人看了几个页面 |
+| `article_views` | 64,650 | 服务端记录的文献页浏览次数 |
+| `sessions` | 51,742 | 当天的会话数 |
+
+有两处写法值得注意：
+
+- **PV 也用 `uniqExactIf(event_id, …)`，不用 `count()`**。明细表里可能还有没被后台合并掉的重复行，按事件 ID 去重才数得准（重复行怎么数那篇讲过）。
+- **排除爬虫按事件排除**：`NOT is_bot` 只扔掉被标成爬虫的那几条事件。伪装爬虫被认出来之前的事件会混进 UV，所以这个 UV 比同一天的日活多一点（指标是什么那篇讲过这 531 的差）。
+
+## PV/UV 比怎么读
+
+PV/UV 比就是平均每人看了几个页面。它本身没有好坏，要和自己过去比、和同类页面比：
+
+- **突然变高**：可能是改版后大家看得更深，也可能是有没被识别的爬虫在大量翻页，或者某个页面在反复自动刷新。
+- **突然变低**：可能是很多人进来看一页就走了，比如从搜索引擎进来发现不是想要的。
+
+10-28 的 3.23 是模拟器按它的页面跳转概率造出来的，不代表真实读者的浏览深度。
+
+## 按维度拆开看
+
+UV 最常见的用法是拆开：哪种设备、哪个地区的人多。同一天按设备类别拆：
+
+```sql
+SELECT device_class, uniqExact(person_id) AS uv
+FROM events
+WHERE toYYYYMMDD(derived_at, 'Asia/Shanghai') = 20261028
+  AND is_synthetic AND NOT is_bot AND event_name = 'page_viewed'
+GROUP BY device_class ORDER BY uv DESC
+FORMAT PrettyCompactMonoBlock;
+```
+
+| `device_class` | `uv` |
+|---|---|
+| Desktop | 25,523 |
+| Phone | 13,626 |
+| Tablet | 1,237 |
+
+三行加起来正好是 40,386，和总 UV 一样。
+
+<Quiz
+  questions={[
+    {
+      question: "三种设备的 UV 加起来正好等于总 UV。换成真实用户，这个等式还会成立吗？",
+      options: ["一定成立：按维度拆开再加回去，总数不会变", "一定不成立：真实数据里设备类别总会有缺失值", "不一定：同一个人一天里用了两种设备，会在两行里各算一次"],
+      answer: "C",
+      explain: "UV 是去重计数，拆开后每一行各自去重。一个登录用户上午用电脑、晚上用手机，Desktop 和 Phone 里各算他一次，加起来就比总数多。合成数据里每个人固定只有一种设备，所以碰巧加得回去。"
+    }
+  ]}
+/>
+
+按省份拆，取前 6 名：
+
+```sql
+SELECT if(province = '', '（境外或查不到）', province) AS province, uniqExact(person_id) AS uv,
+       round(100 * uv / sum(uv) OVER (), 1) AS pct
+FROM events
+WHERE toYYYYMMDD(derived_at, 'Asia/Shanghai') = 20261028
+  AND is_synthetic AND NOT is_bot AND event_name = 'page_viewed'
+GROUP BY province ORDER BY uv DESC LIMIT 6
+FORMAT PrettyCompactMonoBlock
+```
+
+| 省份 | UV | 占比 |
+|---|---|---|
+| 广东省 | 4,741 | 11.7% |
+| 北京市 | 3,994 | 9.9% |
+| 江苏省 | 3,644 | 9.0% |
+| 上海市 | 3,455 | 8.6% |
+| 浙江省 | 3,105 | 7.7% |
+| （境外或查不到） | 2,800 | 6.9% |
+
+这张表正好说明合成数据的局限：比例几乎就是模拟器参数文件 `traffic-model.json` 里给各地区写的权重（广东 11.7474、北京 9.7895、江苏和上海各 8.8105、浙江 7.8316）。查询本身没问题，可它量出来的是模型，不是真实读者分布在哪里。真实数据里，省份来自 IP 查地区库，还要面对代理、出差、库不准这些误差。
+
+## UV 不能跨天相加
+
+这是最常见的误用：把每天的 UV 加起来，当成一周的 UV。
+
+同一个人周一来、周三又来，周一的 UV 里有他，周三的 UV 里也有他，七天加起来他被算了两次。一周的 UV 必须对这一周的所有事件**重新去重**一次。Google Analytics 的文档也这样写：页面浏览这类指标是按天简单相加的，「用户」不是，每选一个时间范围都要重新计算（[[UA] How users are identified for user metrics](https://support.google.com/analytics/answer/2992042)）。
+
+同样的道理也适用于维度：省份、设备各自的 UV 一般加不回总数。日活、周活、月活之间的关系也是这个问题，下一篇接着讲。
+
+<Transfer
+  prompt="某篇文献昨天的 PV 比前天翻了一倍，UV 几乎没变。你会怀疑哪几种情况？各自去查什么来确认？"
+  points={[
+    { label: "同一批人看得更多", text: "PV/UV 比升高；看会话数和每个会话的页面数，是不是同一批人反复打开。" },
+    { label: "刷新或自动重载", text: "看同一个人、同一会话里对这篇文献的浏览间隔，间隔很短且很多就是刷新或页面在反复加载。" },
+    { label: "没识别出来的爬虫", text: "看这些浏览集中在哪几个设备 ID、UA 和时间段；少数设备贡献了大部分 PV，多半是爬虫。" },
+    { label: "重复行", text: "确认 PV 是按 event_id 去重数的；用 count() 数会把还没合并掉的重复行也算上。" }
+  ]}
+/>

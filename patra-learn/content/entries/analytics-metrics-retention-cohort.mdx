@@ -1,0 +1,239 @@
+---
+title: 新增、留存与同期群：合成数据里的两个假象
+summary: 日活稳定不代表人留下来了，要把人按第一次出现的日期分成同期群，看过了 N 天还有多少人回来。这篇讲新增、N 日留存的两种算法和 ClickHouse 的 retention 函数，再看 Patra 的合成数据给出的两个假象：新增逐周衰减（人群固定、观察窗口截掉了之前的历史），留存曲线是平的（模型里没有流失），并对照真实产品通常的样子。
+type: concept
+difficulty: advanced
+tags: [analytics, database]
+prerequisites: [analytics-metrics-dau-mau]
+topics: [analytics-pipeline]
+sources:
+  - version: v0.18
+    issue: PAP-171
+    pr: 373
+personalEnv: false
+---
+
+<Diagnose
+  question="一个网站的日活连续三个月稳定在 4 万左右。能不能据此说「来过的人基本都留下来了」？"
+  options={["不能：也可能每天都有一批新人来一次就走，日活照样稳定", "能：日活不降，说明来过的人都还在继续用", "能：只要同期的月活也没有下降就可以这样说"]}
+  answer="A"
+  ifRight="对。日活把新人和老人混在一起数，看不出谁留下了、谁走了。这篇讲怎么把人分批，单独看每一批还剩多少。"
+  ifWrong="答案是 A。日活只告诉你每天来了多少不同的人，不告诉你是不是同一批人。新人源源不断地来、老人不断地走，日活也可以纹丝不动。这题要先分清日活、月活各数的是什么，先读日活月活那篇。"
+  suggest="analytics-metrics-dau-mau"
+/>
+
+<Callout kind="lead">
+
+**新增**是第一次出现的人；**同期群**（cohort）是同一时间段第一次出现的一批人；**N 日留存**是一个同期群里，第 N 天还回来的人占这批人的比例。
+
+</Callout>
+
+## 为什么要按同期群看
+
+日活、月活是「此刻有多少人」，像一个水池的水位。水位不变，可能是进水和出水一样多，也可能是池子根本没动。留存分析把每天流进来的水单独染个色，看每一批过了几天还剩多少。
+
+做法是一张表：每一行是一个同期群（比如「10-01 第一次来的人」），每一列是过了几天（第 1 天、第 7 天、第 14 天……），格子里是还回来的比例。横着读，看一批人怎么流失；竖着读，看后来的批次是不是比早期的留得更好。
+
+## N 日留存有两种算法
+
+「第 7 天留存」听上去很明确，各家工具的算法其实不一样。Mixpanel 的文档把它分成两种（[Mixpanel 文档：Retention](https://docs.mixpanel.com/docs/reports/retention)）：
+
+| 算法 | Mixpanel 里叫 | 第 7 天留存数的是 |
+|---|---|---|
+| 当天 | On | 恰好在第 7 天回来的人 |
+| 当天或之后 | On or After | 第 7 天或之后任何一天回来过的人 |
+
+Mixpanel 默认用 On or After，理由是大多数产品不要求用户每个时间单位都来，只要最后回来了就算留住。同一份文档还区分了「第 1 天」怎么算：按自然日（晚上 8 点第一次来、第二天早上 6 点再来，就算第 1 天回来了），还是按滚动的 24 小时（要在第一次之后的 24～48 小时内回来）。
+
+Patra 下面的查询用的是**当天、按自然日**：第 N 天就是第一次出现那天加 N 天，「天」按北京时间切。报留存时把这两点写明，就是在写口径。
+
+## 从哪张表算、用什么函数
+
+留存要看几个月前的人有没有回来，可明细表 `events` 只留 90 天。所以 Patra 的新增和留存都从日活表 `daily_person_activity` 算，它保留 400 天：
+
+<CodeRef at="patra-api/patra-analytics/patra-analytics-infra/src/main/resources/clickhouse/V5__daily_person_activity.sql@8140a9d9482324670b63f00ab3c62690102196c5" lines="1-13" />
+
+```sql
+-- 日活（入库设计 §5.5）：每人每天（北京时间）一行；保留 400 天，日活、留存都从这里算。
+CREATE TABLE IF NOT EXISTS daily_person_activity (
+    day           Date,
+    person_id     String,
+    user_id       SimpleAggregateFunction(max, UInt64),   -- 同一个 person_id 的 user_id 不变；26.x 不许 AggregatingMergeTree 有非键非聚合列
+    is_synthetic  Bool,
+    is_bot        SimpleAggregateFunction(max, UInt8),
+    has_client    SimpleAggregateFunction(max, UInt8),
+    first_seen    SimpleAggregateFunction(min, DateTime64(3, 'UTC'))
+) ENGINE = AggregatingMergeTree
+ORDER BY (day, person_id, is_synthetic)
+TTL day + INTERVAL 400 DAY DELETE
+SETTINGS non_replicated_deduplication_window = 1000;
+```
+
+ClickHouse 有一个专门的聚合函数 `retention(cond1, cond2, …)`：对每个人返回一个由 0 和 1 组成的数组。第一个元素是 `cond1` 有没有满足；之后每个元素只有在 `cond1` **也满足**时才可能是 1（[ClickHouse 文档：Parametric aggregate functions](https://clickhouse.com/docs/sql-reference/aggregate-functions/parametric-functions)）。拿「第一次出现那天」当 `cond1`，「第一次出现那天加 N 天」当后面的条件，数组里的第 i 个 1 就表示这个人第 N 天回来了。
+
+下面这条查询取 10-01 到 10-07 第一次出现的 7 个同期群，看第 1、7、14 天的留存：
+
+```sql
+WITH human_days AS (
+    SELECT day, person_id FROM daily_person_activity
+    WHERE is_synthetic AND day <= '2026-11-01'
+    GROUP BY day, person_id
+    HAVING max(is_bot) = 0 AND max(has_client) = 1
+),
+firsts AS (
+    SELECT person_id, min(day) AS first_day FROM human_days GROUP BY person_id
+    HAVING first_day BETWEEN '2026-10-01' AND '2026-10-07'
+)
+SELECT
+    first_day,
+    count()                                  AS cohort,
+    round(100 * sum(r[2]) / cohort, 1)       AS d1_pct,
+    round(100 * sum(r[3]) / cohort, 1)       AS d7_pct,
+    round(100 * sum(r[4]) / cohort, 1)       AS d14_pct
+FROM (
+    SELECT f.person_id, f.first_day,
+           retention(h.day = f.first_day, h.day = f.first_day + 1,
+                     h.day = f.first_day + 7, h.day = f.first_day + 14) AS r
+    FROM firsts AS f
+    INNER JOIN human_days AS h ON h.person_id = f.person_id
+    GROUP BY f.person_id, f.first_day
+)
+GROUP BY first_day ORDER BY first_day
+FORMAT PrettyCompactMonoBlock
+```
+
+三步：`human_days` 是「真人 × 天」，口径和日活一样；`firsts` 找出每个人第一次出现的日期，只留 10-01 到 10-07 的；最外层按同期群数人、求和 `r` 数组。数组下标从 1 开始，`r[2]` 是第 1 天。
+
+2026-11-02 在 mini 上跑出来，耗时约 14 秒（合成数据）：
+
+| 同期群 | 人数 | 第 1 天 | 第 7 天 | 第 14 天 |
+|---|---|---|---|---|
+| 10-01 | 394 | 7.4% | 6.3% | 8.4% |
+| 10-02 | 397 | 4.5% | 7.6% | 4.0% |
+| 10-03 | 223 | 5.4% | 4.0% | 4.9% |
+| 10-04 | 211 | 5.2% | 4.7% | 4.7% |
+| 10-05 | 330 | 7.3% | 5.8% | 4.2% |
+| 10-06 | 313 | 6.1% | 6.4% | 7.7% |
+| 10-07 | 281 | 7.8% | 6.8% | 8.5% |
+
+两个特点：每个同期群只有两三百人，比例忽高忽低，有几批第 14 天比第 1 天还高；没有第 30 天，因为 10-07 加 30 天已经过了数据的最后一天 11-01。观察窗口在右边也有边界：同期群越晚，能看到的天数越少。
+
+两三百人的同期群，对一个日活 4 万的网站来说小得反常。这就引出合成数据的第一个假象。
+
+## 假象一：新增逐周衰减
+
+按「第一次出现在数据里的那周」数新增：
+
+```sql
+WITH human_days AS (
+    SELECT day, person_id FROM daily_person_activity
+    WHERE is_synthetic AND day <= '2026-11-01'
+    GROUP BY day, person_id
+    HAVING max(is_bot) = 0 AND max(has_client) = 1
+)
+SELECT toMonday(first_day) AS week, count() AS new_people
+FROM (SELECT person_id, min(day) AS first_day FROM human_days GROUP BY person_id)
+GROUP BY week ORDER BY week
+FORMAT TSVWithNames
+```
+
+| 周（周一） | 新增 |
+|---|---|
+| 08-03 | 99,138 |
+| 08-10 | 88,237 |
+| 08-17 | 44,129 |
+| 08-24 | 25,182 |
+| 08-31 | 15,109 |
+| 09-07 | 9,837 |
+| 09-14 | 6,171 |
+| 09-21 | 4,051 |
+| 09-28 | 2,616 |
+| 10-05 | 1,796 |
+| 10-12 | 1,197 |
+| 10-19 | 799 |
+| 10-26 | 538 |
+
+数据从 08-06 开始，08-03 那周不满一周。从第三周起一周比一周少，到最后一周只剩几百人。看上去像产品越来越没人来了，其实不是。
+
+<Stepper
+  title="新增为什么一周比一周少"
+  nodes={[
+    { id: "pop", label: "固定人群", sub: "30 万台设备" },
+    { id: "w1", label: "08-03 那周", sub: "数据第一周" },
+    { id: "w3", label: "08-17 那周", sub: "第三周" },
+    { id: "w13", label: "10-26 那周", sub: "最后一周" }
+  ]}
+  links={[
+    { from: "pop", to: "w1" },
+    { from: "pop", to: "w3" },
+    { from: "pop", to: "w13" }
+  ]}
+  steps={[
+    { caption: "模拟器的人群是固定的：30 万台设备，其中 3 万是注册用户，每人一个固定的访问频度。数据从 08-06 开始记录，在这之前没有任何人在数据里。", focus: ["pop"], notes: [{ at: "pop", text: "30 万台设备" }] },
+    { caption: "第一周：常来的人几乎都会露面。他们第一次出现在数据里，全被算成「新增」。", focus: ["pop", "w1"], links: ["pop>w1"], notes: [{ at: "w1", text: "新增 99,138", tone: "wait" }] },
+    { caption: "第三周：常客前两周就被数过了，这周第一次露面的，主要是隔几周才来一次的人。", focus: ["pop", "w3"], links: ["pop>w3"], notes: [{ at: "w1", text: "新增 99,138" }, { at: "w3", text: "新增 44,129", tone: "wait" }] },
+    { caption: "最后一周：还没出现过的，只剩极少来的那些人。新增掉到几百。", focus: ["pop", "w13"], links: ["pop>w13"], notes: [{ at: "w1", text: "新增 99,138" }, { at: "w3", text: "新增 44,129" }, { at: "w13", text: "新增 538", tone: "wait" }] },
+    { caption: "这些「新增」都不是新来的人，只是第一次被数据看到。08-06 之前的历史被观察窗口截掉了，数据只能把「第一次被看到」当成「第一次来」。", focus: ["w1", "w3", "w13"], notes: [{ at: "w1", text: "大多是老用户", tone: "bad" }, { at: "w13", text: "最不常来的人", tone: "bad" }] }
+  ]}
+  guesses={[
+    { before: 3, question: "08-17 那周的新增还不到第一周的一半。最可能的原因是什么？", options: ["产品口碑变差，新访客一周比一周少", "人群是固定的，常客在前两周就被数完了", "那一周入库出了故障，丢掉了一部分事件"], answer: "B", explain: "模拟器里没有「新来的人」，30 万台设备从第一天起就都在。每周的新增只是「这周第一次被看到的人」，常客早早被数过，剩下的越来越是偶尔来的人。" }
+  ]}
+/>
+
+这叫观察窗口的**左截断**：数据开始之前的历史被截掉了，第一次出现不等于第一次来。它在真实产品里同样会发生：一个已经运营了几年的网站今天才开始埋点，头几周的「新增」里会混进大量老用户。常见的处理是留出一段预热期，等常客都出现过之后再开始数新增；对注册用户，可以改用账号创建时间当「第一天」。
+
+真实产品的新增和这张表长得不一样：新人会持续从搜索引擎、推荐、推广活动里来，每周的新增跟着渠道和季节起伏，不会一路衰减到几百。这张表真正量出来的，是模拟器人群的访问频度分布：常客多早被数完，偶尔来的人要多久才露面。
+
+这多半也解释了前面那几个反常的小同期群：10 月才第一次出现的，是人群里最不常来的那一小撮。
+
+## 假象二：留存曲线是平的
+
+换一批早期的同期群：08-17 到 08-19 第一次出现的人，这时数据已经跑了十来天，人数也够多。查询和上面那条一样，只是把日期换成 08-17～08-19，并多加一个第 30 天的条件。结果：
+
+| 同期群 | 人数 | 第 1 天 | 第 7 天 | 第 14 天 | 第 30 天 |
+|---|---|---|---|---|---|
+| 08-17 | 8,946 | 9.7% | 9.7% | 9.8% | 9.9% |
+| 08-18 | 8,105 | 10.0% | 9.2% | 9.8% | 9.4% |
+| 08-19 | 7,343 | 9.0% | 10.0% | 9.5% | 9.1% |
+
+从第 1 天到第 30 天，留存一直在 10% 上下，几乎是一条水平线。原因在模拟器怎么挑人：
+
+<CodeRef at="patra-api/patra-analytics/patra-analytics-simulator/src/main/java/dev/patra/analytics/simulator/model/Population.java@8140a9d9482324670b63f00ab3c62690102196c5" lines="45-50" />
+
+```java
+      double pareto =
+          Math.min(
+              ACTIVITY_CAP, Math.pow(1 - random.nextDouble(), -1 / model.activityParetoAlpha()));
+      weights[i] = registered ? pareto * model.registeredActivityFactor() : pareto;
+    }
+    this.activity = new WeightedSampler(weights);
+```
+
+每个人建出来时抽一个访问频度（帕累托分布，注册用户再乘一个系数），之后每个会话都按这个权重抽人，权重从此不变。除了星期几、几点钟带来的整体起伏，一个人某一天来的概率，和他第 1 天、第 30 天来的概率一样；模型里没有「新鲜感过去了」「找到别的工具了」这类流失。所以某个同期群第 N 天回来的比例，就是这批人每天来的平均概率，跟 N 无关，曲线是平的。
+
+10 月那几批留存只有 4%～8%，比 8 月低，多半也是同一个原因：10 月才第一次出现的人本来就最不常来，每天来的概率更低；再加上同期群只有两三百人，数字抖得厉害。
+
+真实产品的留存曲线通常先降后平：刚来的人里很多只是看一眼，前几天掉得最快；留下来的那部分真正需要这个产品，曲线慢慢变平。a16z 在 2025 年一篇讨论 AI 产品留存的文章里写道，留存曲线通常先有一段初始下降，多半在第 3 个月前后开始变平；它讲的是按收入算的留存，但「先降后平、最后平在哪」这个读法在用户留存上是一样的（[AI retention benchmarks](https://a16z.com/ai-retention-benchmarks/)）。曲线最后有没有平下来、平在多高，常被当成「有没有人真的需要它」的信号；一直往下掉到接近 0，说明来的人几乎都走了。
+
+所以，这份合成数据能验证留存的**查询写对了**（口径、函数、分组都在真数据上跑过一遍），不能拿来回答**留存好不好**。
+
+<Quiz
+  questions={[
+    {
+      question: "某人 10-01 第一次来，10-09（第 8 天）又来了一次，之后再没来过。他算不算 10-01 同期群的第 7 天留存？",
+      options: ["Patra 这条查询和 Mixpanel 默认的算法都算", "两种算法都不算，因为他第 7 天当天没有来", "Patra 这条查询不算；按 On or After 算法就算"],
+      answer: "C",
+      explain: "Patra 的条件是 h.day = f.first_day + 7，要求恰好第 7 天来，属于「当天」算法，第 8 天来不算。Mixpanel 默认的 On or After 只要第 7 天或之后来过就算，他第 8 天来了，所以算。同一个人，两种口径两个答案。"
+    }
+  ]}
+/>
+
+<Transfer
+  prompt="假设 Patra 明年对外开放，从开放那天起就有真实用户，埋点也从那天开始。头三个月的新增和留存，你预计会和这篇里的合成数据有哪些不同？看留存表时你会怎么读？"
+  points={[
+    { label: "新增不会一路衰减", text: "开放前没有老用户，第一次出现基本就是第一次来，左截断的问题很小；新增跟着推广、搜索收录和口碑起伏。" },
+    { label: "留存先降后平", text: "同期群的第 1 天、第 7 天会明显掉，之后看它能不能平下来、平在多少。" },
+    { label: "看右边界", text: "越晚的同期群能看到的天数越少，第 30 天留存要等满 30 天才有；不要拿还没满的格子当 0。" },
+    { label: "写清口径", text: "当天还是当天或之后、自然日还是滚动 24 小时、按人怎么认（访客登录后算不算同一个人），换一种算法数字就变。" }
+  ]}
+/>

@@ -1,0 +1,167 @@
+---
+title: 日活、周活、月活与黏性：先写清什么叫「活跃」
+summary: 日活数一天里活跃的不同的人，周活、月活把窗口换成一周、一个月，日活除以月活叫黏性。这篇先讲「活跃」必须先定义，再看 Patra 2026 年 10 月的合成数据：工作日约 4 万、周末两万多，月活 270,895，黏性 0.133；最后讲日活为什么不能加成月活。
+type: concept
+difficulty: basic
+tags: [analytics, database]
+prerequisites: [analytics-metrics-pv-uv]
+topics: [analytics-pipeline]
+sources:
+  - version: v0.18
+    issue: PAP-171
+    pr: 373
+personalEnv: false
+---
+
+<Diagnose
+  question="Patra 2026 年 10 月每天的日活，31 天平均是 36,094。10 月的月活最可能落在哪儿？"
+  options={["等于 31 天日活加起来的那个数：每天的人加在一起就是一个月的人", "比 31 天日活之和小得多：同一个人来了好几天，月活里只算一次", "和日活最高的那一天差不多：月活就是这个月里人最多的那天"]}
+  answer="B"
+  ifRight="对。月活要对整个月重新按人去重，来了好几天的人只算一次。这篇先讲「活跃」怎么定义，再看 10 月的实测和黏性。"
+  ifWrong="答案是 B。日活、月活都是去重计数，一个人 10 月来了 5 天，在日活里被算了 5 次，在月活里只算 1 次。这和 UV 不能跨天相加是同一个道理，先读 PV 与 UV 那篇。"
+  suggest="analytics-metrics-pv-uv"
+/>
+
+<Callout kind="lead">
+
+日活（DAU，daily active users）是一天里「活跃」的不同的人数；周活（WAU）、月活（MAU）把窗口换成一周、一个月。日活除以月活叫**黏性**（stickiness）：一个月里来过的人，平均每天有多大比例会出现。
+
+</Callout>
+
+## 先写清什么叫「活跃」
+
+「活跃」没有天然的定义，每家产品自己定，而且必须写下来：
+
+- **来过就算**：当天有任意一条事件。最宽，爬虫和只打开一下就关的人都算进去。
+- **有过互动才算**：Google Analytics 4 的 Active users 是「在所选时间范围内和网站或应用有过互动的不同用户数」，有一次互动会话、或者采集到特定的互动事件，才算活跃（[GA4 帮助：Understand user metrics](https://support.google.com/analytics/answer/12253918)）。
+- **做了核心动作才算**：比如当天至少读过一篇全文。最严，也最接近「得到了价值」。
+
+Patra 的日活是第一种加两条排除：**当天有浏览器事件、并且当天没被标成爬虫**。数据来自日活表 `daily_person_activity`，它是物化视图从明细表汇总出来的，每人每天一行：
+
+<CodeRef at="patra-api/patra-analytics/patra-analytics-infra/src/main/resources/clickhouse/V5__daily_person_activity.sql@8140a9d9482324670b63f00ab3c62690102196c5" lines="15-24" />
+
+```sql
+CREATE MATERIALIZED VIEW IF NOT EXISTS daily_person_activity_mv TO daily_person_activity AS
+SELECT
+    toDate(derived_at, 'Asia/Shanghai') AS day,
+    person_id,
+    user_id,
+    is_synthetic,
+    is_bot,
+    source = 'client' AS has_client,
+    derived_at AS first_seen
+FROM events;
+```
+
+每条事件进来，都往日活表里写一行「这个人、这一天、这条是不是爬虫、是不是浏览器事件」。`is_bot` 和 `has_client` 两列在表里取 `max`：同一个人同一天有多行时，只要有一行是 1，合起来就是 1。所以「没被标爬虫」写成 `max(is_bot) = 0`，「有浏览器事件」写成 `max(has_client) = 1`。
+
+这两条排除各有理由。不要求浏览器事件，不跑脚本的爬虫（只有服务端事件）会被算成人；不按整天排除爬虫，伪装爬虫被认出来之前的那段会混进来。
+
+## 10 月每天的日活
+
+```sql
+SELECT day, count() AS dau
+FROM (
+    SELECT day, person_id
+    FROM daily_person_activity
+    WHERE day BETWEEN '2026-10-01' AND '2026-10-31' AND is_synthetic
+    GROUP BY day, person_id
+    HAVING max(is_bot) = 0 AND max(has_client) = 1
+)
+GROUP BY day ORDER BY day
+FORMAT TSVWithNames
+```
+
+里层先按（天，人）合成一行再用 `HAVING` 判断，因为日活表还没合并时，同一个人同一天可能有好几行。
+
+2026-11-02 在 mini 上跑出来（合成数据，不是真实用户）：
+
+| 日期 | 星期 | 日活 |
+|---|---|---|
+| 10-01 | 周四 | 39,895 |
+| 10-03 | 周六 | 27,472 |
+| 10-04 | 周日 | 25,726 |
+| 10-24 | 周六 | 27,462 |
+| 10-25 | 周日 | 25,675 |
+| 10-28 | 周三 | 39,855 |
+| 10-31 | 周六 | 27,509 |
+
+整个月的规律很整齐：工作日约 39,700～40,100，周六约 27,500～27,700，周日约 25,700。
+
+这么整齐，是因为模拟器的参数里写死了星期系数：`traffic-model.json` 的 `weekday` 是周一到周五 1.0、周六 0.65、周日 0.6。真实产品的周末是高是低，取决于用户什么时候用它：上班时查文献的工具周末会低，娱乐类产品可能反过来；而且真实曲线会有节假日、开学季、某篇文章突然火了这类波动，不会每周一模一样。这个月 10-01 是国庆，日活却和平常的工作日一样，也正说明模型里没有节假日。
+
+## 月活、周活和黏性
+
+```sql
+WITH human_days AS (
+    SELECT day, person_id
+    FROM daily_person_activity
+    WHERE day BETWEEN '2026-10-01' AND '2026-10-31' AND is_synthetic
+    GROUP BY day, person_id
+    HAVING max(is_bot) = 0 AND max(has_client) = 1
+)
+SELECT
+    uniqExact(person_id)                         AS mau,
+    round(count() / uniqExact(day))              AS avg_dau,
+    round(avg_dau / mau, 3)                      AS stickiness
+FROM human_days
+FORMAT PrettyCompactMonoBlock
+```
+
+结果：**月活 270,895**，**平均日活 36,094**，**黏性 0.133**。
+
+周活用同样的办法，窗口换成 10-26（周一）到 11-01（周日）：
+
+```sql
+SELECT uniqExact(person_id) AS wau
+FROM (
+    SELECT day, person_id FROM daily_person_activity
+    WHERE day BETWEEN '2026-10-26' AND '2026-11-01' AND is_synthetic
+    GROUP BY day, person_id
+    HAVING max(is_bot) = 0 AND max(has_client) = 1
+)
+FORMAT PrettyCompactMonoBlock
+```
+
+结果：**周活 149,955**。
+
+日活、周活、月活用的是同一个「活跃」定义、同一张表，只是去重的窗口不同。这一点很重要：拿 A 口径的日活除以 B 口径的月活，得到的黏性没有意义。
+
+GA4 也把 DAU/MAU 作为一个现成的指标，表示当天有互动的用户占月活跃用户的比例（[GA4 帮助：Analytics dimensions and metrics](https://support.google.com/analytics/answer/9143382)）。黏性越接近 1，说明来过的人越是天天来；越接近 0，说明大多数人一个月只来一两次。
+
+0.133 的意思是：10 月来过的人里，平均每天只有大约 13% 会出现。这也是模型造出来的：模拟器给每个人一个固定的访问频度，服从帕累托分布（少数常客、多数偶尔来），黏性主要由这个分布决定。对一个查文献的网站，大多数人隔一阵子才来一次很正常；拿它和社交产品的黏性比没有意义，要和自己的过去比。
+
+## 为什么日活不能加成月活
+
+同一个人 10 月来了 5 天，在 5 天的日活里各算一次，在月活里只算一次。日活之和数的是「人 × 天」，月活数的是人，两者只有在每个人一个月只来一天时才相等。
+
+<Params
+  title="动手：1,000 个人，每人每月来几天"
+  guess={{ question: "1,000 个人，每人这个月都来了 4 天。这个月的月活是多少？", options: ["4,000：每人 4 天，日活加起来就是月活", "约 133：月活就是平均每天来的人数", "1,000：不管来几天，每人在月活里只算一次"], answer: "C", explain: "月活对整个月按人去重，每人只算一次，所以是 1,000。4,000 是 30 天日活加起来的数（「人 × 天」），约 133 是平均日活。" }}
+  controls={[
+    { type: "slider", id: "days", label: "每人每月来几天", min: 1, max: 30, step: 1, default: 4, unit: "天" }
+  ]}
+  cases={[
+    { when: { days: [1, 1] }, results: [{ label: "30 天日活加起来", value: "1,000 × {days}" }, { label: "月活", value: "1,000", tone: "ok" }, { label: "黏性 DAU/MAU", value: "约 {days} ÷ 30，很低", tone: "wait" }], verdict: { tone: "ok", head: "唯一能相加的情况。", text: "每人只来一天，「人 × 天」等于人数，日活之和正好是月活。现实里几乎不会这样。" } },
+    { when: { days: [2, 10] }, results: [{ label: "30 天日活加起来", value: "1,000 × {days}" }, { label: "月活", value: "1,000", tone: "ok" }, { label: "黏性 DAU/MAU", value: "约 {days} ÷ 30", tone: "wait" }], verdict: { tone: "bad", head: "加起来就多算了。", text: "每人来 {days}，日活之和是月活的好几倍。拿它当月活报，等于把同一个人重复数了好几次。" } },
+    { results: [{ label: "30 天日活加起来", value: "1,000 × {days}" }, { label: "月活", value: "1,000", tone: "ok" }, { label: "黏性 DAU/MAU", value: "约 {days} ÷ 30，很高", tone: "ok" }], verdict: { tone: "bad", head: "差得更远。", text: "人越是天天来，日活之和离月活越远；可月活一个人都没多，多的只是来的天数。黏性高说的正是这件事。" } }
+  ]}
+/>
+
+同样的理由，周活也不是七天日活之和，月活也不是四周周活之和。每换一个窗口，都要回到明细或日活表重新去重。
+
+## 常见误用
+
+- **不写活跃的定义就报日活**：「我们日活 4 万」，是来过就算还是读过全文才算，差别可能是几倍。
+- **拿不同口径的数比**：去年按「来过就算」，今年改成「有互动才算」，日活一下子掉了，不是产品变差了。
+- **只看日活涨跌**：日活涨了，可能是来了一批新人，也可能是老用户来得更勤；要拆成新增和留存才知道是哪种。下一篇讲新增与留存。
+
+<Transfer
+  prompt="Patra 想把「活跃」改成「当天至少读过一篇全文的真人」。日活、月活、黏性会怎么变？改完之后要注意什么？"
+  points={[
+    { label: "数字都会变小", text: "读全文的人是来过的人的一部分，日活、月活都会下降；黏性不一定，取决于读全文的人是不是更常来。" },
+    { label: "换数据来源", text: "读没读全文不在日活表里，要从 article_session_reads 的 fulltext 列取，再用 session_quality 只留真人会话。" },
+    { label: "新旧不能直接比", text: "改口径那天前后的曲线不能连起来看；要么用新口径把历史重算一遍，要么在图上标出改口径的日期。" },
+    { label: "三个窗口同一个定义", text: "日活、周活、月活都要换成同一个新定义，否则黏性没有意义。" }
+  ]}
+/>

@@ -1,5 +1,6 @@
 package dev.patra.identity.app.account.usecase.login;
 
+import dev.patra.identity.app.account.service.NewDeviceLoginNotifier;
 import dev.patra.identity.domain.account.exception.InvalidCredentialsException;
 import dev.patra.identity.domain.account.exception.LoginTemporarilyLockedException;
 import dev.patra.identity.domain.account.exception.UserBannedException;
@@ -9,10 +10,8 @@ import dev.patra.identity.domain.account.model.read.UserAccountReadModel;
 import dev.patra.identity.domain.account.model.vo.EmailAddress;
 import dev.patra.identity.domain.account.model.vo.PlainPassword;
 import dev.patra.identity.domain.account.model.vo.RequestOrigin;
-import dev.patra.identity.domain.account.model.vo.mail.NewDeviceLoginMail;
 import dev.patra.identity.domain.account.policy.PasswordPolicy;
 import dev.patra.identity.domain.account.port.hashing.PasswordHashingPort;
-import dev.patra.identity.domain.account.port.mail.EmailDeliveryPort;
 import dev.patra.identity.domain.account.port.read.UserReadPort;
 import dev.patra.identity.domain.account.port.repository.UserPasswordCredentialRepository;
 import dev.patra.identity.domain.account.port.repository.UserRepository;
@@ -23,9 +22,6 @@ import dev.patra.identity.domain.session.exception.InvalidUserFieldsException;
 import dev.patra.identity.domain.session.model.vo.ClientOrigin;
 import dev.patra.identity.domain.session.model.vo.IssuedUserSession;
 import dev.patra.identity.domain.session.model.vo.LoginClient;
-import dev.patra.identity.domain.session.policy.NewDeviceLoginPolicy;
-import dev.patra.identity.domain.session.port.repository.UserLoginRecordRepository;
-import dev.patra.identity.domain.session.port.throttle.NewDeviceMailThrottlePort;
 import dev.patra.identity.domain.session.service.SessionIssuer;
 import dev.patra.tool.core.error.field.FieldViolation;
 import dev.patra.tool.core.security.AccountType;
@@ -70,10 +66,7 @@ public class LoginUserHandler implements CommandHandler<LoginUserCommand, Authen
   private final LoginThrottlePort loginThrottle;
   private final SessionIssuer sessionIssuer;
   private final ClientOriginResolver clientOriginResolver;
-  private final UserLoginRecordRepository records;
-  private final NewDeviceLoginPolicy newDevicePolicy;
-  private final NewDeviceMailThrottlePort newDeviceThrottle;
-  private final EmailDeliveryPort emailDelivery;
+  private final NewDeviceLoginNotifier newDeviceNotifier;
   private final TransactionOperations transactions;
   private final Clock clock;
 
@@ -139,7 +132,7 @@ public class LoginUserHandler implements CommandHandler<LoginUserCommand, Authen
                     throw new UserBannedException();
                   }
                   // 建会话之前判：之后再查会查到刚建的这条记录
-                  boolean seen = seenBefore(locked.getId(), client, now);
+                  boolean seen = newDeviceNotifier.seenBefore(locked.getId(), client, now);
                   IssuedUserSession session = sessionIssuer.issue(locked.getId(), client, origin);
                   UserAccountReadModel account =
                       userReadPort
@@ -153,7 +146,7 @@ public class LoginUserHandler implements CommandHandler<LoginUserCommand, Authen
         verified.getStatus(),
         login.session().replacedSessionIds().size());
     if (login.newDevice()) {
-      notifyNewDevice(login.account(), client, origin, now);
+      newDeviceNotifier.notifyNewDevice(login.account(), client, origin, now);
     }
     return AuthenticatedUser.of(login.session().token(), login.account());
   }
@@ -165,58 +158,6 @@ public class LoginUserHandler implements CommandHandler<LoginUserCommand, Authen
   /// @param newDevice 是不是这个账号没见过的设备
   private record Login(
       IssuedUserSession session, UserAccountReadModel account, boolean newDevice) {}
-
-  /// 这个账号是否见过这台设备（PAP-99 设计第 12.2 节）。没带设备标识的一律算没见过。
-  ///
-  /// @param userId 用户 ID
-  /// @param client 客户端信息
-  /// @param now 当前时间
-  /// @return 见过时为 `true`
-  private boolean seenBefore(long userId, LoginClient client, Instant now) {
-    return client
-        .device()
-        .map(device -> records.existsTrustedDevice(userId, device, newDevicePolicy.since(now)))
-        .orElse(false);
-  }
-
-  /// 新设备登录：事务外取 24 小时限流，放行才在一个只写登记行的短事务里登记提醒；登记失败时退还冷却。
-  /// 限流的 Redis 不可用、登记失败都只记日志：提醒不能挡住已经提交的登录。
-  ///
-  /// @param account 账号信息
-  /// @param client 客户端信息
-  /// @param origin 请求来源
-  /// @param now 当前时间
-  private void notifyNewDevice(
-      UserAccountReadModel account, LoginClient client, ClientOrigin origin, Instant now) {
-    boolean allowed;
-    try {
-      allowed = newDeviceThrottle.acquire(account.userId(), client.device().orElse(null), now);
-    } catch (RuntimeException e) {
-      log.warn("新设备提醒的限流不可用，本次不发信: userId={}, {}", account.userId(), e.getMessage());
-      return;
-    }
-    if (!allowed) {
-      return;
-    }
-    try {
-      transactions.executeWithoutResult(
-          status ->
-              emailDelivery.send(
-                  NewDeviceLoginMail.of(
-                      EmailAddress.of(account.email()),
-                      account.displayName(),
-                      origin.toNotice(now))));
-      log.info("已登记新设备登录提醒: userId={}", account.userId());
-    } catch (RuntimeException e) {
-      // 登录已经提交：提醒登记失败不让登录失败；退还冷却，否则这台设备 24 小时内再登录也不会提醒
-      log.warn("新设备提醒登记失败: userId={}", account.userId(), e);
-      try {
-        newDeviceThrottle.reset(account.userId(), client.device().orElse(null));
-      } catch (RuntimeException resetFailure) {
-        log.warn("新设备提醒没登记上，退还冷却也失败: userId={}, {}", account.userId(), resetFailure.getMessage());
-      }
-    }
-  }
 
   /// 校验密码。用户或凭据不存在时拿假哈希校验一次，然后返回 `false`。
   ///

@@ -1,0 +1,119 @@
+---
+title: Playwright 改了上下文的 UA，keepalive 请求仍带 HeadlessChrome：计数用例随机失败
+summary: 门户的计数冒烟用例在 Playwright 上下文里把浏览器标识改成了桌面 Chrome，可浏览器自己发的 keepalive / sendBeacon 请求仍带无头 Chromium 的 `HeadlessChrome`。它在 COUNTER-Robots 名单里，计数又按会话排除爬虫，一条命中整个会话出局，用例结果随机。改为单独用 `--user-agent` 启动一个浏览器。只影响测试。
+type: pitfall
+difficulty: practice
+tags: [frontend, analytics, testing]
+prerequisites: [analytics-bot-detection, test-e2e-playwright]
+topics: [analytics-pipeline]
+sources:
+  - version: v0.18
+    issue: PAP-173
+    pr: 376
+personalEnv: false
+---
+
+<Diagnose
+  question="Playwright 用 browser.newContext({ userAgent: 桌面 Chrome 的标识 }) 打开门户的文献页，页面的埋点队列用 fetch keepalive 和 sendBeacon 往门户发批次。这些批次请求带的 User-Agent 是什么？"
+  options={["不一定：有的可能还是无头 Chromium 自带的、含 HeadlessChrome 的标识", "一定是设置的桌面 Chrome 标识，上下文里所有请求都会改", "一定是空的，sendBeacon 和 keepalive 请求不带 User-Agent"]}
+  answer="A"
+  ifRight="对。门户的冒烟用例就是这样：同一个页面的批次一会儿带桌面标识、一会儿带 HeadlessChrome。往下读：为什么一条带错就足以让整个会话不计数。"
+  ifWrong="答案是 A。上下文级的 userAgent 覆盖不到浏览器自己发的 keepalive / sendBeacon 请求，实际抓到的批次里有的仍带 HeadlessChrome。Playwright 怎么开浏览器、跑用例，先读端到端测试那篇。"
+  suggest="test-e2e-playwright"
+/>
+
+## 坑
+
+<Callout kind="lead" label="坑在哪">
+
+在 Playwright 的上下文上改 `userAgent`，覆盖不到浏览器自己发的 keepalive / sendBeacon 请求；这些请求仍带 `HeadlessChrome`，命中爬虫名单，整个会话被排除出公开计数。
+
+</Callout>
+
+门户 v0.18 有一条冒烟用例：测试账号 B 读完一篇文献的全文后，70 秒内文献页上的「人看过」和「人读过全文」应各加一，断言 `[1, 1]`。这条用例连 mini 上的后端跑，结果随机：有时 `0/0`，有时 `2/0`、`2/1`，还有页面上先显示了数字、过一会儿又归零。
+
+## 为什么
+
+三件事叠在一起。
+
+**一、`HeadlessChrome` 在爬虫名单里。** 无头 Chromium 默认的浏览器标识里带 `HeadlessChrome`。Patra 照 COUNTER 的要求排除机器人，用的 COUNTER-Robots 名单里就有它（「爬虫识别」那篇讲过这份名单）。真实世界里拿无头浏览器批量抓页面的，确实大多是爬虫。
+
+**二、按会话判，一条命中整个会话出局。** 公开计数只数「真人会话」：会话里有浏览器事件，并且没有任何一条被标为爬虫。`session_quality` 表按 `max(has_bot)` 合并，只要一条事件命中名单，整个会话都不计。
+
+**三、上下文级的 UA 覆盖有漏网的请求。** 用例原来在上下文上设了桌面 Chrome 的 `userAgent`。可门户的埋点批次都是 `fetch keepalive` 或 `sendBeacon` 发的（「页面要关了也能发出去」那篇讲过），本地用日志代理抓到的情况是：同一个页面的批次，一会儿带桌面标识，一会儿带 `HeadlessChrome`。哪一批漏掉覆盖不固定。
+
+三件事合起来，结果就随机了：B 的会话里哪怕只有一批带了 `HeadlessChrome`，整个会话（包括已经算进去的「看过」）都被排除。数字先显示后归零，也对得上这个机制：前面的事件先算进了计数，后到的一批让会话被改判成爬虫。
+
+<Callout kind="insight" label="怎么认出它">
+
+同一条用例、同样的操作，结果在 0 和正确值之间跳，且只在无头模式下出现。验证办法是在浏览器和服务之间放一个日志代理，看同一个页面发出的每个请求的 `User-Agent` 是否一致；只看页面导航请求是看不出来的。
+
+</Callout>
+
+<Quiz
+  questions={[
+    {
+      question: "B 这次读全文，页面一共发了 10 批埋点，9 批带桌面 Chrome 标识，1 批带 HeadlessChrome。B 的这次阅读对公开计数的贡献是？",
+      options: ["算一次，9 批正常的足够证明是真人", "算一次，只把带 HeadlessChrome 的那一批扣掉", "不算，一条命中名单，整个会话都被排除", "算 0.9 次，按正常批次的比例折算"],
+      answer: "C",
+      explain: "真人会话要求会话里没有任何一条爬虫事件，按 max(has_bot) 判。一条命中，整个会话出局，之前已经进计数的也一起撤掉。"
+    }
+  ]}
+/>
+
+## 怎么避开
+
+浏览器标识要在**整个浏览器进程**上改，而不是在上下文上改。用例改为给 B 单独启动一个带 `--user-agent` 启动参数的 Chromium：
+
+<CodeRef at="patra-portal/tests/e2e/analytics-display.spec.ts@ffc25c0bf848b54ae29bb08571a5c491c1f5089d" lines="55-59" />
+
+```ts
+  const desktop = await chromium.launch({ args: [`--user-agent=${DESKTOP_CHROME_UA}`] });
+  const page = await desktop.newPage({
+    baseURL: test.info().project.use.baseURL,
+    viewport: { width: 1440, height: 900 },
+  });
+```
+
+用例里把理由写进了注释，同时给读数用的匿名访客也换了标识：
+
+<CodeRef at="patra-portal/tests/e2e/analytics-display.spec.ts@ffc25c0bf848b54ae29bb08571a5c491c1f5089d" lines="18-26" />
+
+```ts
+/// 计数按会话排除爬虫：一个会话里只要有一条事件的浏览器标识命中 COUNTER-Robots 名单（`HeadlessChrome` 就在里面，见
+/// `patra-api/patra-analytics/patra-analytics-api/src/main/resources/analytics/robots/counter-robots.json` 与
+/// 埋点方案 §6.7），整个会话都不计入公开数字。上下文级的 `userAgent` 覆盖不住浏览器自己发的 keepalive / sendBeacon
+/// 请求，它们仍带无头 Chromium 的 `HeadlessChrome`，会话随时被判成爬虫；所以 B 单独起一个用启动参数改标识的浏览器
+const DESKTOP_CHROME_UA =
+  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36";
+
+/// 读数用的访客明确用爬虫标识：它反复刷新文献页，自己的浏览不能算进计数
+const CRAWLER_UA = "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)";
+```
+
+这只影响测试。真实读者用的浏览器，页面请求和 keepalive / sendBeacon 请求带的是同一个标识，产品侧没有问题。
+
+<Callout kind="warn">
+
+别为了让测试通过去把 `HeadlessChrome` 从爬虫名单里删掉。用无头浏览器抓页面的大多真是爬虫，删了名单，公开计数就会被它们撑大。该改的是测试自己的浏览器标识。
+
+</Callout>
+
+## 同一次排查里的其他修正
+
+这条用例在同一次排查里还改了几处，都是测试自己的问题：
+
+- **匿名读数访客原来会被计数。** 测试运行器的匿名上下文带的是桌面 Chrome 标识（不是 `HeadlessChrome`），它反复刷新文献页读数字，自己的浏览也被算了进去。改成明确的 Googlebot 标识（上面代码里的 `CRAWLER_UA`）。
+- **「没有全文就跳过」从没生效。** 文献页的 `#fulltext` 区块在没有可转载全文时也会渲染（显示「暂无开放全文」之类的说明），原来按它在不在判断，永远认为有全文。改成看区块头有没有「许可与出处」链接，只有真有正文时才有。
+- **滚动没让正文进入「在读」。** 居中滚动可能停在正文上方，正文不到半屏，永远不算在读。改成 `scrollIntoView({ block: "start" })` 把正文顶到视口上沿，并等 `fulltext_read` 请求真的发出再往下走。
+- **同一个人只算一次。** B 以前读过的文献再读不会加一，所以改为只挑有全文、看过人数为 0 的文献。
+
+<Transfer
+  prompt="Patra 有一个流量模拟器要造「真人流量」来压测和对账。假如有人改成用无头浏览器批量打开页面来模拟读者，并且只在 Playwright 的上下文上设了桌面 UA。对账时他会看到什么？怎么在动手前就避开？"
+  points={[
+    { label: "真人会话会被吃掉", text: "页面发出的 keepalive / sendBeacon 批次有一部分仍带 HeadlessChrome，命中名单的会话整个不计，公开计数会比模拟器记的真值少，而且少多少不固定。" },
+    { label: "在进程上改标识", text: "启动浏览器时用 --user-agent 启动参数改，让这个进程发出的所有请求都带同一个标识。" },
+    { label: "先抓包核对", text: "正式跑之前放一个日志代理，确认同一个页面的导航请求、批次请求 UA 全部一致。" },
+    { label: "别动名单", text: "不能为了对上账去删爬虫名单里的条目，那会让真实的无头爬虫混进计数。" }
+  ]}
+/>

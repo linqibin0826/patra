@@ -8,7 +8,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.service.annotation.HttpExchange;
 import org.springframework.web.service.annotation.PostExchange;
 
-/// 文献内部 API 契约：interaction 的对象登记表按内部 ID 首次解析、按 PMID 每日对账（PAP-109）。
+/// 文献内部 API 契约：interaction 的对象登记表按内部 ID 首次解析、按 PMID 每日对账（PAP-109）；analytics 的热读与
+/// 「看过还看了」按内部 ID 核对文献是否可用（PAP-170，看 `state` 与 `retracted`）。
 ///
 /// 此接口同时用于：
 ///

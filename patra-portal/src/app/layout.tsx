@@ -1,5 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { IBM_Plex_Mono, Inter, Newsreader } from "next/font/google";
+import { AnalyticsRoot } from "@/components/analytics/AnalyticsRoot";
+import { SignedInToast } from "@/components/auth/SignedInToast";
 import { NotificationStream } from "@/components/notifications/NotificationStream";
 import { Toaster } from "@/components/ui/sonner";
 import { cn } from "@/lib/utils";
@@ -52,7 +54,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <QueryProvider>
           {children}
           <NotificationStream />
+          <AnalyticsRoot />
           <Toaster position="bottom-right" />
+          <SignedInToast />
         </QueryProvider>
       </body>
     </html>

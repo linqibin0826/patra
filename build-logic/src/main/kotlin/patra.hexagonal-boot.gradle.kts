@@ -63,7 +63,9 @@ tasks.bootRun {
             "-Dotel.exporter.otlp.endpoint=$otelExporterEndpoint",
             // HTTP/protobuf（agent 2.x 默认），endpoint 须指向 collector 的 4318 HTTP 端口（见 gradle.properties）
             "-Dotel.exporter.otlp.protocol=http/protobuf",
-            "-Dotel.traces.exporter=otlp"
+            "-Dotel.traces.exporter=otlp",
+            // 指标由 Micrometer 的 OTLP 注册表推送（patra-tool-observability），Agent 不再导出一份
+            "-Dotel.metrics.exporter=none"
         )
     }
 }

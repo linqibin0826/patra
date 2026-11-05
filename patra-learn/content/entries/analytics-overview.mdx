@@ -1,0 +1,212 @@
+---
+title: 行为数据管线：从一次点击到「N 人看过」
+summary: 「这篇文献有多少人看过」听上去只是一个计数器，真做起来要回答一串问题：记哪些事、怎么认出同一个人、爬虫怎么排除、上亿条事件放哪、怎么汇总成页面上的数字。这篇是行为数据系列的入口：讲清一条行为数据管线由哪几段组成、每段解决什么，以及 Patra v0.18 是怎么搭的。
+type: concept
+difficulty: basic
+tags: [analytics, backend]
+prerequisites: [msg-what-is-a-message-queue, db-what-is-a-database]
+topics: [analytics-pipeline]
+sources:
+  - version: v0.18
+    issue: PAP-164
+    pr: 373
+  - version: v0.18
+    issue: PAP-167
+    pr: 373
+  - version: v0.18
+    issue: PAP-168
+    pr: 373
+  - version: v0.18
+    issue: PAP-170
+    pr: 373
+personalEnv: false
+---
+
+<Diagnose
+  question="最朴素的浏览量：文献页每被打开一次，就在处理请求时往数据库插一行浏览记录，再把这篇的计数加一，都做完才把页面返回给读者。某天数据库卡了 5 秒，会怎样？"
+  options={["这 5 秒里打开文献页的人都跟着等，等不及的请求连浏览记录一起丢了", "页面照常打开，只是浏览记录晚 5 秒写进去，最后一条不少", "页面照常打开，数据库恢复后计数会自动按访问日志补齐"]}
+  answer="A"
+  ifRight="对。记录浏览和返回页面绑在同一次请求里，数据库一慢页面就慢。行为数据管线做的第一件事，就是把这两件事拆开。"
+  ifWrong="答案是 A。记录写在处理请求的路上，数据库卡住，请求就卡住；没有任何东西替你先存着这条浏览。中间放一个能先把事情存下来的东西，正是消息队列的用处，先读那篇。"
+  suggest="msg-what-is-a-message-queue"
+/>
+
+## 痛点：一个「浏览量」，推迟了五个版本
+
+Patra 从 v0.13 起就想在文献页上显示浏览量，每一版都推到下一版，理由一直是同一句：量大，不进 PostgreSQL。v0.15 想做「热度」，又因为没有浏览量、信号太稀而作罢。到 v0.18 才认真回答：要显示「这篇文献有多少人看过」，到底要做哪些事。
+
+把它拆开，会发现一个计数器背后藏着好几个问题：
+
+1. **记什么、叫什么。** 前端叫 `view_paper`、后端叫 `ArticleView`、面板里写成 `pv_detail`，半年后没人说得清哪个是哪个。
+2. **数的是请求还是人。** 一个人刷新 20 次算 20 次，还是 1 个人？没登录的访客怎么认出是同一个人？
+3. **爬虫怎么办。** 一个爬虫一分钟抓 500 篇，它看过的不该算进「有人看过」。
+4. **放在哪。** 一个页面请求可能带出好几条事件（打开文献、看到哪些卡片、读了多久全文），亿级行很快就来了。和业务数据放在同一个库里，会拖慢真正的业务。
+5. **怎么变成页面上的数字。** 明细是一条条事件，页面要的是「1,284 人看过」「近期热读」「看过这篇的人还看了」，中间要汇总、要排序、还要够快。
+
+## 以前怎么做，哪里不够
+
+| 做法 | 能做到 | 不够的地方 |
+|---|---|---|
+| 业务表里加一个计数列，打开一次加一 | 最简单，一条 `UPDATE` | 数的是请求不是人，刷新和爬虫都能刷上去；没有明细，算不了热读、留存；热门文献那一行被反复更新 |
+| 接第三方统计（百度统计、Google Analytics） | 不用自己建，面板现成 | 数据在别人那里，门户上要实时显示的计数和推荐拿不回来；读者的阅读轨迹出了站 |
+| 每次浏览往业务库插一行明细，定时跑 SQL 汇总 | 有明细，口径自己定 | 写入量直接压在业务库上；按行存储的库扫上亿行做汇总很慢、占盘也大 |
+
+Patra 选了第四条路：照业界做法自建一整条管线。这一版也是作者第一次学行为数据，为以后在公司里做这类系统做准备，所以每一段都按通行做法来，不只求最小可用。
+
+## 行为数据管线是什么
+
+<Callout kind="lead">
+
+行为数据管线是把用户在产品里做的事记成**事件**，再经过采集、缓冲、存储、汇总，最后变成产品里的数字和运营面板的一整条链路。
+
+它不是日志或监控：日志记的是系统做了什么（报错、耗时），给工程师排查用；行为数据记的是人做了什么（打开、检索、读全文），给产品和读者用。Patra 把前端性能监控明确划在这一版之外，就是这个区分。
+
+</Callout>
+
+## 核心思路
+
+两条主线贯穿整条管线：
+
+- **快路只做收下，慢活放到后面。** 门户处理页面请求时，只把事件交给采集端点，不等它入库；采集端点只做校验、补字段，写进 Kafka 就返回。真正费时的入库、汇总、排序都在 Kafka 后面异步做，ClickHouse 停了、慢了，前面照常收。这和你学过的「为什么要异步」是同一个道理。
+- **存明细，在写入时汇总，在读取时去重。** 每条事件原样存进按列存储的 ClickHouse；物化视图在每批写入时顺手汇总成「每篇文献、每个会话有没有看过」；页面要数字时，再按人去重、排除爬虫。明细留 90 天，汇总长期保留。
+
+<Callout kind="analogy">
+
+像一家快递公司。收件点只管收下包裹、贴好面单（采集端点）；包裹先进分拣中心的传送带排队（Kafka），收件点不用等货车；货车攒满一车再出发（批量入库）；仓库按货架整理好（明细表），每进一车就更新一次库存表（物化视图）；有人问「这类货还有多少」，直接看库存表，不去翻每一个包裹（计数接口）。
+
+</Callout>
+
+## 核心概念全貌
+
+点方块看它管什么，点「发一条」看一条事件怎么走：
+
+<Structure
+  title="Patra 的行为数据管线"
+  nodes={[
+    { id: "plan", label: "埋点方案", sub: "事件字典 + 口径", col: 1, row: 2, desc: "写任何代码之前先定的规格：记哪 10 种事件、每种带哪些字段、「看过人数」「读过全文」怎么算。格式落成 JSON Schema，由机器校验。" },
+    { id: "portal", label: "门户", sub: "产生事件", col: 1, desc: "门户服务端在渲染文献页、执行检索时发服务端事件；浏览器里的曝光、点击、全文停留先发到门户自己的路径，由门户补上设备、会话与登录身份再转发。" },
+    { id: "collector", label: "采集端点", sub: "POST /patra-analytics/events", code: true, col: 2, desc: "逐条按 JSON Schema 校验，补上服务端接收时间，解析 UA、判爬虫，把 IP 换成省级地区后丢掉，写进 Kafka 就返回 202。不合格的进 events.dlq。" },
+    { id: "kafka", label: "Kafka", sub: "events.raw", code: true, col: 3, desc: "缓冲：一本只追加的日志，事件按保留期（2 天）留着。ClickHouse 停机时事件在这里等，恢复后补写。" },
+    { id: "events", label: "明细表 events", sub: "ClickHouse", col: 4, desc: "一行一条事件，按列存储、按天分区，90 天后整个分区丢掉。没有 IP 列。" },
+    { id: "summary", label: "汇总表", sub: "物化视图", col: 4, row: 2, desc: "每批写入明细时同时触发：写出「文献 × 会话有没有看过」「会话里有没有浏览器事件、有没有爬虫」「每人每天活跃」三张汇总，长期保留。" },
+    { id: "app", label: "应用层", sub: "计数 · 热读 · 看过还看了", col: 3, row: 2, desc: "计数接口查汇总表，套 Redis 60 秒缓存；热读每小时、看过还看了每天由定时任务算好写进 PostgreSQL 快照，页面只读快照。" },
+    { id: "history", label: "阅读历史", sub: "PostgreSQL", col: 2, row: 2, desc: "登录用户自己的阅读记录。采集端点写完 Kafka 后同步写一行，和统计数据是两套：清空历史不影响浏览量。" }
+  ]}
+  edges={[
+    { from: "plan", to: "portal", label: "照它埋", dashed: true },
+    { from: "portal", to: "collector", label: "采集信封" },
+    { from: "collector", to: "kafka", label: "富化事件" },
+    { from: "collector", to: "history", label: "同步写" },
+    { from: "kafka", to: "events", label: "批量入库" },
+    { from: "events", to: "summary", label: "写入时汇总" },
+    { from: "summary", to: "app", label: "查询" }
+  ]}
+  traces={[
+    {
+      button: "发一条 article_viewed",
+      packet: "viewed",
+      hops: [
+        { at: "portal", caption: "B 打开一篇文献，门户服务端渲染完页面，组装一条 article_viewed，不等结果就发出去。" },
+        { at: "collector", caption: "采集端点校验通过，补上接收时间、省级地区和爬虫标记，删掉 IP 与原始 UA。" },
+        { at: "kafka", caption: "写进 events.raw，采集端点返回 202。到这里只用了几毫秒。" },
+        { at: "events", caption: "入库消费者攒满 5 万条或等满 1 秒，一次写进明细表。" },
+        { at: "summary", caption: "同一次写入触发物化视图：这篇文献多了一行「B 的这个会话看过」。" },
+        { at: "app", caption: "门户来要计数：按人去重、只数真人会话，B 算 1 个人。" }
+      ]
+    },
+    {
+      button: "发一条不合格的事件",
+      packet: "坏事件",
+      hops: [
+        { at: "portal", caption: "一条事件多带了一个埋点方案里没有的字段。" },
+        { at: "collector", caption: "按 JSON Schema 校验不通过：这一条进 events.dlq 留着排查，同批其他事件照常进 events.raw。它不会出现在明细表里。", drop: true }
+      ]
+    }
+  ]}
+/>
+
+| 概念 | 一句话 | 在 Patra 里 |
+|---|---|---|
+| 埋点方案 | 先定名字、格式、口径，再写代码 | 10 个事件，Object Action 命名；格式是 `patra-analytics-api` 里的 JSON Schema |
+| 采集端点 | 校验、补字段、写进队列，收下就走 | `patra-analytics` 服务的 `collect` 子域 |
+| Kafka | 入库前的缓冲，消息按保留期留着 | 单节点，`events.raw` 与 `events.dlq`，保留 2 天 |
+| 明细表 | 一行一条事件，按列存储 | ClickHouse 的 `events`，按天分区，90 天 TTL |
+| 物化视图汇总 | 写入时就汇总，查询不用扫明细 | `article_session_reads`、`session_quality`、`daily_person_activity` |
+| 应用层 | 新鲜的数字现查，排名提前算好 | 计数接口 + Redis；热读、看过还看了写进 PG 快照 |
+
+后端这一侧（采集端点、Kafka、ClickHouse、计数与热读、阅读历史、流量模拟器）先合并上线，门户这一侧的埋点和数字展示随后合并（2026-11-03）。门户具体怎么发事件、怎么下发设备 Cookie，见「门户怎么埋点」那篇。
+
+业界把这几层叫作数据分层：明细层（ODS + DWD）、汇总层（DWS）、应用层（ADS）。名字各家略有不同，分法大同小异。
+
+## 从头走一遍：B 读了一篇文献，数字怎么加一
+
+<Stepper
+  title="一次真实浏览，变成「N 人看过」"
+  nodes={[
+    { id: "portal", label: "门户" },
+    { id: "collector", label: "采集端点" },
+    { id: "kafka", label: "Kafka" },
+    { id: "clickhouse", label: "ClickHouse", sub: "明细 + 汇总" },
+    { id: "api", label: "计数接口", sub: "Redis 60 秒" }
+  ]}
+  links={[
+    { from: "portal", to: "collector" },
+    { from: "collector", to: "kafka" },
+    { from: "kafka", to: "clickhouse" },
+    { from: "clickhouse", to: "api" }
+  ]}
+  steps={[
+    { caption: "B 打开文献页。门户服务端组装一条 article_viewed：带上设备 ID、会话 ID、B 的用户 ID、IP 和 UA，交给采集端点，不等结果。", focus: ["portal"], tokens: [{ id: "e1", label: "viewed", at: "portal" }] },
+    { caption: "采集端点按 JSON Schema 校验，补上接收时间，判断不是爬虫，把 IP 换成省份后丢掉，写进 Kafka，返回 202。", focus: ["collector", "kafka"], links: ["portal>collector", "collector>kafka"], tokens: [{ id: "e1", label: "viewed", at: "kafka" }], notes: [{ at: "kafka", text: "events.raw · 排队", tone: "wait" }] },
+    { caption: "入库消费者从 Kafka 拉一批，一次写进明细表；物化视图在同一次写入里更新汇总。B 的浏览器随后发来 page_viewed、fulltext_read，这个会话被认作真人会话。", focus: ["clickhouse"], links: ["kafka>clickhouse"], tokens: [{ id: "e1", label: "viewed", at: "clickhouse" }], notes: [{ at: "clickhouse", text: "汇总 · B 看过", tone: "ok" }] },
+    { caption: "门户渲染下一个页面时来要计数：Redis 里没有，就按人去重查汇总表，结果缓存 60 秒。这篇的「看过」多了 1。", focus: ["api"], links: ["clickhouse>api"], notes: [{ at: "api", text: "看过 +1", tone: "ok" }] },
+    { caption: "B 又刷新了 3 次：又多了 3 条 article_viewed，明细表里都在，可它们都是同一个人。按人去重之后，数字不变。", focus: ["clickhouse", "api"], tokens: [{ id: "e2", label: "viewed ×3", at: "clickhouse" }], notes: [{ at: "api", text: "看过不变", tone: "ok" }] }
+  ]}
+  guesses={[
+    { before: 3, question: "采集端点已经写进 Kafka、返回了 202。这时 ClickHouse 停机了 10 分钟，这次浏览会怎样？", options: ["在 Kafka 里等着，ClickHouse 恢复后补写进去", "丢了，因为采集端点已经返回，没人再管它", "采集端点发现写不进 ClickHouse，改回 503 让门户重发"], answer: "A", explain: "采集端点只负责写进 Kafka，入库在后面异步做。ClickHouse 停机期间消费者停在原地不提交，事件在 Kafka 里最多能等 2 天。" },
+    { before: 5, question: "B 又刷新了 3 次文献页。页面上的「看过」会怎样？", options: ["再加 3，明细表里确实多了 3 条", "再加 1，刷新算一次新的访问", "不变，同一个人只算一次"], answer: "C", explain: "Patra 显示的是「N 人看过」，按人长期去重：登录用户按账号，访客按设备。同一个人看多少次都只算 1。" }
+  ]}
+/>
+
+## 常见误解
+
+- **以为浏览量就是请求次数**：最容易做的就是数请求。Patra 门户上写的是「N 人看过」，按人长期去重，还要排除爬虫和只有服务端请求、没跑过页面脚本的会话；给学术出版界对照用的按会话口径（COUNTER）只放在面板里。
+- **以为埋点就是在前端加几行上报代码**：代码是最后一步。先要有一份埋点方案，定好事件名、字段和口径，前端、后端、数据分析都照它来。Patra 的文献浏览是门户服务端发的，不是浏览器发的，浏览器伪造不了浏览数。
+- **以为有了消息队列就随便选一个**：RabbitMQ 像邮局，消息取走就没了；Kafka 像只追加的日志本，按保留期留着、能倒回去重读。行为数据和日志管线几乎都用后者。
+- **以为 ClickHouse 是更快的 PostgreSQL**：它擅长一次扫上亿行算一个结果，不擅长按 ID 改一行、每秒上百个小查询。所以 Patra 的阅读历史（要按行删除）放 PG，计数前面挡一层 Redis，排名干脆算好放进 PG。
+- **以为管线能保证每条事件恰好一次**：生产者的网络重试、入库消费者重拉同一段消息、模拟器的重试和故意重发都会产生重复。Patra 的做法是至少一次投递，再靠批次去重令牌、ReplacingMergeTree 和按 `event_id` 去重计数兜底。
+
+## 什么时候用，代价是什么
+
+<Callout kind="cost">
+
+只想要一个粗略的总访问量，业务表里的计数列或第三方统计就够了。要按人去重、排除爬虫、算热读与推荐、数据不出站，才值得建管线。
+
+代价是实打实的：多了 Kafka 和 ClickHouse 两个有状态的中间件（在 16 GB 内存的 mini 上分别限 1 GB 和 2 GB）；同一个「独立读者」口径要在物化视图和定时任务里各实现一次，靠测试守住一致；真实访客几乎为零，规模只能靠自己写的流量模拟器造。灌进 1.0232 亿条合成事件后，ClickHouse 实际占了 14.3 GiB 磁盘，比规划时估的「1 亿条约 2～4 GB」多出好几倍：容量一定要实测。
+
+</Callout>
+
+## 学习路线
+
+| 档 | 学什么 | 对应篇目 |
+|---|---|---|
+| 基础 | 先定规格：事件字典、口径；怎么认出「一个人」 | 埋点方案；设备 ID、会话与「一个人」 |
+| 进阶 · 采集 | 事件格式怎么由机器守住；爬虫怎么识别 | 事件信封三形态与 JSON Schema；爬虫识别 |
+| 进阶 · 缓冲与存储 | Kafka 的日志模型；列式存储；MergeTree 的片段与合并 | Kafka：一本只追加的日志；列式存储；MergeTree：数据片段、后台合并、分区与 TTL |
+| 进阶 · 入库与汇总 | 批量写入与去重令牌；物化视图；重复行怎么数 | 批量写入与块令牌去重；物化视图；重复行怎么数 |
+| 进阶 · 应用 | 热读的时间衰减；看过还看了的共现与余弦相似度 | 热读：让旧的阅读慢慢变轻；看过还看了 |
+| 进阶 · 造流量 | 三个流量模型；开环压测；真值对账 | 造流量；开环压测与 coordinated omission；真值对账 |
+| 实战 · 取舍 | Patra 在每一段做的选择和代价 | 采集端点收下就走；行为事件的缓冲用 Kafka；入库自己写批量消费者；计数现查加缓存，排名算好放快照；阅读历史：清空了，就要真的空 |
+| 实战 · 坑 | 在 mini 上灌 1 亿条时真实碰到的 | 灌数据时磁盘多掉了一截；对账差了 26 行 |
+
+Patra 没用到的部分：流处理引擎（Flink）、Kafka Connect 与「恰好一次」投递、ClickHouse 副本与 Kafka 多节点、用户分群与 A/B 实验平台，都在这一版之外，要学请看各自的官方文档。
+
+<Recap
+  prompt="不看上文，用自己的话讲一遍：一条行为数据管线由哪几段组成？为什么采集端点写进 Kafka 就返回？页面上的「N 人看过」是从哪里、按什么口径算出来的？"
+  points={[
+    { label: "几段", text: "埋点方案定规格；门户产生事件；采集端点校验、富化；Kafka 缓冲；入库写进 ClickHouse 明细；物化视图汇总；应用层出计数、热读与推荐。" },
+    { label: "收下就走", text: "采集端点是唯一同步面对门户的一环，慢了会拖慢页面；入库、汇总都放在 Kafka 后面，ClickHouse 停机时事件在 Kafka 里等着。" },
+    { label: "数字怎么来", text: "计数接口查物化视图写出的汇总表，按人（账号或设备）长期去重，只数真人会话、排除爬虫和合成数据，外面套 Redis 60 秒缓存。" },
+    { label: "代价", text: "多两个中间件、同一口径实现两次、容量要实测。" }
+  ]}
+/>

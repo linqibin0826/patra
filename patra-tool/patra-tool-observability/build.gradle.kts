@@ -2,8 +2,8 @@
  * Patra Spring Boot Starter - Observability
  *
  * 可观测性基础设施：
- * - Metrics (Micrometer)
- * - Tracing (OTel Agent)
+ * - Metrics (Micrometer → OTLP)
+ * - Tracing (OTel Agent，仅本机 bootRun)
  * - Logging (MDC trace_id/span_id)
  */
 
@@ -33,6 +33,11 @@ dependencies {
 
     // Spring Boot Actuator: 提供 WebMvcObservationAutoConfiguration 等观测相关自动配置
     api("org.springframework.boot:spring-boot-starter-actuator")
+
+    // 指标经 OTLP 推给 OTel Collector：Boot 4.1 的 OtlpMetricsExportAutoConfiguration 两个类都要，
+    // 缺 spring-boot-opentelemetry 就静默不导出。不用 starter-opentelemetry：它还会带上链路导出
+    implementation("io.micrometer:micrometer-registry-otlp")
+    implementation("org.springframework.boot:spring-boot-opentelemetry")
 
     // 测试依赖
     testImplementation(project(":patra-tool:patra-tool-test"))

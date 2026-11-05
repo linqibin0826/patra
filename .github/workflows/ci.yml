@@ -23,6 +23,9 @@ env:
   POSTGRES_IMAGE: postgres:17
   REDIS_IMAGE: redis:7.0.15
   RABBITMQ_IMAGE: rabbitmq:4.4.0-management
+  CLICKHOUSE_IMAGE: clickhouse/clickhouse-server:26.8.36.3
+  # mini 跑 apache/kafka（JVM 版），测试容器用同版本的 apache/kafka-native，只核对版本号一致
+  KAFKA_VERSION: 4.3.2
 
 jobs:
   # ---- 1) 受影响单元路由 ----
@@ -95,6 +98,29 @@ jobs:
             echo "::error file=$RABBITMQ_COMPOSE::rabbitmq 的镜像（$COMPOSE_IMAGE）与 workflow env RABBITMQ_IMAGE=$RABBITMQ_IMAGE 不一致"
             FAIL=1
           fi
+          # ClickHouse、Kafka：测试容器与 pipeline 栈 compose 一致（v0.18 PAP-165）
+          PIPELINE_COMPOSE="patra-infra/docker/docker-compose.pipeline.yaml"
+          CLICKHOUSE_FILE="patra-tool/patra-tool-test/src/main/java/dev/patra/tool/test/container/initializer/ClickHouseContainerInitializer.java"
+          if ! grep -Fq "private static final String CLICKHOUSE_IMAGE = \"$CLICKHOUSE_IMAGE\";" "$CLICKHOUSE_FILE"; then
+            echo "::error file=$CLICKHOUSE_FILE::CLICKHOUSE_IMAGE 常量与 workflow env CLICKHOUSE_IMAGE=$CLICKHOUSE_IMAGE 不一致"
+            FAIL=1
+          fi
+          COMPOSE_IMAGE=$(sed -n 's/^[[:space:]]*image:[[:space:]]*\(clickhouse\/[^[:space:]]*\).*/\1/p' "$PIPELINE_COMPOSE")
+          if [ "$COMPOSE_IMAGE" != "$CLICKHOUSE_IMAGE" ]; then
+            echo "::error file=$PIPELINE_COMPOSE::clickhouse 的镜像（$COMPOSE_IMAGE）与 workflow env CLICKHOUSE_IMAGE=$CLICKHOUSE_IMAGE 不一致"
+            FAIL=1
+          fi
+          KAFKA_FILE="patra-tool/patra-tool-test/src/main/java/dev/patra/tool/test/container/initializer/KafkaContainerInitializer.java"
+          if ! grep -Fq "private static final String KAFKA_IMAGE = \"apache/kafka-native:$KAFKA_VERSION\";" "$KAFKA_FILE"; then
+            echo "::error file=$KAFKA_FILE::KAFKA_IMAGE 常量与 workflow env KAFKA_VERSION=$KAFKA_VERSION 不一致（应为 apache/kafka-native:$KAFKA_VERSION）"
+            FAIL=1
+          fi
+          # kafka 与 kafka-init 两处都要是 apache/kafka:$KAFKA_VERSION
+          KAFKA_IMAGES=$(sed -n 's/^[[:space:]]*image:[[:space:]]*\(apache\/kafka[^[:space:]]*\).*/\1/p' "$PIPELINE_COMPOSE" | sort -u)
+          if [ "$KAFKA_IMAGES" != "apache/kafka:$KAFKA_VERSION" ]; then
+            echo "::error file=$PIPELINE_COMPOSE::kafka / kafka-init 的镜像（$(echo $KAFKA_IMAGES)）应都是 apache/kafka:$KAFKA_VERSION"
+            FAIL=1
+          fi
           [ "$FAIL" -ne 0 ] && { echo "镜像版本治理 SSOT 失守"; exit 1; }
           echo "✓ 镜像版本一致"
       - uses: actions/setup-java@dd06d9cba3e5552c54d9f8ea23572deb30010f7c # v6.0.0
@@ -151,8 +177,12 @@ jobs:
           docker pull "$POSTGRES_IMAGE" & pid_pg=$!
           docker pull "$REDIS_IMAGE" & pid_redis=$!
           docker pull "$RABBITMQ_IMAGE" & pid_mq=$!
+          # v0.18 起 analytics 与 tool-test 的集成测试用 ClickHouse、Kafka；不预拉时第一个用到的测试要现拉镜像，
+          # 撞上单个测试 15 秒的默认超时
+          docker pull "$CLICKHOUSE_IMAGE" & pid_ch=$!
+          docker pull "apache/kafka-native:$KAFKA_VERSION" & pid_kafka=$!
           wait "$pid_pg"; wait "$pid_redis"
-          wait "$pid_mq"
+          wait "$pid_mq"; wait "$pid_ch"; wait "$pid_kafka"
       - name: ✅ Test unit (check + integrationTest + e2eTest)
         run: ./gradlew ${{ steps.tasks.outputs.list }} -x jacocoTestReport -x integrationTestCodeCoverageReport --build-cache
       - name: 📦 Upload jacoco exec (${{ matrix.unit }})

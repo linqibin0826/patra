@@ -1,0 +1,222 @@
+---
+title: 爬虫识别：名单、设备类别、频率窗口，再加一道「真人会话」
+summary: 爬虫看过的文献不该算进「有人看过」。Patra 照学术出版界 COUNTER 的要求排除机器人：先用 COUNTER-Robots 的 UA 名单和 Yauaa 的设备类别认出老实报名字的爬虫，再用 Redis 滑动窗口抓「同一设备 5 分钟浏览超过 30 篇」的；不存 Cookie 的爬虫这三条都可能漏，最后靠「会话里执行过浏览器脚本才算真人」兜住。
+type: concept
+difficulty: advanced
+tags: [analytics, redis, security]
+prerequisites: [analytics-device-and-session, web-rate-limiting]
+topics: [analytics-pipeline]
+sources:
+  - version: v0.18
+    issue: PAP-164
+    pr: 373
+  - version: v0.18
+    issue: PAP-167
+    pr: 373
+  - version: v0.18
+    issue: PAP-168
+    pr: 373
+personalEnv: false
+---
+
+<Diagnose
+  question="频率规则是「同一个设备 ID 5 分钟内浏览超过 30 篇就判为爬虫」。一个爬虫从不保存 Cookie，于是每个请求都会被下发一个新的设备 ID。它一分钟抓了 500 篇，会被这条规则标上吗？"
+  options={["会，一分钟 500 次远远超过了阈值", "只有第 31 次以后的请求会被标上", "不会，按设备算，每个设备都只有 1 次"]}
+  answer="C"
+  ifRight="对。限流按什么键计数，就只能拦住在这个键上重复的人。这篇讲 Patra 怎么补上这个洞。"
+  ifWrong="答案是 C。频率规则按设备 ID 计数，而这个爬虫每次都换一个新设备 ID，每个计数器里永远只有 1。滑动窗口按什么键计数、怎么计，先读限流那篇；设备 ID 怎么来的，读上一篇。"
+  suggest="web-rate-limiting"
+/>
+
+<Callout kind="lead">
+
+爬虫识别是给每条事件打一个「是不是机器」的标记（`is_bot` 加原因 `bot_reason`），被标的不进任何对外数字，但照样入库、在运营面板里看得到。
+
+</Callout>
+
+## 为什么要排除，排除到什么程度
+
+一个爬虫一分钟能抓几百篇文献。不排除，热门文献的「看过人数」会被爬虫主导，「近期热读」排的就是爬虫的兴趣。学术出版界的使用统计标准 COUNTER（5.1 版）明确要求报表排除机器人，Patra 照这个要求做。
+
+排除不等于丢弃。被标的事件照常写进 Kafka 和明细表，只是在算对外数字时过滤掉。好处是规则改了可以重算，面板上也能看到爬虫占了多少流量。
+
+Patra 判一条事件是不是爬虫，按先后查三条规则，命中一条就停，`bot_reason` 记下是哪一条：
+
+1. `ua_list`：UA 匹配 COUNTER-Robots 名单。
+2. `ua_class`：Yauaa 把 UA 归为非人类的设备类别。
+3. `rate`：同一设备 5 分钟内的文献浏览超过 30 条。
+
+## 前两条：认出老实报名字的爬虫
+
+搜索引擎和大部分正规爬虫会在 UA 里写明自己是谁，比如 `Googlebot`。认它们最直接的办法是一份名单。
+
+**COUNTER-Robots** 是 COUNTER 社区维护的一份爬虫 UA 正则名单（GitHub 上的 atmire/COUNTER-Robots，MIT 许可），目前 327 条，开头几条就是 `bot`、`spider`、`crawl` 这种宽泛的模式。Patra 把名单原样放进仓库，记下来源提交和取得日期，启动时把每条编译成不区分大小写的正则，逐条匹配；运行时不联网，更新靠手动重新拉取再提交。
+
+**Yauaa** 是一个开源的 Java UA 解析库，能从 UA 里解析出浏览器、操作系统和设备类别。名单靠关键词，Yauaa 靠对 UA 结构的分析，能认出一些名单里没有的写法。它把设备归成 `Desktop`、`Phone`、`Tablet` 等类别，非人类的归成下面这几种：
+
+<CodeRef at="patra-api/patra-analytics/patra-analytics-domain/src/main/java/dev/patra/analytics/domain/collect/policy/BotClassification.java@8140a9d9482324670b63f00ab3c62690102196c5" lines="14-44" />
+
+```java
+  /// 频率规则的阈值：窗口内的文献浏览超过这个数就判为爬虫
+  public static final int RATE_LIMIT = 30;
+
+  /// 频率规则的窗口
+  public static final Duration RATE_WINDOW = Duration.ofMinutes(5);
+
+  /// Yauaa 归为非人类的设备类别
+  private static final Set<String> ROBOT_CLASSES =
+      Set.of("Robot", "Robot Mobile", "Robot Imitator", "Spy", "Hacker");
+
+  private BotClassification() {}
+
+  /// 按 UA 判定。
+  ///
+  /// @param listedInRobots UA 是否匹配 COUNTER-Robots 列表
+  /// @param deviceClass Yauaa 的设备类别
+  /// @return 判为爬虫的原因；没命中为空
+  public static Optional<BotReason> fromUserAgent(boolean listedInRobots, String deviceClass) {
+    if (listedInRobots) {
+      return Optional.of(BotReason.UA_LIST);
+    }
+    return ROBOT_CLASSES.contains(deviceClass) ? Optional.of(BotReason.UA_CLASS) : Optional.empty();
+  }
+
+  /// 频率规则是否命中。
+  ///
+  /// @param windowCount 窗口内这个设备的文献浏览条数
+  /// @return 超过阈值时为 `true`
+  public static boolean overRate(int windowCount) {
+    return windowCount > RATE_LIMIT;
+  }
+```
+
+这个类在领域层，只做组合判断，不碰名单文件、不调 Yauaa、不连 Redis：名单匹配、UA 解析、频率计数都在基础设施层，由用例把结果喂进来。判断规则因此能用纯单元测试覆盖，「先名单、后类别」的顺序和阈值是不是 30 都测得到。
+
+## 第三条：伪装成浏览器的爬虫，看它的速度
+
+把 UA 改成普通 Chrome 的爬虫，前两条都认不出。能暴露它的是行为：真人读文献，5 分钟看不了 30 篇。
+
+计数用 Redis 的**有序集合**做滑动窗口，和 identity 服务的限流是同一种写法：集合里每个成员是一条事件，分数是收到它的毫秒时间戳。每来一条，先删掉 5 分钟以前的成员，再加入这一条，然后数集合里还剩几个。三步写在一段 Lua 脚本里，Redis 一次执行完，中间不会插进别的请求：
+
+<CodeRef at="patra-api/patra-analytics/patra-analytics-infra/src/main/resources/redis/device-rate.lua@8140a9d9482324670b63f00ab3c62690102196c5" lines="1-12" />
+
+```lua
+-- 爬虫频率规则的滑动窗口：同一设备 5 分钟内的文献浏览条数（埋点方案 §6.7）。
+-- KEYS[1] 窗口键 ana:bot-rate:device:{device_id}
+-- ARGV[1] now 毫秒  ARGV[2] 窗口毫秒  ARGV[3] 成员（event_id，重发只占一个位置）  ARGV[4] 1 计入 / 0 只读
+-- 返回窗口内的条数。时间由 Java 传入，脚本不调 TIME。
+local now = tonumber(ARGV[1])
+local window = tonumber(ARGV[2])
+redis.call('ZREMRANGEBYSCORE', KEYS[1], '-inf', now - window)
+if ARGV[4] == '1' then
+  redis.call('ZADD', KEYS[1], now, ARGV[3])
+  redis.call('PEXPIRE', KEYS[1], window)
+end
+return redis.call('ZCARD', KEYS[1])
+```
+
+三个细节值得记住：
+
+- **只有 `article_viewed` 计入。** 其他事件只清过期、只数数，不加入（`ARGV[4]` 为 0）。但数出来超过 30，它们同样被标为 `rate`：这个设备已经被认定在刷了。
+- **成员是 `event_id`。** 门户或模拟器重发同一条事件时 `event_id` 不变，有序集合里同一个成员只占一个位置，重发顶不高计数。
+- **时间由 Java 传进来，脚本不调 Redis 的 `TIME`。** 测试里注入一个固定时钟，就能把窗口往前推 5 分钟，验证计数会降回去。
+
+<Stepper
+  title="一个设备的频率窗口怎么变"
+  nodes={[
+    { id: "portal", label: "门户", sub: "发来事件" },
+    { id: "collector", label: "采集端点", sub: "判爬虫" },
+    { id: "redis", label: "Redis", sub: "ana:bot-rate:device:…" }
+  ]}
+  links={[
+    { from: "portal", to: "collector" },
+    { from: "collector", to: "redis" }
+  ]}
+  steps={[
+    { caption: "这个设备最近 5 分钟已经有 30 条 `article_viewed`，窗口里 30 个成员。30 不超过 30，都不算爬虫。", focus: ["redis"], notes: [{ at: "redis", text: "窗口 · 30", tone: "ok" }] },
+    { caption: "第 31 条 `article_viewed` 到了。脚本清过期、加入它、数出 31，超过 30，这条标为 `rate`。", focus: ["collector", "redis"], links: ["portal>collector", "collector>redis"], tokens: [{ id: "e31", label: "#31", at: "redis" }], notes: [{ at: "redis", text: "窗口 · 31", tone: "bad" }, { at: "collector", text: "is_bot · rate", tone: "bad" }] },
+    { caption: "门户没收到响应，把第 31 条原样重发了一次，`event_id` 不变。", focus: ["portal", "collector"], links: ["portal>collector"], tokens: [{ id: "e31", label: "#31 重发", at: "collector" }], notes: [{ at: "redis", text: "窗口 · 31", tone: "bad" }] },
+    { caption: "同一个成员再 `ZADD` 一次，只是更新了它的分数，集合里还是 31 个。重发没有把计数顶高。", focus: ["redis"], links: ["collector>redis"], tokens: [{ id: "e31", label: "#31 重发", at: "redis" }], notes: [{ at: "redis", text: "窗口 · 31", tone: "bad" }] },
+    { caption: "同一设备来了一条 `page_viewed`。它不计入，只数数：31，超过阈值，它也被标为 `rate`。", focus: ["collector", "redis"], links: ["portal>collector", "collector>redis"], tokens: [{ id: "pv", label: "page_viewed", at: "redis" }], notes: [{ at: "redis", text: "窗口 · 31（只读）", tone: "bad" }, { at: "collector", text: "is_bot · rate", tone: "bad" }] },
+    { caption: "这个设备停了一阵再来。脚本先清掉 5 分钟以前的成员，窗口降回 30 以下，这条和之后的事件不再被标。", focus: ["redis"], notes: [{ at: "redis", text: "窗口 · ≤ 30", tone: "ok" }] }
+  ]}
+  guesses={[
+    { before: 4, question: "第 31 条被原样重发了一次（`event_id` 不变）。窗口里现在有几个成员？", options: ["还是 31，同一个 event_id 只占一个位置", "变成 32，每来一次请求就加一个", "清零，重发的请求会重置这个窗口"], answer: "A", explain: "有序集合的成员不重复：同一个 `event_id` 再加一次只更新分数。这就是选 `event_id` 当成员、而不是随便生成一个随机值的原因。" }
+  ]}
+/>
+
+还有两条是为了不让爬虫识别拖垮采集：
+
+- **前两条命中的事件不进频率窗口**，既然已经知道是爬虫，没必要再查 Redis。
+- **Redis 出错时跳过这条规则。** 事件照常收，`is_bot` 只看前两条，同时记一个指标。同一批里第一次出错之后，剩下的事件直接跳过，不再一条条等 Redis 超时：一批几百条每条都等满超时，会远远超过门户愿意等的时间。频率规则是锦上添花，不能让 Redis 故障拦住整条采集。
+
+为什么不按 IP 做频率规则？因为 Patra 现在所有公网访客的 IP 都被记成同一个内网地址（这一版有意不修），按 IP 计数等于全站共用一个计数器。
+
+## 最后一道：只数「真人会话」
+
+回到开头那道题：不存 Cookie、UA 伪装成 Chrome 的爬虫，每个请求一个新设备 ID，三条规则全部漏掉。这种爬虫一个能变成几千个「人」。
+
+能抓住它的，是它通常不执行 JavaScript。门户的浏览器事件（`page_viewed`、曝光、点击、全文阅读）都是页面脚本在浏览器里发的；只抓 HTML 的爬虫只会产生服务端事件。所以埋点方案定了一条口径：
+
+- **真人会话**：会话里至少有一条 `source = client` 的事件，并且**没有任何一条**被标为爬虫。
+- 只要有一条被标，整个会话都不进对外数字，包括被标之前的事件。
+- 只有服务端事件的会话不进浏览数、全文数、热读和共现，只在面板里单独显示它的量。
+
+这个判定要看整个会话的事件，而事件是一批批到的，所以 Patra 不在写入时判，只在写入时按会话记两个「有没有过」：
+
+<CodeRef at="patra-api/patra-analytics/patra-analytics-infra/src/main/resources/clickhouse/V4__session_quality.sql@8140a9d9482324670b63f00ab3c62690102196c5" lines="1-17" />
+
+```sql
+-- 会话特征（入库设计 §5.4）：真人会话 = 有浏览器事件且没有爬虫事件，在查询时判定；长期保留。
+CREATE TABLE IF NOT EXISTS session_quality (
+    session_id    UUID,
+    has_client    SimpleAggregateFunction(max, UInt8),
+    has_bot       SimpleAggregateFunction(max, UInt8),
+    first_day     SimpleAggregateFunction(min, Date)
+) ENGINE = AggregatingMergeTree
+ORDER BY session_id
+SETTINGS non_replicated_deduplication_window = 1000;
+
+CREATE MATERIALIZED VIEW IF NOT EXISTS session_quality_mv TO session_quality AS
+SELECT
+    session_id,
+    source = 'client' AS has_client,
+    toUInt8(is_bot) AS has_bot,
+    toDate(derived_at, 'Asia/Shanghai') AS first_day
+FROM events;
+```
+
+每条事件进明细表时，物化视图往这张表写一行「这个会话有没有浏览器事件、有没有爬虫事件」，按 `max` 合并：只要出现过一次 1，就一直是 1。计数查询时再按 `HAVING max(has_client) = 1 AND max(has_bot) = 0` 挑出真人会话。物化视图的细节在「物化视图」那篇讲。
+
+<Callout kind="cost">
+
+关掉 JavaScript 的真人不会被计入；浏览器事件被拦截插件挡掉的访客也不会（门户用第一方路径，一般不会被挡）。业界用前端统计（比如 Google Analytics）时本来就是这个口径。反过来，执行 JavaScript、行为又像真人的无头浏览器，这几道都可能漏，这一版不处理。
+
+</Callout>
+
+<Quiz
+  questions={[
+    {
+      question: "一个会话先发了几条 `page_viewed`，然后连续 31 条 `article_viewed`，第 31 条被标为 `rate`。前 30 条 `article_viewed` 进不进「N 人看过」？",
+      options: ["不进，会话里有一条被标，整个会话都不算", "进，它们被采集的时候都没有被标", "只进前 30 条里排在浏览器事件之后的那些"],
+      answer: "A",
+      explain: "真人会话要求整个会话里没有任何一条爬虫事件。被标之前的事件也一起排除：一个设备刷到第 31 篇才露馅，前 30 篇同样是它刷的。"
+    },
+    {
+      question: "一个爬虫 UA 伪装成普通 Chrome，不存 Cookie，也不执行 JavaScript。它最终靠哪一道被排除在对外数字之外？",
+      options: ["COUNTER-Robots 名单，名单里有 `bot` 这种宽泛模式", "频率规则，它一分钟抓了几百篇", "真人会话规则，它的会话里没有任何浏览器事件"],
+      answer: "C",
+      explain: "伪装的 UA 骗过了名单和 Yauaa；每次换设备 ID 让频率规则失效。可它不执行页面脚本，会话里只有服务端事件，不算真人会话。"
+    }
+  ]}
+/>
+
+<Transfer
+  prompt="假设 Patra 后来打通了真实 IP，想加一条「同一个 IP 5 分钟内浏览超过 30 篇就判为爬虫」的规则。这条规则能补上哪个洞？直接照搬设备规则的阈值，会误伤谁？你会怎么设计？"
+  points={[
+    { label: "能补的洞", text: "不存 Cookie、每次换设备 ID 的爬虫，IP 通常不换；按 IP 计数能把它的请求重新聚到一个计数器里。" },
+    { label: "会误伤谁", text: "医院、高校、图书馆往往很多人共用一个出口 IP，几十个医生同时查文献，按 IP 看就像一个人在狂刷。" },
+    { label: "怎么设计", text: "IP 规则的阈值要远高于设备规则，或者只在「IP 次数高、而且这些请求的设备 ID 都只出现一次」时才判，并在面板上观察误伤量再调。" },
+    { label: "隐私", text: "IP 照样只在采集端点用完即丢，频率窗口的键可以存 IP 的哈希、设短过期时间，不把 IP 落进明细。" }
+  ]}
+/>

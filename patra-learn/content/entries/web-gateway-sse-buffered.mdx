@@ -67,7 +67,7 @@ v0.16 通知中心那一版加了实时推送：通知服务提供 SSE 接口，
 
 只有推送路由这么做。普通路由没有事件流，整块读写更省事，不受影响。推送路由在配置里用自定义的 `lb-push://` 协议区分，同时走一个单独的连接池。
 
-<CodeRef at="patra-api/patra-gateway-boot/src/main/resources/application.yml@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="91-100" />
+<CodeRef at="patra-api/patra-gateway-boot/src/main/resources/application.yml@8140a9d9482324670b63f00ab3c62690102196c5" lines="91-100" />
 
 回归测试：下游每 600 毫秒滴一条 7 字节的心跳，第一条必须在 3 秒内到达客户端。
 

@@ -1,12 +1,14 @@
 "use client";
 
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { usePathname, useSearchParams } from "next/navigation";
 import { type FormEvent, type RefObject, useRef, useState } from "react";
 import { FormAlert } from "@/components/auth/FormAlert";
 import { FormField } from "@/components/auth/FormField";
 import { PasswordInput } from "@/components/auth/PasswordInput";
+import { SetPasswordDialog } from "@/components/reauth/SetPasswordDialog";
 import { Dialog } from "@/components/ui/dialog";
+import { fetchCurrentUser } from "@/lib/auth/current-user-query";
 import { REAUTH_MESSAGES, waitMinutes } from "@/lib/auth/messages";
 import { useCommonFailureRedirect } from "@/lib/auth/use-common-failure-redirect";
 import { btnPrimary, btnSecondary } from "@/lib/portal-ui";
@@ -15,12 +17,23 @@ import { postReauth } from "@/lib/reauth/post-reauth";
 import { useReauthStore } from "@/store/reauth";
 
 /// 再认证对话框（简报 §3.14、§4.9）：store 打开它，验证成功 `settle(true)`、取消或会话没了 `settle(false)`。
-/// 每次打开都是新的表单（关闭时卸载），不带上一次的输入和错误。
+/// 每次打开都是新的表单（关闭时卸载），不带上一次的输入和错误。没有密码的账号填不了密码框（决策 E），换成设置密码；
+/// 当前用户由导航栏加载，这里只读缓存，没加载时按有密码处理。
 export function ReauthDialog() {
   const open = useReauthStore((state) => state.open);
   const settle = useReauthStore((state) => state.settle);
   const [busy, setBusy] = useState(false);
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const { data: user } = useQuery({
+    queryKey: queryKeys.currentUser,
+    queryFn: fetchCurrentUser,
+    enabled: false,
+  });
+  if (user?.hasPassword === false) {
+    return (
+      <SetPasswordDialog open={open} onClose={() => settle(false)} email={user.email} reason />
+    );
+  }
   return (
     <Dialog
       open={open}

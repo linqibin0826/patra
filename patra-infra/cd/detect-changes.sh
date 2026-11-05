@@ -19,7 +19,7 @@
 set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 GRAPH="$SCRIPT_DIR/module-graph.json"
-ALL_UNITS='["registry","catalog","identity","interaction","notification","gateway","foundation"]'
+ALL_UNITS='["registry","catalog","identity","interaction","notification","analytics","gateway","foundation"]'
 LEARN_CHANGED=false   # 全局初始化：防环境注入假阳性 / 非布尔值炸 --argjson
 NACOS_CHANGED=false   # 同上：全局初始化
 
@@ -73,11 +73,16 @@ classify() {
       patra-infra/docker/alertmanager/*|patra-infra/docker/grafana/*|patra-infra/docker/loki/*) docs_all=false; continue;;
       patra-infra/docker/mysql-ops/*|patra-infra/docker/otel-agent/*|patra-infra/docker/otel-collector/*) docs_all=false; continue;;
       patra-infra/docker/postgres/*|patra-infra/docker/prometheus/*|patra-infra/docker/tempo/*) docs_all=false; continue;;
-      patra-infra/docker/rabbitmq/*) docs_all=false; continue;;
+      patra-infra/docker/rabbitmq/*|patra-infra/docker/clickhouse/*|patra-infra/docker/kafka/*) docs_all=false; continue;;
     esac
     # 文档判定必须排在 portal / learn 之前：两者目录下的 *.md（设计简报、README、规则文档）
     # 不进应用构建，portal-cd / learn-cd 也用 '!**/*.md' 排除，这里保持同一口径。
     case "$f" in *.md|docs/*|.gitignore|.editorconfig|LICENSE|.claude/*) continue;; esac
+    # 埋点契约（schema 与样例）：门户的事件类型由 schema 生成、单测按样例核对（PAP-173），改了也要跑 portal；
+    # 不 continue，接着按模块图路由到 analytics
+    case "$f" in
+      patra-api/patra-analytics/patra-analytics-api/src/main/resources/analytics/schema/*|patra-api/patra-analytics/patra-analytics-api/src/main/resources/analytics/examples/*) portal=true;;
+    esac
     case "$f" in patra-portal/*) portal=true; docs_all=false; continue;; esac
     case "$f" in patra-learn/*) LEARN_CHANGED=true; docs_all=false; continue;; esac
     docs_all=false

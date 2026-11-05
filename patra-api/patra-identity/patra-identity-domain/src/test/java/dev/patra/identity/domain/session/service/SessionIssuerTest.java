@@ -85,6 +85,20 @@ class SessionIssuerTest {
     assertThat(session.lifetime()).isEqualTo(WEB);
     assertThat(session.maxSessionsPerUser()).isEqualTo(10);
     assertThat(session.expiresAt()).isEqualTo(NOW.plus(Duration.ofDays(180)));
+    assertThat(session.passwordVerifiedAt()).isEqualTo(NOW);
+  }
+
+  @Test
+  @DisplayName("第三方登录建的会话没有密码证明")
+  void should_issue_session_without_password_proof() {
+    when(records.save(any())).thenAnswer(invocation -> withId(invocation.getArgument(0), 7001L));
+    when(sessions.issue(any())).thenReturn(IssuedUserSession.of("patra_user_x", List.of()));
+
+    issuer.issueWithoutPasswordProof(42L, LoginClient.web(), ORIGIN);
+
+    ArgumentCaptor<NewUserSession> requested = ArgumentCaptor.forClass(NewUserSession.class);
+    verify(sessions).issue(requested.capture());
+    assertThat(requested.getValue().passwordVerifiedAt()).isNull();
   }
 
   @Test

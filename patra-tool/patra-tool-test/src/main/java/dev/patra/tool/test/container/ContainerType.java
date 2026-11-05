@@ -44,5 +44,15 @@ public enum ContainerType {
   /// RabbitMQ 消息容器。
   ///
   /// 使用 rabbitmq:4.4.0-management 镜像，与 compose 一致，支持事件外送与消费的集成测试。
-  RABBITMQ
+  RABBITMQ,
+
+  /// Kafka 消息容器。
+  ///
+  /// 使用 apache/kafka-native 镜像，版本号与 mini 上的 apache/kafka 一致，支持行为事件收发的集成测试。
+  KAFKA,
+
+  /// ClickHouse 列式数据库容器。
+  ///
+  /// 使用 clickhouse/clickhouse-server 镜像，与 compose 一致，支持行为数据写入与查询的集成测试。
+  CLICKHOUSE
 }

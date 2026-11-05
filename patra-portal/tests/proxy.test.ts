@@ -175,6 +175,12 @@ describe("已登录的人打开登录页、注册页时直接跳走", () => {
     });
   });
 
+  it("补填页同样会跳走", async () => {
+    fetchMock.mockResolvedValue(json(200, ME_RESPONSE));
+    const res = await proxy(signedIn("/register/complete?next=%2Fjournals"));
+    expect(res.headers.get("location")).toBe("http://portal.test/journals");
+  });
+
   it("next 出现多次时取第一个", async () => {
     fetchMock.mockResolvedValue(json(200, ME_RESPONSE));
     const res = await proxy(signedIn("/login?next=%2Fjournals&next=%2Fpapers"));
@@ -371,5 +377,108 @@ describe("冷静期账号整页打开任何页面都去取消注销页", () => {
     expect(res.headers.get("location")).toBe(
       "http://portal.test/account/deletion-pending?next=%2Fjournals%2F7",
     );
+  });
+});
+
+describe("埋点：所有访客第一次打开页面就下发设备与会话 Cookie（PAP-173）", () => {
+  const DEVICE = "D".repeat(43);
+  const TOKEN = "patra_user_abc";
+  /// proxy 传给渲染层的请求头，Next 编码成 `x-middleware-request-<名字>` 放在响应上
+  const forwarded = (res: Response, name: string) =>
+    res.headers.get(`x-middleware-request-${name}`);
+  const sessionIdOf = (
+    res: Response & { cookies: { get(name: string): { value: string } | undefined } },
+  ) => res.cookies.get("patra_sid")?.value.split(".")[0];
+
+  beforeEach(() => {
+    vi.stubEnv("PATRA_SESSION_COOKIE_SECURE", "false");
+    vi.spyOn(console, "error").mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("从没来过的访客打开首页：写出设备与会话 Cookie，渲染层拿到同样的两个 ID", async () => {
+    const res = await proxy(request("/"));
+    const device = res.cookies.get("patra_device");
+    expect(device?.value).toMatch(/^[A-Za-z0-9_-]{43}$/);
+    expect(device?.maxAge).toBe(34_560_000);
+    expect(res.cookies.get("patra_sid")?.maxAge).toBeUndefined();
+    expect(forwarded(res, "x-patra-device-id")).toBe(device?.value);
+    expect(forwarded(res, "x-patra-session-id")).toBe(sessionIdOf(res));
+    expect(res.headers.get("x-middleware-next")).toBe("1");
+  });
+
+  it("已有合法设备 Cookie：值不变（登录前后设备 ID 一致）", async () => {
+    const res = await proxy(
+      request("/", { "sec-fetch-dest": "document", cookie: `patra_device=${DEVICE}` }),
+    );
+    expect(res.cookies.get("patra_device")?.value).toBe(DEVICE);
+    expect(forwarded(res, "x-patra-device-id")).toBe(DEVICE);
+  });
+
+  it("浏览器自己带来的 x-patra-device-id 被覆盖", async () => {
+    const res = await proxy(
+      request("/", { "sec-fetch-dest": "document", "x-patra-device-id": "forged" }),
+    );
+    expect(forwarded(res, "x-patra-device-id")).not.toBe("forged");
+    expect(forwarded(res, "x-patra-device-id")).toBe(res.cookies.get("patra_device")?.value);
+  });
+
+  it("站内跳转（sec-fetch-dest: empty）也是活动：带 Cookie 与请求头", async () => {
+    const res = await proxy(request("/papers/42", { "sec-fetch-dest": "empty" }));
+    expect(res.cookies.get("patra_sid")).toBeDefined();
+    expect(forwarded(res, "x-patra-session-id")).toBe(sessionIdOf(res));
+  });
+
+  it("详情页改写到 404 页也带 Cookie 与请求头", async () => {
+    const res = await proxy(request("/papers/not-a-real-id"));
+    expect(rewrittenTo(res)).toBe("http://portal.test/missing/paper");
+    expect(res.cookies.get("patra_device")).toBeDefined();
+    expect(forwarded(res, "x-patra-device-id")).toBe(res.cookies.get("patra_device")?.value);
+  });
+
+  it("冷静期跳转（307）也带 Cookie", async () => {
+    fetchMock.mockResolvedValue(
+      Response.json({
+        ...ME_RESPONSE,
+        status: "PENDING_DELETION",
+        deletionDueAt: "2026-11-06T00:00:00Z",
+      }),
+    );
+    const res = await proxy(
+      request("/settings/profile", {
+        "sec-fetch-dest": "document",
+        cookie: `patra_session=${TOKEN}`,
+      }),
+    );
+    expect(res.status).toBe(307);
+    expect(res.cookies.get("patra_device")).toBeDefined();
+  });
+
+  it("已登录打开登录页跳走（307）也带 Cookie", async () => {
+    fetchMock.mockResolvedValue(Response.json(ME_RESPONSE));
+    const res = await proxy(
+      request("/login", { "sec-fetch-dest": "document", cookie: `patra_session=${TOKEN}` }),
+    );
+    expect(res.status).toBe(307);
+    expect(res.cookies.get("patra_sid")).toBeDefined();
+  });
+
+  it("没登录打开登录页放行，也带 Cookie 与请求头", async () => {
+    const res = await proxy(request("/login"));
+    expect(res.headers.get("x-middleware-next")).toBe("1");
+    expect(forwarded(res, "x-patra-device-id")).toBe(res.cookies.get("patra_device")?.value);
+  });
+
+  it("算 ID 时出错：页面照常放行，不写 Cookie、不带请求头", async () => {
+    vi.spyOn(crypto, "getRandomValues").mockImplementation(() => {
+      throw new Error("entropy");
+    });
+    const res = await proxy(request("/"));
+    expect(res.headers.get("x-middleware-next")).toBe("1");
+    expect(res.cookies.get("patra_device")).toBeUndefined();
+    expect(forwarded(res, "x-patra-device-id")).toBeNull();
   });
 });

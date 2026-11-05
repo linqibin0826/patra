@@ -39,7 +39,7 @@ Dockerfile 里每条指令（`COPY`、`RUN`）会生成一层。Docker 会把每
 
 这条规则决定了 Dockerfile 怎么写才快：把很少变的放前面，经常变的放后面。Patra 的后端服务就是这么做的。Spring Boot 的可执行 jar 先被拆成几层，再依次拷进镜像：
 
-<CodeRef at="patra-infra/docker/service.Dockerfile@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="36-44" />
+<CodeRef at="patra-infra/docker/service.Dockerfile@8140a9d9482324670b63f00ab3c62690102196c5" lines="36-44" />
 
 | 层 | 内容 | 变化频率 |
 |---|---|---|

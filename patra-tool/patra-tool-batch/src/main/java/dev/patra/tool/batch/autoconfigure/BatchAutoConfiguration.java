@@ -32,11 +32,12 @@ import tools.jackson.databind.json.JsonMapper;
 ///
 /// ### 数据源选择
 ///
-/// 支持独立数据源配置，优先级如下：
+/// Batch 元数据只放独立库，来源二选一：
 ///
-/// 1. 用户自定义 `batchDataSource` Bean（最高）
+/// 1. 用户自定义 `batchDataSource` Bean（优先）
 /// 2. `patra.batch.datasource.*` 配置创建的数据源
-/// 3. 主数据源 `@Primary DataSource`（默认回退）
+///
+/// 两者都没有时启动失败，不退回主数据源：退回会把 `BATCH_*` 表悄悄建进业务库。
 ///
 /// 条件激活：`patra.batch.enabled=true`（默认启用）
 ///
@@ -60,26 +61,30 @@ public final class BatchAutoConfiguration extends JdbcDefaultBatchConfiguration 
   private final DataSource batchDataSource;
   private final PlatformTransactionManager batchTransactionManager;
 
-  /// 构造函数：优先使用独立数据源，否则回退到主数据源。
+  /// 构造函数：使用独立 Batch 数据源，缺失时启动失败。
   ///
   /// 在构造时触发 Schema 初始化（如果配置了 `BatchSchemaInitializer`），
   /// 确保 `JobRepository` 创建前元数据表已存在。
   ///
   /// @param properties Batch 配置属性
-  /// @param primaryDataSource 主数据源（Spring Boot 自动配置，使用 `dataSource` 名称注入）
-  /// @param batchDataSource 独立 Batch 数据源（可选，由 BatchDataSourceAutoConfiguration 创建）
+  /// @param batchDataSource 独立 Batch 数据源（由 BatchDataSourceAutoConfiguration 或用户创建）
   /// @param batchTransactionManager 独立 Batch 事务管理器（可选）
   /// @param schemaInitializer Schema 初始化器（可选，由 BatchSchemaAutoConfiguration 创建）
+  /// @throws IllegalStateException 没有 `batchDataSource` 时
   public BatchAutoConfiguration(
       BatchProperties properties,
-      @Qualifier("dataSource") DataSource primaryDataSource,
       @Autowired(required = false) @Qualifier("batchDataSource") DataSource batchDataSource,
       @Autowired(required = false) @Qualifier("batchTransactionManager")
           PlatformTransactionManager batchTransactionManager,
       @Autowired(required = false) BatchSchemaInitializer schemaInitializer) {
+    if (batchDataSource == null) {
+      throw new IllegalStateException(
+          "Spring Batch 已启用（patra.batch.enabled=true），但没有配置独立的 Batch 元数据库："
+              + "请设置 patra.batch.datasource.url（或提供名为 batchDataSource 的 Bean）。"
+              + "不会退回主数据源，以免把 BATCH_* 表建进业务库");
+    }
     this.properties = properties;
-    // 优先使用独立数据源，否则回退到主数据源
-    this.batchDataSource = (batchDataSource != null) ? batchDataSource : primaryDataSource;
+    this.batchDataSource = batchDataSource;
     // 优先使用独立事务管理器，否则创建新的
     this.batchTransactionManager =
         (batchTransactionManager != null)

@@ -6,10 +6,92 @@
         "identity",
         "interaction",
         "notification",
+        "analytics",
         "gateway",
         "foundation"
     ],
     "modules": [
+        {
+            "dir": "patra-api/patra-analytics/patra-analytics-adapter",
+            "project": ":patra-api:patra-analytics:patra-analytics-adapter",
+            "unit": "analytics",
+            "impacts": [
+                "analytics"
+            ],
+            "tasks": [
+                "check"
+            ]
+        },
+        {
+            "dir": "patra-api/patra-analytics/patra-analytics-api",
+            "project": ":patra-api:patra-analytics:patra-analytics-api",
+            "unit": "analytics",
+            "impacts": [
+                "analytics"
+            ],
+            "tasks": [
+                "check"
+            ]
+        },
+        {
+            "dir": "patra-api/patra-analytics/patra-analytics-app",
+            "project": ":patra-api:patra-analytics:patra-analytics-app",
+            "unit": "analytics",
+            "impacts": [
+                "analytics"
+            ],
+            "tasks": [
+                "check"
+            ]
+        },
+        {
+            "dir": "patra-api/patra-analytics/patra-analytics-boot",
+            "project": ":patra-api:patra-analytics:patra-analytics-boot",
+            "unit": "analytics",
+            "impacts": [
+                "analytics"
+            ],
+            "tasks": [
+                "check",
+                "integrationTest",
+                "e2eTest"
+            ]
+        },
+        {
+            "dir": "patra-api/patra-analytics/patra-analytics-domain",
+            "project": ":patra-api:patra-analytics:patra-analytics-domain",
+            "unit": "analytics",
+            "impacts": [
+                "analytics"
+            ],
+            "tasks": [
+                "check"
+            ]
+        },
+        {
+            "dir": "patra-api/patra-analytics/patra-analytics-infra",
+            "project": ":patra-api:patra-analytics:patra-analytics-infra",
+            "unit": "analytics",
+            "impacts": [
+                "analytics"
+            ],
+            "tasks": [
+                "check",
+                "integrationTest"
+            ]
+        },
+        {
+            "dir": "patra-api/patra-analytics/patra-analytics-simulator",
+            "project": ":patra-api:patra-analytics:patra-analytics-simulator",
+            "unit": "analytics",
+            "impacts": [
+                "analytics"
+            ],
+            "tasks": [
+                "check",
+                "integrationTest"
+            ]
+        },
         {
             "dir": "patra-api/patra-catalog/patra-catalog-adapter",
             "project": ":patra-api:patra-catalog:patra-catalog-adapter",
@@ -27,6 +109,7 @@
             "project": ":patra-api:patra-catalog:patra-catalog-api",
             "unit": "catalog",
             "impacts": [
+                "analytics",
                 "catalog",
                 "identity",
                 "interaction"
@@ -111,6 +194,7 @@
             "project": ":patra-api:patra-identity:patra-identity-api",
             "unit": "identity",
             "impacts": [
+                "analytics",
                 "gateway",
                 "identity",
                 "interaction",
@@ -390,6 +474,7 @@
             "project": ":patra-tool:patra-tool-core",
             "unit": "foundation",
             "impacts": [
+                "analytics",
                 "catalog",
                 "foundation",
                 "gateway",
@@ -407,6 +492,7 @@
             "project": ":patra-tool:patra-tool-cqrs",
             "unit": "foundation",
             "impacts": [
+                "analytics",
                 "catalog",
                 "foundation",
                 "identity",
@@ -437,6 +523,7 @@
             "project": ":patra-tool:patra-tool-http-client",
             "unit": "foundation",
             "impacts": [
+                "analytics",
                 "catalog",
                 "foundation",
                 "gateway",
@@ -454,6 +541,7 @@
             "project": ":patra-tool:patra-tool-jpa",
             "unit": "foundation",
             "impacts": [
+                "analytics",
                 "catalog",
                 "foundation",
                 "gateway",
@@ -472,6 +560,7 @@
             "project": ":patra-tool:patra-tool-launch",
             "unit": "foundation",
             "impacts": [
+                "analytics",
                 "catalog",
                 "foundation",
                 "gateway",
@@ -504,6 +593,7 @@
             "project": ":patra-tool:patra-tool-observability",
             "unit": "foundation",
             "impacts": [
+                "analytics",
                 "catalog",
                 "foundation",
                 "gateway",
@@ -521,6 +611,7 @@
             "project": ":patra-tool:patra-tool-openapi",
             "unit": "foundation",
             "impacts": [
+                "analytics",
                 "catalog",
                 "foundation",
                 "identity",
@@ -536,6 +627,7 @@
             "project": ":patra-tool:patra-tool-security",
             "unit": "foundation",
             "impacts": [
+                "analytics",
                 "foundation",
                 "gateway",
                 "identity",
@@ -552,6 +644,7 @@
             "project": ":patra-tool:patra-tool-test",
             "unit": "foundation",
             "impacts": [
+                "analytics",
                 "catalog",
                 "foundation",
                 "gateway",
@@ -570,6 +663,7 @@
             "project": ":patra-tool:patra-tool-web",
             "unit": "foundation",
             "impacts": [
+                "analytics",
                 "catalog",
                 "foundation",
                 "gateway",

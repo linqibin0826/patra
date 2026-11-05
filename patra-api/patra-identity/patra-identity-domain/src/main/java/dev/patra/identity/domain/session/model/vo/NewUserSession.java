@@ -13,6 +13,7 @@ import lombok.Builder;
 /// @param accountType 账号类型
 /// @param client 客户端信息
 /// @param now 签发时间，Redis 和登录记录都按它算过期
+/// @param passwordVerifiedAt 这次登录输密码的时间；第三方登录没有，为 `null`
 /// @param lifetime 有效期
 /// @param maxSessionsPerUser 每用户的会话上限
 @Builder
@@ -22,6 +23,7 @@ public record NewUserSession(
     AccountType accountType,
     LoginClient client,
     Instant now,
+    Instant passwordVerifiedAt,
     SessionLifetime lifetime,
     int maxSessionsPerUser) {
 

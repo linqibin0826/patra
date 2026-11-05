@@ -30,7 +30,7 @@ personalEnv: false
 
 每个服务验货通过后，部署脚本立刻把当前版本号写进一个文件，位置在部署机的 `~/.patra/cd/last-good-<服务名>`。文件里只有一行：一个提交的 SHA，意思是「这个服务上一次确认好用的版本」。
 
-<CodeRef at="patra-infra/cd/deploy.sh@2197850b5a624ed4dbaa97df71e144c343e28baa" lines="122-130" />
+<CodeRef at="patra-infra/cd/deploy.sh@7dc80d272f808228d2fb32897c8857f0faae94ff" lines="139-147" />
 
 注意两个细节：
 
@@ -39,7 +39,7 @@ personalEnv: false
 
 验货失败时，脚本先把容器最近 80 行日志打出来，这是你回头排查的第一现场，然后调用 `rollback()`：
 
-<CodeRef at="patra-infra/cd/deploy.sh@2197850b5a624ed4dbaa97df71e144c343e28baa" lines="88-95" />
+<CodeRef at="patra-infra/cd/deploy.sh@7dc80d272f808228d2fb32897c8857f0faae94ff" lines="91-98" />
 
 读出 last-good，把那个版本的镜像拿来、`up`、再走一遍健康检查。
 

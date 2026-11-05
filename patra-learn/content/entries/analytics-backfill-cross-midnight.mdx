@@ -1,0 +1,187 @@
+---
+title: 按天回填时，跨午夜的会话在第二天又被算一次：计算要往前多读一天
+summary: 会话表按「会话第一条事件的日期」归天。计算视图原来只从区间第一天的 00:00 开始读明细，按天回填第二天时，一个 23:50 开始、00:10 结束的会话只剩后半段，被当成第二天的新会话又算一次。Patra 改为往前多读一天；COUNTER 的双击过滤在按天回填时也有跨午夜的问题，方向相反，PR 把它列为已知取舍。
+type: pitfall
+difficulty: practice
+tags: [analytics, database]
+prerequisites: [analytics-refreshable-materialized-views]
+topics: [analytics-pipeline]
+sources:
+  - version: v0.18
+    issue: PAP-172
+    pr: 377
+personalEnv: false
+---
+
+<Diagnose
+  question="会话表的计算视图按会话聚合，会话的「天」取会话第一条事件的北京日期，读明细的范围是 from 当天 00:00 到 to 后一天结束。会话 s1 在 10-01 23:50 看了一页，10-02 00:10 又看了一页。回填脚本先单独算 10-01，再单独算 10-02。s1 一共被算了几次？"
+  options={["1 次，算在 10-01：会话按第一条事件归天", "1 次，算在 10-02：会话按最后一条事件归天", "2 次：10-01 算一个两页的会话，10-02 又算一个单页的会话"]}
+  answer="C"
+  ifRight="对。算 10-02 时读不到 23:50 那一条，后半段看起来就是一个新会话。这篇讲为什么，以及 Patra 怎么改。"
+  ifWrong="答案是 C。单独算 10-02 时，读明细从 10-02 00:00 开始，看不见 23:50 那一条；s1 只剩 00:10 一条，第一条事件落在 10-02，于是被当成 10-02 的单页会话又算一次。这题考的是计算视图「算这几天，读哪几天」，先读定时刷新那篇。"
+  suggest="analytics-refreshable-materialized-views"
+/>
+
+## 坑
+
+<Callout kind="lead" label="坑在哪">
+
+按「第一条事件的日期」归天的会话，在按天回填时会被切开：算第二天时读不到前一天的前半段，后半段被当成第二天的新会话又算一次。读明细的范围要往前多读一天。
+
+</Callout>
+
+这个坑同样是 PR 合并前的全分支终审指出的。实施计划里写的读取范围是 `[from, to + 1 天]`，注明「为了看到跨午夜的后半段」：右边想到了，左边漏了。
+
+## 为什么
+
+会话表的计算分两层：里层按 `session_id` 聚合出每个会话的首日、页数、漏斗级，外层只留首日落在 `[from, to]` 里的会话。首日是 `toDate(min(derived_at))`，取的是**读进来的事件里**最早的那一条。读的范围从哪开始，决定了 `min` 能看到什么。
+
+<Stepper
+  title="s1 跨了午夜，回填脚本一天一天地算"
+  nodes={[
+    { id: "d1", label: "10-01 的明细", sub: "23:50 一页" },
+    { id: "d2", label: "10-02 的明细", sub: "00:10 一页" },
+    { id: "calc", label: "会话表计算视图", sub: "按会话聚合" },
+    { id: "table", label: "ads_daily_sessions", sub: "按首日汇总" }
+  ]}
+  links={[
+    { from: "d1", to: "calc" },
+    { from: "d2", to: "calc" },
+    { from: "calc", to: "table" }
+  ]}
+  steps={[
+    { caption: "s1 的两条事件分在两天的分区里：10-01 23:50 一页，10-02 00:10 一页。", focus: ["d1", "d2"], tokens: [{ id: "a", label: "s1 前半", at: "d1" }, { id: "b", label: "s1 后半", at: "d2" }] },
+    { caption: "回填 10-01：读 10-01 到 10-02 结束，两条都看得见。首日 = 10-01，两页，记 1 个多页会话。", focus: ["calc", "table"], links: ["d1>calc", "d2>calc", "calc>table"], tokens: [{ id: "a", label: "s1", at: "table" }], notes: [{ at: "table", text: "10-01 · 多页 1", tone: "ok" }] },
+    { caption: "回填 10-02（计划里的写法）：从 10-02 00:00 开始读，只看到 00:10 那一条。首日 = 10-02，一页，又记了 1 个单页会话。", focus: ["d2", "calc", "table"], links: ["d2>calc", "calc>table"], tokens: [{ id: "b", label: "s1 后半", at: "table", state: "dropped" }], notes: [{ at: "table", text: "10-02 · 单页 1", tone: "bad" }] },
+    { caption: "回填 10-02（修好后）：往前多读一天，从 10-01 00:00 开始读，又看到了 23:50。首日 = 10-01，不在 [10-02, 10-02] 里，外层把它滤掉，10-02 不计。", focus: ["d1", "d2", "calc"], links: ["d1>calc", "d2>calc"], notes: [{ at: "table", text: "10-02 · 0", tone: "ok" }] }
+  ]}
+  guesses={[
+    { before: 3, question: "回填 10-02 时，读明细从 10-02 00:00 开始。s1 会怎样？", options: ["被当成 10-02 的一个单页新会话，再算一次", "被认出是 10-01 的会话，因为 session_id 相同", "两条都读不到，10-02 这天没有 s1"], answer: "A", explain: "计算视图只认读进来的事件。10-01 那一条不在范围里，它不知道 s1 早就开始了；session_id 相同也没用，聚合只在读进来的行之间做。" }
+  ]}
+/>
+
+还有一个让它藏住的原因：**一次算两天就没事**。区间内部的午夜，两边的事件都在读取范围里，会话被看成完整的一个。所以一次回填 `[10-01, 10-02]` 的测试是绿的，按天一次一天地回填才暴露。
+
+<Callout kind="insight" label="怎么认出它">
+
+- 同一段日期，「一次算完」和「一天一天算」结果不一样，就是区间边界在切东西。这是最便宜的检查：两种回填方式各跑一遍，对比结果。
+- 回填出来的历史里，每天都多出一批凌晨开始的单页会话，跳出率偏高。
+
+</Callout>
+
+## 怎么避开
+
+读取范围往前也多读一天，外层的「首日在区间里」照旧：
+
+<CodeRef at="patra-api/patra-analytics/patra-analytics-infra/src/main/resources/clickhouse/V9__ads_daily_sessions.sql@c3df651e18fcd34d66a1ece0e2cea00c78e9d881" lines="22-44" />
+
+```sql
+CREATE VIEW IF NOT EXISTS ads_daily_sessions_calc AS
+SELECT day, is_synthetic, session_kind, funnel_level, single_page, count() AS sessions, now64(3) AS computed_at
+FROM (
+    SELECT session_id,
+           toDate(min(derived_at), 'Asia/Shanghai') AS day,
+           any(is_synthetic) AS is_synthetic,
+           multiIf(max(is_bot), 'bot', max(source = 'client'), 'human', 'no_script') AS session_kind,
+           countIf(event_name = 'page_viewed') AS page_views,
+           page_views = 1 AS single_page,
+           toUInt8(if(page_views = 0, 0,
+               1 + windowFunnel(1800)(toDateTime(derived_at),
+                   event_name = 'search_performed',
+                   event_name = 'article_clicked' AND JSONExtractString(properties, 'list_type') = 'search',
+                   event_name = 'article_viewed',
+                   event_name IN ('fulltext_read', 'pdf_downloaded')))) AS funnel_level
+    FROM events
+    -- 前后各多读一天：跨午夜的会话要看到整个会话才能定它的首日，后半段不能在次日被当成新会话
+    WHERE derived_at >= toDateTime({from:Date} - 1, 'Asia/Shanghai')
+      AND derived_at < toDateTime({to:Date} + 2, 'Asia/Shanghai')
+    GROUP BY session_id
+)
+WHERE day BETWEEN {from:Date} AND {to:Date}
+GROUP BY day, is_synthetic, session_kind, funnel_level, single_page;
+```
+
+两头各多一天，各管一件事：
+
+- **往前多读（`from - 1`）**：前一天开始的会话，能看到它真正的第一条事件，首日算对，外层把它滤掉，不会在区间第一天重复出现。
+- **往后多读（`to + 2` 之前，即读完 `to` 的后一天）**：区间最后一天开始的会话，能看到它午夜之后的后半段，页数和漏斗级算全。
+
+刷新视图每次算「昨天到今天」，它的区间也有左边界，就是昨天 00:00，往前多读的那一天对它同样生效。
+
+修好后补的测试照搬回填脚本的用法，一天一天地算，断言第二天没有这个会话：
+
+<CodeRef at="patra-api/patra-analytics/patra-analytics-infra/src/integrationTest/java/dev/patra/analytics/infra/ads/AdsDailySessionsIT.java@c3df651e18fcd34d66a1ece0e2cea00c78e9d881" lines="144-162" />
+
+```java
+  @Test
+  void crossing_midnight_backfilled_day_by_day_counts_once() {
+    insert(
+        client,
+        "T|mid2",
+        List.of(
+            event("page_viewed", "client", "2026-10-01 23:50:00"),
+            event("page_viewed", "client", "2026-10-02 00:10:00")));
+
+    backfill(client, "ads_daily_sessions", D, D);
+    backfill(client, "ads_daily_sessions", D.plusDays(1), D.plusDays(1));
+
+    assertThat(
+            rows(
+                client,
+                "SELECT day FROM ads_daily_sessions_latest WHERE day = '%s'"
+                    .formatted(D.plusDays(1))))
+        .isEmpty();
+  }
+```
+
+同一个文件里原先就有一个跨午夜的测试 `session_crossing_midnight_counts_on_start_day`，它一次回填两天，只能证明往后多读那一天，证明不了往前那一天。
+
+<Callout kind="warn">
+
+多读进来的那一天只能用来「看清楚」，不能被算进结果。外层的 `WHERE day BETWEEN {from:Date} AND {to:Date}` 必须保留；去掉它，每次都会把前一天、后一天的会话也写进来。
+
+</Callout>
+
+## 顺带：双击过滤也有跨午夜的问题，方向相反
+
+COUNTER 的 Total 指标做双击过滤：同一个人对同一篇，两条事件相隔 30 秒以内只算后一条。判断一条事件算不算，要看它的**下一条**。文献使用表的计算视图读明细只读区间内：
+
+<CodeRef at="patra-api/patra-analytics/patra-analytics-infra/src/main/resources/clickhouse/V11__ads_daily_counter_items.sql@c3df651e18fcd34d66a1ece0e2cea00c78e9d881" lines="46-56" />
+
+```sql
+views AS (
+    SELECT toDate(derived_at, 'Asia/Shanghai') AS day, article_id, is_synthetic, person_id, derived_at,
+           event_name IN ('fulltext_read', 'pdf_downloaded') AS is_request,
+           session_id IN human_sessions AS human
+    FROM events
+    WHERE event_name IN ('article_viewed', 'fulltext_read', 'pdf_downloaded', 'article_collected')
+      AND article_id != 0
+      AND derived_at >= toDateTime({from:Date}, 'Asia/Shanghai')
+      AND derived_at < toDateTime({to:Date} + 1, 'Asia/Shanghai')
+    LIMIT 1 BY event_id
+),
+```
+
+<Quiz
+  title="你猜会怎样"
+  questions={[
+    {
+      question: "同一个人对同一篇文献，10-01 23:59:50 和 10-02 00:00:10 各看了一次，相隔 20 秒，应该只算 1 次。按天回填时，10-01 和 10-02 一共会算几次？",
+      options: ["1 次：10-02 那条看得到前一条，把自己过滤掉", "2 次：10-01 那条看不到下一条，被当成最后一条算上；10-02 那条照常算", "0 次：两条都被当成双击过滤掉了", "1 次：10-01 那条被过滤，10-02 那条算上"],
+      answer: "B",
+      explain: "过滤规则保留后一条，判断要看下一条。单独算 10-01 时读不到 10-02，23:59:50 那条找不到下一条，按「没有下一条」计数；单独算 10-02 时，00:00:10 本来就该算。两边各算一次。会话要看的是左边（第一条），双击过滤要看的是右边（下一条）。"
+    }
+  ]}
+/>
+
+刷新视图一次算昨天和今天，昨天最后一条的「下一条」就在今天，读取范围里有，所以它不受影响；只有按天回填的历史里，每个午夜可能多算一点。PR 把它列进了「已知取舍（暂缓）」，没有改。
+
+<Transfer
+  prompt="如果要把双击过滤的这个问题也修掉，文献使用表的计算视图该怎么改？改完你会用什么测试证明？"
+  points={[
+    { label: "往后多读一天", text: "读明细的范围延到 to 的后一天结束，让区间最后一天的事件看得到下一条；判断完再只保留 day 落在 [from, to] 里的计数。" },
+    { label: "多读的只用来看", text: "后一天的事件只参与「找下一条」，不能被计进结果，否则每次都把后一天的数也算进来。" },
+    { label: "往前不用多读", text: "过滤保留的是后一条，一条事件算不算只取决于它后面有没有 30 秒内的下一条，和前一天的事件无关。" },
+    { label: "按天回填的测试", text: "照会话表的做法：造一对跨午夜、相隔 20 秒的事件，分别单独回填两天，断言两天的 total_investigations 加起来是 1。" }
+  ]}
+/>

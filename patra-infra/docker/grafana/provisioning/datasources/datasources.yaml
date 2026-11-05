@@ -1,5 +1,5 @@
 # Grafana 数据源配置
-# 自动配置 Prometheus、Loki、Tempo 数据源
+# 自动配置 Prometheus、Loki、Tempo、ClickHouse 数据源
 
 apiVersion: 1
 
@@ -9,6 +9,8 @@ deleteDatasources:
   - name: Loki
     orgId: 1
   - name: Tempo
+    orgId: 1
+  - name: ClickHouse
     orgId: 1
 
 datasources:
@@ -98,3 +100,17 @@ datasources:
     uid: alertmanager
     jsonData:
       implementation: prometheus
+
+  # ClickHouse - 行为数据（v0.18）。插件由 compose 的 GF_PLUGINS_PREINSTALL_SYNC 安装；
+  # 账号 grafana 只读（clickhouse/users.d/patra.xml），密码来自 ~/.patra/secrets/clickhouse-grafana.env
+  - name: ClickHouse
+    type: grafana-clickhouse-datasource
+    uid: clickhouse
+    jsonData:
+      host: patra-clickhouse
+      port: 8123
+      protocol: http
+      username: grafana
+      defaultDatabase: patra_analytics
+    secureJsonData:
+      password: $CLICKHOUSE_GRAFANA_PASSWORD

@@ -124,6 +124,7 @@ describe("ExportDialog", () => {
       ids: ["11", "12"],
       format: "ris",
       name: "组会",
+      scope: "collection",
     });
   });
 
@@ -154,6 +155,7 @@ describe("ExportDialog", () => {
     expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))).toMatchObject({
       ids: ["11", "12"],
       name: "selection",
+      scope: "items",
     });
   });
 });

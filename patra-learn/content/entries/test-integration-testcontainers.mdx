@@ -119,9 +119,11 @@ Patra 的集成测试约定里写明：用 TestContainers 模拟真实中间件�
 
 测试用的镜像版本和线上不一致，就失去了「用真的」的意义。CI 有一步专门核对，常量和 workflow 里声明的版本必须相同，对不上就让 CI 失败：
 
-<CodeRef at=".github/workflows/ci.yml@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="66-110" />
+<CodeRef at=".github/workflows/ci.yml@8140a9d9482324670b63f00ab3c62690102196c5" lines="69-136" />
 
-CI 还会提前把 PostgreSQL、Redis、RabbitMQ 的镜像并行拉好，免得测试一个个等下载。
+v0.18 引入 ClickHouse 和 Kafka 后，它们也进了这份核对：测试容器里的版本常量、部署机上 pipeline 栈的 compose 文件，都要和 workflow 里声明的版本对上。Kafka 稍有不同：部署机跑的是 JVM 版的 `apache/kafka`，测试容器用同版本的 `apache/kafka-native`，两者镜像名不同，所以只核对版本号一致。
+
+CI 还会提前把 PostgreSQL、Redis、RabbitMQ、ClickHouse、Kafka 的镜像并行拉好，免得测试一个个等下载。
 
 <Callout kind="cost">
 

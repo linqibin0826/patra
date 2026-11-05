@@ -1,0 +1,199 @@
+---
+title: 埋点方案：先定名字、格式和口径，再写采集代码
+summary: 行为数据最常见的烂法是同一件事有好几个名字、字段随手加、两处算出的数字对不上。埋点方案在写任何采集代码之前，把「记哪些事、每件事带什么、数字怎么算」定成一份所有人共用的规格。这篇讲业界的做法，以及 Patra 的 10 个事件和几条口径。
+type: concept
+difficulty: basic
+tags: [analytics, backend]
+prerequisites: [analytics-overview]
+topics: [analytics-pipeline]
+sources:
+  - version: v0.18
+    issue: PAP-164
+    pr: 373
+personalEnv: false
+---
+
+<Diagnose
+  question="门户的文献页显示这篇有 120 次浏览，运营面板上同一篇同一天只有 87。两边读的是同一张明细表，查询也都没有报错。最可能的原因是什么？"
+  options={["明细表里丢了 33 条事件，面板查到的是残缺数据", "门户的查询有缓存，显示的是几小时前的旧值", "两边对「一次浏览」的定义不同，一个数请求、一个数人"]}
+  answer="C"
+  ifRight="对。数据一样、查询都对，数字还是对不上，问题出在定义上。这篇讲怎么在写代码之前把定义定死。"
+  ifWrong="答案是 C。同一张表、查询都没错，差别只能出在「什么算一次浏览」：刷新算不算、同一个人看两次算几次、爬虫算不算。全景篇里讲过管线的第一段就是埋点方案，它专门防这件事。"
+  suggest="analytics-overview"
+/>
+
+<Callout kind="lead">
+
+埋点方案（Tracking Plan）是写采集代码之前定下的一份共用规格：记哪些事（事件字典）、每件事带哪些字段（格式）、数字怎么算（口径）。
+
+</Callout>
+
+产品看它确认指标是什么意思，前端照它埋点，后端照它校验和建表，写查询的人照它算数。它不是代码的说明文档，而是代码的依据：先有它，再有代码。
+
+## 它防的是三种烂法
+
+行为数据没人管的话，半年后通常会烂成这样：
+
+1. **同一件事有好几个名字。** 前端叫 `view_paper`，后端叫 `ArticleView`，面板里又写成 `pv_detail`，没人说得清哪个是哪个。
+2. **字段随手加。** 今天某个事件多带一个字段，明天又换个名字，半年后表里有 40 列，一半永远是空的。
+3. **数字对不上。** 门户显示 120 次浏览，面板算出 87，因为两边对「一次浏览」的定义不同。
+
+所以埋点方案只做三件事，各治一种：**定名字**（事件字典）、**定格式**（字段落成机器能校验的 JSON Schema）、**定口径**（浏览、全文、会话、曝光、爬虫怎么算）。Patra 的埋点方案是 v0.18 的第一个 Issue，排在所有采集代码之前。
+
+## 定名字：对象 + 动作过去式
+
+业界最常见的命名规范来自 Segment，叫 **Object Action**：先写对象，再写动作的过去式。`Article Viewed`、`Search Performed`，而不是 `ViewArticle` 或 `pv_detail`。好处是事件名本身就是一句话：哪个东西、发生了什么，而且一定是已经发生的事。
+
+Patra 在这上面加了几条规矩：
+
+- **展示名和机器值分开。** 文档里写 `Article Viewed`，代码、JSON、ClickHouse 里只用它的 snake_case：`article_viewed`。
+- **一个事件名只表示一件事，会变的值放属性里。** 不要 `article_viewed_from_search`，而是 `article_viewed` 加属性。否则每多一个来源就多一个事件名，又回到第一种烂法。
+- **按业界通用词起名，和内部类名脱钩。** 门户代码里文献叫 `Paper`，事件里一律叫 `article`：事件名是对外契约，内部类名改了它也不能跟着变。
+
+首批定了 10 个事件，前 5 个由门户服务端发，后 5 个由浏览器发：
+
+| 事件 | 谁发 | 什么时候发 |
+|---|---|---|
+| `article_viewed` | 门户服务端 | 文献详情页服务端渲染完成、文献存在时 |
+| `search_performed` | 门户服务端 | 检索页拿到结果时（翻页、改筛选也算一次新检索） |
+| `pdf_downloaded` | 门户服务端 | 开始向浏览器回传 PDF 时 |
+| `export_completed` | 门户服务端 | 导出文件开始回传时 |
+| `article_collected` | 门户服务端 | 收藏写入成功后 |
+| `page_viewed` | 浏览器 | 每次进入一个页面 |
+| `article_impressed` | 浏览器 | 文献卡片满足曝光规则时 |
+| `article_clicked` | 浏览器 | 点击文献卡片、跳转之前 |
+| `fulltext_read` | 浏览器 | 全文正文累计可见停留首次满 10 秒时 |
+| `citation_copied` | 浏览器 | 引用对话框里点「复制」成功后 |
+
+为什么复制引用是浏览器事件：门户生成引用的接口只出预览，打开对话框、每切一次格式都会请求一次；真正的复制发生在浏览器里，只有浏览器知道「复制了」。按「谁真正知道这件事发生了」来定谁发，是定来源的通用思路。
+
+事件名和来源在代码里是绑死的：
+
+<CodeRef at="patra-api/patra-analytics/patra-analytics-domain/src/main/java/dev/patra/analytics/domain/kernel/model/vo/EventName.java@8140a9d9482324670b63f00ab3c62690102196c5" lines="9-32" />
+
+```java
+/// 事件字典里的 10 个事件（埋点方案 §3.2）：机器值与只能由谁发。
+///
+/// 来源与事件名绑定：服务端事件只能由门户服务端发，浏览器事件只能由浏览器发，浏览器伪造不了浏览数。
+public enum EventName {
+  /// 文献详情页服务端渲染完成
+  ARTICLE_VIEWED("article_viewed", EventSource.SERVER),
+  /// 检索页服务端拿到结果
+  SEARCH_PERFORMED("search_performed", EventSource.SERVER),
+  /// PDF 开始回传
+  PDF_DOWNLOADED("pdf_downloaded", EventSource.SERVER),
+  /// 导出文件开始回传
+  EXPORT_COMPLETED("export_completed", EventSource.SERVER),
+  /// 收藏写入成功
+  ARTICLE_COLLECTED("article_collected", EventSource.SERVER),
+  /// 进入一个页面
+  PAGE_VIEWED("page_viewed", EventSource.CLIENT),
+  /// 文献卡片满足曝光规则
+  ARTICLE_IMPRESSED("article_impressed", EventSource.CLIENT),
+  /// 点击文献卡片
+  ARTICLE_CLICKED("article_clicked", EventSource.CLIENT),
+  /// 全文正文累计可见停留达到 10 秒
+  FULLTEXT_READ("fulltext_read", EventSource.CLIENT),
+  /// 引用对话框里点「复制」成功
+  CITATION_COPIED("citation_copied", EventSource.CLIENT);
+```
+
+`article_viewed` 只能来自门户服务端，浏览器路径上发来的 `article_viewed` 会被判为不合格。这样浏览数刷不上去：浏览器里的脚本谁都能改，服务端渲染页面这件事却伪造不了。
+
+<Quiz
+  questions={[
+    {
+      question: "运营想知道读者是从检索结果、首页文献流还是「看过还看了」点进文献的。按这篇的命名规矩，该怎么记？",
+      options: ["每个入口一个事件名，比如 `article_viewed_from_search`、`article_viewed_from_home`", "事件名不变，入口作为属性记下来，同一种动作只有一个事件名", "不用新记，从 `page_viewed` 的页面路径就能倒推出入口"],
+      answer: "B",
+      explain: "会变的值放属性里，事件名只表示一件事。Patra 实际是在 `article_clicked` 上带 `list_type`（`search`、`feed_hot`、`related` 等）记卡片所在的列表；按入口拆事件名，每加一个入口就多一个名字。"
+    },
+    {
+      question: "一个新同事提议：门户代码里文献叫 `Paper`，事件名也改成 `paper_viewed` 更统一。为什么埋点方案不这么做？",
+      options: ["`article` 比 `paper` 短，存储更省", "ClickHouse 不允许事件名里出现 paper", "事件名是对外契约，要按业界通用词起，内部类名改了它也不变"],
+      answer: "C",
+      explain: "事件名会写进明细表、面板和查询，一旦定下就很难改。和内部类名绑在一起，代码一重构，历史数据的名字就对不上了。"
+    }
+  ]}
+/>
+
+## 定格式：字段写成机器能查的规格
+
+名字定了，还得定每个事件带哪些字段、什么类型、取值范围。只写在文档里不够，前端多传一个字段没人会发现。业界的做法是把格式写成 **JSON Schema**（Snowplow 的 Iglu、Segment 的 Protocols 都是这样），采集端点按它逐条校验，不合格的单独放到一边。
+
+Patra 的规矩很硬：每个事件的属性 schema 都写 `additionalProperties: false`，多一个没登记的字段也算不合格。这就是「字段不能随手加」在机器上的落点。三种信封、版本号、坏事件去哪，在「事件信封三形态与 JSON Schema」那篇细讲。
+
+## 定口径：每条规则都能直接写成测试
+
+口径是最容易被一句话带过、最后却吵得最凶的部分。Patra 的写法是：每条口径都写成能直接拿来写测试的规则，并附一个具体例子。下面是最关键的四条。
+
+**看过人数。** 门户上写「1,284 人看过」，按人长期去重：同一个人看多少次、隔多少天再看，都只算 1。「人」是登录用户按账号、访客按设备（下一篇细讲）。查看类事件是 `article_viewed`、`fulltext_read`、`pdf_downloaded`、`article_collected` 四种；引用和导出一次涉及多篇、不一定打开过文献，不算查看。例：B 打开文献 X、刷新 3 次、读了全文，看过 +1；第二天 B 又打开 X，不变；C 第一次打开 X，看过 +1。
+
+这条规则进代码时就是一张物化视图的筛选条件：
+
+<CodeRef at="patra-api/patra-analytics/patra-analytics-infra/src/main/resources/clickhouse/V3__article_session_reads.sql@8140a9d9482324670b63f00ab3c62690102196c5" lines="15-27" />
+
+```sql
+-- 查看类事件（埋点方案 §6.8）；全文 = 全文阅读或下载 PDF。列名写明：SELECT * 不含计算列
+CREATE MATERIALIZED VIEW IF NOT EXISTS article_session_reads_mv TO article_session_reads AS
+SELECT
+    article_id,
+    session_id,
+    person_id,
+    toDate(derived_at, 'Asia/Shanghai') AS day,
+    is_synthetic,
+    1 AS viewed,
+    event_name IN ('fulltext_read', 'pdf_downloaded') AS fulltext
+FROM events
+WHERE article_id != 0
+  AND event_name IN ('article_viewed', 'fulltext_read', 'pdf_downloaded', 'article_collected');
+```
+
+文档里那句「查看类事件有四种」，在这里就是一个 `IN` 列表。口径写得具体，代码才能照着一个字一个字落下来。
+
+**读过全文。** 全文正文在视口里占的高度至少是视口高度的一半（或正文本身比半个视口还矮且整段可见），并且标签页在前台时计时，累计满 10 秒发一条 `fulltext_read`，每个页面实例只发一次；下载 PDF 也算。注意这里没用「正文元素有一半可见」：长文超过两屏时，正文元素永远不会有一半同时在屏幕上，这条规则就永远不触发。例：正文占视口 70% 停 6 秒，切到别的标签页 1 分钟，回来再停 4 秒，这时发出，`visible_seconds = 10`。
+
+**曝光。** 文献卡片至少 50% 在视口内、连续 1 秒、标签页在前台，算一次曝光。这是广告行业 MRC / IAB 的可见曝光标准。中途低于 50% 或切到后台就重新计时；同一个列表实例里同一篇只算一次。
+
+<Params
+  title="动手试试：这张卡片算不算一次曝光"
+  guess={{ question: "一张文献卡片 60% 露在屏幕上，停了 0.8 秒就被滚走了。算不算一次曝光？", options: ["不算，可见要连续满 1 秒", "算，超过一半可见就够了", "算，只要标签页在前台就行"], answer: "A", explain: "50% 和 1 秒两个条件都要满足，而且是连续的 1 秒。0.8 秒后滚走就重新计时，滚回来再连续停满 1 秒才算。" }}
+  controls={[
+    { type: "slider", id: "visible", label: "卡片在视口里的比例", min: 0, max: 100, step: 10, default: 60, unit: "%" },
+    { type: "slider", id: "seconds", label: "连续保持这个比例的时长", min: 0, max: 3, step: 0.5, default: 0.5, unit: " 秒" },
+    { type: "switch", id: "foreground", label: "标签页在前台", default: true }
+  ]}
+  cases={[
+    { when: { foreground: false }, results: [{ label: "`article_impressed`", value: "不发", tone: "bad" }], verdict: { tone: "bad", head: "不算。", text: "切到后台就暂停计时，读者根本没在看这一页。" } },
+    { when: { visible: [0, 40] }, results: [{ label: "`article_impressed`", value: "不发", tone: "bad" }], verdict: { tone: "bad", head: "不算。", text: "露出不到一半，按 MRC 的标准不算「看得见」。" } },
+    { when: { seconds: [0, 0.5] }, results: [{ label: "`article_impressed`", value: "不发", tone: "bad" }], verdict: { tone: "bad", head: "还不算。", text: "可见比例够了，但没连续停满 1 秒。滚走就从头计时。" } },
+    { results: [{ label: "`article_impressed`", value: "发一条", tone: "ok" }, { label: "同一列表里再滚回来", value: "不再发", tone: "wait" }], verdict: { tone: "ok", head: "算一次曝光。", text: "{visible} 可见、连续 {seconds}、标签页在前台。同一个列表实例里这篇以后不再计。" } }
+  ]}
+/>
+
+**预取不算。** Next.js 会在链接出现在屏幕上时提前去取目标页面，好让点击后秒开。读者并没有打开那一页，所以预取不发任何服务端事件，否则首页列出 20 篇文献，就凭空多出 20 次「浏览」。埋点方案原定靠预取请求带的 `Next-Router-Prefetch` 请求头来认；门户实现时发现 Next 16 把这个头藏起来了、读不到，改成靠 `loading.tsx` 让预取只渲染到加载边界、根本不执行发事件的页面代码，口径不变（见「Next 16 读不到预取请求头」那篇）。同理，页面上收藏、发评论之后服务端的重新渲染也不再发 `article_viewed`。
+
+## 口径写成可测的规则，好处在哪
+
+对比两种写法：
+
+- 「浏览量按会话去重」。
+- 「10:00 打开首页（会话 S1），10:20 打开文献，10:55 再打开文献，距上次 35 分钟，换成 S2」。
+
+第一种每个人读出来都不一样；第二种可以原样写成一个单元测试。Patra 的模拟器、计数查询、对账查询都按同一份埋点方案写，测试里的例子就是方案里的例子，三处算出的数字才对得上。
+
+<Callout kind="warn">
+
+口径一旦上线就很难改：已经入库的明细是按旧口径产生的，改了口径，新旧数据就没法直接比较。Patra 在规划时就改过一次：浏览量原定「一次会话里只算一次」，写埋点方案时改成「按人长期去重」，门户写「N 人看过」；按会话去重的 COUNTER 口径只留给运营面板。这种改动要在第一行代码之前做完。
+
+</Callout>
+
+<Transfer
+  prompt="你要给一个视频网站写埋点方案，产品说要在视频下方显示「播放量」。按这篇的思路，你要先定下哪些东西？至少写出事件名、谁来发、以及「一次播放」的口径规则（带一个例子）。"
+  points={[
+    { label: "事件名", text: "按 Object Action 起名，比如 `Video Played`，机器值 `video_played`；从哪个入口点进来作为属性，不拆成多个事件名。" },
+    { label: "谁来发", text: "谁真正知道播放发生了谁发：播放器在浏览器里，所以由浏览器发；但浏览器的事件能被伪造，要想清楚刷量怎么防。" },
+    { label: "口径写成规则", text: "比如「画面在前台连续播放满 N 秒才算一次」「同一个人同一天只算一次」，并配一个例子：播 3 秒退出不算，第二天再看算新的一次。" },
+    { label: "不算的请求", text: "列出不算播放的情况：自动预加载、封面上的静音预览、爬虫，都要在方案里写明。" }
+  ]}
+/>

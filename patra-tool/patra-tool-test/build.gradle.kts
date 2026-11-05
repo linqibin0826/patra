@@ -43,6 +43,8 @@ dependencies {
     api("org.flywaydb:flyway-database-postgresql")
     api("org.springframework.boot:spring-boot-starter-webmvc-test")
     api("org.springframework.boot:spring-boot-starter-restclient-test")
+    // @SpringBootTest 里关掉指标导出（只留内存注册表），测试不往 OTel Collector 推
+    api("org.springframework.boot:spring-boot-micrometer-metrics-test")
 
     // Spring Boot AutoConfiguration 支持
     api("org.springframework.boot:spring-boot-autoconfigure")
@@ -57,6 +59,9 @@ dependencies {
     api(libs.testcontainers.postgresql)
     api(libs.testcontainers.minio)
     api(libs.testcontainers.rabbitmq)
+    api(libs.testcontainers.kafka)
+    // 只带容器，不带 JDBC 驱动：ClickHouse 客户端由用到它的服务自己引
+    api(libs.testcontainers.clickhouse)
 
     // MinIO Java Client（MinIOContainerInitializer 创建存储桶需要）
     api(libs.minio) {
@@ -94,6 +99,11 @@ dependencies {
 
     // Jackson（JSON 序列化支持）
     compileOnly("tools.jackson.core:jackson-databind")
+
+    // ==================== 初始化器自己的集成测试 ====================
+
+    // Kafka 示例用例收发消息用的客户端：不放进 api，使用方自己引（版本由 Spring Boot 管理）
+    "integrationTestImplementation"("org.apache.kafka:kafka-clients")
 }
 
 // 本模块暂不启用 JaCoCo 覆盖率检查（测试基础设施模块）

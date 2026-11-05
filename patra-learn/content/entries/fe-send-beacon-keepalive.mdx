@@ -1,0 +1,201 @@
+---
+title: 页面要关了也能发出去：sendBeacon 与 fetch keepalive
+summary: 读者关掉标签页的那一刻，队列里常常还有几条没发的埋点事件。普通请求会随页面一起被浏览器中止；`navigator.sendBeacon` 和带 `keepalive` 的 `fetch` 就是为这一刻设计的，代价是整个页面共用一份约 64 KiB 的在途额度。这篇讲它们的区别、什么时候算「最后时刻」，以及门户实际怎么用：定时攒批用 fetch keepalive，页面隐藏时用 sendBeacon。
+type: concept
+difficulty: advanced
+tags: [frontend, analytics]
+prerequisites: [fe-async-and-fetch, fe-analytics-tracking]
+topics: [analytics-pipeline]
+sources:
+  - version: v0.18
+    issue: PAP-173
+    pr: 376
+personalEnv: false
+---
+
+<Diagnose
+  question="读者在文献页上读了一会儿，直接关掉了标签页，这时门户的队列里还有 3 条没发的事件。如果在关页时用一个普通的 fetch（不带任何特殊选项）把它们发出去，最可能怎样？"
+  options={["一定能发出去：fetch 一旦发出，就和页面没有关系了", "可能发不出去：页面卸载时，浏览器会中止这个页面发起的普通请求", "一定发不出去：关页时浏览器根本不再运行页面里的任何脚本"]}
+  answer="B"
+  ifRight="对。请求属于发起它的页面，页面没了，还在路上的普通请求会被中止。往下读：浏览器专门给「页面要走了还得发出去」这件事留了两个口子。"
+  ifWrong="答案是 B。fetch 发出后返回的是一个 Promise，请求本身还挂在这个页面上；页面卸载时浏览器会中止它。关页前脚本还有机会跑（比如处理 visibilitychange），只是普通请求活不过页面。fetch 和 Promise 怎么工作，先读异步与 fetch 那篇。"
+  suggest="fe-async-and-fetch"
+/>
+
+<Callout kind="lead">
+
+`fetch` 加上 `keepalive: true`，请求就能比发起它的页面活得久；`navigator.sendBeacon` 是专为上报做的「只管发、不管回」的 POST，内部用的是同一个机制。两者共用一份整页约 64 KiB 的在途额度。
+
+</Callout>
+
+## 普通请求为什么会丢
+
+上一篇「门户怎么埋点」讲过，浏览器事件先进队列、攒一批再发。攒批省请求，但也意味着任何时刻队列里都可能有几条还没发。读者如果这时关掉标签页、跳到别的网站、或者在手机上切到别的 App，这几条就面临丢失。
+
+浏览器的规矩是：页面卸载时，它发起的、还没完成的普通请求一并中止。早年的做法是在 `unload` 里发一个同步请求，强行让浏览器等它发完，结果是关页、跳转都被拖慢。现在的标准做法是下面两个工具。
+
+## 两个工具
+
+| | `navigator.sendBeacon(url, data)` | `fetch(url, { keepalive: true, ... })` |
+|---|---|---|
+| 方法 | 只能 POST | 任意方法 |
+| 请求头 | 不能自定义（只能借 `Blob` 的类型设 `Content-Type`） | 随便设 |
+| 能拿到响应吗 | 不能 | 能，和普通 fetch 一样拿 Promise |
+| 返回什么 | 布尔值：`true` 只表示浏览器把它排进了发送队列，不表示服务器收到了 | Promise |
+| 页面关了还发吗 | 发 | 发 |
+| Cookie | 带（同源请求，凭据模式是 include） | 按 fetch 的凭据设置 |
+
+MDN 的建议：只是上报数据、不关心回应，用 `sendBeacon`；要换方法、改请求属性、或者要看响应，用 `fetch` 加 `keepalive`。
+
+<Callout kind="warn">
+
+`sendBeacon` 返回 `true` 只是「浏览器接下了」。服务器有没有收到、回了什么，页面永远不知道。所以它只适合「丢几条也无所谓」的数据，埋点正好是这种。
+
+</Callout>
+
+## 什么时候算「最后时刻」
+
+直觉是在 `unload`、`beforeunload` 里发。可这几个事件在很多情况下不触发，手机上尤其不可靠：读者切到别的 App，浏览器可能直接把页面冻结或回收，`unload` 根本不来。`unload` 还会让页面进不了浏览器的往返缓存（点「后退」秒回的那个缓存）。`pagehide` 不影响往返缓存，可可靠性问题一样。
+
+MDN 给的答案是 `visibilitychange`：页面变成 `hidden` 是页面能可靠观察到的最后一个事件。切标签、关标签、最小化浏览器、手机上切到别的 App 都会触发它，应当把它当作这次访问的可能终点。
+
+这里大多数人会卡住的一点：**`hidden` 不等于读者走了**。读者可能只是切出去看一眼又回来。所以在 `hidden` 时发的是「到目前为止攒下的」，读者回来后继续攒、继续发，不会因此多算或少算。
+
+## 门户实际怎么用
+
+门户的队列在 `lib/analytics/client/queue.ts`，整页一个。它两种工具都用，分工很清楚：
+
+<Stepper
+  title="一个读者的几分钟里，事件是怎么发出去的"
+  nodes={[
+    { id: "page", label: "页面", sub: "队列" },
+    { id: "browser", label: "浏览器", sub: "发送队列" },
+    { id: "route", label: "/api/reading-signals", sub: "门户" }
+  ]}
+  links={[
+    { from: "page", to: "browser" },
+    { from: "browser", to: "route" }
+  ]}
+  steps={[
+    { caption: "读者打开文献页，page_viewed 入队。这是队列里的第一条，5 秒计时器开始走。", focus: ["page"], tokens: [{ id: "first", label: "1 条", at: "page" }], notes: [{ at: "page", text: "队列 · 1 条", tone: "wait" }] },
+    { caption: "几秒内又露出两张文献卡片，两条曝光事件入队。还不到 20 条，继续等计时器。", focus: ["page"], tokens: [{ id: "first", label: "3 条", at: "page" }], notes: [{ at: "page", text: "队列 · 3 条", tone: "wait" }] },
+    { caption: "5 秒到点：整批交给 fetch(..., { keepalive: true }) 发出，门户收下回 204。", focus: ["browser", "route"], links: ["page>browser", "browser>route"], tokens: [{ id: "first", label: "3 条", at: "route" }], notes: [{ at: "page", text: "队列 · 0 条" }, { at: "route", text: "204", tone: "ok" }] },
+    { caption: "读者往下读全文，满 10 秒，fulltext_read 入队；又点了复制引用。队列 2 条，计时器重新开始。", focus: ["page"], tokens: [{ id: "second", label: "2 条", at: "page" }], notes: [{ at: "page", text: "队列 · 2 条", tone: "wait" }] },
+    { caption: "读者切到别的标签页：visibilitychange 变成 hidden，门户立刻把剩下的 2 条用 sendBeacon 交给浏览器，计时器作废。", focus: ["browser"], links: ["page>browser"], tokens: [{ id: "second", label: "2 条", at: "browser" }], notes: [{ at: "page", text: "队列 · 0 条" }, { at: "browser", text: "已排队", tone: "wait" }] },
+    { caption: "读者接着关掉了这个标签。页面没了，浏览器照样把那个 beacon 发到门户。pagehide 也触发了一次补发，可队列已经空了，什么都不发。", focus: ["route"], links: ["browser>route"], tokens: [{ id: "second", label: "2 条", at: "route" }], notes: [{ at: "route", text: "204", tone: "ok" }] }
+  ]}
+  guesses={[
+    { before: 5, question: "读者切到别的标签页时，队列里还有 2 条，计时器还差 3 秒。门户会怎么做？", options: ["等计时器到点，再照常用 fetch keepalive 发", "什么都不做，等读者切回来再继续攒", "立刻把这 2 条用 sendBeacon 交给浏览器发出去"], answer: "C", explain: "hidden 可能就是最后一刻。门户不赌读者会回来，变成 hidden 就把队列清空。" },
+    { before: 6, question: "beacon 刚交给浏览器，读者就关掉了标签页。这 2 条会怎样？", options: ["照样发出去，beacon 不随页面中止", "随页面一起被取消，算丢了", "等读者下次打开门户时再补发"], answer: "A", explain: "sendBeacon 内部就是带 keepalive 标记的请求，规范要求它能活过页面。门户也没有任何「下次补发」的机制，失败就丢。" }
+  ]}
+/>
+
+定时和攒满 20 条走的是 `post`：
+
+<CodeRef at="patra-portal/src/lib/analytics/client/queue.ts@ffc25c0bf848b54ae29bb08571a5c491c1f5089d" lines="87-100" />
+
+```ts
+  function post(body: string): void {
+    try {
+      deps
+        .fetch("/api/reading-signals", {
+          method: "POST",
+          keepalive: true,
+          headers: { "Content-Type": "application/json" },
+          body,
+        })
+        .catch(() => {});
+    } catch {
+      // fetch 同步抛错（如 keepalive 超出在途上限）同样丢弃
+    }
+  }
+```
+
+平时也带 `keepalive`，是因为一批发出去之后读者随时可能关页，带上它这批就不会半路被中止。页面隐藏时走 `flushWithBeacon`：
+
+<CodeRef at="patra-portal/src/lib/analytics/client/queue.ts@ffc25c0bf848b54ae29bb08571a5c491c1f5089d" lines="126-139" />
+
+```ts
+    flushWithBeacon() {
+      for (const batch of take()) {
+        const body = bodyOf(batch);
+        if (deps.sendBeacon) {
+          try {
+            deps.sendBeacon(ENDPOINT, new Blob([body], { type: "application/json" }));
+          } catch {
+            // 丢弃
+          }
+        } else {
+          post(body);
+        }
+      }
+    },
+```
+
+浏览器不支持 `sendBeacon` 时退回 `fetch keepalive`。谁来调 `flushWithBeacon`？挂在根布局里的 `AnalyticsRoot`：
+
+<CodeRef at="patra-portal/src/components/analytics/AnalyticsRoot.tsx@ffc25c0bf848b54ae29bb08571a5c491c1f5089d" lines="31-49" />
+
+```tsx
+  useEffect(() => {
+    const onVisibilityChange = () => {
+      if (document.visibilityState !== "visible") {
+        flushWithBeacon();
+        return;
+      }
+      if (pending.current !== null) {
+        sent.current = pending.current;
+        pending.current = null;
+        track("page_viewed", {});
+      }
+    };
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    window.addEventListener("pagehide", flushWithBeacon);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+      window.removeEventListener("pagehide", flushWithBeacon);
+    };
+  }, []);
+```
+
+`visibilitychange` 是主路，`pagehide` 是兜底，代码注释给的理由是「有的浏览器关标签页时不触发 visibilitychange」。两个事件都来也没关系：第一次已经把队列清空，第二次什么都不发。
+
+站内跳转（点链接进另一篇文献）不会卸载页面，队列还在，点击事件入队后照常跟下一批一起发，不用特别处理。
+
+## 64 KiB 是整页共用的在途额度
+
+keepalive 请求能活过页面，浏览器就得防着它被滥用。Fetch 规范的做法：发一个带 keepalive 的请求时，把**这个页面所有还没完成的 keepalive 请求**的请求体大小加起来，再加上这一个，超过 64 KiB 就直接返回网络错误。Beacon 规范写明 `sendBeacon` 用的就是带 keepalive 标记的请求，和 fetch keepalive 共用这份额度，超了就返回 `false`。
+
+<Params
+  title="动手试试：这个 beacon 能排上吗"
+  guess={{ question: "上一批 30 KiB 的 fetch keepalive 还在路上没回来，页面这时又用 sendBeacon 发一批 40 KiB。sendBeacon 返回什么？", options: ["true：sendBeacon 和 fetch 各有各的 64 KiB", "true：浏览器先发前 64 KiB，剩下的截掉", "false：两批加起来 70 KiB，超过了共用的 64 KiB"], answer: "C", explain: "额度按「这个页面所有在途的 keepalive 请求」算，sendBeacon 和 fetch keepalive 算在一起。超了就整批拒绝，不会截断。" }}
+  controls={[
+    { type: "switch", id: "inflight", label: "上一批 30 KiB 的 keepalive 请求还在路上", default: true },
+    { type: "slider", id: "size", label: "这一批的大小", min: 10, max: 60, step: 1, default: 40, unit: " KiB" }
+  ]}
+  cases={[
+    { when: { inflight: true, size: [35, 60] }, results: [{ label: "在途合计", value: "超过 64 KiB", tone: "bad" }, { label: "sendBeacon 返回", value: "false", tone: "bad" }], verdict: { tone: "bad", head: "排不上。", text: "30 KiB 加 {size}，超过了整页共用的 64 KiB。这一批被拒，门户直接丢掉。" } },
+    { when: { inflight: true }, results: [{ label: "在途合计", value: "不超过 64 KiB", tone: "ok" }, { label: "sendBeacon 返回", value: "true", tone: "ok" }], verdict: { tone: "ok", head: "排上了。", text: "30 KiB 加 {size}，还在额度内。" } },
+    { results: [{ label: "在途合计", value: "不超过 64 KiB", tone: "ok" }, { label: "sendBeacon 返回", value: "true", tone: "ok" }], verdict: { tone: "ok", head: "排上了。", text: "前面没有在途的 keepalive 请求，{size} 自己用不满 64 KiB。" } }
+  ]}
+/>
+
+所以埋点方案给每批定了上限：**最多 50 条、序列化后不超过 48 KiB**，给额度留出余量（队列按条数和字节顺序切批，单条就超过上限的直接丢，正常用法碰不到）。门户的 `/api/reading-signals` 对应地按 64 KiB 拒收，回 413。
+
+超额时两个工具的表现不一样：`sendBeacon` 返回 `false`；fetch keepalive 按规范是返回网络错误，也就是 Promise 被拒绝。门户的 `post` 两条路都接住了：外面的 `try` 接同步抛错（注释里写的就是超额的情况），`.catch(() => {})` 接 Promise 被拒绝。不管哪种，结果都是丢弃这一批、不往控制台报错。
+
+<Callout kind="insight">
+
+额度是按「在途」算的。平时 5 秒一批、一批几 KiB，前一批早就回来了，碰不到上限。真正会挤的是页面隐藏那一刻：定时发的那一批可能还没回来，`sendBeacon` 又要把剩下的全塞进去。每批卡在 48 KiB，就是为了这时候还有空间。
+
+</Callout>
+
+<Transfer
+  prompt="一个在线视频网站想在读者关掉播放页时上报这次的观看记录：每 1 秒一个采样点，看一小时就有 3600 个点，序列化后大约 200 KiB。照这篇的知识，直接在 visibilitychange 里 sendBeacon 一次发完行不行？你会怎么改？"
+  points={[
+    { label: "一次发不出去", text: "200 KiB 远超整页共用的 64 KiB 在途额度，sendBeacon 会直接返回 false，整批丢失。" },
+    { label: "平时就分批发", text: "不要攒到最后一刻：播放过程中定时发（比如每 30 秒），每批控制在几十 KiB 以内，关页时只剩最后一小段。" },
+    { label: "最后一批要留余量", text: "关页时前一批 keepalive 可能还在路上，最后一批的上限要比 64 KiB 小一截，像门户的 48 KiB 那样。" },
+    { label: "能压就压", text: "3600 个点里大多是重复的状态，可以只上报变化点或做聚合，从源头减少字节。" }
+  ]}
+/>

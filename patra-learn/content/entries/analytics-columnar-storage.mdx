@@ -1,0 +1,185 @@
+---
+title: 列式存储：为什么行为数据放 ClickHouse
+summary: 行存数据库把一行的所有字段放在一起，适合按 ID 取一行、改一行；列存数据库把一列的值放在一起压缩存放，适合扫上亿行只看几列。这篇讲行存与列存的差别、压缩与 LowCardinality、排序键与稀疏索引、ClickHouse 不擅长什么，以及 Patra 在 2 GB 内存里怎么配它、1 亿条事件实测占多少盘。
+type: concept
+difficulty: advanced
+tags: [analytics, database]
+prerequisites: [db-indexes]
+topics: [analytics-pipeline]
+sources:
+  - version: v0.18
+    issue: PAP-165
+    pr: 373
+  - version: v0.18
+    issue: PAP-168
+    pr: 373
+  - version: v0.18
+    issue: PAP-171
+    pr: 373
+personalEnv: false
+---
+
+<Diagnose
+  question="一张 1 亿行的事件表有 25 列，按行存储，没有可用的索引。要算「昨天 article_viewed 有多少条」，只用到事件名和时间两列。数据库大致要从磁盘读多少数据？"
+  options={["差不多整张表：每一行的 25 列挨着放，读一行就得把整行读进来", "只读事件名和时间那两列，其余 23 列碰都不碰", "只读一个计数器，数据库平时就替每种事件记着条数"]}
+  answer="A"
+  ifRight="对。行存的读取单位是一行（准确说是装着若干行的一页），用不到的列也一起读进来了。往下读看列存怎么反过来放。"
+  ifWrong="答案是 A。行存把一行的所有列挨着放在同一页里，没有索引可走时只能整页整页地读，用不到的列也跟着进内存。这题考的是数据库在没有索引时怎么找数据，先读「索引：为什么查得快」。"
+  suggest="db-indexes"
+/>
+
+<Callout kind="lead">
+
+列式存储把同一列的值连续存放、分列压缩；查询只读用到的那几列。它擅长「扫很多行、只看几列、算一个结果」，不擅长「按 ID 取一行、改一行」。
+
+</Callout>
+
+## 行存和列存：同一张表的两种放法
+
+想象一张事件表，每行是一条事件，有事件名、时间、文献 ID、设备 ID、地区、浏览器等 25 列。
+
+- **行存**（PostgreSQL、MySQL）：一行的 25 个值挨着放，一页里装若干整行。按 ID 取一条事件，找到那一页就全拿到了；改一行，也只动那一页。
+- **列存**（ClickHouse）：所有行的「事件名」放在一个文件里，所有行的「时间」放在另一个文件里，以此类推。算「昨天每种事件有多少条」，只读事件名和时间两个文件。
+
+行为数据的查询几乎都是后一种：日活、某篇文献有多少人看过、近 14 天的热读，都是扫一大片事件、只看几列、算个总数。这就是 Patra 把事件明细放进 ClickHouse，而不是业务用的 PostgreSQL 的原因。
+
+<Params
+  title="动手试试：什么查询配什么存储"
+  guess={{ question: "在 ClickHouse 里按 ID 删掉一条阅读历史（一行），结果更接近哪种？", options: ["和 PostgreSQL 一样，按索引找到那一行删掉，几毫秒的事", "删不了一行：要么改写这行所在的整块数据，要么先打个标记，等后台合并时才真删", "不支持删除，只能把整张表重建一遍"], answer: "B", explain: "列存的数据按列压缩成一大块一大块的文件，没法原地抹掉中间一行。ClickHouse 的轻量删除先把行标记为不可见，后台合并时才真正去掉；其他修改方式要改写整块数据。能做，但又慢又重。" }}
+  controls={[
+    { type: "switch", id: "columnar", label: "用列式存储（ClickHouse）", default: true },
+    { type: "switch", id: "scan", label: "查询是「扫 1 亿行、只看 3 列」（关掉＝按 ID 取或改一行）", default: false }
+  ]}
+  cases={[
+    { when: { columnar: true, scan: true }, results: [{ label: "读多少", value: "只读 3 列的文件，还是压缩过的", tone: "ok" }, { label: "感觉", value: "秒级出结果", tone: "ok" }], verdict: { tone: "ok", head: "列存的本行。", text: "日活、看过人数、热读这类汇总查询都是这个形状。" } },
+    { when: { columnar: true }, results: [{ label: "读多少", value: "每列都要定位一次，一读就是一整块", tone: "bad" }, { label: "改一行", value: "打标记或改写整块，后台合并才落定", tone: "bad" }], verdict: { tone: "bad", head: "用错了地方。", text: "按行取、按行改是列存最不擅长的。Patra 的阅读历史要按人翻页、单条删除，所以放 PostgreSQL。" } },
+    { when: { scan: true }, results: [{ label: "读多少", value: "每一行的 25 列全读进来", tone: "bad" }, { label: "磁盘占用", value: "不分列压缩，比列存大得多", tone: "bad" }], verdict: { tone: "bad", head: "能算，但很慢。", text: "行存扫一亿行做汇总，大部分读进来的数据都用不上；写入量还直接压在业务库上。" } },
+    { results: [{ label: "读多少", value: "走 B 树索引，几次跳转找到那一页", tone: "ok" }, { label: "改一行", value: "原地改那一页", tone: "ok" }], verdict: { tone: "ok", head: "行存的本行。", text: "业务数据的增删改查都是这个形状，这正是 PostgreSQL 擅长的。" } }
+  ]}
+/>
+
+## 压缩：同一列的值长得像
+
+一列里的值类型相同、经常重复，放在一起很好压缩。事件名只有十来种，省份三十几个，浏览器、操作系统、设备类别也就几个到几十个取值。
+
+ClickHouse 为这种列准备了 `LowCardinality`：先给每个不同的值编一个小整数，列里只存整数，另存一份「整数 → 原值」的字典。查询按事件名过滤时，比较的也是整数。
+
+Patra 的明细表 `events` 里，凡是取值少的字符串列都用了它；设备 ID、页面路径这种几乎不重复的列就不用：
+
+<CodeRef at="patra-api/patra-analytics/patra-analytics-infra/src/main/resources/clickhouse/V1__events.sql@8140a9d9482324670b63f00ab3c62690102196c5" lines="4-34" />
+
+```sql
+CREATE TABLE IF NOT EXISTS events (
+    event_id        UUID,
+    event_name      LowCardinality(String),
+    schema_version  LowCardinality(String),
+    source          LowCardinality(String),
+    created_at      DateTime64(3, 'UTC'),
+    sent_at         DateTime64(3, 'UTC'),
+    received_at     DateTime64(3, 'UTC'),
+    derived_at      DateTime64(3, 'UTC'),
+    device_id       String,
+    session_id      UUID,
+    user_id         UInt64,
+    page_path       String,
+    page_type       LowCardinality(String),
+    referrer_host   String,
+    country_code    LowCardinality(String),
+    province        LowCardinality(String),
+    browser_family  LowCardinality(String),
+    os_family       LowCardinality(String),
+    device_class    LowCardinality(String),
+    is_bot          Bool,
+    bot_reason      LowCardinality(String),
+    is_synthetic    Bool,
+    properties      String,
+    article_id      UInt64 MATERIALIZED toUInt64OrZero(JSONExtractString(properties, 'article_id')),
+    person_id       String MATERIALIZED if(user_id != 0, concat('u:', toString(user_id)), concat('d:', device_id))
+) ENGINE = ReplacingMergeTree
+PARTITION BY toYYYYMMDD(derived_at, 'Asia/Shanghai')
+ORDER BY (event_name, toDate(derived_at, 'Asia/Shanghai'), article_id, person_id, event_id)
+TTL toDateTime(derived_at) + INTERVAL 90 DAY DELETE
+SETTINGS non_replicated_deduplication_window = 1000, ttl_only_drop_parts = 1;
+```
+
+最后五行（引擎、分区、TTL）是下一篇讲数据片段与合并时的主角，这里先看 `ORDER BY`。
+
+## 排序键与稀疏索引
+
+在「索引：为什么查得快」里，B 树索引给**每一行**记一条「值 → 位置」。一亿行就是一亿条索引项，ClickHouse 不这么做。
+
+ClickHouse 的表按 `ORDER BY` 排好序存放，再把连续的行切成一个个颗粒（granule，默认 8192 行一个），**每个颗粒只记一个标记**：这个颗粒第一行的排序键值。一亿行只有一万多个标记，小到能整个放进内存。查询时，拿条件和标记比一比，就知道哪些颗粒可能有要的数据，其余的整块跳过。这叫稀疏索引。
+
+所以排序键的列顺序，要照着最常见的查询来排。Patra 的查询大多是「某种事件、某段日期、某些文献」：
+
+- `event_name` 第一：先按事件名把同类事件排在一起；
+- 日期第二（按北京时间取日）：同一种事件里再按天排；
+- `article_id` 第三：查某几篇文献时能进一步跳过；
+- `person_id`：便于按人去重；
+- `event_id` 放最后：同一条事件重复写入时排在一起，合并时只留一行（讲重复行怎么数的那篇会展开）。
+
+<Quiz
+  title="你猜会怎样"
+  questions={[
+    {
+      question: "排序键的五列全部给出，精确查一条事件。ClickHouse 最少要读多少行？",
+      options: ["正好 1 行，排序键唯一确定了它", "整个分区，排序键只管排序不管查找", "整张表，列存不支持精确查找", "一整个颗粒（默认 8192 行）里用到的那几列"],
+      answer: "D",
+      explain: "稀疏索引只能定位到颗粒，定位不到行。哪怕结果只有一行，也要把那个颗粒的相关列读进来、解压、再逐行比较。这就是 ClickHouse 不擅长点查的根源：每次「取一行」的成本其实是「取八千行」。"
+    }
+  ]}
+/>
+
+## ClickHouse 不擅长什么，Patra 就不让它做什么
+
+稀疏索引和分列压缩让扫描飞快，也让三件事变得不划算：
+
+| 不擅长 | 为什么 | Patra 怎么绕开 |
+|---|---|---|
+| 按 ID 取一行 | 最小读取单位是颗粒 | 阅读历史（按人翻页、单条删除、清空）放 PostgreSQL |
+| 按行修改、删除 | 数据是压缩好的整块，不能原地改 | 同上；注销清理用轻量删除，一批用户一条语句 |
+| 每秒上百个小查询 | 单条查询要开线程、读颗粒，并发上限也低 | 计数接口前面挡一层 Redis 60 秒缓存；热读和「看过还看了」由定时任务算好写进 PostgreSQL 快照 |
+
+## 在 2 GB 里跑 ClickHouse
+
+ClickHouse 默认按「一台机器只跑它」来配：各种缓存、后台线程、十几张系统日志表都按大机器的量开，放进 2 GB 的容器，空闲时就能吃掉一大半。Patra 照 Altinity（ClickHouse 服务商）知识库的低内存样例做三件事：缩缓存、限并发、关掉用不到的系统日志。
+
+<CodeRef at="patra-infra/docker/clickhouse/config.d/patra.xml@8140a9d9482324670b63f00ab3c62690102196c5" lines="23-36" />
+
+```xml
+  <!-- 缓存：Altinity 样例是 256 / 64 / 16 MiB，按 2 GB 把前两个减半。
+       查询条件缓存默认约 100 MB、查询结果缓存默认 1 GB（只在查询显式开启时使用），一并调小 -->
+  <mark_cache_size>134217728</mark_cache_size>
+  <index_mark_cache_size>33554432</index_mark_cache_size>
+  <uncompressed_cache_size>16777216</uncompressed_cache_size>
+  <query_condition_cache_size>33554432</query_condition_cache_size>
+  <query_cache>
+    <max_size_in_bytes>67108864</max_size_in_bytes>
+  </query_cache>
+
+  <!-- 内存：ClickHouse 能读出容器的 cgroup 上限，0.75 即 2 GB × 0.75 ≈ 1.5 GB，
+       剩下的留给它统计不到的内存。和 docker-compose.pipeline.yaml 的 limits.memory 一起看 -->
+  <max_server_memory_usage_to_ram_ratio>0.75</max_server_memory_usage_to_ram_ratio>
+  <max_server_memory_usage>0</max_server_memory_usage>
+```
+
+`mark_cache_size` 缓存的就是上一节的颗粒标记，128 MiB。账号层面另有限制：每条查询最多 2 个线程、1 GiB 内存，聚合和排序超过 512 MiB 落盘而不是失败。这也是为什么后面的热读、共现查询都要先按日期缩小范围，不能对全部会话做 `GROUP BY`。
+
+## 1 亿条事件实测占多少盘
+
+规划时调研估的是「1 亿条约 2～4 GB」，release spec 当时就注明这是推断、要实测。2026-11-02 在 mini 上：
+
+- **试灌**：263 万条，实测每条约 146 B（明细加四张汇总表合计），推算 1.02 亿条约 13.9 GiB。
+- **正式灌入**：1.0232 亿条，用时约 15 分钟；ClickHouse 实际占用 14.3 GiB；`events` 表压缩比约 2.3。
+
+实测比估计大了好几倍。压缩比取决于数据本身：一般来说，取值少、重复多的列压得很狠，随机 ID、JSON 原文这类几乎不重复的内容压不了多少。容量规划不能只套别人的经验值，先拿真实形状的数据试灌一小段、量出每条多少字节，再乘上去。
+
+<Transfer
+  prompt="产品想加一个功能：用户在个人页能看到「我最近的 50 次检索」，数据就在 events 表里（event_name 是检索事件）。你会直接查 ClickHouse 吗？如果要查，现在的排序键对这个查询友好吗？"
+  points={[
+    { label: "形状像点查", text: "按一个人取最近几十条、每页刷新都查，是「每秒很多小查询」的形状，正是 ClickHouse 不擅长的；Patra 的阅读历史就是因此放进了 PostgreSQL。" },
+    { label: "排序键不对口", text: "排序键是事件名、日期、文献 ID、person_id。按事件名能缩小范围，但同一种事件里先按日期再按文献排，一个人的记录散在每一天、每篇文献下面，要扫很多颗粒。" },
+    { label: "更好的做法", text: "像阅读历史一样，采集时同步往 PostgreSQL 写一份按用户索引的小表，只留最近 N 条；ClickHouse 继续只做汇总。" },
+    { label: "删除权", text: "个人页能看到的东西，用户多半也要能删；按行删除又是列存的弱项，这是放 PostgreSQL 的另一个理由。" }
+  ]}
+/>

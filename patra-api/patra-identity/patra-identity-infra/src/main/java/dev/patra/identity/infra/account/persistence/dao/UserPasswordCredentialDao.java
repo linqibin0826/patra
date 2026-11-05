@@ -17,6 +17,12 @@ public interface UserPasswordCredentialDao
   /// @return 实体
   Optional<UserPasswordCredentialEntity> findByUserId(Long userId);
 
+  /// 这个用户有没有密码凭据。
+  ///
+  /// @param userId 用户 ID
+  /// @return 有凭据时为 `true`
+  boolean existsByUserId(Long userId);
+
   /// 按用户 ID 删。批量语句而不是派生删除：派生删除先查再逐个 remove，flush 时排在插入之后。
   ///
   /// @param userId 用户 ID

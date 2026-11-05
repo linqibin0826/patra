@@ -22,6 +22,8 @@ interface FormFieldProps {
   error?: ReactNode;
   /// 控件自带外框（下拉、日期、数字原语）时不再套输入井
   bare?: boolean;
+  /// 标红但不显示错误文案：错误说明不在这一行时用（第三方注册的邮箱撞车，说明是字段下方的引导块）
+  invalid?: boolean;
   children: (control: FieldControl) => ReactNode;
 }
 
@@ -51,13 +53,14 @@ export function FormField({
   hint,
   error,
   bare,
+  invalid,
   children,
 }: FormFieldProps) {
   const messageId = error ? `${id}-error` : hint ? `${id}-hint` : undefined;
   const control = children({
     id,
     className: FIELD_INPUT,
-    "aria-invalid": Boolean(error),
+    "aria-invalid": Boolean(error) || Boolean(invalid),
     "aria-describedby": messageId,
   });
   return (

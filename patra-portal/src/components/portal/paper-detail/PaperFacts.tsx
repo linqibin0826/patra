@@ -7,17 +7,15 @@ import type { PaperDetail } from "@/types/portal";
 
 /**
  * 页头事实条（spec §5.2）：详情里有的几项直接给出；篇幅、图表、参考文献来自全文接口，
- * 由调用方包在 Suspense 里作为 `fullTextFacts` 传入；收藏人数与讨论数来自 interaction（`interactionFacts`，
- * 同样在 Suspense 里），放在最后，晚到也不挤动前面的格子（v0.15 简报 §3.7）。
+ * 由调用方包在 Suspense 里作为 `fullTextFacts` 传入。只放书目事实：收藏、讨论与看过、读过全文在下方的读者一行
+ * （v0.18 简报 §3.3，`PaperReaders`）。
  */
 export function PaperFacts({
   paper,
   fullTextFacts,
-  interactionFacts,
 }: {
   paper: PaperDetail;
   fullTextFacts?: ReactNode;
-  interactionFacts?: ReactNode;
 }) {
   return (
     <dl className="m-0 mt-8 grid grid-cols-[repeat(auto-fit,minmax(128px,1fr))] border-y border-border-default">
@@ -31,7 +29,6 @@ export function PaperFacts({
         <FactCell term="原文阅读">≈ {paper.estimatedReadMin} 分钟</FactCell>
       )}
       {fullTextFacts}
-      {interactionFacts}
     </dl>
   );
 }

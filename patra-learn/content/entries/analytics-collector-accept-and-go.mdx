@@ -1,0 +1,215 @@
+---
+title: 采集端点收下就走：Kafka 不可用时返回 503，门户丢弃不重试
+summary: 采集端点是行为数据管线里唯一同步面对门户的一环，它慢一点门户就跟着慢。Patra 照 PostHog、Snowplow 的做法只做校验、富化、写 Kafka 三件事，等 Kafka 确认整批就返回；Kafka 不可用时 2～5 秒内返回 503，门户直接丢掉这一批。这篇讲为什么不选本地磁盘缓冲、也不让门户重试，以及「写进 Kafka」怎样才算写成功。
+type: decision
+difficulty: practice
+tags: [analytics, messaging]
+prerequisites: [analytics-event-envelope-schema, analytics-kafka-log]
+topics: [analytics-pipeline]
+sources:
+  - version: v0.18
+    issue: PAP-167
+    pr: 373
+  - version: v0.18
+    issue: PAP-171
+    pr: 373
+personalEnv: false
+---
+
+<Diagnose
+  question="Kafka 生产者设成 `acks=0`：消息交给网络就算成功，不等 broker 回话。`send()` 刚报完成功，broker 就宕机了。这条消息怎样了？"
+  options={["可能丢了：生产者没等 broker 确认就报了成功", "不会丢：send() 报成功说明 broker 已经写进了磁盘", "不会丢：生产者会在 broker 恢复后自动补发它"]}
+  answer="A"
+  ifRight="对。「返回成功」到底意味着什么，取决于生产者等确认等到什么程度。这篇讲采集端点在这件事上怎么取舍。"
+  ifWrong="答案是 A。`acks=0` 时生产者根本不等 broker，broker 有没有收到、写没写盘它都不知道，更谈不上补发。acks 的三档含义在 Kafka 那篇讲过，先读它。"
+  suggest="analytics-kafka-log"
+/>
+
+## 背景：采集端点是唯一同步的一环
+
+门户每处理一个页面请求，都可能顺手发一批事件给采集端点（`POST /patra-analytics/events`）。采集端点后面的入库、汇总、去重，都隔着 Kafka 异步进行；只有它，是门户要等着回话的。它慢一点，门户就跟着慢；它挂了，不能连累门户。
+
+业界的采集服务（PostHog 的 capture、Snowplow 的 collector）因此都只做三件事：**校验格式、补上只有服务端知道的字段、写进消息队列，然后立刻返回**。重活全在队列后面做，ClickHouse 停机或变慢时采集照收，事件在 Kafka 里等着。Patra 的采集端点也是这样：逐条校验、富化、判爬虫，合格的写 `events.raw`、不合格的写 `events.dlq`，等这一批全部确认后返回 202 和「合格几条、不合格几条」。
+
+剩下要决定的是：**Kafka 本身不可用时怎么办。**
+
+## 选项
+
+<DecisionOptions
+  options={[
+    { name: "返回 503，门户丢弃", summary: "采集端点告诉门户「现在收不了」，门户直接扔掉这一批，不重试；模拟器重试。", pros: "采集端点无状态、实现简单；门户不为埋点堆积请求，页面不受影响；Kafka 不可用时 2～5 秒内就有结论。", cons: "Kafka 停机期间的真实浏览会丢，计数少几条。", chosen: true },
+    { name: "本地磁盘缓冲，恢复后补发", summary: "Kafka 写不进时，采集端点先把事件写到本机磁盘，Kafka 恢复后再补发（Snowplow 的部分 collector 支持）。", pros: "Kafka 停机也不丢事件。", cons: "要处理磁盘写满、重启后恢复、补发时的重复；采集端点从无状态变成有状态，容器重建时缓冲区还要跟着走。" },
+    { name: "返回 503，门户重试", summary: "和第一种一样返回 503，但门户隔一会儿重发同一批（PostHog 的 capture 返回 503，由 SDK 重试）。", pros: "短暂故障时能补回事件；采集端点仍然无状态。", cons: "门户要为埋点维护重试队列；Kafka 长时间不可用时，重试请求在门户里越积越多，反过来拖慢页面。" }
+  ]}
+/>
+
+## 选择
+
+<Callout kind="lead" label="选了什么">
+
+Kafka 写不进时返回 503，门户直接丢弃这一批、不重试；只有流量模拟器重试。决定性的理由是代价不对称：行为数据丢一小段只是计数少几条，而为了不丢它去做磁盘缓冲或门户重试，复杂度和拖慢页面的风险都远超这一版的价值。
+
+</Callout>
+
+模拟器为什么要重试：它是用来测吞吐和去重的，丢了事件真值就对不上；而且它不是用户在等的页面，重试多慢都没关系。它对 503、其他 5xx、超时和连接错误按指数退避重试同一个请求体，4xx 不重试：
+
+<CodeRef at="patra-api/patra-analytics/patra-analytics-simulator/src/main/java/dev/patra/analytics/simulator/live/CollectorClient.java@8140a9d9482324670b63f00ab3c62690102196c5" lines="98-108" />
+
+```java
+      if (status == 202) {
+        return delivered(response);
+      }
+      if (status >= 400 && status < 500) {
+        stats.failed(eventCount);
+        LOG.log(System.Logger.Level.ERROR, "采集端点拒收（{0}），不重试：{1}", status, response);
+        return new SendOutcome.Failed(status, response);
+      }
+      if (attempt < maxAttempts) {
+        sleeper.sleep(Math.min(MAX_BACKOFF_MILLIS, FIRST_BACKOFF_MILLIS << (attempt - 1)));
+      }
+```
+
+4xx 是请求本身有问题（格式不对、太大），重发一万次也一样；5xx 和超时可能是暂时的，等一等再试才有意义。这是重试策略的通用分界。
+
+## 「写进 Kafka」怎样才算写成功
+
+返回 202 之前要等 Kafka 确认，「确认」到什么程度由生产者设置决定。采集端点的设置集中在一个类里，运行时和测试用同一份：
+
+<CodeRef at="patra-api/patra-analytics/patra-analytics-infra/src/main/java/dev/patra/analytics/infra/collect/publish/KafkaProducerSettings.java@8140a9d9482324670b63f00ab3c62690102196c5" lines="15-34" />
+
+```java
+  public static final Map<String, Object> OVERRIDES =
+      Map.of(
+          ProducerConfig.ACKS_CONFIG,
+          "all",
+          ProducerConfig.ENABLE_IDEMPOTENCE_CONFIG,
+          true,
+          ProducerConfig.COMPRESSION_TYPE_CONFIG,
+          "zstd",
+          ProducerConfig.LINGER_MS_CONFIG,
+          10,
+          ProducerConfig.DELIVERY_TIMEOUT_MS_CONFIG,
+          5_000,
+          ProducerConfig.REQUEST_TIMEOUT_MS_CONFIG,
+          4_000,
+          ProducerConfig.MAX_BLOCK_MS_CONFIG,
+          2_000,
+          ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG,
+          StringSerializer.class,
+          ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG,
+          StringSerializer.class);
+```
+
+逐个看：
+
+| 设置 | 取值 | 为什么 |
+|---|---|---|
+| `acks` | `all` | 所有同步副本都写了才算成功。Patra 是单节点，等同于 `1`，但以后换成多节点不用改配置 |
+| `enable.idempotence` | `true` | 生产者给消息编号，网络抖动导致内部重试时，broker 认得出重复、只留一条 |
+| `delivery.timeout.ms` | 5000 | 一条消息从交出到放弃的总时限，含内部重试 |
+| `request.timeout.ms` | 4000 | 单次请求等 broker 回话的上限。Kafka 要求总时限不小于它加上 `linger.ms`，所以比 5 秒略小 |
+| `max.block.ms` | 2000 | 连不上 Kafka 时，`send()` 调用最多卡 2 秒就抛异常 |
+| `linger.ms` / `compression.type` | 10 / `zstd` | 攒 10 毫秒凑一批再发、整批压缩，减少请求数和网络字节 |
+
+消息的键是设备 ID，同一设备的事件落进同一个分区、保持先后顺序；值是富化事件的 JSON 文本。
+
+<Quiz
+  title="你猜会怎样"
+  questions={[
+    {
+      question: "Kafka 连不上时，每次 `send()` 最多卡 `max.block.ms` 2 秒才抛异常。如果采集端点对一批 500 条逐条 `send()`、每条都等到抛异常再试下一条，这次请求最长会卡多久？",
+      options: ["约 2 秒，后面几条会立刻失败", "约 5 秒，被 delivery.timeout.ms 截住", "约 1000 秒，500 条每条都卡 2 秒"],
+      answer: "C",
+      explain: "`max.block.ms` 管的是单次 `send()`，`delivery.timeout.ms` 管的是单条消息，两者都不管整批。500 次 × 2 秒，门户早就超时了。所以采集端点要自己给整批设一个截止时间。"
+    }
+  ]}
+/>
+
+## 整批一个总截止时间：5 秒
+
+所以采集端点没有把超时只交给生产者设置，而是给整批加了一个总截止时间：从开始发送起 5 秒。
+
+<CodeRef at="patra-api/patra-analytics/patra-analytics-infra/src/main/java/dev/patra/analytics/infra/collect/publish/KafkaEventPublishAdapter.java@8140a9d9482324670b63f00ab3c62690102196c5" lines="70-88" />
+
+```java
+  private void sendAll(List<OutboundMessage> messages) {
+    Instant deadline = clock.instant().plus(properties.batchDeadline());
+    List<CompletableFuture<SendResult<String, String>>> pending = new ArrayList<>(messages.size());
+    for (OutboundMessage message : messages) {
+      CompletableFuture<SendResult<String, String>> future;
+      try {
+        future = kafka.send(topicOf(message.stream()), message.key(), message.payload());
+      } catch (RuntimeException e) {
+        throw new EventPublishUnavailableException("写 Kafka 失败：" + e.getMessage(), e);
+      }
+      if (future.isCompletedExceptionally() || clock.instant().isAfter(deadline)) {
+        throw new EventPublishUnavailableException("写 Kafka 失败或超过整批截止时间，放弃本批");
+      }
+      pending.add(future);
+    }
+    for (CompletableFuture<SendResult<String, String>> future : pending) {
+      awaitUntil(future, deadline);
+    }
+  }
+```
+
+分两段：
+
+1. **先全部交出去。** 逐条 `send()`，它只是把消息放进生产者的发送缓冲、立刻返回一个 future。任何一次 `send()` 抛异常、已经失败、或者过了截止时间，立刻放弃剩下的，整批失败。
+2. **再统一等确认。** 每个 future 只等到截止时间为止，有一条没等到也整批失败。
+
+整批失败抛出的异常被映射成 503。于是 Kafka 不可用时，一次请求最长约 2～5 秒就有结论：连不上的话第一次 `send()` 卡 2 秒就失败，连得上但不回话就等满 5 秒。门户调采集端点的超时设 6 秒，正好盖住它。集成测试里专门造了 Kafka 不可用的场景，断言 6 秒内拿到 503。
+
+<Sequence
+  title="Kafka 连不上时，一次采集请求的 2 秒"
+  actors={[
+    { id: "portal", label: "门户服务端" },
+    { id: "collector", label: "采集端点" },
+    { id: "kafka", label: "Kafka" }
+  ]}
+  messages={[
+    { from: "portal", to: "collector", label: "POST /events（一批）", time: "0 ms", caption: "门户处理完一个页面请求，顺手把这批事件发给采集端点，不等它的结果再返回页面。" },
+    { from: "collector", to: "kafka", label: "第 1 条 send()", caption: "校验、富化都在内存里做完，开始写 Kafka。生产者要先拿到集群元数据，可 Kafka 连不上。" },
+    { from: "kafka", to: "collector", label: "2 秒没连上，抛异常", time: "约 2.0 s", bad: true, dashed: true, caption: "`max.block.ms` 到了，`send()` 抛异常。采集端点不再试后面的事件，整批放弃。" },
+    { from: "collector", to: "portal", label: "503", time: "约 2.0 s", caption: "返回 503。门户直接丢掉这一批，不重试，也不影响读者已经拿到的页面。" }
+  ]}
+  summary={{ time: "约 2.0 s", caption: "Kafka 不可用时，采集端点 2～5 秒内给出 503，门户 6 秒的超时不会被撞到。" }}
+/>
+
+## 已经写进去一半怎么办
+
+整批 503 时，前面已经交出去的消息可能有一部分其实写进了 Kafka，只是没等到全部确认。门户丢弃不重试，这部分照常入库，正好不丢；模拟器重试整批时，这部分会再写一次。
+
+这不会导致重复计数：重试时每条事件的 `event_id` 不变，入库时按 `event_id` 去重。采集端点只保证「至少一次」，去重交给下游，这和发件箱「保证不丢、不保证不重」是同一个思路。
+
+<Quiz
+  questions={[
+    {
+      question: "模拟器的一批 500 条拿到 503，其实前 200 条已经写进了 Kafka。模拟器重试同一个请求体，这 200 条在「看过人数」里会被算两次吗？",
+      options: ["会，Kafka 里有两份，入库时两份都会被计数", "不会，重试时 event_id 不变，入库按 event_id 去重", "不会，幂等生产者能认出这是跨请求的重复消息"],
+      answer: "B",
+      explain: "幂等生产者只认得同一个生产者内部的网络重试；重试一个新的 HTTP 请求，对 Kafka 来说是全新的消息。真正挡住重复的是事件自带的 `event_id` 和入库层的去重。"
+    }
+  ]}
+/>
+
+## 代价
+
+<Callout kind="cost">
+
+- **Kafka 停机期间的真实浏览会丢。** 门户不重试，这段时间的计数会少。行为数据可以接受，业务数据不行。
+- **采集端点要等 Kafka 确认才返回。** 正常时很快，但它让采集端点的延迟直接挂在 Kafka 上；门户那边是「发出去不等结果」，读者感觉不到。
+- **整批共进退。** 一批里只要有一条没确认，整批都报 503，已经写成的那部分只能靠下游去重兜住。
+- **什么时候该重新考虑**：事件开始承载不能丢的东西（比如按量计费），或者 Kafka 变得经常不可用。那时该换成门户重试或采集端点本地缓冲，并接受随之而来的复杂度。
+
+</Callout>
+
+<Transfer
+  prompt="一个在线教育平台也要做类似的采集端点，但它的事件里有一类是「课程视频观看时长」，直接用来给讲师结算课酬。按这篇的思路，这类事件还能用「503 后丢弃」吗？你会怎么改？"
+  points={[
+    { label: "代价变了", text: "丢事件直接少算讲师的钱，不再是「计数少几条」，丢弃不可接受。" },
+    { label: "让产生方重试", text: "客户端或服务端带着不变的事件 ID 重试，配合指数退避和重试上限；或者在采集端点前做本地持久缓冲。" },
+    { label: "去重跟上", text: "重试必然带来重复，入库和结算都要按事件 ID 去重，否则会多算钱。" },
+    { label: "分开处理", text: "普通浏览事件仍可以丢弃不重试，只有结算类事件走可靠通道，别让全部事件为最严格的那一类买单。" }
+  ]}
+/>

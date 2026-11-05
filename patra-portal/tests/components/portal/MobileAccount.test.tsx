@@ -97,12 +97,13 @@ describe("MobileAccount · 三种形态", () => {
     expect(screen.queryByText(USER.email)).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: "主页" })).toHaveAttribute("href", "/u/chen-yu");
     expect(screen.getByRole("link", { name: "文献库" })).toHaveAttribute("href", "/library");
+    expect(screen.getByRole("link", { name: "阅读历史" })).toHaveAttribute("href", "/history");
     expect(screen.getByRole("link", { name: "设置" })).toHaveAttribute("href", "/settings/profile");
     expect(screen.getByRole("button", { name: "退出登录" })).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "登录" })).not.toBeInTheDocument();
   });
 
-  it.each(["主页", "文献库", "设置"])("已登录：点「%s」先关闭菜单", async (name) => {
+  it.each(["主页", "文献库", "阅读历史", "设置"])("已登录：点「%s」先关闭菜单", async (name) => {
     const { user, onClose } = renderAccount(USER);
     await user.click(screen.getByRole("link", { name }));
     expect(onClose).toHaveBeenCalledTimes(1);
@@ -148,14 +149,20 @@ describe("MobileAccount · 退出登录", () => {
 });
 
 describe("MobileAccount · 提醒", () => {
-  it("已登录：四个按钮排成 2×2（主页、文献库 / 提醒、设置），「提醒」挂未读数", () => {
+  it("已登录：五个按钮两列排（主页、文献库 / 阅读历史、提醒 / 设置），「提醒」挂未读数", () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async () => Response.json({ total: 5, replies: 5, mentions: 0, helpful: 0 })),
     );
     renderAccount(USER);
     const links = screen.getAllByRole("link").map((link) => link.getAttribute("href"));
-    expect(links).toEqual(["/u/chen-yu", "/library", "/notifications", "/settings/profile"]);
+    expect(links).toEqual([
+      "/u/chen-yu",
+      "/library",
+      "/history",
+      "/notifications",
+      "/settings/profile",
+    ]);
     expect(screen.getByRole("link", { name: "主页" }).parentElement).toHaveClass("grid-cols-2");
   });
 

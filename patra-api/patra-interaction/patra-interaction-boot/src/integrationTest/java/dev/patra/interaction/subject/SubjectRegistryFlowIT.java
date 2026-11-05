@@ -168,7 +168,8 @@ class SubjectRegistryFlowIT {
     catalog.stubFor(
         post(urlEqualTo(BY_IDS))
             .withRequestBody(equalToJson("{\"ids\":[100]}"))
-            .willReturn(okJson("{\"items\":[{\"key\":\"100\",\"exists\":false}]}")));
+            .willReturn(
+                okJson("{\"items\":[{\"key\":\"100\",\"exists\":false,\"retracted\":false}]}")));
     stubById(200L, null, "ACTIVE");
     stubById(300L, "3", "DELETED");
 
@@ -345,7 +346,7 @@ class SubjectRegistryFlowIT {
   private static String item(long id, String pmid, String state) {
     return """
         {"key":"%s","exists":true,"state":"%s","id":"%d","pmid":%s,"title":"Title %s (%s)",
-         "journal":"Journal","year":2019,"publishedDate":"2019-03"}"""
+         "journal":"Journal","year":2019,"publishedDate":"2019-03","retracted":false}"""
         .formatted(
             pmid == null ? id : pmid,
             state,

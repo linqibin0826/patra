@@ -114,6 +114,7 @@ public final class FakeCatalog implements ResponseDefinitionTransformerV2 {
         "year",
         p.publishedDate() == null ? null : Integer.parseInt(p.publishedDate().substring(0, 4)));
     item.put("publishedDate", p.publishedDate());
+    item.put("retracted", false);
     return item;
   }
 
@@ -125,6 +126,7 @@ public final class FakeCatalog implements ResponseDefinitionTransformerV2 {
     Map<String, Object> item = new LinkedHashMap<>();
     item.put("key", key);
     item.put("exists", false);
+    item.put("retracted", false);
     return item;
   }
 

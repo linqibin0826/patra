@@ -1,0 +1,109 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://patra.linqibin.dev/schemas/analytics/events/search_performed.schema.json",
+  "title": "Search Performed",
+  "x-patra-version": "1-0-0",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "search_id": {
+      "$ref": "../defs.schema.json#/$defs/uuid"
+    },
+    "mode": {
+      "enum": [
+        "keyword",
+        "exact_pmid",
+        "exact_doi"
+      ]
+    },
+    "query": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "filters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "author": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "year_from": {
+          "type": "integer",
+          "minimum": 1000,
+          "maximum": 9999
+        },
+        "year_to": {
+          "type": "integer",
+          "minimum": 1000,
+          "maximum": 9999
+        },
+        "type": {
+          "type": "array",
+          "maxItems": 20,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          }
+        },
+        "evidence": {
+          "type": "array",
+          "maxItems": 20,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 32
+          }
+        },
+        "lang": {
+          "type": "array",
+          "maxItems": 20,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 16
+          }
+        },
+        "venue": {
+          "type": "array",
+          "maxItems": 20,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "../defs.schema.json#/$defs/entity_id"
+          }
+        },
+        "oa": {
+          "const": true
+        }
+      }
+    },
+    "sort": {
+      "enum": [
+        "latest",
+        "year"
+      ]
+    },
+    "page": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "result_count": {
+      "type": "integer",
+      "minimum": 0
+    }
+  },
+  "required": [
+    "search_id",
+    "mode",
+    "query",
+    "filters",
+    "sort",
+    "page",
+    "result_count"
+  ]
+}

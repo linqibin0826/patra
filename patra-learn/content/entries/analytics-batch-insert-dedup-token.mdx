@@ -1,0 +1,163 @@
+---
+title: 批量写入与块令牌去重：重试同一批，ClickHouse 整批丢弃
+summary: ClickHouse 怕小批量写入，所以入库一批一写；至少一次投递会带来重复，Patra 用「topic ID + 每个分区的偏移量范围」当 insert_deduplication_token，重试同一批时 ClickHouse 在最近 1,000 次写入里认出令牌、整批丢弃。提交偏移量前崩溃仍会写出部分重复，交给下游按 event_id 去重；被拒的批次用二分定位坏行。
+type: concept
+difficulty: advanced
+tags: [analytics, database]
+prerequisites: [analytics-mergetree-parts, msg-at-least-once-and-dedup]
+topics: [analytics-pipeline]
+sources:
+  - version: v0.18
+    issue: PAP-168
+    pr: 373
+personalEnv: false
+---
+
+<Diagnose
+  question="消息队列是「至少一次」投递：同一条消息可能到两次。消费者要怎样才能不把它算两次？"
+  options={["消费者按消息自带的唯一 ID 认出重复，处理过的就跳过", "让 broker 保证每条只投一次，消费者不用管", "把消费者并发调成 1，同一条就不会被处理两次"]}
+  answer="A"
+  ifRight="对。至少一次的重复只能由接收方认出来。这篇讲 Patra 在 ClickHouse 上怎么认：先按整批认，再按事件 ID 认。"
+  ifWrong="答案是 A。至少一次的意思就是 broker 不保证不重复；并发调成 1 也挡不住「处理完、确认前崩溃」后的重投。重复只能靠接收方按唯一 ID 去重。这题考的是至少一次与去重，先读那篇。"
+  suggest="msg-at-least-once-and-dedup"
+/>
+
+<Callout kind="lead">
+
+块令牌（`insert_deduplication_token`）是写入时附带的一个字符串：ClickHouse 记住最近若干次写入的令牌，同一个令牌再来，整批数据直接丢弃，就像没写过。
+
+</Callout>
+
+## 为什么一定要批量写
+
+MergeTree 那篇讲过：ClickHouse 每写一次，就在表上新建一个数据片段，后台再慢慢合并。Patra 的明细表 `events` 挂着三个物化视图，一次写入会在 `events` 和三张汇总表上**各**多一个片段，也就是 4 个；而合并线程只有 2 个。一秒写几百次，片段数很快超过上限，写入被拒（`TOO_MANY_PARTS`）。
+
+所以入库消费者攒批：一批最多 5 万条，流量小时最多等 1 秒，**一批只写一次**。连按分区拆开分别写都不做：`events.raw` 有 3 个分区，拆开就是 3 倍的片段。
+
+## 至少一次，重复从哪来
+
+入库是「写成功才提交偏移量」，这保证了不丢，代价是会重复。重复有三个来源：
+
+- **写成了，响应没回来**：ClickHouse 已经写进去，响应在路上超时，消费者以为失败，重试同一批。
+- **写成了，提交偏移量前进程崩溃**：重启后从上次提交处重新拉取。
+- **故意的**：流量模拟器每条事件以 1% 的概率再发一次，专门用来验证去重。
+
+第一种最常见，块令牌就是给它准备的。
+
+## 令牌长什么样
+
+令牌由这一批里每个分区的偏移量范围拼成，前面加上 topic ID：
+
+<CodeRef at="patra-api/patra-analytics/patra-analytics-app/src/main/java/dev/patra/analytics/app/ingest/usecase/ingest/IngestBatchHandler.java@8140a9d9482324670b63f00ab3c62690102196c5" lines="166-182" />
+
+```java
+  /// 批次去重令牌：`{topic ID}|p{分区}:{首}-{尾}|…`，按分区号排序（入库设计 §4.3）。
+  ///
+  /// @param records 这一批（同一 topic）
+  /// @return 令牌
+  private static String token(List<IngestRecord> records) {
+    Map<Integer, long[]> ranges = new TreeMap<>();
+    for (IngestRecord record : records) {
+      ranges.merge(
+          record.partition(),
+          new long[] {record.offset(), record.offset()},
+          (a, b) -> new long[] {Math.min(a[0], b[0]), Math.max(a[1], b[1])});
+    }
+    return records.getFirst().topicId()
+        + ranges.entrySet().stream()
+            .map(e -> "|p" + e.getKey() + ":" + e.getValue()[0] + "-" + e.getValue()[1])
+            .collect(Collectors.joining());
+  }
+```
+
+几个细节：
+
+- **为什么带 topic ID**：topic ID 是 Kafka 给每个 topic 的 UUID，启动时用 AdminClient 取一次。删掉 topic 重建、重置消费组、集成测试复用同一个 ClickHouse 容器时，偏移量都会从 0 重来；令牌只有偏移量的话，新数据会和旧令牌撞上，被当成重复**静默丢掉**。topic ID 一换，令牌就不会撞。
+- **记多少个**：明细表和三张汇总表都设了 `non_replicated_deduplication_window = 1000`，记住最近 1,000 次写入的令牌。重试期间消费者卡在这一批上，不会写别的批次，窗口不会被挤掉。
+- **重试时边界不变**：监听方法写失败时抛普通异常，spring-kafka 的错误处理器用**内存里的同一批**重新调用它，不重新拉取，所以这一批的偏移量范围、也就是令牌，和上次一模一样。监听方法刻意不抛 `BatchListenerFailedException`：那会让容器重新定位偏移量、重新拉取，批次边界就变了。
+
+## 走一遍：令牌挡住了什么、挡不住什么
+
+<Stepper
+  title="两次故障：响应超时与提交前崩溃"
+  nodes={[
+    { id: "kafka", label: "events.raw", sub: "分区 0" },
+    { id: "consumer", label: "入库消费者", sub: "批量监听" },
+    { id: "ch", label: "ClickHouse", sub: "events" }
+  ]}
+  links={[
+    { from: "kafka", to: "consumer", label: "拉一批" },
+    { from: "consumer", to: "ch", label: "带令牌写" }
+  ]}
+  steps={[
+    { caption: "假设流量不大，等满 1 秒拉到 8,000 条：偏移量 100～8099。令牌 T1 = 「topic ID|p0:100-8099」。", focus: ["kafka", "consumer"], links: ["kafka>consumer"], tokens: [{ id: "b1", label: "T1 · 8,000 条", at: "consumer" }], notes: [{ at: "kafka", text: "已提交 · 100" }] },
+    { caption: "整批一次写进 ClickHouse。数据写进去了，可响应在路上超时，消费者以为失败，不提交偏移量。", focus: ["ch"], links: ["consumer>ch"], tokens: [{ id: "b1", label: "T1 · 8,000 条", at: "ch" }], notes: [{ at: "kafka", text: "已提交 · 100" }, { at: "ch", text: "8,000 行", tone: "ok" }] },
+    { caption: "错误处理器按退避，用内存里的同一批再调一次监听方法：同样 8,000 条，同样的令牌 T1。", focus: ["consumer"], tokens: [{ id: "b1r", label: "T1 · 8,000 条", at: "consumer" }], notes: [{ at: "kafka", text: "已提交 · 100" }, { at: "ch", text: "8,000 行", tone: "ok" }] },
+    { caption: "ClickHouse 在最近 1,000 个令牌里查到 T1，整批丢弃，三张汇总表也不会多出一份。写入「成功」返回，消费者提交偏移量。", focus: ["ch", "kafka"], links: ["consumer>ch"], tokens: [{ id: "b1r", label: "T1 重复", at: "ch", state: "dropped" }], notes: [{ at: "kafka", text: "已提交 · 8100", tone: "ok" }, { at: "ch", text: "8,000 行", tone: "ok" }] },
+    { caption: "下一批 8100～15099 共 7,000 条，令牌 T2，写成了。就在提交偏移量之前，进程崩溃。", focus: ["ch"], links: ["kafka>consumer", "consumer>ch"], tokens: [{ id: "b2", label: "T2 · 7,000 条", at: "ch" }], notes: [{ at: "kafka", text: "已提交 · 8100", tone: "wait" }, { at: "ch", text: "15,000 行", tone: "ok" }] },
+    { caption: "重启后从已提交的 8100 重新拉。这时 Kafka 里攒了更多事件，一次拉满 5 万条：8100～58099，令牌 T3。", focus: ["kafka", "consumer"], links: ["kafka>consumer"], tokens: [{ id: "b3", label: "T3 · 50,000 条", at: "consumer" }], notes: [{ at: "kafka", text: "已提交 · 8100", tone: "wait" }, { at: "ch", text: "15,000 行", tone: "ok" }] },
+    { caption: "T3 没见过，整批写入。其中 8100～15099 这 7,000 条，表里已经有一份了：部分重复就这样进了库，要靠下游按 event_id 去重。", focus: ["ch"], links: ["consumer>ch"], tokens: [{ id: "b3", label: "T3 · 50,000 条", at: "ch" }], notes: [{ at: "kafka", text: "已提交 · 58100", tone: "ok" }, { at: "ch", text: "65,000 行 · 7,000 重复", tone: "bad" }] }
+  ]}
+  guesses={[
+    { before: 4, question: "带着同一个令牌 T1，这 8,000 条又写了一次。ClickHouse 会怎样？", options: ["照样写进去，等后台合并时再按 event_id 去重", "逐行比对，只丢掉 event_id 已经存在的那几行", "认出令牌 T1，整批丢弃，表里还是一份"], answer: "C", explain: "块令牌按整批认，不看每一行：同一个令牌在去重窗口里出现过，这一批就当没写过。三张汇总表也不会多出一份。" },
+    { before: 6, question: "崩溃重启后，从同一个偏移量 8100 重新拉。这一批的令牌和崩溃前那批 T2 一样吗？", options: ["不一样：Kafka 里攒了更多事件，这次拉到的范围变了", "一样：起点都是 8100，令牌按起点算", "一样：ClickHouse 会按数据内容判断是不是同一批"], answer: "A", explain: "令牌是这一批的偏移量范围。重新拉取时一批拉多少取决于当时 Kafka 里有多少，起点相同、终点不同，令牌就不同。这正是 Patra 做不到恰好一次的地方。" }
+  ]}
+/>
+
+<Callout kind="warn">
+
+令牌只挡「同一批重试」。提交偏移量前崩溃、模拟器故意把副本放进另一次写入，令牌都对不上。所以令牌之后还有两道：明细表 `ReplacingMergeTree` 按 `event_id` 合并、数条数一律 `uniqExact(event_id)`；汇总表只存 `max` / `min` 这类重复来几次结果都一样的值。详见「重复行怎么数：ReplacingMergeTree 只在合并时去重，数条数一律 uniqExact」和「物化视图：写入时就汇总，所以汇总表只能存幂等的值」两篇。
+
+</Callout>
+
+## 一批里有一条坏数据怎么办
+
+ClickHouse 写入是整批的：5 万条里有一条解析不了，整批被拒。可数据里有坏行，重试多少次都不会好，也不能因为一条坏行卡住整个管线。
+
+入库用例先把空消息和不以 `{` 开头的消息挑出来，直接转进 dlq 表（JSONEachRow 会静默跳过空行，这类最常见的垃圾也不值得去找）。剩下的整批写；被拒了，就**对半拆开**分别写：
+
+<CodeRef at="patra-api/patra-analytics/patra-analytics-app/src/main/java/dev/patra/analytics/app/ingest/usecase/ingest/IngestBatchHandler.java@8140a9d9482324670b63f00ab3c62690102196c5" lines="106-118" />
+
+```java
+    boolean whole = from == 0 && to == records.size() - 1;
+    List<String> lines = records.subList(from, to + 1).stream().map(IngestRecord::value).toList();
+    try {
+      insert(stream, lines, whole ? token : token + "#" + from + "-" + to);
+    } catch (IngestRejectedException e) {
+      if (from == to) {
+        rejected.add(new Rejection(records.get(from), e.getMessage()));
+        return;
+      }
+      int middle = (from + to) >>> 1;
+      write(stream, records, from, middle, token, rejected);
+      write(stream, records, middle + 1, to, token, rejected);
+    }
+```
+
+写成的那半就算写成，写不进的那半继续对半拆，到单条还写不进，就转成 dlq 记录（原因 `ingest_rejected`）。几个要点：
+
+- **子批也有令牌**：在批次令牌后面加 `#起-止`（批内序号）。重试整批时拆法一样、子批令牌一样，已经写成的那半会被认出来丢弃。
+- **哪些算「坏」**：只有 ClickHouse 返回解析、类型转换这一类错误码才拆；连不上、超时、磁盘不够都当成「重试会好」，整批停住等。
+- **为什么 `max.poll.interval.ms` 设到 10 分钟**：二分重写也算这一批的处理时间，超时了消费组会判它死掉、触发重平衡。
+
+<Quiz
+  title="你猜会怎样"
+  questions={[
+    {
+      question: "5 万条里只有 1 条坏的。逐条写要 5 万次写入、留下 5 万个片段。用上面的二分法，大约要写多少次？",
+      options: ["约 5,000 次", "约 32 次", "约 2 次"],
+      answer: "B",
+      explain: "每拆一层，只有含坏行的那半要继续拆，另一半一次写成。5 万条拆到单条大约 16 层，每层写两次，合计约 32 次。坏行越多，次数越多，所以最常见的垃圾先在 Java 里挑掉。"
+    }
+  ]}
+/>
+
+<Transfer
+  prompt="换个库：你要写一个消费者，把 Kafka 里的订单事件批量写进 PostgreSQL。PostgreSQL 没有块令牌。你怎么做到「重试同一批不会多一份」？崩溃重启、批次边界变了的情况呢？"
+  points={[
+    { label: "按事件 ID 唯一", text: "给事件 ID 建唯一约束，写入用 INSERT ... ON CONFLICT DO NOTHING，重试也好、边界变了也好，已有的行都会被跳过。" },
+    { label: "偏移量和数据同一个事务", text: "PostgreSQL 有事务，可以把这批数据和消费到的偏移量写进同一个事务；重启时从库里读偏移量，这是真正的恰好一次。" },
+    { label: "为什么 ClickHouse 不这样做", text: "ClickHouse 没有跨表事务，也不在写入时检查唯一性，去重只能靠块令牌和后台合并，所以才需要令牌加 event_id 两层。" },
+    { label: "批次大小的考量变了", text: "PostgreSQL 没有片段与合并的压力，批次大小主要看事务时长和锁，不必攒到 5 万条。" }
+  ]}
+/>

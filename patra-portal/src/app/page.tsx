@@ -14,7 +14,7 @@ export default async function HomePage({
   searchParams: Promise<{ tab?: string }>;
 }) {
   const { tab } = await searchParams;
-  const safeTab: FeedTab = tab === "cited" ? "cited" : "recent";
+  const safeTab: FeedTab = tab === "cited" || tab === "hot" ? tab : "recent";
   return (
     <>
       <TopNav />

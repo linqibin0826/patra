@@ -5,6 +5,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import "@testing-library/jest-dom/vitest";
 import { CiteDialog } from "@/components/library/CiteDialog";
 import type { DialogScope } from "@/components/library/ExportDialog";
+import { track } from "@/lib/analytics/client/queue";
+
+vi.mock("@/lib/analytics/client/queue", () => ({ track: vi.fn() }));
 
 const fetchMock = vi.fn<typeof fetch>();
 const writeText = vi.fn<(text: string) => Promise<void>>();
@@ -19,6 +22,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
   fetchMock.mockReset();
   writeText.mockReset();
+  vi.mocked(track).mockReset();
 });
 
 const COLLECTION: DialogScope = {
@@ -159,5 +163,36 @@ describe("CiteDialog · 评审修复", () => {
     respond({ keys: ["11", "12"], skippedUnavailable: 0 });
     await user.click(screen.getByRole("button", { name: "重试" }));
     expect(await screen.findByText("[1] CHEN Y. Title one[J]. 2019.")).toBeInTheDocument();
+  });
+});
+
+describe("CiteDialog · 埋点 Citation Copied", () => {
+  it("复制成功：记这次复制的文献与格式", async () => {
+    respond({ keys: ["11", "12"], skippedUnavailable: 0 });
+    const { user } = open();
+    await user.click(await screen.findByRole("button", { name: "复制 2 条引用" }));
+    await waitFor(() =>
+      expect(track).toHaveBeenCalledWith("citation_copied", {
+        article_ids: ["11", "12"],
+        style: "gb-t-7714-2015",
+      }),
+    );
+  });
+
+  it("只打开对话框、看预览：不记", async () => {
+    respond({ keys: ["11", "12"], skippedUnavailable: 0 });
+    open();
+    await screen.findByRole("button", { name: "复制 2 条引用" });
+    expect(track).not.toHaveBeenCalled();
+  });
+
+  it("复制没成功、降级成「已选中」：不记", async () => {
+    respond({ keys: ["11", "12"], skippedUnavailable: 0 });
+    const { user } = open();
+    writeText.mockRejectedValue(new Error("denied"));
+    Object.defineProperty(document, "execCommand", { value: () => false, configurable: true });
+    await user.click(await screen.findByRole("button", { name: "复制 2 条引用" }));
+    expect(await screen.findByText(/已选中/)).toBeInTheDocument();
+    expect(track).not.toHaveBeenCalled();
   });
 });

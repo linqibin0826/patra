@@ -1,0 +1,15 @@
+{
+  "event_id": "0193e1a2-7c4b-7d2e-9f10-00000000000a",
+  "event_name": "citation_copied",
+  "schema_version": "1-0-0",
+  "created_at": "2026-11-01T08:30:10.120Z",
+  "page_path": "/library",
+  "page_type": "library",
+  "properties": {
+    "article_ids": [
+      "39871245",
+      "40112233"
+    ],
+    "style": "gb-t-7714-2015"
+  }
+}

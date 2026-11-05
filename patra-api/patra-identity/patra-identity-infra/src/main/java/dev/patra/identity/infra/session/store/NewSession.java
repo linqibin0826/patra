@@ -17,6 +17,7 @@ import lombok.Builder;
 /// @param clientType 客户端类型
 /// @param deviceId 设备标识，可以为 `null`；空白按 `null`
 /// @param createdAt 创建时间
+/// @param authenticatedAt 这次登录输密码的时间；第三方登录没有，为 `null`，不写 `auth_at`
 /// @param expiresAt 绝对过期时间，必须晚于创建时间
 /// @param idleTimeout 不活跃过期，正数
 /// @param maxSessionsPerUser 每用户的会话上限，至少 1
@@ -28,6 +29,7 @@ public record NewSession(
     ClientType clientType,
     String deviceId,
     Instant createdAt,
+    Instant authenticatedAt,
     Instant expiresAt,
     Duration idleTimeout,
     int maxSessionsPerUser) {

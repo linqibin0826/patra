@@ -15,6 +15,7 @@ import { CitationPreview } from "@/components/library/CitationPreview";
 import { CopyButton } from "@/components/library/CopyButton";
 import { CopyLinkField } from "@/components/library/CopyLinkField";
 import { ResponsivePopover } from "@/components/ui/popover";
+import { track } from "@/lib/analytics/client/queue";
 import { saveResponseAsFile } from "@/lib/download";
 import { EXPORT_FORMATS, type ExportFormat } from "@/lib/library/export-formats";
 import { btnSecondary, btnText } from "@/lib/portal-ui";
@@ -100,7 +101,7 @@ export function SharePanel({ paperId, pmid, link }: ShareProps) {
       const res = await fetch("/api/publications/export", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ids: [paperId], format, name: pmid ?? paperId }),
+        body: JSON.stringify({ ids: [paperId], format, name: pmid ?? paperId, scope: "items" }),
       });
       if (!res.ok) {
         throw new Error(`导出失败：${res.status}`);
@@ -142,6 +143,7 @@ export function SharePanel({ paperId, pmid, link }: ShareProps) {
           target={() => preview.current}
           disabled={!citations.data || lines.length === 0}
           className="self-start"
+          onCopied={() => track("citation_copied", { article_ids: [paperId], style })}
         />
       </section>
       <section className="flex flex-col gap-2">

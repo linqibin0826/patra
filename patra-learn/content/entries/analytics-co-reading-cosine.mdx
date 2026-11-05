@@ -1,0 +1,171 @@
+---
+title: 看过还看了：数一起读的人，再除掉热门的优势
+summary: 文献页下方的「看过这篇的人还看了」，把同一个人同一天读过的文献当成一组，数两篇被多少人一起读过，再用余弦相似度压低热门文献天然占的便宜。至少 3 个人一起读过才算数，每天算一次写进快照，不足 6 篇时用同主题文献补位。
+type: concept
+difficulty: advanced
+tags: [analytics, backend]
+prerequisites: [analytics-hot-reading-decay]
+topics: [analytics-pipeline]
+sources:
+  - version: v0.18
+    issue: PAP-170
+    pr: 373
+personalEnv: false
+---
+
+<Diagnose
+  question="共现任务和热读任务用的是同一段取数：近 14 天、只算真人会话、同一人同一天对同一篇只算一行。B 今天把 X 打开了 3 次、Y 打开了 1 次。在「B 今天读过的文献」里，X 出现几次？"
+  options={["3 次：打开几次就出现几次", "1 次：先合并成每人每天每篇一行", "4 次：X 和 Y 加起来一共打开了 4 次"]}
+  answer="B"
+  ifRight="对。共现建立在热读的那张「每人每天每篇一行」之上。往下读会讲怎么从这些行里找出「常被一起读」的文献。"
+  ifWrong="答案是 B。热读先把阅读合并成（文献，人，天）一行，共现直接复用这一步，所以 B 今天这一组里 X 只出现一次。这题考的是热读那篇讲的取数规则，先读它会更顺。"
+  suggest="analytics-hot-reading-decay"
+/>
+
+<Callout kind="lead">
+
+看过还看了：把同一个人同一天读过的文献当成一组，数两篇文献一起出现在多少人的组里，再除以两篇各自读者数的几何平均。
+
+</Callout>
+
+## 先把阅读分成一组一组
+
+推荐系统里常把「一起出现的东西」叫作一个篮子：一张购物小票、一次会话里看过的商品。Patra 的篮子是**同一个人同一天（北京时间）读过的文献**。
+
+例：B 今天读了 X、Y、Z，C 今天读了 X、Y，E 昨天读了 X、今天读了 Y。那么：
+
+- B 今天一组：X、Y、Z
+- C 今天一组：X、Y
+- E 昨天一组：X；今天一组：Y
+
+E 读过 X 也读过 Y，但不在同一天，**不算一起读**。
+
+### 每组最多 20 篇
+
+一组里有 n 篇，能配出 n × (n − 1) 个有序配对（X→Y 和 Y→X 各算一个）。20 篇是 380 对，200 篇就是 39,800 对：配对数随组的大小平方增长，一个一天翻了几百篇的访客能制造出比普通读者多上百倍的配对。
+
+所以一组超过 20 篇时，只取这个人当天**最先读**的 20 篇（按他当天对每篇的第一条事件时间），其余的不参与这一组。整组丢掉也是一种做法，Patra 选的是截断。
+
+## 只数一起读的人数，热门文献会赢
+
+有了篮子，最朴素的相似度是：X 和 Y 一起出现在多少个人的组里，记为 co(X, Y)。数完给每篇 X 按 co 排序，取前几名。
+
+问题是热门文献和谁都一起读过。一篇 1,000 人读过的综述，跟几乎任何一篇冷门文献都能凑出几个共同读者，结果每篇文献的推荐列表里都是它。这不是「看过这篇的人还看了」，而是「所有人都看了」。
+
+余弦相似度把一起读的人数除以两篇各自读者数的几何平均：
+
+```
+相似度(X, Y) = co(X, Y) / √( n(X) × n(Y) )
+```
+
+n(X) 是读过 X 的不同人数。一篇文献读者越多，分母越大，它靠「谁都读过」拿到的那点共同读者就越不值钱。这正是 Amazon 2003 年发表的 item-to-item 推荐用的归一化方式之一。
+
+<Params
+  title="动手试试：热门综述还能排在前面吗"
+  guess={{ question: "X 有 10 个读者。Y 也有 10 个读者，其中 5 个读过 X；综述 Z 有 1,000 个读者，其中 8 个读过 X。用余弦相似度，X 的推荐里谁排在前面？", options: ["Y 在前：0.5 对 0.08", "Z 在前：共同读者 8 个，比 Y 的 5 个多", "并列：两篇都过了 3 人的门槛，不再比较"], answer: "A", explain: "Y：5 ÷ √(10 × 10) = 0.5；Z：8 ÷ √(10 × 1000) ≈ 0.08。Z 的共同读者更多，但它的 1,000 个读者把分母撑大了。" }}
+  controls={[
+    { type: "switch", id: "cosine", label: "用余弦相似度（关掉就只数一起读的人数）", default: true },
+    { type: "slider", id: "nz", label: "综述 Z 的读者数", min: 10, max: 1000, step: 10, default: 1000, unit: " 人" }
+  ]}
+  cases={[
+    { when: { cosine: false }, results: [{ label: "Y 的得分", value: "5（一起读的人数）" }, { label: "Z 的得分", value: "8（一起读的人数）" }, { label: "排在前面的", value: "Z", tone: "bad" }], verdict: { tone: "bad", head: "热门吃掉一切。", text: "不管 Z 有多少读者，只要共同读者多就排前面；每篇冷门文献的推荐里都会是它。" } },
+    { when: { nz: [10, 10] }, results: [{ label: "Y 的相似度", value: "5 ÷ √(10 × 10) = 0.50" }, { label: "Z 的相似度", value: "8 ÷ √(10 × 10) = 0.80" }, { label: "排在前面的", value: "Z", tone: "ok" }], verdict: { tone: "ok", head: "Z 赢得公平。", text: "Z 只有 {nz}，跟 Y 一样冷门，8 个共同读者确实说明它和 X 关系更紧。" } },
+    { when: { nz: [20, 20] }, results: [{ label: "Y 的相似度", value: "0.50" }, { label: "Z 的相似度", value: "8 ÷ √(10 × 20) ≈ 0.57" }, { label: "排在前面的", value: "Z", tone: "ok" }], verdict: { tone: "ok", head: "Z 还领先一点。", text: "Z 有 {nz}，分母开始变大，优势在缩小。" } },
+    { when: { nz: [30, 30] }, results: [{ label: "Y 的相似度", value: "0.50" }, { label: "Z 的相似度", value: "8 ÷ √(10 × 30) ≈ 0.46" }, { label: "排在前面的", value: "Y", tone: "ok" }], verdict: { tone: "ok", head: "交叉点。", text: "Z 有 {nz} 时，相似度已经落到 Y 后面。" } },
+    { when: { nz: [40, 90] }, results: [{ label: "Y 的相似度", value: "0.50" }, { label: "Z 的相似度", value: "约 0.40 到 0.27" }, { label: "排在前面的", value: "Y", tone: "ok" }], verdict: { tone: "ok", head: "Y 在前。", text: "Z 有 {nz}，它的 8 个共同读者里有一部分只是因为它读的人多。" } },
+    { when: { nz: [100, 290] }, results: [{ label: "Y 的相似度", value: "0.50" }, { label: "Z 的相似度", value: "约 0.25 到 0.15" }, { label: "排在前面的", value: "Y", tone: "ok" }], verdict: { tone: "ok", head: "Y 稳稳在前。", text: "Z 有 {nz}，余弦把它压到了 Y 的一半以下。" } },
+    { when: { nz: [300, 990] }, results: [{ label: "Y 的相似度", value: "0.50" }, { label: "Z 的相似度", value: "约 0.15 到 0.08" }, { label: "排在前面的", value: "Y", tone: "ok" }], verdict: { tone: "ok", head: "热门被压下去了。", text: "Z 有 {nz}，相似度只剩零点一上下。" } },
+    { results: [{ label: "Y 的相似度", value: "0.50" }, { label: "Z 的相似度", value: "8 ÷ √(10 × 1000) ≈ 0.08" }, { label: "排在前面的", value: "Y", tone: "ok" }], verdict: { tone: "ok", head: "这就是余弦的用处。", text: "Z 的共同读者比 Y 多，但它和谁都一起被读过，相似度只有 Y 的六分之一。" } }
+  ]}
+/>
+
+余弦不是唯一的归一化。业界还常用 Jaccard（一起读的人数 ÷ 读过任一篇的人数）和 lift（实际一起读的比例 ÷ 随机碰上的比例），思路都是同一个：把「因为热门才碰到一起」的部分扣掉。
+
+## 门槛：至少 3 个人一起读过
+
+co(X, Y) ≥ 3 才算一对。只有一两个人碰巧同一天读了两篇不相关的文献，不该变成一条推荐。
+
+页面上**不显示「几个人一起读过」**。门槛只有 3 个人，显示人数就等于半公开了别人的阅读：你看到「3 人一起读过」，再结合自己认识谁在研究这个方向，很容易猜出是谁。快照表里有 `co_readers` 列，只供排查，不对外。
+
+## 只以当前文献为键
+
+Amazon 的 item-to-item 做法把计算分成两半：离线算好「每件商品和哪些商品常被一起买」，页面请求时只按当前商品查一张现成的表。Patra 一样：每天北京时间 04:30 的任务算出每篇文献最相似的前 20 篇，写进 PostgreSQL 快照，文献页按文献 ID 读。
+
+这样的推荐只看「当前这篇」，不读你个人的阅读历史，所以它不是「猜你喜欢」那类个性化推荐。个性化推荐要读个人画像，按《算法推荐管理规定》还要同时提供关闭开关，本版明确不做。
+
+<Quiz
+  title="考考自己"
+  questions={[
+    {
+      question: "X→Y 的相似度是 0.5，Y 进了 X 的推荐列表。反过来，Y 的推荐列表里 X 怎么样？",
+      options: ["不一定有记录：配对只按一个方向存", "要用 Y 的读者数重新算，相似度会是另一个值", "相似度同样是 0.5，但它要和 Y 的其他配对比，名次不一定相同"],
+      answer: "C",
+      explain: "公式里 co(X, Y) 和 √(n(X) × n(Y)) 都对 X、Y 对称，所以两个方向的值相同。查询两个方向都会展开；可 Y 的列表是和 Y 的其他配对比，Y 若有更多关系更紧的文献，X 的名次会靠后，甚至落到前 20 之外。"
+    }
+  ]}
+/>
+
+## 一片一片地算，守住内存
+
+配对展开后是整个计算里最大的一张中间表。Patra 的 ClickHouse 账号每条查询最多用 1 GiB 内存，平时真实数据只有几行，但本机开发打开「包含合成事件」后，任务面对的是亿级模拟事件。
+
+所以共现查询按 X **分片**：`cityHash64(X) % 8 = k` 的 8 片各跑一条查询（片数可配置，默认 8），每片只展开 X 落在这一片的配对。同一篇 X 只会出现在一片里，各片的结果拼起来就是全部。
+
+<CodeRef at="patra-api/patra-analytics/patra-analytics-infra/src/main/java/dev/patra/analytics/infra/insight/signal/ClickHouseReadingSignalAdapter.java@8140a9d9482324670b63f00ab3c62690102196c5" lines="68-93" />
+
+```java
+  /// 共现（一片）：同一人同一天为一组、取当天最先读的 20 篇；只展开 X 落在这一片的有序配对；
+  /// 相似度 = 一起读的人数 / √(读 X 的人数 × 读 Y 的人数)，人数都在截断后的组里数。
+  private static final String CO_READING =
+      READS.replace("{aggregate}", "min(derived_at) AS first_at")
+          + """
+          , baskets AS (
+              SELECT person_id,
+                     arraySlice(arrayMap(t -> t.2, arraySort(groupArray((first_at, article_id)))),
+                                1, {groupLimit:UInt8}) AS items
+              FROM reads GROUP BY person_id, day),
+          readers AS (
+              SELECT a AS article_id, uniqExact(person_id) AS n
+              FROM baskets ARRAY JOIN items AS a GROUP BY a),
+          pairs AS (
+              SELECT p.1 AS x, p.2 AS y, uniqExact(person_id) AS co
+              FROM baskets
+              ARRAY JOIN arrayFlatten(arrayMap(a -> arrayMap(b -> (a, b), arrayFilter(b -> b != a, items)),
+                         arrayFilter(a -> cityHash64(a) % {shards:UInt16} = {shard:UInt16}, items))) AS p
+              GROUP BY x, y HAVING co >= {minCoReaders:UInt8})
+          SELECT x, y, toUInt32(co) AS co, co / sqrt(rx.n * ry.n) AS similarity
+          FROM pairs
+          JOIN readers AS rx ON rx.article_id = pairs.x
+          JOIN readers AS ry ON ry.article_id = pairs.y
+          ORDER BY x, similarity DESC, co DESC, y ASC
+          LIMIT {perArticle:UInt32} BY x
+          """;
+```
+
+按 CTE 的顺序读：
+
+1. `reads`（和热读共用）：每人每天每篇一行，这里取当天第一次读的时间 `first_at`。
+2. `baskets`：按（人，天）分组，按 `first_at` 排序后截前 20 篇，得到一组的文献数组。
+3. `readers`：把数组展开，数每篇的读者数 n。注意它是在**截断后**的组里数的，分子分母用的是同一批数据。
+4. `pairs`：只对落在这一片的 X 展开配对，数一起读的人数 co，不到 3 的扔掉。
+5. 最后算相似度，每篇 X 按相似度、co、Y 的 ID 排序，`LIMIT ... BY x` 每篇取前 25 名。
+
+多取的 5 名是给核对留的余量：任务拿到结果后，把出现过的文献按 100 个一批向 catalog 核对，去掉撤稿、软删、已不存在的 X 和 Y，每篇留前 20 名，一个事务里整表替换快照。
+
+## 不足 6 篇时补同主题文献
+
+文献页这一块最多 6 篇。共现快照只覆盖「至少有一对被 3 个人一起读过」的文献，绝大多数文献（尤其是新收录的）一条都没有。
+
+不足 6 篇时，请求当时向 catalog 要这篇的「同主题邻居」补齐：先是同一个 MeSH 主要主题词的文献，再是同一期刊的。补位的部分在接口里标成 `SAME_MESH` 或 `SAME_VENUE`，门户把这部分的标题换成「同主题文献」，不和共现结果混成一组。
+
+补位放在请求时而不是每天的任务里，是因为量：给每篇文献都预先算邻居，是全部文献 × 6；请求时算再在 Redis 里缓存 6 小时，只算真有人打开的那些。catalog 不可用时只返回共现的部分，不报错，也不缓存这次的空结果。
+
+<Transfer
+  prompt="有人提议把「一组」从「同一个人同一天」改成「同一个人近 14 天读过的全部文献」，理由是能找到更多配对。你觉得会发生什么？要跟着调哪些参数？"
+  points={[
+    { label: "组变大", text: "一个人 14 天读的文献远多于一天，配对数随组的大小平方增长，20 篇的截断会砍掉更多，内存压力也更大。" },
+    { label: "噪声变多", text: "两周里一个人可能在看好几个不相干的课题，它们被算成「一起读」，推荐里会混进关系很弱的文献。" },
+    { label: "门槛变松", text: "共同读者更容易凑够 3 个，门槛实际上降低了，可能要提高门槛或者改用更严的归一化。" },
+    { label: "要重新验证", text: "改了分组口径，相似度的分布全变了，前 20 名和补位的比例都要重新看一遍。" }
+  ]}
+/>

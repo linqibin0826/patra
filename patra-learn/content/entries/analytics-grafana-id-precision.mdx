@@ -1,0 +1,152 @@
+---
+title: Grafana 直接读 ClickHouse：超过 2^53 的文献 ID 会丢精度，要在 SQL 里转成字符串
+summary: Patra 的后端早就在 HTTP 响应里把 Long 写成字符串，可 Grafana 看板直接连 ClickHouse，绕过了那一层。COUNTER 前 20 篇表里的文献 ID 超过 2^53，到了浏览器里会被舍入，「打开文献页」的链接就会打开别的文献。改法是在面板 SQL 里 toString(article_id)，集成测试断言这一列是字符串。
+type: pitfall
+difficulty: practice
+tags: [analytics, frontend]
+prerequisites: [spring-json-jackson, analytics-ads-layer]
+topics: [analytics-pipeline]
+sources:
+  - version: v0.18
+    issue: PAP-172
+    pr: 377
+personalEnv: false
+---
+
+<Diagnose
+  question="Patra 的后端在 HTTP 响应里已经把 Long 写成字符串。运营看板的一张表直接连 ClickHouse 查 UInt64 类型的 article_id，再拼成门户的文献页链接。这个链接准吗？"
+  options={["准：Long 转字符串的规则对整个系统生效，ClickHouse 返回的也算", "不一定：Grafana 不经过 Patra 的后端，ID 作为数字到了浏览器，超过 2^53 就会被舍入", "准：UInt64 是无符号整数，比 Java 的 Long 多一位，装得下"]}
+  answer="B"
+  ifRight="对。转换规则只装在 Patra 自己服务的响应上，Grafana 那条路根本不经过它。往下读看这条路怎么走、怎么改。"
+  ifWrong="答案是 B。Long 转字符串只加在 Spring MVC 写响应的那一处，Grafana 直连数据库，数字原样交给浏览器里的 JavaScript，而 JavaScript 能精确表示的整数只到 2 的 53 次方左右。这题考的是「为什么要转字符串、转换加在哪」，Jackson 那篇讲过。"
+  suggest="spring-json-jackson"
+/>
+
+## 坑
+
+<Callout kind="lead" label="坑在哪">
+
+后端在 HTTP 层做的 Long 转字符串，只管经过后端的数据。Grafana 这类直接读数据库的工具绕过了这一层，超过 2^53 的 ID 到了浏览器里会悄悄变成另一个数。
+
+</Callout>
+
+运营看板「文献使用（COUNTER）」组有一张表：时间范围内被读全文最多的 20 篇，点文献 ID 打开门户的文献页。文献 ID 是雪花 ID，一个按时间加机器号拼出来的 64 位整数，远超 2^53。全分支终审指出：这一列原样交给 Grafana，链接会打开错的文献。问题在合并前修掉了。
+
+## 为什么
+
+「对象和 JSON 怎么互转：Jackson」那篇讲过：浏览器里的 JavaScript 只有一种数字类型，能精确表示的整数最大是 2 的 53 次方减 1。更大的整数不会报错，而是被舍入到最接近的、能表示的那个数，后几位就变了。
+
+所以 Patra 在 Spring MVC 写响应时把 `Long` 写成字符串，门户拿到的 ID 一直是准的。可这条规则只装在那一处。看板走的是另一条路：
+
+<Structure
+  title="同一个文献 ID，两条路到浏览器"
+  nodes={[
+    { id: "portal", label: "门户页面", sub: "浏览器 · JavaScript", col: 1, row: 1, desc: "收到的 ID 是字符串，原样拼进链接，准。" },
+    { id: "mvc", label: "MVC 响应转换器", sub: "Long → 字符串", col: 2, row: 1, desc: "Patra 服务写 HTTP 响应时，把 Long 写成 JSON 字符串。只有经过 Patra 服务的数据才走这里。" },
+    { id: "service", label: "Patra 后端服务", sub: "Java · Long", col: 3, row: 1, desc: "从数据库读出来是 Java 的 long，64 位，装得下雪花 ID。" },
+    { id: "grafana-ui", label: "Grafana 页面", sub: "浏览器 · JavaScript", col: 1, row: 2, desc: "面板在浏览器里渲染，数字列在这里是 JavaScript 的 number，超过 2^53 就被舍入。" },
+    { id: "grafana", label: "Grafana 服务", sub: "ClickHouse 数据源插件", col: 2, row: 2, desc: "按面板里写的 SQL 去查 ClickHouse，把结果交给浏览器。它不知道 Patra 有什么转换规则。" },
+    { id: "ch", label: "ClickHouse", sub: "article_id UInt64", code: true, col: 3, row: 2, desc: "ADS 表里的 article_id 是 64 位无符号整数。" }
+  ]}
+  edges={[
+    { from: "service", to: "mvc" },
+    { from: "mvc", to: "portal", label: "字符串" },
+    { from: "ch", to: "grafana" },
+    { from: "grafana", to: "grafana-ui", label: "数字", desc: "原样是数字，到了浏览器就只剩 JavaScript number 的精度。" }
+  ]}
+/>
+
+看板这条路上没有任何 Patra 的代码。这正是 ADS 层想要的（面板只读预先算好的表，不经过任何服务），也正是坑的来源：后端替前端兜住的那些事，Grafana 一样都没有。
+
+<Callout kind="insight" label="怎么认出它">
+
+- 链接打开的是别的文献，或者是 404；把表里显示的 ID 和数据库里的对比，前面十几位一样，后几位不一样。
+- JavaScript 打印这种被舍入的大整数时，常常是末尾几位变成 0。
+- 只有大 ID 出问题：测试里用 `1001` 这种小 ID 永远测不出来。
+
+</Callout>
+
+## 怎么避开
+
+在交给 Grafana 之前，就在 SQL 里把 ID 转成字符串：
+
+<CodeRef at="patra-infra/docker/grafana/provisioning/dashboards/patra/analytics-ops.json@c3df651e18fcd34d66a1ece0e2cea00c78e9d881" lines="1058" />
+
+```json
+          "rawSql": "SELECT toString(article_id) AS article_id, sum(unique_requests) AS `Unique Item Requests`,\n       sum(unique_investigations) AS `Unique Item Investigations`,\n       sum(total_requests) AS `Total Item Requests`\nFROM ads_daily_counter_items_latest\nWHERE day BETWEEN toDate($__fromTime, 'Asia/Shanghai') AND toDate($__toTime, 'Asia/Shanghai') AND traffic = '${traffic}' AND is_synthetic IN (${synthetic:raw})\nGROUP BY article_id ORDER BY `Unique Item Requests` DESC LIMIT 20",
+```
+
+`toString(article_id) AS article_id` 让这一列从一开始就是字符串，Grafana 和浏览器只是原样搬运。链接里用 `${__value.raw}` 取这一格的原始值，拼进门户的地址：
+
+<CodeRef at="patra-infra/docker/grafana/provisioning/dashboards/patra/analytics-ops.json@c3df651e18fcd34d66a1ece0e2cea00c78e9d881" lines="1067-1084" />
+
+```json
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "article_id"
+            },
+            "properties": [
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "打开文献页",
+                    "url": "${portal}/papers/${__value.raw}",
+                    "targetBlank": true
+                  }
+                ]
+              }
+            ]
+          }
+```
+
+`${portal}` 是看板的一个常量变量，写的是门户的地址，这里不展开。
+
+看板 JSON 放在仓库里，集成测试会把每个面板的 SQL 替换掉宏、在测试库上执行。这张表另有一条断言：结果里 `article_id` 的类型必须是 `String`。
+
+<CodeRef at="patra-api/patra-analytics/patra-analytics-infra/src/integrationTest/java/dev/patra/analytics/infra/ads/AnalyticsOpsDashboardIT.java@c3df651e18fcd34d66a1ece0e2cea00c78e9d881" lines="124-134" />
+
+```java
+  @Test
+  void top_article_ids_are_strings() {
+    String top = queries().get("Unique Item Requests 前 20 篇");
+
+    assertThat(
+            rows(client, "SELECT toTypeName(article_id) AS t FROM (" + resolve(top, "0,1") + ")")
+                .getFirst()
+                .getString("t"))
+        .as("雪花 ID 超过 2^53，交给 Grafana 前端前要转成字符串")
+        .isEqualTo("String");
+  }
+```
+
+它断言的是类型，不是具体的值：测试库里的 ID 再小，只要有人把 `toString` 删了，类型就会变回 `UInt64`，测试就红。上面说过小 ID 测不出舍入，所以测类型比测值更可靠。
+
+<Callout kind="warn">
+
+转成字符串之后，这一列就不能再按数字排序或做加减了。Patra 这张表按 `Unique Item Requests` 排序，ID 只用来显示和拼链接，没有这个问题；要按 ID 排序的场景，排序要在 SQL 里先按原始数字做完，最后一步再转字符串。
+
+</Callout>
+
+<Quiz
+  title="你猜会怎样"
+  questions={[
+    {
+      question: "下面哪条路径同样会绕过 Patra 的 Long 转字符串，让大 ID 有丢精度的风险？",
+      options: ["门户经网关调 analytics 的计数接口，拿到含文献 ID 的 JSON", "门户的服务端组件调后端接口，在 Node.js 里解析响应", "两个 Java 服务之间用 HTTP 调用，请求体里的 Long 是数字", "运营用 BI 工具直连 ClickHouse，把结果导出成 CSV 再用电子表格打开"],
+      answer: "D",
+      explain: "前两条都经过 Patra 服务的 MVC 响应，拿到的已经是字符串。Java 服务之间 Long 保持数字，但两边都是 64 位的 long，装得下。BI 工具和电子表格直接读数据库或文件，没经过任何 Patra 代码，电子表格一般也用双精度浮点存数字，同样会把大整数的后几位弄丢。"
+    }
+  ]}
+/>
+
+<Transfer
+  prompt="以后要给运营再做一个「导出本周被看最多的 1000 篇文献」的功能。方案甲：后端加一个接口，查 ClickHouse 后返回 JSON；方案乙：给运营一个只读账号，让他们用 BI 工具直接查 ADS 表。两种方案下，文献 ID 的精度各要在哪里处理？"
+  points={[
+    { label: "方案甲走后端", text: "接口经过 Spring MVC，Long 转字符串自动生效；只要读出来时用 Long 装，不在中途转成 double，就不用额外处理。" },
+    { label: "方案乙绕过后端", text: "BI 工具直连数据库，和 Grafana 一样没有 Patra 的规则；要在给它的查询或视图里就把 ID 转成字符串。" },
+    { label: "导出文件也要想", text: "导出成 CSV 后用电子表格打开，长数字照样会被当成数字截断；ID 列要以文本的形式导出或打开。" },
+    { label: "用类型断言守住", text: "像看板测试那样，断言交出去的 ID 列类型是字符串，而不是拿一个小 ID 比数值。" }
+  ]}
+/>

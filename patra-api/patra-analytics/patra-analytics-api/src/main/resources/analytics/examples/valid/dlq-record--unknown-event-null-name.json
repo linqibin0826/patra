@@ -1,0 +1,8 @@
+{
+  "received_at": "2026-11-01T08:30:12.402Z",
+  "reason_code": "unknown_event",
+  "reason_detail": "event_name 缺失",
+  "event_name": null,
+  "raw": "{}",
+  "raw_truncated": false
+}

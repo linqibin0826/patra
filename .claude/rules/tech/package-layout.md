@@ -32,6 +32,7 @@ Gradle 模块按层，**模块内先按子域、再按组件类型**。由 `patr
 {根}.adapter.{子域}
 ├─ rest(.request | .response | .converter)
 ├─ internal             *EndpointImpl 与它用的 *ApiConverter
+├─ security             过滤器链上的入站组件（如 oauth2Login 的处理器），装配放 boot
 ├─ scheduler | mq | config
 
 {根}.api.{子域}.{endpoint | dto | event}   event 放发给别的服务的集成事件 record

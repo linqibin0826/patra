@@ -1,0 +1,423 @@
+---
+title: 上手练习二：翻一翻 ClickHouse 的片段表和 Kafka 的日志本
+summary: 六道只读的动手题：用 system.parts 看各表的片段、分区和压缩比，用 system.columns 找最占地方的列，数每个分区有几个片段；再用 Kafka 命令行看 topic 配置、末端偏移量和消费组滞后，最后取两条 events.raw 里的真实消息逐字段读懂，并亲手把 derived_at 的时钟校正算一遍。
+type: concept
+difficulty: practice
+tags: [analytics, database, messaging]
+prerequisites: [analytics-mergetree-parts, analytics-kafka-log]
+topics: [analytics-pipeline]
+sources:
+  - version: v0.18
+    issue: PAP-171
+    pr: 373
+personalEnv: false
+---
+
+<Diagnose
+  question="你想看看 Kafka 的 events.raw 里最新的两条消息长什么样，又不想影响线上正在跑的入库消费者。下面三种做法，哪一种最可能闯祸？"
+  options={["指定 `--partition 0 --offset` 末端减 2，按位置直接取两条，不带任何组名", "用 `kafka-consumer-groups.sh --describe` 看入库消费组每个分区读到了哪里", "带上 `--group patra-analytics-ingest`，以入库消费组的身份读两条再退出"]}
+  answer="C"
+  ifRight="对。以别人的组名去读，就是在动别人的书签。往下读，本篇每条命令都会说清它为什么不会改动任何东西。"
+  ifWrong="答案是 C。加入入库消费组会触发重新分配，分区被分走一部分，读过的位置还可能被提交；入库消费者回来后从新书签接着读，中间那几条就再也不会写进 ClickHouse。这题考的是消费组与偏移量，先读讲 Kafka 日志的那篇。"
+  suggest="analytics-kafka-log"
+/>
+
+<Callout kind="lead">
+
+前两道大题看存储：ClickHouse 自己把每个数据片段、每一列占多少盘都记在系统表里，Kafka 把每个分区写到哪、每个消费组读到哪都记在元数据里。这篇带你亲手查一遍，每条命令都只读。
+
+</Callout>
+
+## 开始之前：两套工具，各自怎么保证只读
+
+**ClickHouse** 的连法和练习一一样，SQL 存成 `query.sql`，用 curl 发给 HTTP 接口：
+
+```bash
+curl -u "patra:$CLICKHOUSE_PATRA_PASSWORD" \
+  'http://<mini 的地址>:8123/?database=patra_analytics&readonly=1' \
+  --data-binary @query.sql
+```
+
+`patra` 账号对 `patra_analytics` 有全部权限，另外被授权读 `system.parts`；地址里的 `readonly=1` 把这次请求锁成只读，写操作一律被拒绝。本篇查的 `system.parts`、`system.columns` 只读元数据，不扫数据，0.1 秒就回来。
+
+**Kafka** 的命令行工具在 Kafka 容器里，通过 ssh 到 mini 上执行：
+
+```bash
+ssh <mini> docker exec -e KAFKA_HEAP_OPTS=-Xmx128m patra-kafka \
+  /opt/kafka/bin/kafka-topics.sh --bootstrap-server patra-kafka:29092 --describe --topic events.raw
+```
+
+两个参数要解释：
+
+- **`--bootstrap-server patra-kafka:29092`**：broker 有两个对客户端的监听器，容器内部用按容器名访问的 `INTERNAL` 那个（讲 Kafka 日志那篇的「两个地址」一节），健康检查也是这么连的。
+- **`-e KAFKA_HEAP_OPTS=-Xmx128m`**：每个命令行工具都会另起一个 JVM。Kafka 容器的环境变量里把堆设成了 512 MB（给 broker 用的），整个容器的内存上限是 1 GB；不覆盖的话，工具也按 512 MB 起，和 broker 抢同一个容器的内存。compose 文件里健康检查的注释写的就是这件事，它把堆压到 64 MB，建 topic 的边车用 128 MB。这里照边车的值。
+
+本篇用到的 Kafka 命令为什么都不改东西：
+
+| 命令 | 做什么 | 为什么不改东西 |
+|---|---|---|
+| `kafka-topics.sh --describe` | 看 topic 的分区与配置 | 只读元数据；改配置是 `--alter`，本篇不用 |
+| `kafka-get-offsets.sh` | 看每个分区的末端偏移量 | 只读元数据 |
+| `kafka-consumer-groups.sh --describe` | 看消费组读到哪 | 只读；会改东西的是 `--reset-offsets` 和 `--delete`，本篇不用 |
+| `kafka-console-consumer.sh --partition --offset` | 按位置取几条消息 | 不带 `--group`，不以任何已有消费组的身份读、不提交位点；消息本身也不会因为被读过而删除 |
+
+<Callout kind="warn">
+
+数据是流量模拟器造的（`is_synthetic = 1`），不是真实用户；下面两条 Kafka 消息也来自一次模拟器运行。结果是 2026-11-02 北京时间 18:50 左右查的。
+
+</Callout>
+
+## 第 1 题：每张表有几个片段、压缩比多少
+
+**要查什么**：`patra_analytics` 里每张表当前的活跃片段数、分区数、行数、压缩前后的大小和压缩比。
+
+**为什么值得查**：MergeTree 那篇讲过，片段太多会拖垮写入，分区决定过期数据怎么扔。这张表是日常巡检最先看的东西。
+
+<Quiz
+  title="先猜"
+  questions={[
+    {
+      question: "events 表按天分区，现在有 89 个分区。它大约有多少个活跃片段？",
+      options: ["正好 89 个：后台合并会把每个分区一直合到只剩一个片段为止", "三四百个：平均每个分区三四个，合并不会把一个分区合成一个", "上万个：每次 INSERT 一个片段，1 亿条数据写了很多很多次"],
+      answer: "B",
+      explain: "346 个，平均每个分区不到 4 个。合并把片段数压在一个稳定的小数目上，但不会主动合到只剩一个。"
+    }
+  ]}
+/>
+
+**提示**：`system.parts` 每个片段一行；只看 `active` 的（合并后被替换掉的旧片段 `active = 0`）；`data_compressed_bytes`、`data_uncompressed_bytes` 是压缩前后的字节数，`formatReadableSize()` 把它们变成 GiB、MiB。
+
+**参考答案**：
+
+```sql
+SELECT table,
+       count()                                   AS active_parts,
+       uniqExact(partition)                      AS partitions,
+       sum(rows)                                 AS rows,
+       formatReadableSize(sum(data_compressed_bytes))   AS compressed,
+       formatReadableSize(sum(data_uncompressed_bytes)) AS uncompressed,
+       round(sum(data_uncompressed_bytes) / sum(data_compressed_bytes), 2) AS ratio
+FROM system.parts
+WHERE database = 'patra_analytics' AND active AND table != 'schema_migrations'
+GROUP BY table ORDER BY sum(data_compressed_bytes) DESC
+FORMAT PrettyCompactMonoBlock
+```
+
+**实际结果**（0.1 秒，整理成表）：
+
+| table | active_parts | partitions | rows | compressed | uncompressed | ratio |
+|---|---|---|---|---|---|---|
+| `events` | 346 | 89 | 104,207,095 | 12.66 GiB | 29.32 GiB | 2.32 |
+| `article_session_reads` | 12 | 1 | 31,325,736 | 1.63 GiB | 2.35 GiB | 1.44 |
+| `daily_person_activity` | 6 | 1 | 3,546,916 | 131.69 MiB | 231.29 MiB | 1.76 |
+| `session_quality` | 7 | 1 | 4,290,881 | 72.85 MiB | 78.18 MiB | 1.07 |
+
+**怎么读**：
+
+- **片段数是稳态，不是零**。`events` 89 个分区、346 个片段。合并会挑大小相近的片段归并，写入停下后片段数稳定在一个小数目，不会一路合到每个分区只剩一个。强行合并要用 `OPTIMIZE ... FINAL`，那是写操作，会重写整个分区，本篇不用，`readonly=1` 也不允许。
+- **只有 `events` 分了区**。三张汇总表的建表语句里没有 `PARTITION BY`，整张表就是一个分区（MergeTree 那篇末尾提过）。`events` 按天分区，所以分区数就是天数：2026-08-06 到 11-02，89 天。
+- **`rows` 数的是磁盘上的行**。它是活跃片段里的物理行数，还没被合并掉的重复行也在里面，所以不能拿它当事件条数；数条数照样要 `uniqExact(event_id)`。
+- **压缩比差很多**。`events` 2.32，`session_quality` 只有 1.07：后者几乎只有一列 `session_id`（UUID）加三个小字段，而随机 ID 几乎压不动，下一题会看到。
+- **没有 `dlq_events`**。死信表一行都没有（合成事件全部合格），没有行就没有片段，`system.parts` 里自然不出现。
+
+## 第 2 题：events 表里，哪一列最占地方
+
+**要查什么**：`events` 表按列看压缩后的大小，取最大的 6 列，连同各自的压缩比。
+
+**为什么值得查**：列存按列存放、按列压缩（列式存储那篇）。想省盘，先知道钱花在了哪一列上。
+
+<Quiz
+  title="先猜"
+  questions={[
+    {
+      question: "events 表压缩后最占地方的是哪一列？",
+      options: ["`device_id`：每台设备一个几十位的随机串，而且相邻的行往往不是同一台设备", "`properties`：每条事件的 JSON 原文，一般是一行里最长的那个字段", "`event_id`：每行都不一样的 UUID，一个字节都压不掉", "`event_name`：每一行都有，上亿行加起来最多"],
+      answer: "A",
+      explain: "device_id 2.12 GiB 第一；properties 1.83 GiB 虽长，但 JSON 的键名反复出现，压缩比有 3.4；event_id 是定长 16 字节，排第四；event_name 是 LowCardinality，进不了前 6。"
+    }
+  ]}
+/>
+
+**提示**：`system.columns` 每列一行，也有 `data_compressed_bytes` 和 `data_uncompressed_bytes`。
+
+**参考答案**：
+
+```sql
+SELECT name, type,
+       formatReadableSize(data_compressed_bytes)   AS compressed,
+       round(data_uncompressed_bytes / data_compressed_bytes, 1) AS ratio
+FROM system.columns
+WHERE database = 'patra_analytics' AND table = 'events'
+ORDER BY data_compressed_bytes DESC LIMIT 6
+FORMAT PrettyCompactMonoBlock
+```
+
+**实际结果**（整理成表）：
+
+| name | type | compressed | ratio |
+|---|---|---|---|
+| `device_id` | String | 2.12 GiB | 1.8 |
+| `person_id` | String | 1.84 GiB | 2.0 |
+| `properties` | String | 1.83 GiB | 3.4 |
+| `event_id` | UUID | 1.16 GiB | 1.0 |
+| `session_id` | UUID | 804.87 MiB | 1.5 |
+| `derived_at` | DateTime64 | 399.45 MiB | 1.5 |
+
+**怎么读**：
+
+- **随机 ID 几乎压不动**。`event_id` 压缩比 1.0，存多少占多少。压缩靠的是重复和规律，随机串两样都没有。
+- **`person_id` 是第二份 `device_id`**。它不是采集来的字段，是写入时算出来存下的计算列：
+
+<CodeRef at="patra-api/patra-analytics/patra-analytics-infra/src/main/resources/clickhouse/V1__events.sql@8140a9d9482324670b63f00ab3c62690102196c5" lines="27-29" />
+
+```sql
+    properties      String,
+    article_id      UInt64 MATERIALIZED toUInt64OrZero(JSONExtractString(properties, 'article_id')),
+    person_id       String MATERIALIZED if(user_id != 0, concat('u:', toString(user_id)), concat('d:', device_id))
+```
+
+没登录的读者，`person_id` 就是 `d:` 加设备 ID，几乎把 `device_id` 又存了一遍，多花 1.84 GiB。换来的是：它能进排序键，按人去重的查询直接用，不用每次现算（设备 ID、会话与「一个人」那篇讲过 `u:` / `d:` 的规则）。这是一笔明确的空间换时间。
+
+- **它比 `device_id` 压得好一点**（2.0 对 1.8），大致是因为 `person_id` 在排序键里，排好序后相邻行更常是同一个人。`session_id` 的 1.5 也类似：同一个会话的几条事件常常挨在一起。这两条是推断。
+- **`event_name` 不在前 6**。它是 `LowCardinality(String)`，列里只存小整数（列式存储那篇），上亿行也占不了多少。
+
+## 第 3 题：每个分区有几个片段
+
+**要查什么**：`events` 每个分区的活跃片段数，取最多的 5 个。
+
+**为什么值得查**：`TOO_MANY_PARTS` 的门槛是按**单个分区**的活跃片段数算的。平均数好看不代表没事，要看最多的那个。
+
+<Quiz
+  title="先猜"
+  questions={[
+    {
+      question: "片段最多的那个分区，大约有几个活跃片段？",
+      options: ["上百个，最近几天还在写入的分区离 TOO_MANY_PARTS 不远了", "1 个，最近几天的分区早就被合并干净，只剩一个片段", "6 个左右，和平均数差不多，离报错的门槛远得很"],
+      answer: "C",
+      explain: "最多的 5 个分区都是 6 个片段。灌历史时一次写入只放一天、按顺序写，合并跟得上，每个分区都收尾在个位数。"
+    }
+  ]}
+/>
+
+**提示**：还是 `system.parts`，这次只看 `events`，按 `partition` 分组。
+
+**参考答案**：
+
+```sql
+SELECT partition, count() AS parts, sum(rows) AS rows
+FROM system.parts WHERE database = 'patra_analytics' AND table = 'events' AND active
+GROUP BY partition ORDER BY parts DESC, partition DESC LIMIT 5
+FORMAT PrettyCompactMonoBlock
+```
+
+**实际结果**（只列分区和片段数）：
+
+| partition | parts |
+|---|---|
+| 20261101 | 6 |
+| 20261031 | 6 |
+| 20261025 | 6 |
+| 20261024 | 6 |
+| 20261018 | 6 |
+
+**怎么读**：分区名就是 `toYYYYMMDD(derived_at, 'Asia/Shanghai')` 的值，一眼能看出是哪一天（北京时间）。最多的分区也只有 6 个片段，说明 MergeTree 那篇讲的「一次写入只放一天、按顺序写」起了作用：每天写完就不再有新片段进这个分区，合并可以收尾。
+
+顺带一提，这 5 天都是周末。片段数取决于后台合并挑中了哪些片段、合到了哪一步，和数据量没有简单的比例关系，不必从这里读出规律。
+
+## 第 4 题：events.raw 的配置，和脚本写的一样吗
+
+**要查什么**：`events.raw` 有几个分区、几个副本，保留策略实际是什么。
+
+**为什么值得查**：仓库里的脚本是「想要的样子」，broker 上的配置才是「实际的样子」。两者对不上，磁盘预算就算错了。
+
+<Quiz
+  title="先猜"
+  questions={[
+    {
+      question: "建 topic 的脚本只给 events.raw 写了五项配置（见下面的代码）。describe 打出来的 Configs 却多出一项 `file.delete.delay.ms=5000`。它最可能是哪来的？",
+      options: ["有人手工给这个 topic 改过配置，脚本下次运行时会把它清掉", "Kafka 4 对所有 topic 的默认值，和 Patra 的配置没有关系", "建 topic 的边车容器启动时自动加的，每次重建都会重新写一遍", "broker 级的删除延迟在 compose 里设成了 5 秒，topic 继承了这个值"],
+      answer: "D",
+      explain: "compose 里的 KAFKA_LOG_SEGMENT_DELETE_DELAY_MS: 5000 是 broker 级设置 log.segment.delete.delay.ms，它在 topic 级的名字叫 file.delete.delay.ms。describe 会把这类来自 broker 配置、不是默认值的项一起显示出来。"
+    }
+  ]}
+/>
+
+**提示**：`kafka-topics.sh --describe --topic events.raw`，看第一行的 `PartitionCount`、`ReplicationFactor` 和 `Configs`。
+
+**参考答案**：
+
+```bash
+ssh <mini> docker exec -e KAFKA_HEAP_OPTS=-Xmx128m patra-kafka \
+  /opt/kafka/bin/kafka-topics.sh --bootstrap-server patra-kafka:29092 --describe --topic events.raw
+```
+
+**实际结果**（整理成表）：
+
+| 项 | 值 | 含义 |
+|---|---|---|
+| `PartitionCount` | 3 | 3 个分区 |
+| `ReplicationFactor` | 1 | 单节点，只有一份 |
+| `cleanup.policy` | delete | 过期就删（而不是按键压缩） |
+| `retention.ms` | 172800000 | 2 天 |
+| `retention.bytes` | 1073741824 | 每个分区 1 GiB |
+| `segment.bytes` | 268435456 | 一段写满 256 MiB 就滚动 |
+| `segment.ms` | 21600000 | 不满也每 6 小时滚动一段 |
+| `file.delete.delay.ms` | 5000 | 段文件被判定删除后，再等 5 秒真正删 |
+
+**怎么读**：前五项和建 topic 脚本写进去的一致：
+
+<CodeRef at="patra-infra/docker/kafka/init-topics.sh@8140a9d9482324670b63f00ab3c62690102196c5" lines="44-46" />
+
+```bash
+  "${BIN}/kafka-configs.sh" --bootstrap-server "${BOOTSTRAP}" --alter \
+    --entity-type topics --entity-name "${name}" \
+    --add-config "cleanup.policy=delete,retention.ms=${TWO_DAYS_MS},retention.bytes=${retention_bytes},segment.bytes=${segment_bytes},segment.ms=${SIX_HOURS_MS}"
+```
+
+脚本每次 `up` 都会把这五项重写一遍，手工改过的值会被改回来，所以仓库里的值就是线上的值。第六项来自 broker，就是讲 Kafka 日志那篇里「清理检查 30 秒 + 删除延迟 5 秒」的后半截。有了这几项，就能按那篇的公式算出 `events.raw` 的最坏磁盘占用：3 × (1 GiB + 256 MiB) = 3.75 GiB，再加两次清理检查之间的写入量。
+
+## 第 5 题：写到哪了，读到哪了
+
+**要查什么**：`events.raw` 每个分区的末端偏移量；入库消费组 `patra-analytics-ingest` 每个分区读到了哪、落后多少。
+
+**为什么值得查**：消费滞后（lag）是这条管线最重要的健康指标。它一直涨，说明入库跟不上，事件在 Kafka 里越堆越多，离保留期上限越来越近。
+
+<Quiz
+  title="先猜"
+  questions={[
+    {
+      question: "三个分区的末端偏移量是 541,643、555,705、550,367。下面哪种理解对？",
+      options: ["events.raw 现在一共存着这么多条消息，再多就要按保留期删了", "这是每个分区下一条消息要用的序号，过了保留期被删掉的也算在里面", "这是入库消费者还没处理的条数，越大说明积压越严重"],
+      answer: "B",
+      explain: "偏移量从 0 往上数，写进去就不变，删段文件也不会让它回退。末端偏移量是下一条要写的序号，等于这个分区有史以来写入的条数，不等于现在还留着多少条。"
+    }
+  ]}
+/>
+
+**提示**：末端偏移量用 `kafka-get-offsets.sh`；消费组用 `kafka-consumer-groups.sh --describe --group`。
+
+**参考答案**：
+
+```bash
+ssh <mini> docker exec -e KAFKA_HEAP_OPTS=-Xmx128m patra-kafka \
+  /opt/kafka/bin/kafka-get-offsets.sh --bootstrap-server patra-kafka:29092 --topic events.raw
+
+ssh <mini> docker exec -e KAFKA_HEAP_OPTS=-Xmx128m patra-kafka \
+  /opt/kafka/bin/kafka-consumer-groups.sh --bootstrap-server patra-kafka:29092 \
+  --describe --group patra-analytics-ingest
+```
+
+**实际结果**：末端偏移量（整理成表）：
+
+| 分区 | 末端偏移量 |
+|---|---|
+| 0 | 541,643 |
+| 1 | 555,705 |
+| 2 | 550,367 |
+
+消费组（整理成表；原输出还有 `CONSUMER-ID`、`HOST`、`CLIENT-ID` 几列，这里略去）：
+
+| TOPIC | PARTITION | CURRENT-OFFSET | LOG-END-OFFSET | LAG |
+|---|---|---|---|---|
+| `events.raw` | 0 | 等于末端 | 等于末端 | 0 |
+| `events.raw` | 1 | 等于末端 | 等于末端 | 0 |
+| `events.raw` | 2 | 等于末端 | 等于末端 | 0 |
+| `events.dlq` | 0 | `-` | 0 | — |
+
+**怎么读**：
+
+- **LAG = LOG-END-OFFSET − CURRENT-OFFSET**。`CURRENT-OFFSET` 是这个消费组提交过的书签。三个分区都是 0，说明入库消费者把写进来的事件全写进了 ClickHouse，实时跟上了。
+- **`events.dlq` 那行是 `-`**。入库消费者同时订阅了死信 topic，但它一条消息都没有（末端 0），消费组从没在这里提交过书签。这和 ClickHouse 里 `dlq_events` 表 0 行是同一件事的两面。
+- **三个分区差不多大**。消息的键是设备 ID，生产者按键算分区；设备多了，三个分区自然摊得差不多。
+- **Kafka 里的数远小于 ClickHouse 里的 1 亿条**。灌 88 天历史时，模拟器直接写 ClickHouse，不经 Kafka（造流量那篇讲过两种模式）；经过 Kafka 的只有模拟器实时模式发给采集端点的那部分。
+- **想知道现在还留着多少条**：`kafka-get-offsets.sh` 加 `--time -2` 取最早还在的偏移量，用末端减去它。2026-11-02 实测三个分区的最早偏移量都是 `0`：还没有任何段文件被清理（最早的消息没到 2 天保留期，每个分区也没写满 1 GiB），从第一条起都还在。
+
+## 第 6 题：取两条真实消息，逐字段读懂
+
+**要查什么**：`events.raw` 分区 0 最后两条消息，连同键、分区、偏移量一起打印出来。
+
+**为什么值得查**：埋点方案、事件信封、爬虫识别讲的都是这条消息的各个字段。亲眼看一条，前面几篇就串起来了。
+
+<Quiz
+  title="先猜"
+  questions={[
+    {
+      question: "取到的第一条：created_at 是 10:49:37.464，sent_at 是 10:52:24.695，received_at 是 10:52:29.017（都是 UTC）。它的 derived_at 是多少？",
+      options: ["10:49:41.786：用收到时刻减去它在浏览器里攒着没发的那 2 分 47 秒", "10:49:37.464：直接采用浏览器记下的 created_at，事件就是这时候发生的", "10:52:29.017：浏览器的时钟不可信，一律以服务端收到的时刻为准"],
+      answer: "A",
+      explain: "derived_at = received_at − (sent_at − created_at)。只用浏览器时钟算一个时间差，再从服务端的收到时刻往回推，浏览器时钟快了慢了都不影响结果。下文逐位算一遍。"
+    }
+  ]}
+/>
+
+**提示**：分区 0 的末端偏移量是 541,643，它是下一条要写的序号，所以最后两条是 541,641 和 541,642。用 `--offset 541641 --max-messages 2`；不加 `--max-messages`，工具取完会一直等新消息。
+
+**参考答案**：
+
+```bash
+ssh <mini> docker exec -e KAFKA_HEAP_OPTS=-Xmx128m patra-kafka \
+  /opt/kafka/bin/kafka-console-consumer.sh --bootstrap-server patra-kafka:29092 \
+  --topic events.raw --partition 0 --offset 541641 --max-messages 2 \
+  --property print.key=true --property print.partition=true --property print.offset=true
+```
+
+运行时工具会提示 `--property` 将被弃用，改用 `--formatter-property`，两者效果一样。
+
+**实际结果**：第一条原样如下（一行：分区、偏移量、键、消息体，用制表符隔开）：
+
+```text
+Partition:0	Offset:541641	sim003P_RO3FNzkiQd0-NXkV-hGVPBLKMVVD_bxXVg6	{"event_id":"01a19be1-03b8-78cc-8e80-718e82375c7e","event_name":"article_impressed","schema_version":"1-0-0","source":"client","created_at":"2026-11-02T10:49:37.464Z","sent_at":"2026-11-02T10:52:24.695Z","received_at":"2026-11-02T10:52:29.017Z","derived_at":"2026-11-02T10:49:41.786Z","device_id":"sim003P_RO3FNzkiQd0-NXkV-hGVPBLKMVVD_bxXVg6","session_id":"01a19bdc-888c-7428-9b21-9c1e4356bb61","user_id":null,"page_path":"/papers","page_type":"search","referrer_host":null,"country_code":"CN","province":"广东省","browser_family":"Chrome","os_family":"Windows NT","device_class":"Desktop","is_bot":false,"bot_reason":null,"is_synthetic":true,"properties":{"article_id":"352303128708834263","list_type":"search","list_id":"f8a44b87-d0f3-833a-e5a6-23b065c32c1f","position":10}}
+```
+
+第二条是同一个会话、同一个检索结果列表里的下一张卡片：`position` 是 11，`created_at` 晚 100 毫秒，这里不再贴。
+
+**先把 derived_at 算一遍**：
+
+```text
+sent_at − created_at    = 10:52:24.695 − 10:49:37.464 = 2 分 47.231 秒   （两个都是浏览器时钟，时钟偏差相减抵消）
+received_at − 2:47.231  = 10:52:29.017 − 2:47.231     = 10:49:41.786     （服务端时钟往回推）
+```
+
+和消息里的 `derived_at` 一位不差。注意它比 `created_at` 晚了 4.322 秒：公式把 `sent_at` 到 `received_at` 之间的差（网络传输加上两边时钟的偏差）全部当成了时钟偏差，两者分不开。这正是事件信封那篇讲的取舍：只信浏览器量出来的时间**差**，不信它报的时间**点**。这条消息在浏览器里攒了约 2 分 47 秒才发出，原因这里不展开。`10:49` UTC 是北京时间 18:49，和实测时间（约 18:50）对得上，这是刚写进来不久的消息。
+
+**再逐字段读**：
+
+| 字段 | 这条里的值 | 读出什么 |
+|---|---|---|
+| 键 | `sim003P_RO3F…` | 就是设备 ID。按键分区，同一台设备的事件总在同一个分区、保持先后顺序；`sim003` 前缀表示模拟器第 3 次运行造的设备 |
+| `event_name` | `article_impressed` | 曝光事件：卡片在屏幕上露出一半以上、停留 1 秒以上才算（埋点方案那篇的口径） |
+| `schema_version` | `1-0-0` | SchemaVer 版本号，校验时按它选 JSON Schema |
+| `source` | `client` | 浏览器事件；服务端事件是 `server`，真人会话的判定就看有没有这一类 |
+| `user_id` | `null` | 没登录。入库时 JSON 的 `null` 写成列默认值 0，于是 `person_id` 算成 `d:` 加设备 ID |
+| `country_code` / `province` | `CN` / `广东省` | 采集端点用 IP 查出来的地区，只到省；IP 本身用完即丢，消息里没有 |
+| `browser_family` / `os_family` / `device_class` | `Chrome` / `Windows NT` / `Desktop` | 从 UA 解析出来的类别；原始 UA 同样没有留下 |
+| `is_bot` / `bot_reason` | `false` / `null` | 采集时判的爬虫标记，这条没被标 |
+| `is_synthetic` | `true` | 模拟器造的；所有查询都靠它把合成数据和真实数据分开 |
+| `properties` | 嵌套对象 | 事件自己的字段：哪篇文献、哪个列表、第几张卡片 |
+
+最后两行怎么进 ClickHouse，看入库写入时的设置：
+
+<CodeRef at="patra-api/patra-analytics/patra-analytics-infra/src/main/java/dev/patra/analytics/infra/ingest/support/ClickHouseInserts.java@8140a9d9482324670b63f00ab3c62690102196c5" lines="17-24" />
+
+```java
+  public static InsertSettings settings(String token) {
+    return new InsertSettings()
+        .setDeduplicationToken(token)
+        .serverSetting("deduplicate_blocks_in_dependent_materialized_views", "1")
+        .serverSetting("input_format_null_as_default", "1")
+        .serverSetting("date_time_input_format", "best_effort")
+        .serverSetting("input_format_json_read_objects_as_strings", "1");
+  }
+```
+
+`input_format_null_as_default` 让 `"user_id":null` 写成 0；`input_format_json_read_objects_as_strings` 让 `properties` 这个嵌套对象原样写进 String 列，所以第 2 题里它是一个 String 列、压缩比 3.4，而 `article_id` 是从这段 JSON 里抽出来的计算列。
+
+<Transfer
+  prompt="某天入库消费者因为部署失败停了半小时，模拟器照常往采集端点发事件。用本篇的命令，你怎么判断事件丢没丢、多久能追上？ClickHouse 那边会看到什么变化？如果停的不是半小时而是三天呢？"
+  points={[
+    { label: "先看滞后", text: "kafka-consumer-groups.sh --describe：三个分区的 LAG 会随停机时间一直涨，书签停在停机那一刻。重启后 LAG 逐渐降回 0，就是追上了。" },
+    { label: "半小时不会丢", text: "events.raw 保留 2 天、每个分区上限 1 GiB，半小时的事件还在日志里；入库消费者从提交过的书签接着读，一条不少。" },
+    { label: "ClickHouse 的变化", text: "追赶期间每批写满 5 万条，写入更密，system.parts 里最近这天分区的活跃片段会先多一些，再被后台合并降回去；数条数照样用 uniqExact(event_id)。" },
+    { label: "三天就会丢", text: "超过 2 天保留期（或撞上 1 GiB 上限），最早的段文件被删，书签指向的偏移量已经不在了。用 kafka-get-offsets.sh --time -2 能看到最早偏移量已经越过了书签，中间那段事件找不回来。" }
+  ]}
+/>

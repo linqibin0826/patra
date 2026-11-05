@@ -11,6 +11,8 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
   usePathname: () => "/papers",
 }));
+// 埋点另有用例（tests/app/papers/analytics-events.test.tsx）
+vi.mock("@/lib/analytics/server/context", () => ({ readPageFacts: vi.fn(async () => null) }));
 vi.mock("@/lib/portal-api/publication-search", () => ({
   fetchPublicationSearch: vi.fn(),
   fetchPublicationFacets: vi.fn(),

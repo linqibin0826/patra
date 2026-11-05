@@ -14,6 +14,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import dev.patra.identity.app.account.service.NewDeviceLoginNotifier;
 import dev.patra.identity.domain.account.exception.InvalidCredentialsException;
 import dev.patra.identity.domain.account.exception.LoginTemporarilyLockedException;
 import dev.patra.identity.domain.account.exception.UserBannedException;
@@ -158,10 +159,12 @@ class LoginUserHandlerTest {
           loginThrottle,
           sessionIssuer,
           resolver,
-          records,
-          NEW_DEVICE_POLICY,
-          newDeviceThrottle,
-          emailDelivery,
+          new NewDeviceLoginNotifier(
+              records,
+              NEW_DEVICE_POLICY,
+              newDeviceThrottle,
+              emailDelivery,
+              new RecordingTransactions(events)),
           new RecordingTransactions(events),
           Clock.fixed(NOW, ZoneOffset.UTC));
 
@@ -481,10 +484,8 @@ class LoginUserHandlerTest {
             loginThrottle,
             sessionIssuer,
             resolver,
-            records,
-            NEW_DEVICE_POLICY,
-            newDeviceThrottle,
-            emailDelivery,
+            new NewDeviceLoginNotifier(
+                records, NEW_DEVICE_POLICY, newDeviceThrottle, emailDelivery, recording),
             recording,
             Clock.fixed(NOW, ZoneOffset.UTC));
     when(passwordHashing.matches(any(), any()))

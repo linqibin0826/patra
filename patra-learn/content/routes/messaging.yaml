@@ -18,7 +18,9 @@ entries:
   - msg-ordering
   - ddd-domain-vs-integration-events
   - spring-modulith-externalization
+  - analytics-kafka-log
   - msg-why-rabbitmq
+  - analytics-why-kafka-not-rabbitmq
   - msg-registry-trigger-annotation
   - msg-resubmitted-stuck
   - msg-confirm-wait-no-connection

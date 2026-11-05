@@ -105,7 +105,10 @@ public final class RedisSessionStore {
                     Long.toString(session.createdAt().toEpochMilli()),
                     Long.toString(session.idleTimeout().toMillis()),
                     Long.toString(session.expiresAt().toEpochMilli()),
-                    Integer.toString(session.maxSessionsPerUser())));
+                    Integer.toString(session.maxSessionsPerUser()),
+                    session.authenticatedAt() == null
+                        ? ""
+                        : Long.toString(session.authenticatedAt().toEpochMilli())));
     return IssuedSession.of(token, toSessionIds(replaced));
   }
 
@@ -322,7 +325,8 @@ public final class RedisSessionStore {
     return raw.stream().map(value -> Long.parseLong(String.valueOf(value))).toList();
   }
 
-  /// `HGETALL` 的扁平数组转成会话。字段缺失是数据损坏，解析时直接报错，不给默认值。
+  /// `HGETALL` 的扁平数组转成会话。字段缺失是数据损坏，解析时直接报错，不给默认值；
+  /// 只有 `device_id` 和 `auth_at` 可以没有（第三方登录不写 `auth_at`）。
   ///
   /// @param fields 字段名和值交替的列表
   /// @return 会话
@@ -344,7 +348,10 @@ public final class RedisSessionStore {
         .createdAt(Instant.ofEpochMilli(Long.parseLong(values.get("created_at"))))
         .lastActiveAt(Instant.ofEpochMilli(Long.parseLong(values.get("last_active_at"))))
         .expiresAt(Instant.ofEpochMilli(Long.parseLong(values.get("expires_at"))))
-        .authenticatedAt(Instant.ofEpochMilli(Long.parseLong(values.get("auth_at"))))
+        .authenticatedAt(
+            values.containsKey("auth_at")
+                ? Instant.ofEpochMilli(Long.parseLong(values.get("auth_at")))
+                : null)
         .build();
   }
 }

@@ -244,3 +244,13 @@ describe("gatewayFetch 的条件请求", () => {
     expect(new Headers(call()[1]?.headers).has("If-None-Match")).toBe(false);
   });
 });
+
+describe("gatewayFetch 的自定义请求头", () => {
+  it("headers 原样带上，和令牌并存", async () => {
+    await gatewayFetch("/x", { token: "t", headers: { "X-Patra-Device-Id": "device" } });
+    expect(fetchMock.mock.calls[0]?.[1]?.headers).toMatchObject({
+      Authorization: "Bearer t",
+      "X-Patra-Device-Id": "device",
+    });
+  });
+});

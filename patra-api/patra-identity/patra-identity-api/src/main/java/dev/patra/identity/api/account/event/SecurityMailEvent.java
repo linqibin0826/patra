@@ -22,7 +22,10 @@ public sealed interface SecurityMailEvent extends IntegrationEvent
         AccountDeletionRequestedMailEvent,
         AccountDeletionCancelledMailEvent,
         AccountDeletionReminderMailEvent,
-        AccountDeletionCompletedMailEvent {
+        AccountDeletionCompletedMailEvent,
+        RegistrationCodeMailEvent,
+        LoginMethodLinkedMailEvent,
+        LoginMethodUnlinkedMailEvent {
 
   /// identity 发布集成事件的交换机。
   String EXCHANGE = "identity.events";

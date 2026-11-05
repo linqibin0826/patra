@@ -1,5 +1,7 @@
 "use server";
 
+import { actionPage, readActionFacts } from "@/lib/analytics/server/context";
+import { trackServerEvent } from "@/lib/analytics/server/send";
 import type { Problem } from "@/lib/identity/problem";
 import {
   type CommonFailure,
@@ -24,8 +26,12 @@ export type CollectResult =
   | { ok: false; reason: "library-full" | "gone" | "catalog-unavailable" }
   | CommonFailure;
 
-/// 收藏（`PUT /me/library/publication/{key}`）：已在库里也是成功，`created=false`
-export async function collectPublication(key: string): Promise<CollectResult> {
+/// 收藏（`PUT /me/library/publication/{key}`）：已在库里也是成功，`created=false`。真正新收藏时记一次
+/// Article Collected；`restore` 是「已从文献库移除」里点撤销引起的重新收藏，是恢复不是新收藏，不记
+export async function collectPublication(
+  key: string,
+  options: { restore?: boolean } = {},
+): Promise<CollectResult> {
   if (typeof key !== "string" || !isEntityId(key)) {
     return UNAVAILABLE;
   }
@@ -42,7 +48,17 @@ export async function collectPublication(key: string): Promise<CollectResult> {
             ? ({ ok: false, reason: "catalog-unavailable" } as const)
             : null,
   );
-  return result.ok ? { ok: true, created: result.data.created, item: result.data.item } : result;
+  if (!result.ok) {
+    return result;
+  }
+  if (result.data.created && !options.restore) {
+    trackServerEvent(
+      { name: "article_collected", properties: { article_id: key } },
+      await readActionFacts(),
+      await actionPage(),
+    );
+  }
+  return { ok: true, created: result.data.created, item: result.data.item };
 }
 
 /// 从文献库移除（1 ~ 100 条，幂等）：同时移出所有收藏夹、删备注

@@ -27,7 +27,11 @@ import org.springframework.test.context.ContextConfiguration;
     properties = {
       "spring.batch.jdbc.initialize-schema=always",
       "spring.batch.job.enabled=false",
-      "patra.batch.enabled=true"
+      "patra.batch.enabled=true",
+      // Batch 元数据必须走独立数据源；这里指向同一个测试容器，只验证组件装配
+      "patra.batch.datasource.url=${spring.datasource.url}",
+      "patra.batch.datasource.username=${spring.datasource.username}",
+      "patra.batch.datasource.password=${spring.datasource.password}"
     })
 @ContextConfiguration(initializers = PostgreSQLContainerInitializer.class)
 class BatchAutoConfigurationIT {

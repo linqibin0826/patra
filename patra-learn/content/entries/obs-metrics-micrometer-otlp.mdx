@@ -1,0 +1,247 @@
+---
+title: 指标怎么从服务走到 Prometheus：Micrometer、OTLP 与 Collector
+summary: 代码经 Micrometer 往进程内的注册表里记数，注册表要么等 Prometheus 来抓（拉），要么经 OTLP 推给 OTel Collector（推）。Patra 用推：七个服务的 OTLP 注册表推给 Collector，Prometheus 再去抓 Collector。上线前还要估一估会多出多少条序列。
+type: concept
+difficulty: advanced
+tags: [spring, backend, docker]
+prerequisites: [spring-boot-auto-configuration, ops-docker-images-and-containers]
+topics: [analytics-pipeline]
+sources:
+  - version: v0.18
+    issue: PAP-172
+    pr: 375
+personalEnv: false
+---
+
+<Diagnose
+  question="analytics 用 Micrometer 记了一个指标 `analytics.ingest.lag`，在服务的 `/actuator/metrics` 里能查到它，Prometheus 也在正常运行。Prometheus 里一定能查到这个指标吗？"
+  options={["一定能：`/actuator/metrics` 和 Prometheus 读的是同一份数据", "一定能：Prometheus 会自己发现服务，定时来取", "不一定：`/actuator/metrics` 只读进程内的注册表，还得有人把数送出去"]}
+  answer="C"
+  ifRight="对。进程里记下了数，和数到了 Prometheus，是两件事。中间那段路由谁走、怎么走，就是这篇的内容。"
+  ifWrong="答案是 C。`/actuator/metrics` 看的是进程内存里的注册表；要进 Prometheus，还得有一个导出用的注册表把数推出去，或者有人来抓。进程里建出哪些注册表，是自动配置按类路径决定的，这是读懂这篇的前提。"
+  suggest="spring-boot-auto-configuration"
+/>
+
+<Callout kind="lead">
+
+指标通路：业务代码经 Micrometer 往进程内的注册表里记数；注册表按某种协议把数送出去（推），或者摆在一个地址上等人来取（拉）；数最后存进 Prometheus 这样的时序库，Grafana 从库里查出来画图。
+
+</Callout>
+
+## 指标是一个名字、一组标签、一串随时间变化的数
+
+日志记的是一件件事（几点几分、谁、报了什么错），指标记的是一个数怎么随时间变化：每秒多少请求、入库落后多少条、一次发送花了多少秒。
+
+一个指标由名字和标签组成，比如 `analytics.ingest.lag{topic="events.raw"}`。名字相同、标签取值不同，就是不同的**序列**（time series），时序库给每条序列单独存一串「时间点 → 数值」。这一点到最后估算序列数时会用到。
+
+常见的三种：
+
+| 类型 | 记什么 | Patra 里的例子 |
+|---|---|---|
+| 计数器（Counter） | 只增不减的次数 | 收到多少个事件 |
+| 仪表（Gauge） | 某一刻的读数，可升可降 | `analytics.ingest.lag`：Kafka 里还有多少条没入库 |
+| 计时器（Timer） | 一件事花了多久、做了几次 | `analytics.collect.publish`：写一批事件进 Kafka 花了多久 |
+
+## Micrometer：门面和注册表
+
+Java 里记指标，业界通行的是 Micrometer。它和日志里的 SLF4J 是同一个思路：业务代码只调门面（`MeterRegistry`、`Counter`、`Timer`），不关心数最后送到哪；送到哪由**注册表**（registry）的实现决定。
+
+| 注册表 | 数去哪 |
+|---|---|
+| `SimpleMeterRegistry` | 只留在进程内存里，哪也不去 |
+| `PrometheusMeterRegistry` | 在 `/actuator/prometheus` 上按 Prometheus 的文本格式摆出来，等人来抓 |
+| `OtlpMeterRegistry` | 定时把攒下的数经 OTLP 推出去 |
+
+<Callout kind="analogy">
+
+SLF4J 让你写 `log.info(...)` 时不用管日志进文件还是进 Loki，换 Logback 的配置就行。Micrometer 让你写 `timer.record(...)` 时不用管数进 Prometheus 还是进别的库，换注册表就行。
+
+</Callout>
+
+Spring Boot 按类路径决定建哪个注册表：类路径上有哪个注册表的依赖，对应的自动配置条件满足，就建它；一个导出用的注册表都没有时，退回一个 `SimpleMeterRegistry`。`/actuator/metrics` 读的就是进程里的注册表，所以它能看到数，不代表数已经出了进程。
+
+## 送出去有两种做法：拉和推
+
+**拉**（pull）：服务在一个 HTTP 地址上摆出当前所有指标的值，Prometheus 按配置好的目标列表，每隔一段时间来抓一次。这是 Prometheus 原生的做法。
+
+**推**（push）：服务里的注册表每隔一段时间（Patra 是 30 秒，叫步长 step）把攒下的数主动发给一个接收方。
+
+只看一切正常的时候，两种做法都能让数进 Prometheus。差别出在导出那一环出问题的时候：
+
+<Compare
+  title="拉和推：导出用的注册表没建出来时，各自看到什么"
+  failureLabel="导出用的注册表没建出来"
+  variants={[
+    { label: "拉：Prometheus 抓服务", steps: ["代码往注册表里记数", "注册表在 /actuator/prometheus 上摆出当前值", "Prometheus 按目标列表定时来抓"], results: [{ label: "Prometheus 里", value: "有这个服务的指标", tone: "ok" }, { label: "目标状态", value: "up = 1", tone: "ok" }], verdict: { tone: "ok", head: "正常。", text: "Prometheus 知道该去哪几个地址抓，抓到了就存。" }, failure: { after: 1, results: [{ label: "Prometheus 里", value: "没有这个服务的指标", tone: "bad" }, { label: "目标状态", value: "抓取失败，up = 0", tone: "wait" }], verdict: { tone: "ok", head: "失败了，但看得见。", text: "目标列表里写着这个服务，抓不到就标成 down，一眼能看出是谁出了问题。" } } },
+    { label: "推：服务推给 Collector", steps: ["代码往注册表里记数", "注册表每 30 秒经 OTLP 推给 Collector", "Prometheus 定时抓 Collector"], results: [{ label: "Prometheus 里", value: "有这个服务的指标", tone: "ok" }, { label: "Collector 收到的点", value: "每 30 秒一批", tone: "ok" }], verdict: { tone: "ok", head: "正常。", text: "服务自己知道往哪推，Collector 收到就转给 Prometheus。" }, failure: { after: 1, results: [{ label: "Prometheus 里", value: "没有这个服务的指标", tone: "bad" }, { label: "Collector 那边", value: "一切正常，只是没收到东西", tone: "bad" }], verdict: { tone: "bad", head: "静悄悄地缺了一块。", text: "接收方不知道本该有谁来推，没人推它也不会报错。只能从「收到的点是 0」倒推。" } } }
+  ]}
+/>
+
+推的好处是服务不用对外暴露抓取地址，Prometheus 也不用知道每个服务在哪；代价就是上面那一格：没人推的时候，接收方安安静静。
+
+## OTLP 与 Collector：推给谁
+
+**OTLP**（OpenTelemetry Protocol）是 OpenTelemetry 定义的传输协议，链路、指标、日志三种数据都能走。常用两个端口：4317 走 gRPC，4318 走 HTTP；指标走 HTTP 时路径是 `/v1/metrics`。
+
+**OTel Collector** 是一个独立的进程，专门收、处理、转发这三种数据。它的配置分三段：接收器（receivers，从哪收）、处理器（processors，批量、限内存、加属性）、导出器（exporters，往哪送），再用管道（pipelines）把三段串起来。
+
+Patra 的 Collector 在指标管道上用 `otlp` 接收器收，用 `prometheus` 导出器送。这个导出器不往外推，而是在 8889 端口摆出一个抓取地址：
+
+<CodeRef at="patra-infra/docker/otel-collector/config.yaml@a03e852b2acea936e22d8e197018224461ed9135" lines="64-70" />
+
+```yaml
+  # Prometheus 导出器 - 指标暴露给 Prometheus 抓取
+  prometheus:
+    endpoint: 0.0.0.0:8889
+    namespace: patra
+    enable_open_metrics: true
+    resource_to_telemetry_conversion:
+      enabled: true
+```
+
+- `namespace: patra`：所有指标名前面加 `patra_`，点换成下划线。`analytics.ingest.lag` 到了 Prometheus 里就是 `patra_analytics_ingest_lag` 开头的名字。
+- `resource_to_telemetry_conversion`：OTLP 里有一类挂在「资源」（发数据的那个进程）上的属性，打开它，这些属性也变成 Prometheus 的标签。
+
+Prometheus 的配置里写的抓取目标是 `otel-collector:8889`，每 15 秒抓一次，数据保留 7 天，容器内存上限 512M。所以 Patra 实际是两段：**服务推给 Collector，Prometheus 拉 Collector**。七个服务只需要知道 Collector 一个地址，Prometheus 也只需要抓 Collector 一个目标。
+
+<Structure
+  title="Patra 的一个指标从记下到画成图"
+  nodes={[
+    { id: "svc", label: "OtlpMeterRegistry", sub: "七个服务各一个", code: true, col: 1, desc: "业务代码经 Micrometer 记数；注册表每 30 秒把攒下的数经 OTLP/HTTP 推出去。" },
+    { id: "otel", label: "OTel Collector", sub: "收 4318 · 摆 8889", col: 2, desc: "otlp 接收器在 4318 收；prometheus 导出器给指标名加 patra_ 前缀，摆在 8889 上等人来抓。" },
+    { id: "prom", label: "Prometheus", sub: "每 15 秒抓一次", col: 3, desc: "按目标列表抓 otel-collector:8889，存成一条条序列，保留 7 天。" },
+    { id: "grafana", label: "Grafana", col: 4, desc: "面板用 PromQL 从 Prometheus 查数画图。" }
+  ]}
+  edges={[
+    { from: "svc", to: "otel", label: "推 · OTLP", desc: "服务主动发，地址是 `management.otlp.metrics.export.url`。" },
+    { from: "otel", to: "prom", label: "被抓 · HTTP", desc: "数据从 Collector 流向 Prometheus，但请求是 Prometheus 发起的。" },
+    { from: "prom", to: "grafana", label: "查询" }
+  ]}
+  traces={[
+    {
+      button: "走一遍 analytics.ingest.lag",
+      packet: "lag",
+      hops: [
+        { at: "svc", caption: "analytics 的仪表读出 Kafka 还有多少条没入库，注册表攒着，到 30 秒推一次。" },
+        { at: "otel", caption: "Collector 收下这一批，名字变成 patra_analytics_ingest_lag 开头。" },
+        { at: "prom", caption: "Prometheus 下一次抓 8889 时把它存成序列。" },
+        { at: "grafana", caption: "运营面板上的入库滞后曲线从这里查。" }
+      ]
+    }
+  ]}
+/>
+
+推往哪、多久推一次，由工具模块 `patra-tool-observability` 统一出默认值，七个服务都不用写：
+
+<CodeRef at="patra-tool/patra-tool-observability/src/main/java/dev/patra/tool/observability/autoconfigure/ObservabilityDefaultsPostProcessor.java@cff912f0b0bd40cd32755fe44174880ab9e160e8" lines="31-36" />
+
+```java
+          // 指标经 OTLP 推给 OTel Collector；mini 上 apps 容器经 extra_hosts 回到宿主机的 4318，本机开发连 mini
+          "management.otlp.metrics.export.url",
+              "http://${PATRA_INFRA_HOST:127.0.0.1}:4318/v1/metrics",
+          "management.otlp.metrics.export.step", "30s",
+          // 计时按秒导出，经 Prometheus 导出器后是 *_seconds_*
+          "management.otlp.metrics.export.base-time-unit", "seconds");
+```
+
+这些键以最低优先级并入，服务的 yml、Nacos、环境变量都能覆盖（做法见「自动配置：引一个依赖就能用」最后一节）。
+
+## 谁把注册表接到 OTLP：Agent 桥接，还是应用内注册表
+
+把 Micrometer 的数变成 OTLP，业界有两种接法。
+
+**OTel Java Agent**：启动 JVM 时加 `-javaagent:...jar`，Agent 在类加载时改字节码，自动产生链路、日志，也能接管 Micrometer 的数再经 OTLP 推出去。好处是业务代码一行不改。可它是 JVM 启动参数，哪种启动方式带了参数，哪里才有它。
+
+**应用内的 OTLP 注册表**：在依赖里加 `micrometer-registry-otlp`，Boot 自动建出 `OtlpMeterRegistry`。它是普通的 jar，打进镜像就跟着走，不依赖启动参数。
+
+| | Agent 桥接 | 应用内注册表 |
+|---|---|---|
+| 生效的前提 | JVM 启动时挂了 Agent | 依赖在类路径上 |
+| 换个启动方式（本机 / 容器） | 每种都要记得挂 | 打进 jar 就都有 |
+| 适合 | 链路、日志的自动埋点 | 指标 |
+
+Patra 以前的规范是前一种：工具模块里有一个桥接 Bean，把 Agent 放进 `Metrics.globalRegistry` 的注册表搬进 Spring 容器。可 Agent 只挂在本机的 `bootRun` 上，容器的启动命令里没有它。v0.18 改成后一种：七个服务都经应用内的 `OtlpMeterRegistry` 推指标，桥接 Bean 删掉；本机运行时 Agent 仍然挂着，只导出链路和日志，指标那一项关掉（`otel.metrics.exporter=none`）。为什么关，考考自己：
+
+<Quiz
+  questions={[
+    {
+      question: "本机 `bootRun` 时，如果 Agent 的指标导出还开着（默认是 otlp），应用里的 `OtlpMeterRegistry` 也在推。Prometheus 里会看到什么？",
+      options: ["只有一份：Collector 会按指标名自动去重", "同一份指标从两条路各推一次", "启动失败：两个注册表抢同一个端口"],
+      answer: "B",
+      explain: "Agent 和应用内注册表是两个互不知道对方的发送方，Collector 也不做去重。PR 里明说：Agent 改为 `otel.metrics.exporter=none`，就是为了避免同一份指标推两次。"
+    }
+  ]}
+/>
+
+## 序列数：上线前为什么要先估
+
+Prometheus 的内存和存储大体跟**序列数**成正比，而序列数 = 每个指标的标签取值组合数，加起来。标签取值越多（基数越高），组合数乘得越快。给一个指标加上 `userId` 这种标签，用户有多少，序列就乘多少倍。
+
+Patra 的工具模块默认把一批高基数标签过滤掉：
+
+<CodeRef at="patra-tool/patra-tool-observability/src/main/java/dev/patra/tool/observability/filter/HighCardinalityMeterFilter.java@b6e01875bb5692356021c8a19562f557f319fc54" lines="53-70" />
+
+```java
+  /// 默认高基数标签黑名单。
+  private static final Set<String> DEFAULT_HIGH_CARDINALITY_KEYS =
+      Set.of(
+          "userId",
+          "user_id",
+          "requestId",
+          "request_id",
+          "traceId",
+          "trace_id",
+          "spanId",
+          "span_id",
+          "sessionId",
+          "session_id",
+          "timestamp",
+          "uuid",
+          "ip",
+          "email",
+          "phone");
+```
+
+七个服务一下子全接进来之前，PR #375 按 Prometheus 的 512 MiB 上限估了一遍：
+
+| 估什么 | 结果 |
+|---|---|
+| 计时器会不会带一串桶 | 全仓没有任何 Timer 打开 `percentiles-histogram` 或 SLO 桶。每个 Timer 经 Collector 只产生 3 条序列：`_bucket{le="+Inf"}`、`_count`、`_sum` |
+| 指标个数（各服务 `/actuator/metrics` 实测） | registry 66、catalog 77、gateway 78、interaction 108、identity 114、notification 114、analytics 215，共约 770 个 |
+| 标签组合 | 按取值个数相乘的理论上限 5.8 万条，大部分来自网关的 `http.server.requests` 和 `http.client.requests`；预计实际几千条 |
+| 现状 | Prometheus 875 条序列，内存 48.6 MiB / 512 MiB |
+
+<Callout kind="warn">
+
+打开 `percentiles-histogram` 后，一个计时器的每个标签组合都要多出一串桶序列，序列数成倍涨。Patra 的规范因此写明：要分位数，只给面板真用的那一个指标开，并先估算序列数。
+
+</Callout>
+
+还有一处已知的抖动：网关 `http.client.requests` 的 `client.name` 标签是下游容器的 IP，每次部署换一批。Collector 的 Prometheus 导出器 5 分钟后丢掉不再更新的序列，Prometheus 只保留 7 天，所以旧序列不会一直攒下去。
+
+<Quiz
+  questions={[
+    {
+      question: "给 `http.server.requests` 加一个 `userId` 标签（假设没有被过滤），活跃用户有一万个。序列数大约会怎样？",
+      options: ["每个已有的标签组合再乘上活跃用户数，往上万倍涨", "不变：标签只是附加信息，不会产生新序列", "只多出一条序列，专门记 userId"],
+      answer: "A",
+      explain: "每个不同的标签取值组合都是一条独立序列。加一个有一万种取值的标签，原来每个组合都要拆成最多一万条。Patra 的 `HighCardinalityMeterFilter` 默认就会把 `userId` 去掉。"
+    },
+    {
+      question: "PR 算出标签组合的理论上限是 5.8 万条，却预计实际只有几千条。凭什么？",
+      options: ["Prometheus 会自动合并名字相近的序列", "Collector 每 5 分钟会清掉一半序列", "`uri`、`status`、`exception` 这些标签彼此相关，实际出现的组合远少于乘积"],
+      answer: "C",
+      explain: "某个路由只会返回少数几种状态码、抛少数几种异常，不会每种组合都出现；`uri` 又是路由模板，不随请求路径无限增长。乘积只是上限。"
+    }
+  ]}
+/>
+
+<Transfer
+  prompt="假设 Patra 改成不经 Collector、让 Prometheus 直接抓每个服务的 `/actuator/prometheus`。要改哪些东西？得到什么、失去什么？序列数的问题会不会因此消失？"
+  points={[
+    { label: "要改的", text: "七个服务换成 `micrometer-registry-prometheus`，把 `prometheus` 端点加进 actuator 暴露列表；Prometheus 要知道每个服务的地址，服务的端口要能被它访问到。" },
+    { label: "得到", text: "哪个服务没导出，抓取就失败、目标标成 up = 0，不再是接收方静悄悄地收不到。" },
+    { label: "失去", text: "七个服务不再只认 Collector 一个地址；Collector 统一加前缀、加资源属性、和链路日志共用一套管道的好处也没了。" },
+    { label: "序列数照旧", text: "序列数由指标个数和标签组合决定，跟推还是拉无关，高基数标签照样要防。" }
+  ]}
+/>

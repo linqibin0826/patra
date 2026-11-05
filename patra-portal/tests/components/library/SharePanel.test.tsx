@@ -5,8 +5,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import "@testing-library/jest-dom/vitest";
 import { toast } from "sonner";
 import { ShareButton } from "@/components/library/SharePanel";
+import { track } from "@/lib/analytics/client/queue";
 
 vi.mock("sonner", () => ({ toast: { success: vi.fn() } }));
+vi.mock("@/lib/analytics/client/queue", () => ({ track: vi.fn() }));
 
 const fetchMock = vi.fn<typeof fetch>();
 const writeText = vi.fn<(text: string) => Promise<void>>();
@@ -145,6 +147,7 @@ describe("SharePanel", () => {
       ids: ["1"],
       format: "ris",
       name: "31535829",
+      scope: "items",
     });
     finish(fileResponse());
     await waitFor(() =>
@@ -162,6 +165,7 @@ describe("SharePanel", () => {
         ids: ["1"],
         format: "bibtex",
         name: "1",
+        scope: "items",
       }),
     );
   });
@@ -173,5 +177,30 @@ describe("SharePanel", () => {
     expect(await within(panel).findByText("导出没有成功，请稍后再试")).toBeInTheDocument();
     expect(within(panel).getByRole("button", { name: "CSV" })).toBeEnabled();
     expect(toast.success).not.toHaveBeenCalled();
+  });
+});
+
+describe("SharePanel · 埋点 Citation Copied", () => {
+  it("复制引用：记这一篇与当前格式", async () => {
+    vi.mocked(track).mockReset();
+    respond();
+    const { user, panel } = await openPanel();
+    await within(panel).findByText(CITATION.text);
+    await user.click(within(panel).getByRole("button", { name: "复制引用" }));
+    await waitFor(() =>
+      expect(track).toHaveBeenCalledWith("citation_copied", {
+        article_ids: ["1"],
+        style: "gb-t-7714-2015",
+      }),
+    );
+  });
+
+  it("复制链接不是引用：不记", async () => {
+    vi.mocked(track).mockReset();
+    respond();
+    const { user, panel } = await openPanel();
+    await user.click(within(panel).getByRole("button", { name: "复制链接" }));
+    expect(await within(panel).findByRole("button", { name: "已复制" })).toBeInTheDocument();
+    expect(track).not.toHaveBeenCalled();
   });
 });

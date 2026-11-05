@@ -28,6 +28,7 @@ import dev.patra.identity.domain.account.policy.MailLinkPolicy;
 import dev.patra.identity.domain.account.port.mail.EmailDeliveryPort;
 import dev.patra.identity.domain.account.port.read.UserReadPort;
 import dev.patra.identity.domain.account.port.repository.EmailTokenRepository;
+import dev.patra.identity.domain.account.port.repository.ExternalIdentityRepository;
 import dev.patra.identity.domain.account.port.repository.UserPasswordCredentialRepository;
 import dev.patra.identity.domain.account.port.repository.UserRepository;
 import dev.patra.identity.domain.account.service.ClientOriginResolver;
@@ -88,6 +89,8 @@ class RevertEmailChangeHandlerTest {
   private final UserReadPort userReadPort = mock(UserReadPort.class);
   private final UserPasswordCredentialRepository credentials =
       mock(UserPasswordCredentialRepository.class);
+  private final ExternalIdentityRepository externalIdentities =
+      mock(ExternalIdentityRepository.class);
   private final SessionStorePort sessions = mock(SessionStorePort.class);
   private final UserLoginRecordRepository records = mock(UserLoginRecordRepository.class);
   private final EmailTokenIssuer emailTokenIssuer = mock(EmailTokenIssuer.class);
@@ -103,6 +106,7 @@ class RevertEmailChangeHandlerTest {
           users,
           userReadPort,
           credentials,
+          externalIdentities,
           new SessionTerminator(sessions, records),
           emailTokenIssuer,
           LINKS,
@@ -206,6 +210,7 @@ class RevertEmailChangeHandlerTest {
     assertThat(result.email()).isEqualTo("chen.yu@example.com");
     verify(users).save(argThat(u -> u.getEmail().orElseThrow().equals(OLD)));
     verify(credentials).deleteByUserId(42L);
+    verify(externalIdentities).deleteAllByUserId(42L);
     verify(emailDelivery).send(any());
   }
 

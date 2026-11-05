@@ -1,0 +1,217 @@
+---
+title: Kafka：一本只追加的日志
+summary: RabbitMQ 像邮局，信取走就没了；Kafka 像一本只追加的日志本，消息按保留期留着，每个消费组用自己的书签（偏移量）记读到哪。这篇讲 topic、分区、偏移量、消费组，段文件与清理（retention.bytes 按分区算的坑），KRaft，以及生产者的 acks 与幂等。
+type: concept
+difficulty: advanced
+tags: [analytics, messaging]
+prerequisites: [msg-what-is-a-message-queue, msg-ack-and-redelivery]
+topics: [analytics-pipeline]
+sources:
+  - version: v0.18
+    issue: PAP-165
+    pr: 373
+  - version: v0.18
+    issue: PAP-167
+    pr: 373
+personalEnv: false
+---
+
+<Diagnose
+  question="入库消费者从 Kafka 读完一条事件，写进了 ClickHouse，然后提交了偏移量（相当于 RabbitMQ 里回 ack）。这条事件在 Kafka 里会怎样？"
+  options={["立刻被删掉，和 RabbitMQ 收到 ack 后删消息一样", "被挪进一个「已处理」topic，留给以后对账用", "原样留着，等保留期到了或超出大小上限，才随所在的整段文件一起删"]}
+  answer="C"
+  ifRight="对。提交偏移量只是挪了一下书签，消息本身不动。往下读会讲这本「日志本」怎么切分、怎么清理。"
+  ifWrong="答案是 C。Kafka 的消息不因为被读过就删除，提交偏移量只是记下「这个消费组读到哪了」。这题要先知道 RabbitMQ 里 ack 意味着什么，才看得出两者的差别，先读确认与重投那篇。"
+  suggest="msg-ack-and-redelivery"
+/>
+
+<Callout kind="lead">
+
+Kafka 把消息存成一本**只追加的日志**：新消息永远写在末尾，读的人各自拿一张书签记读到哪，消息按保留期留着，不因为被读过就消失。
+
+</Callout>
+
+## 邮局和日志本
+
+你在「确认与重投」那篇里见过 RabbitMQ 的规矩：消费者处理完回 ack，RabbitMQ 就把消息删掉。它是为「把一件事交给一个人去办」设计的，办完就没必要留着。
+
+行为数据要的不一样。Patra 的入库消费者要把事件批量写进 ClickHouse；ClickHouse 停机时，事件得在中间等着；写入代码出了 bug，最好能倒回去重新写一遍；以后再加一个实时监控，也要能读到同一批事件。这些要求放在「取走就删」的队列上都很别扭。
+
+<Callout kind="analogy">
+
+RabbitMQ 像邮局：一封信投进某个信箱，收件人取走就没了。Kafka 像一本只往后写的日志本：谁都可以翻，每个人夹一张自己的书签；日志本写满一册就归档，旧册按规定的年限销毁，跟有没有人读过无关。
+
+</Callout>
+
+## topic、分区、偏移量、消费组
+
+四个词把这本日志本说清楚：
+
+| 词 | 是什么 | 在 Patra 里 |
+|---|---|---|
+| topic | 一类消息的名字，相当于一本日志本 | `events.raw`（采集端点收下的事件）、`events.dlq`（校验没通过的事件） |
+| 分区（partition） | 一个 topic 切成几份，每份是一个独立的只追加日志 | `events.raw` 3 个分区，`events.dlq` 1 个 |
+| 偏移量（offset） | 消息在分区里的序号，从 0 往上数，写进去就不变 | 入库时拿「分区 + 偏移量范围」认出同一批消息 |
+| 消费组（consumer group） | 一组消费者共用一套书签；不同的组各记各的 | 入库消费者的组叫 `patra-analytics-ingest` |
+
+<Structure
+  title="events.raw 的三个分区与一个消费组"
+  nodes={[
+    { id: "collector", label: "采集端点", sub: "生产者", col: 1, row: 2, desc: "每条事件带一个键（设备 ID）。生产者按键算出分区，同一台设备的事件总落在同一个分区里，在分区内保持先后顺序。" },
+    { id: "p0", label: "分区 0", sub: "偏移量 0, 1, 2 …", col: 2, row: 1, desc: "一个只追加的日志。新消息写在末尾，拿到下一个偏移量。分区之间互不相干，各自编号。" },
+    { id: "p1", label: "分区 1", sub: "偏移量 0, 1, 2 …", col: 2, row: 2, desc: "同上。分区是并行的单位：同一个消费组里，一个分区同一时刻只交给一个消费者读。" },
+    { id: "p2", label: "分区 2", sub: "偏移量 0, 1, 2 …", col: 2, row: 3, desc: "同上。分区数只能加不能减，所以 3 个分区意味着这个组最多 3 个消费者并行。" },
+    { id: "ingest", label: "patra-analytics-ingest", sub: "消费组 · 1 个线程", code: true, col: 3, row: 2, desc: "Patra 只起一个实例、一个线程轮流拉 3 个分区。它为每个分区记一个「已提交偏移量」：重启后从这里接着读。" },
+    { id: "other", label: "另一个消费组", sub: "举例，Patra 没有", col: 3, row: 3, desc: "假如以后加一个实时监控，它用自己的组名，从自己的书签开始读同样的消息，和入库消费者互不影响。RabbitMQ 要做到这一点，得给它单独建队列、再复制一份消息。" }
+  ]}
+  edges={[
+    { from: "collector", to: "p0", label: "按键选分区" },
+    { from: "collector", to: "p1" },
+    { from: "collector", to: "p2" },
+    { from: "p0", to: "ingest" },
+    { from: "p1", to: "ingest" },
+    { from: "p2", to: "ingest" },
+    { from: "p2", to: "other", dashed: true, desc: "同一条消息可以被任意多个消费组读到，各组的书签互不相干。" }
+  ]}
+/>
+
+这里大多数人会卡在一点：**「读过」和「删除」在 Kafka 里是两件不相干的事**。消费组提交偏移量，只是告诉 Kafka「我读到这里了，下次从这里接着给我」。想重读，把书签往回拨就行；新建一个消费组，可以选择从头读（Patra 的入库消费者设了 `auto.offset.reset = earliest`，第一次启动时把 Kafka 里留着的都读一遍）。
+
+## 消息什么时候删：按段文件清理
+
+既然读过不删，磁盘总要有个头。Kafka 的清理规则有两条，满足任一条就删：
+
+- **按时间**（`retention.ms`）：超过保留期的删。Patra 保留 2 天。
+- **按大小**（`retention.bytes`）：超出大小上限的部分删。
+
+删的单位不是一条消息。每个分区的日志被切成一段段文件（段文件，segment），正在写的那段叫活动段。Kafka 清理时**只删整段，而且只删已经写满、关闭了的段**。由此带出两个容易想错的地方：
+
+1. **按时间清理会拖后**。一段文件里最新的那条也过期了，整段才删。流量小的时候一段迟迟写不满，「保留 2 天」可能变成好几天。所以 Patra 设了 `segment.ms` 6 小时：不管写没写满，6 小时滚动一段，保留期最多拖到 2 天 6 小时。
+2. **按大小清理是按分区算的**。`retention.bytes` 是**每个分区**的上限，不是整个 topic 的，而且活动段不删、只删整段。
+
+<Quiz
+  title="你猜会怎样"
+  questions={[
+    {
+      question: "events.raw 有 3 个分区，retention.bytes 设 1 GiB，segment.bytes（一段写满的大小）设 256 MiB。往里不停地写，它在磁盘上最多大约占多少？",
+      options: ["1 GiB，上限就是这么设的", "1.25 GiB，上限再加一个没删的活动段", "3 GiB，3 个分区各 1 GiB", "3.75 GiB，再加上两次清理检查之间新写入的量"],
+      answer: "D",
+      explain: "上限按分区算：3 个分区各 1 GiB。每个分区还可能多出一个段（活动段不删、只删整段），各 256 MiB。合起来 3 × (1 GiB + 256 MiB) = 3.75 GiB；超出上限的部分要等下一次清理检查才删，这段时间写进来的也得算上。"
+    }
+  ]}
+/>
+
+最坏占用这样算：
+
+```text
+最坏占用 ≈ 分区数 × (retention.bytes + segment.bytes) + 两次清理检查之间的写入量
+```
+
+Patra 的 topic 由一个边车容器按脚本建，脚本开头把这笔账写在注释里：
+
+<CodeRef at="patra-infra/docker/kafka/init-topics.sh@8140a9d9482324670b63f00ab3c62690102196c5" lines="8-24" />
+
+```bash
+# 「5 GB 上限」按整个 Kafka 算（spec 4.2 节）。retention.bytes 是每个分区的上限，且只删写满关闭的段文件，
+# 所以一个分区最坏占用 = retention.bytes + segment.bytes（再加 broker 两次清理检查之间新写入的量）：
+#   events.raw  3 × (1 GiB + 256 MiB) = 3.75 GiB
+#   events.dlq  1 × (512 MiB + 128 MiB) = 0.625 GiB
+# segment.ms 让流量小时段文件也按 6 小时滚动，否则一个段迟迟写不满，「保留 2 天」会拖成好几天。
+set -euo pipefail
+
+BOOTSTRAP="${BOOTSTRAP:-patra-kafka:29092}"
+BIN=/opt/kafka/bin
+TWO_DAYS_MS=172800000
+SIX_HOURS_MS=21600000
+
+# 名称 分区数 retention.bytes（每分区） segment.bytes
+TOPICS=(
+  "events.raw 3 1073741824 268435456"
+  "events.dlq 1 536870912 134217728"
+)
+```
+
+公式里最后一项也不能忽略。超出上限的段不是立刻删：broker 每隔一段时间做一次清理检查（默认 5 分钟），发现了再等一个删除延迟（默认 1 分钟）才真正删文件，这期间的写入量全是超出的部分。本机不限速压测时，峰值因此多出一倍多，于是 Patra 把两个值缩到 30 秒和 5 秒：
+
+<CodeRef at="patra-infra/docker/docker-compose.pipeline.yaml@8140a9d9482324670b63f00ab3c62690102196c5" lines="85-88" />
+
+```yaml
+      # 超出上限的部分要等「清理检查」发现、再等「删除延迟」才真正删掉文件，这段时间的写入量就是超出上限的量。
+      # 默认 5 分钟 + 1 分钟，本机不限速压测（约 390 MB/s）时峰值多出一倍多；缩到 30 秒 + 5 秒
+      KAFKA_LOG_RETENTION_CHECK_INTERVAL_MS: 30000
+      KAFKA_LOG_SEGMENT_DELETE_DELAY_MS: 5000
+```
+
+## KRaft：不再需要 ZooKeeper
+
+早期的 Kafka 要另起一套 ZooKeeper 集群，存「有哪些 topic、每个分区的主在哪台 broker」这类元数据。Kafka 4.0 起只支持 KRaft：元数据由 Kafka 自己的「控制器」用 Raft 协议管理。
+
+单节点时，同一个进程既当控制器又当 broker（`KAFKA_PROCESS_ROLES: broker,controller`）。代价是要固定一个**集群 ID**：数据目录第一次格式化时写进去，之后每次启动都要对得上。Patra 把它写死在 compose 里，它不是密钥，只是这份数据目录的身份；改了它，Kafka 会认不出自己的数据。
+
+## 客户端怎么找到 broker：两个地址
+
+客户端连 Kafka 分两步：先连你给它的引导地址（bootstrap），broker 回一份元数据，里面写着「分区的主在哪个地址」，客户端之后**改连元数据里的地址**。这个地址叫通告地址（advertised listener）。
+
+所以通告地址必须是客户端那一侧能连通的地址。Patra 的 broker 开了两个对客户端的监听器：
+
+| 监听器 | 谁在用 | 通告地址 |
+|---|---|---|
+| `EXTERNAL` | MacBook 上的服务和模拟器、mini 上 apps 栈的容器（经宿主机回到 9092 端口） | `<mini 的地址>:9092` |
+| `INTERNAL` | 同一个 Docker 网络里的建 topic 边车、健康检查 | `patra-kafka:29092`（按容器名） |
+
+只开一个监听器也能工作，但内网的容器要绕宿主机一圈；分开写是业界 compose 样例的通行做法。通告地址写错的典型症状是：引导地址连得上，一发消息就超时，因为客户端改连的那个地址它到不了。
+
+## 生产者：acks 与幂等
+
+采集端点是生产者。「发送成功」到底意味着什么，由生产者的设置决定：
+
+| 设置 | 含义 | Patra 取 |
+|---|---|---|
+| `acks` | broker 确认到什么程度才回成功：`0` 不等，`1` 主副本写了，`all` 所有同步副本都写了 | `all`（单节点时等同于 `1`，以后换多节点不用改配置） |
+| `enable.idempotence` | 生产者给发出的消息编号，网络重试时 broker 认出重复、只留一条 | `true` |
+| `delivery.timeout.ms` | 一条消息从交出到放弃的总时限，含重试 | 5 秒 |
+
+<CodeRef at="patra-api/patra-analytics/patra-analytics-infra/src/main/java/dev/patra/analytics/infra/collect/publish/KafkaProducerSettings.java@8140a9d9482324670b63f00ab3c62690102196c5" lines="15-30" />
+
+```java
+  public static final Map<String, Object> OVERRIDES =
+      Map.of(
+          ProducerConfig.ACKS_CONFIG,
+          "all",
+          ProducerConfig.ENABLE_IDEMPOTENCE_CONFIG,
+          true,
+          ProducerConfig.COMPRESSION_TYPE_CONFIG,
+          "zstd",
+          ProducerConfig.LINGER_MS_CONFIG,
+          10,
+          ProducerConfig.DELIVERY_TIMEOUT_MS_CONFIG,
+          5_000,
+          ProducerConfig.REQUEST_TIMEOUT_MS_CONFIG,
+          4_000,
+          ProducerConfig.MAX_BLOCK_MS_CONFIG,
+          2_000,
+```
+
+<Quiz
+  title="你猜会怎样"
+  questions={[
+    {
+      question: "采集端点的生产者开了幂等。流量模拟器把一批事件发给采集端点，采集端点等确认超时、返回 503；模拟器过一会儿把同一批（event_id 不变）又发了一次。Kafka 里会有几份？",
+      options: ["可能有两份：幂等只认得同一个生产者在一次发送里的重试", "只有一份：幂等让 broker 认出了重复", "零份：503 说明第一次一条都没写进去", "只有一份：Kafka 会按 event_id 去重"],
+      answer: "A",
+      explain: "幂等管的是生产者内部的网络重试：同一个生产者给同一条消息的重发带着同一个编号，broker 能认出来。产生方重新提交是另一次发送，编号不同；第一次也可能已经写进去一部分。Kafka 不看消息内容，不认识 event_id，这层重复要靠入库时按 event_id 去重。"
+    }
+  ]}
+/>
+
+这正是整条管线的分工：Kafka 保证「交给我的不丢」，不保证「全局不重」；重复留给入库那一端去挡，讲批量写入与去重令牌的那篇会接着讲。
+
+<Transfer
+  prompt="压测时发现入库跟不上，有人提议把 events.raw 从 3 个分区加到 6 个、入库消费者开 6 个线程，retention.bytes 不动。这样做之后：磁盘最坏占用会变成多少？以后流量降下来，想把分区减回 3 个，行不行？同一台设备的事件还能保持先后顺序吗？"
+  points={[
+    { label: "最坏占用翻倍", text: "retention.bytes 按分区算：6 × (1 GiB + 256 MiB) = 7.5 GiB，再加检查间隔内的写入量。原来按 5 GB 总预算定的参数要跟着改小。" },
+    { label: "分区只增不减", text: "Kafka 不支持减少分区。Patra 的建 topic 脚本在仓库值小于现有分区数时直接报错退出，不会静默。" },
+    { label: "顺序只在分区内", text: "加分区后，按键算出的分区会变，同一台设备的新事件可能落到别的分区；扩容前后的事件之间不再保证顺序，扩容之后的新事件之间仍然有序。" },
+    { label: "先看瓶颈", text: "消费者是不是瓶颈、ClickHouse 是不是瓶颈要先量清楚；如果慢在写 ClickHouse，加分区只会让并发写更多小批次。" }
+  ]}
+/>

@@ -1,0 +1,115 @@
+---
+title: 灌数据时磁盘多掉了一截：合并后的旧片段要等约 8 分钟才删
+summary: 往 ClickHouse 大批量写入时，后台合并不断产出新片段，被合并掉的旧片段并不马上删除，默认要留 480 秒。Patra 灌 1 亿条事件时，mini 的磁盘剩余从 51 GiB 一度掉到 28 GiB，旧片段删掉后才回到 37 GiB。估容量和设磁盘红线时，要把这笔临时占用算进去。
+type: pitfall
+difficulty: practice
+tags: [analytics, database]
+prerequisites: [analytics-mergetree-parts]
+topics: [analytics-pipeline]
+sources:
+  - version: v0.18
+    issue: PAP-171
+    pr: 373
+  - version: v0.18
+    issue: PAP-165
+    pr: 373
+personalEnv: false
+---
+
+<Diagnose
+  question="mini 的磁盘剩 51 GiB。往 ClickHouse 灌 1 亿条事件，灌完后 ClickHouse 实际占用 14.3 GiB。灌的过程中，磁盘剩余更可能怎么走？"
+  options={["一度明显低于 37 GiB，停写几分钟后自己回升到 37 GiB 左右", "一路降到 37 GiB 左右就停住，数据占多少就掉多少", "始终高于 37 GiB：合并会去掉重复行，过程中的占用比最终还小"]}
+  answer="A"
+  ifRight="对。被合并掉的旧片段还在盘上躺一阵，所以过程中的占用比最终占用大。往下读看为什么要留、留多久。"
+  ifWrong="答案是 A。合并是先写出新片段、再让旧片段退场，旧片段不会立刻删除，这段时间新旧两份同时占着盘。这题要先知道片段和合并是怎么回事，先读 MergeTree 那篇。"
+  suggest="analytics-mergetree-parts"
+/>
+
+## 坑
+
+<Callout kind="lead" label="坑在哪">
+
+往 ClickHouse 大批量写入时，磁盘掉得比数据量多：合并后的旧片段（inactive parts）默认要等 480 秒才删，大量合并期间它们会攒成一大笔临时占用。
+
+</Callout>
+
+2026-11-02，Patra 在 mini 上灌入 1.0232 亿条事件（用时约 15 分钟，ClickHouse 最终占用 14.3 GiB）。灌入时，mini 的磁盘剩余一度从 51 GiB 降到 28 GiB。原因是合并后的旧片段约 8.8 GiB，要等约 8 分钟才删除；清掉之后，剩余回到 37 GiB。
+
+## 为什么
+
+上一篇讲过，合并是把几个旧片段归并成一个新片段。顺序是：先把新片段完整写到磁盘上，再让它接替旧片段参与查询；旧片段从此变成 inactive，查询不再读它，但文件还在。
+
+ClickHouse 不会马上删 inactive 片段，而是留一段时间，由 MergeTree 的设置 `old_parts_lifetime` 控制，默认 480 秒，也就是 8 分钟。这样设计是为了防一种情况：服务器突然断电或重启时，刚写好的新片段可能还没真正落盘，旧片段留着，数据就还有一份完整的。
+
+平时写入量小，这点临时占用无关紧要。灌历史时就不一样了：每分钟都有大量新片段写入、大量合并在进行，每次合并都留下一批要等 8 分钟才删的旧片段。合并越多，压在盘上的旧片段越多；片段在一次次合并里越变越大，旧片段也越来越大。磁盘上同时躺着两份数据：合并好的新片段，和还没到期的旧片段。
+
+<Quiz
+  title="你猜会怎样"
+  questions={[
+    {
+      question: "灌完停写，过了 8 分钟左右，磁盘剩余从 28 GiB 回到了 37 GiB，events 的行数一条没少。多出来的空间是哪来的？",
+      options: ["后台合并把数据压缩得更小了", "TTL 把最早那一天的分区删掉了", "合并后留下的旧片段到期，被删除了", "ClickHouse 清掉了系统日志表"],
+      answer: "C",
+      explain: "行数没少，说明删的不是数据；回升的时间点正好是旧片段的 480 秒保留期。灌的是 88 天前到昨天的数据，离 90 天的 TTL 还有两天余量，TTL 不会在这时动手。"
+    }
+  ]}
+/>
+
+<Callout kind="insight" label="怎么认出它">
+
+- 磁盘掉得比写入的数据量多，而且**停写几分钟后自己回升**，不用你做任何事。
+- `system.parts` 里 `active = 0` 的片段很多、合计很大：
+
+```sql
+SELECT table, count() AS parts, formatReadableSize(sum(bytes_on_disk)) AS size
+FROM system.parts
+WHERE database = 'patra_analytics' AND NOT active
+GROUP BY table;
+```
+
+查容量时只看 `active` 的片段，得到的是数据真正占用的大小；磁盘上实际被占的，是活跃加不活跃两部分。
+
+</Callout>
+
+## 怎么避开
+
+这个坑不需要修，要做的是**估容量、设红线时把它算进去**。
+
+**1. 容量预算按「最终占用 + 合并期间的临时占用」留**。最终占用可以试灌一小段、量出每条多少字节再乘上去（Patra 试灌 263 万条，量出每条约 146 B）。合并期间要额外留出新旧片段并存的空间：Patra 灌数前的计划里，除了推算的最终占用，另算了合并时的临时空间，约为最大分区的 2 倍。
+
+**2. 让数据库自己守住磁盘红线**。Patra 给 ClickHouse 设了 `keep_free_space_bytes`：写入和合并前都要先预留空间，磁盘剩余低于 22 GB 时拒绝预留，写入报 `NOT_ENOUGH_SPACE`，而不是一路写到 mini 上 runner 看门狗的 20 GB 红线以下。
+
+<CodeRef at="patra-infra/docker/clickhouse/config.d/patra.xml@8140a9d9482324670b63f00ab3c62690102196c5" lines="68-76" />
+
+```xml
+  <!-- 磁盘兜底：写入和合并前先预留空间，剩余空间低于 22 GB 时拒绝预留，写入报 NOT_ENOUGH_SPACE，
+       不会一直写到 runner 看门狗的 20 GB 红线以下。数据目录是 mini 宿主机磁盘的 bind mount，看到的就是整盘余量 -->
+  <storage_configuration>
+    <disks>
+      <default>
+        <keep_free_space_bytes>22000000000</keep_free_space_bytes>
+      </default>
+    </disks>
+  </storage_configuration>
+```
+
+这次最低剩 28 GiB，没有碰到 22 GB 的保护线。模拟器遇到 `NOT_ENOUGH_SPACE` 会立刻停下报告，不硬写。
+
+**3. 灌完等一会儿再量**。灌完马上看 `df`，看到的是新旧并存时的数字；等 8 分钟左右，旧片段删掉，才是真实的剩余。
+
+<Callout kind="warn">
+
+- **保护线按实际剩余算，旧片段也算占用**：如果预算贴着红线，灌到一半可能因为旧片段占着盘而被拒绝写入，哪怕最终的数据其实放得下。留余量时要按最低点算，不能按灌完稳定后的数字算。
+- **别急着把 `old_parts_lifetime` 调小**：调小能让磁盘更快回来，但它保护的正是突然断电时的数据。Patra 的配置里没有改它，用的是默认值。
+
+</Callout>
+
+<Transfer
+  prompt="除了灌历史，还有哪些操作会让 ClickHouse（或者别的存储）出现同样的「先多占一份、过一阵才释放」？各自该怎么留余量？"
+  points={[
+    { label: "强制合并", text: "对一张大表执行 OPTIMIZE ... FINAL，会把整个分区合成一个片段：新片段写完前后，新旧两份同时在盘上，旧的还要再留 8 分钟。" },
+    { label: "改写片段的修改", text: "ALTER TABLE ... UPDATE / DELETE 这类变更会重写受影响的片段；不开 ttl_only_drop_parts 时，TTL 删除也是重写片段。都会先生成新片段、再让旧片段变成 inactive。" },
+    { label: "Kafka 的段文件删除", text: "Kafka 超出保留上限的段，也要等清理检查发现、再等删除延迟才真删，这期间的写入量就是超出的量。Patra 因此把检查间隔和删除延迟缩到 30 秒和 5 秒。" },
+    { label: "通用做法", text: "预算按峰值留，不按稳态留；让存储自己设一条拒写的保护线；操作完等延迟过去再验收容量。" }
+  ]}
+/>

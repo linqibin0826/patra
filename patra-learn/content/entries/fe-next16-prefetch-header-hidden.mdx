@@ -1,0 +1,138 @@
+---
+title: Next 16 读不到预取请求头：改靠 loading.tsx 挡住预取
+summary: 埋点方案原定「带 `Next-Router-Prefetch` 请求头的请求不发服务端事件」，好让 Next 的预取不被算成浏览。可 Next 16.3 把这个头连同 `RSC` 等内部头从 proxy 和 `headers()` 里都藏掉了，这条判断写了也永远不生效。门户改靠文献详情页和检索页的 `loading.tsx`：预取只渲染到 loading 边界，`page.tsx` 不执行，事件自然不发。
+type: pitfall
+difficulty: practice
+tags: [frontend, analytics]
+prerequisites: [fe-analytics-tracking, fe-nextjs-pages-and-routing]
+topics: [analytics-pipeline]
+sources:
+  - version: v0.18
+    issue: PAP-173
+    pr: 376
+personalEnv: false
+---
+
+<Diagnose
+  question="门户不想让预取被算成一次浏览，打算在文献页里这样写：用 headers() 读 Next-Router-Prefetch 请求头，有这个头就不发「看过」事件。在 Next 16.3 上，这段判断会怎样？"
+  options={["能读到，预取请求都会被正确跳过", "读的时候报错，Next 不许页面读这类请求头", "读不到：这个头被 Next 藏起来了，判断永远为假，等于没写"]}
+  answer="C"
+  ifRight="对。Next 16.3 在交给 proxy 和 headers() 之前就把这类内部头藏掉了，读到的永远是 null，也不报错。往下读：门户换了一个不靠请求头的办法。"
+  ifWrong="答案是 C。不报错，只是读不到：Next 16.3 把预取头和 RSC 等内部头都从 headers() 里藏掉了。这题考的是门户的服务端事件在哪发、怎么判断「这次不算」，先读门户怎么埋点那篇。"
+  suggest="fe-analytics-tracking"
+/>
+
+## 坑
+
+<Callout kind="lead" label="坑在哪">
+
+埋点方案靠 `Next-Router-Prefetch` 请求头认出预取、预取不发服务端事件；Next 16.3 把这个头从 proxy 和 `headers()` 里都藏掉了，门户读不到，这条规则写了也永远不生效。
+
+</Callout>
+
+## 为什么要防预取
+
+生产环境里，`<Link>` 一进入视口，Next 就会在后台把它指向的页面预取一部分，读者点下去时几乎秒开。预取是一次真实的服务端请求：服务器会把目标路由渲染到某个位置为止。
+
+Next 的文档专门提醒过：页面或布局里如果有副作用（比如记一次浏览），预取时就可能被执行，而读者根本没有打开那一页。门户的 `article_viewed` 正是在文献页 `page.tsx` 里发的。首页一屏列出 20 篇文献，要是预取会执行 `page.tsx`，就会凭空多出 20 次「浏览」。
+
+所以「埋点方案」那篇定了一条：带 `Next-Router-Prefetch` 头的请求不发任何服务端事件。这个头是 Next 客户端在发预取请求时自己加的。
+
+## 为什么读不到
+
+写代码时实测发现，页面里 `headers()` 读这个头永远是 `null`。原因在 Next 16.3 的请求处理里：它有一张「隐藏请求头」表，交给 `headers()` 的请求头视图会把表里的头全部遮掉。这张表由 `FLIGHT_HEADERS` 展开而来，包括 `RSC`、`Next-Router-State-Tree`、`Next-Router-Prefetch`、`Next-Router-Segment-Prefetch` 等，都是 Next 客户端和服务端之间传 React Server Components 数据用的内部头。
+
+proxy 那一层同样看不到。门户的 proxy 里正好有一段要区分「站内跳转、预取」和「地址栏直接打开」，代码注释写明了它为什么不用这些头：
+
+<CodeRef at="patra-portal/src/proxy.ts@ffc25c0bf848b54ae29bb08571a5c491c1f5089d" lines="128-134" />
+
+```ts
+  // 站内跳转与预取是页面里发起的 fetch，本来就不看 HTTP 状态码，直接放行。
+  // 认它们靠浏览器自带的 Sec-Fetch-Dest（fetch 是 empty，地址栏打开是 document）：
+  // Next 交给这里之前会剥掉 rsc 等内部请求头，在这里读不到。
+  // 爬虫、curl 不带这个头，按直接打开处理，照样能拿到真正的 404
+  if (req.headers.get("sec-fetch-dest") === "empty") {
+    return pass.next();
+  }
+```
+
+`Sec-Fetch-Dest` 能分出「页面里发的 fetch」和「地址栏打开」，可站内跳转和预取都是 fetch，它分不出这两者。所以这条路也没法用来认预取。
+
+<Callout kind="insight" label="怎么认出它">
+
+读 Next 内部请求头（`RSC`、`Next-Router-Prefetch` 之类）的判断不报错、不告警，只是永远拿到 `null`。更隐蔽的是自动预取只在生产环境发生：本地 `next dev` 下根本没有预取请求，这类判断在开发时看不出任何问题。
+
+</Callout>
+
+不是所有请求头都被藏。Server Action 的请求带 `Next-Action` 头，它不在隐藏表里，门户照样靠它认出「这是 Server Action 引起的重渲染」，不发 `article_viewed`。
+
+<Quiz
+  questions={[
+    {
+      question: "在 Next 16.3 的页面里用 headers() 读下面几个请求头，哪一个读得到？",
+      options: ["Next-Router-Prefetch", "RSC", "Next-Router-State-Tree", "Next-Action"],
+      answer: "D",
+      explain: "前三个都在 FLIGHT_HEADERS 里，被藏掉了。Next-Action 不在隐藏表里，门户正是靠它跳过 Server Action 的重渲染。"
+    },
+    {
+      question: "文献页有 loading.tsx。首页一屏露出 20 个文献链接，Next 预取了这 20 个页面。文献页的 article_viewed 因此发了几次？",
+      options: ["20 次：预取就是提前把整页渲染一遍", "0 次：预取只渲染到 loading 边界，page.tsx 不执行", "20 次，但采集端点会按 event_id 去重成 0 次"],
+      answer: "B",
+      explain: "带 loading 文件的动态路由，预取的内容只到第一个 loading 边界为止，page.tsx 根本没跑，事件也就没发。采集端点按 event_id 去重只防同一条事件重复送达，挡不住 20 条不同的事件。"
+    }
+  ]}
+/>
+
+## 怎么避开：让预取根本走不到发事件的地方
+
+既然认不出预取，就让预取不执行 `page.tsx`。Next 文档里写了预取的范围：没有 Cache Components 时，动态路由默认不预取；带 `loading` 文件的动态路由，预取的内容是「布局，直到第一个 loading 边界」。
+
+门户的文献详情页 `/papers/[id]` 和检索页 `/papers` 都是动态路由，都有 `loading.tsx`。所以预取只渲染外层布局和骨架屏，`page.tsx` 不执行。服务端事件只要发在 `page.tsx` 或它下面的组件里，预取就碰不到：
+
+<CodeRef at="patra-portal/src/app/papers/[id]/page.tsx@ffc25c0bf848b54ae29bb08571a5c491c1f5089d" lines="54-59" />
+
+```tsx
+  // 埋点：响应之后发 Article Viewed。预取只渲染到 loading.tsx、不进这里；Server Action 的回渲染不发（spec §2.3）
+  trackServerEvent(
+    { name: "article_viewed", properties: { article_id: paper.id } },
+    await readPageFacts(),
+    { path: `/papers/${paper.id}`, type: "article" },
+  );
+```
+
+效果和原来那条规则一样，只是防线从「读请求头」换成了「文件结构」。文件结构也会被人改，所以门户加了一个测试守住这两个 `loading.tsx`：
+
+<CodeRef at="patra-portal/tests/app/papers/loading-boundaries.test.ts@ffc25c0bf848b54ae29bb08571a5c491c1f5089d" lines="6-15" />
+
+```ts
+// 埋点 spec §2.3：Next 16 读不到预取请求头，靠 loading 边界保证预取只渲染到骨架、page.tsx 不执行，
+// 所以文献详情与检索页的服务端事件不会因为预取多算。删掉这两个文件前先换一种防预取的办法
+describe("文献详情与检索页保留 loading.tsx", () => {
+  it.each(["src/app/papers/[id]/loading.tsx", "src/app/papers/(list)/loading.tsx"])(
+    "%s",
+    (file) => {
+      expect(existsSync(resolve(__dirname, "../../..", file))).toBe(true);
+    },
+  );
+});
+```
+
+预取请求仍然会经过 proxy，proxy 照样滚动会话 Cookie：读者把鼠标移到链接上、链接滚进视口，本身也是活动。挡掉的只是事件，不是会话。
+
+门户把这个改法写进了给后端的契约备注，建议埋点方案里那条规则改写成「预取不渲染页面，因此不发」，后端答复接受。
+
+<Callout kind="warn">
+
+这道防线有两个前提，改代码时容易不小心拆掉：一是事件不能挪进布局（`layout.tsx`），预取会渲染布局；二是门户的链接不能写 `prefetch={true}`，那会让 Next 预取更完整的页面内容。门户现在没有任何 `prefetch={true}` 的链接。
+
+</Callout>
+
+<Transfer
+  prompt="有人想给门户的期刊详情页 /journals/[id] 也加一个「看过期刊」的服务端事件，打算写在期刊页的 page.tsx 里。为了不被预取多算，他需要先确认什么？如果他图省事把事件写进根布局，按路径判断「是期刊页才发」，会怎样？"
+  points={[
+    { label: "确认有 loading 边界", text: "期刊详情页是不是动态路由、有没有 loading.tsx；有，预取才只渲染到骨架，page.tsx 不执行。最好也像文献页那样加一条测试守住它。" },
+    { label: "别读内部请求头", text: "不要再写「读 Next-Router-Prefetch 判断预取」，在 Next 16.3 上它永远读不到。" },
+    { label: "写进布局会多算", text: "预取会渲染外层布局，事件写在根布局里，链接一进视口就会发一次，期刊浏览数被预取撑大。" },
+    { label: "链接别开完整预取", text: "指向期刊页的链接不能写 prefetch={true}，否则预取的范围会越过 loading 边界。" }
+  ]}
+/>

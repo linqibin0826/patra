@@ -40,15 +40,20 @@ const page = <T>(items: T[]) => ({
 });
 const urls = () => fetchMock.mock.calls.map(([url]) => String(url));
 
-/// 按地址分派：interaction 的回 `interaction`，catalog 批量卡片回 `cards`，批量对象统计回 `stats`
+/// 按地址分派：interaction 的回 `interaction`，catalog 批量卡片回 `cards`，批量对象统计回 `stats`，
+/// 行为数据服务的看过人数回 `views`
 function respond(
   interaction: Response,
   cards: Response = Response.json({ items: [] }),
   stats: Response = Response.json({ items: [] }),
+  views: Response = Response.json({ items: [] }),
 ) {
   fetchMock.mockImplementation(async (url) => {
     if (String(url).includes("/patra-catalog/")) {
       return cards.clone();
+    }
+    if (String(url).includes("/patra-analytics/")) {
+      return views.clone();
     }
     return String(url).includes("/subjects/stats") ? stats.clone() : interaction.clone();
   });
@@ -129,8 +134,12 @@ describe("fetchLibraryPage", () => {
     const paper = makePaper({ id: "11" });
     respond(Response.json(page([active, gone])), Response.json({ items: [paper] }));
     const read = await fetchLibraryPage("all", "published", 2);
-    expect(urls()).toEqual([
+    expect(urls()[0]).toBe(
       "http://gw.test/patra-interaction/me/library/items?view=all&sort=published&page=2&size=50",
+    );
+    // 卡片、计数、看过人数三个请求并行，到达顺序不定
+    expect(urls().slice(1).sort()).toEqual([
+      "http://gw.test/patra-analytics/articles/stats",
       "http://gw.test/patra-catalog/portal/publications/batch?id=11",
       "http://gw.test/patra-interaction/subjects/stats",
     ]);
@@ -142,8 +151,8 @@ describe("fetchLibraryPage", () => {
         ...page([]),
         total: 2,
         items: [
-          { item: active, paper, stats: null },
-          { item: gone, paper: null, stats: null },
+          { item: active, paper, stats: null, views: 0 },
+          { item: gone, paper: null, stats: null, views: null },
         ],
       },
     });
@@ -199,6 +208,31 @@ describe("fetchLibraryPage", () => {
       null,
       null,
     ]);
+  });
+
+  it("看过人数随卡片一起取（v0.18）：没数据的是 0", async () => {
+    respond(
+      Response.json(page([active, second])),
+      Response.json({ items: [makePaper({ id: "11" }), makePaper({ id: "12" })] }),
+      undefined,
+      Response.json({
+        items: [{ articleId: "11", viewerCount: 1284, fulltextReaderCount: 3, hot: true }],
+      }),
+    );
+    const read = await fetchLibraryPage("all", "added", 1);
+    expect(read.kind === "ok" && read.data.items.map((entry) => entry.views)).toEqual([1284, 0]);
+  });
+
+  it("行为数据服务取不到：页面照常，看过为 null", async () => {
+    respond(
+      Response.json(page([active])),
+      Response.json({ items: [makePaper({ id: "11" })] }),
+      undefined,
+      new Response(null, { status: 503 }),
+    );
+    const read = await fetchLibraryPage("all", "added", 1);
+    expect(read.kind).toBe("ok");
+    expect(read.kind === "ok" && read.data.items[0]?.views).toBeNull();
   });
 
   it("should_stay_ok_with_null_stats_when_stats_unavailable", async () => {

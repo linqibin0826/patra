@@ -394,4 +394,35 @@ class IdentitySchemaConstraintsIT {
         deletedAt,
         emailVerifiedAt);
   }
+
+  @Test
+  @DisplayName("外部身份的 provider 只收三家")
+  void should_reject_unknown_external_identity_provider() {
+    jdbcTemplate.update(
+        INSERT_USER, 9901L, "ext@example.com", "u-ext-ck", "ACTIVE", null, null, null, null);
+
+    assertThatThrownBy(
+            () ->
+                jdbcTemplate.update(
+                    "INSERT INTO idn_user_external_identity "
+                        + "(id, user_id, provider, subject, account_label, linked_at) "
+                        + "VALUES (9902, 9901, 'WECHAT', 'x', 'x', ?)",
+                    AT))
+        .isInstanceOf(DataIntegrityViolationException.class)
+        .hasMessageContaining("ck_idn_user_external_identity_provider");
+  }
+
+  @Test
+  @DisplayName("外部身份的 user_id 要指向存在的用户")
+  void should_reject_external_identity_of_missing_user() {
+    assertThatThrownBy(
+            () ->
+                jdbcTemplate.update(
+                    "INSERT INTO idn_user_external_identity "
+                        + "(id, user_id, provider, subject, account_label, linked_at) "
+                        + "VALUES (9903, 9999999, 'GITHUB', 'x', 'x', ?)",
+                    AT))
+        .isInstanceOf(DataIntegrityViolationException.class)
+        .hasMessageContaining("fk_idn_user_external_identity_user");
+  }
 }

@@ -172,7 +172,7 @@ Playwright 的 `expect(…).toBeVisible()`、`toHaveURL(…)` 这类断言默认
 
 端到端在 CI 里的位置：
 
-<CodeRef at=".github/workflows/ci.yml@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="214-218" />
+<CodeRef at=".github/workflows/ci.yml@8140a9d9482324670b63f00ab3c62690102196c5" lines="244-248" />
 
 从那几行能读出：门户有改动的 PR 上它会跑，但**失败不拦合并**（`continue-on-error`）；而每晚的定时全量运行里，失败是**阻塞**的。这是对速度和稳定性的折中：不让偶发的浏览器抖动卡住每一个 PR，同时每天有一次严格的检查兜底。
 

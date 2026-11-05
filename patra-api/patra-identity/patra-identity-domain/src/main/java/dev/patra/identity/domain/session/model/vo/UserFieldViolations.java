@@ -17,6 +17,15 @@ public final class UserFieldViolations {
   /// 设备标识字段名，和请求体一致。
   public static final String DEVICE_ID = "deviceId";
 
+  /// 待补填凭证字段名（请求头 `X-Patra-Registration-Ticket`）。
+  public static final String TICKET = "ticket";
+
+  /// 注册验证码字段名，和请求体一致。
+  public static final String CODE = "code";
+
+  /// 没有可用的验证码：过期、已用或错满次数。
+  public static final String EXPIRED = "EXPIRED";
+
   /// 为空。
   public static final String REQUIRED = "REQUIRED";
 
@@ -336,6 +345,48 @@ public final class UserFieldViolations {
   /// @return 字段错误
   public static FieldViolation usernameUnchanged() {
     return FieldViolation.of(USERNAME, UNCHANGED, "新用户名与当前相同");
+  }
+
+  /// 没带待补填凭证。
+  ///
+  /// @return 字段错误
+  public static FieldViolation ticketRequired() {
+    return FieldViolation.of(TICKET, REQUIRED, "请重新从第三方登录开始");
+  }
+
+  /// 待补填凭证过期或不存在。
+  ///
+  /// @return 字段错误
+  public static FieldViolation ticketInvalid() {
+    return FieldViolation.of(TICKET, INVALID, "注册已过期，请重新从第三方登录开始");
+  }
+
+  /// 验证码为空。
+  ///
+  /// @return 字段错误
+  public static FieldViolation codeRequired() {
+    return FieldViolation.of(CODE, REQUIRED, "请输入验证码");
+  }
+
+  /// 验证码不是 6 位数字。
+  ///
+  /// @return 字段错误
+  public static FieldViolation codeInvalidFormat() {
+    return FieldViolation.of(CODE, INVALID_FORMAT, "验证码是 6 位数字");
+  }
+
+  /// 验证码不对。
+  ///
+  /// @return 字段错误
+  public static FieldViolation codeInvalid() {
+    return FieldViolation.of(CODE, INVALID, "验证码不对");
+  }
+
+  /// 没有可用的验证码。
+  ///
+  /// @return 字段错误
+  public static FieldViolation codeExpired() {
+    return FieldViolation.of(CODE, EXPIRED, "验证码已失效，请重新发送");
   }
 
   /// 令牌为空。

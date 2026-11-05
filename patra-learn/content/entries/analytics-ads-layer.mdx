@@ -1,0 +1,185 @@
+---
+title: 应用层（ADS）：面板只读预先算好的小表
+summary: 一块运营看板打开时，所有面板同时发查询。Patra 在 mini 上实测，30 天范围直接扫明细，漏斗一条就要 403 MiB、6 秒，2 GiB 的 ClickHouse 扛不住。所以在明细层、汇总层之上再加一层应用层（ADS）：每小时把明细算成按天的小表，面板只读它们，代价是数字最多晚 1 小时。
+type: concept
+difficulty: advanced
+tags: [analytics, database]
+prerequisites: [analytics-materialized-views, analytics-metrics-overview]
+topics: [analytics-pipeline]
+sources:
+  - version: v0.18
+    issue: PAP-172
+    pr: 377
+personalEnv: false
+---
+
+<Diagnose
+  question="一块 Grafana 看板有 20 多个面板，每个面板都直接扫 30 天的明细表，最重的一条查询要 403 MiB。ClickHouse 容器一共 2 GiB 内存，每条查询上限 1 GiB。打开这块看板，最可能怎样？"
+  options={["每条查询都没超过 1 GiB，所以都能出数，只是加载慢一点", "ClickHouse 会把同一块看板的查询排成队一条条跑，内存不会叠加", "所有面板同时发查询，内存叠加起来超过容器能给的，查询报错甚至拖垮整个库"]}
+  answer="C"
+  ifRight="对。单条不超限不等于一起跑不超限。这篇讲 Patra 怎么让面板根本不碰明细：再加一层只给面板用的小表。"
+  ifWrong="答案是 C。Grafana 打开看板时所有面板同时发查询，每条各占一份内存；单条的上限管不住加起来的总量。这题还考汇总表为什么能省掉扫明细，物化视图那篇讲过「写入时就汇总」，先读它。"
+  suggest="analytics-materialized-views"
+/>
+
+<Callout kind="lead">
+
+应用层（ADS，Application Data Service）是专门给某个应用准备的小表：把明细预先算成这个应用要看的形状，应用只读它，不再碰明细。
+
+</Callout>
+
+## 先看实测：直接扫明细要多少
+
+v0.18 的行为数据已经入库，mini 上有 1.02 亿条合成历史事件。产品与运营要看一块面板：每天多少人来、回不回来、从检索到读全文在哪一步流失、有没有搜不到的词、数据本身可不可信。
+
+最直接的做法是每个面板写一条 SQL，直接查明细表 `events` 和日活表 `daily_person_activity`。设计时先在 mini 上用只读账号实测了 30 天范围（每天约 116 万条事件）：
+
+| 查询 | 耗时 | 内存 |
+|---|---|---|
+| 漏斗（`windowFunnel`，按会话） | 6.1 s | 403 MiB |
+| 跳出率（按会话） | 4.2 s | 172 MiB |
+| 滚动 DAU / WAU / MAU（日活表） | 2.5 s | 520 MiB |
+| 日活（日活表） | 1.0 s | 194 MiB |
+| 留存 30 个同期群（日活表） | 0.6 s | 167 MiB |
+| 迟到分位数（明细） | 2.3 s | 9 MiB |
+| 无结果词（明细） | 0.7 s | 20 MiB |
+
+单看每一条，都没超过每条查询 1 GiB 的上限。问题在「同时」：ClickHouse 容器只有 2 GiB，Grafana 打开看板时所有图同时发查询，光漏斗、跳出、MAU 三块就要 1.1 GiB；时间范围拉到 90 天，还要再翻三倍。而这块看板最后有 23 个面板。
+
+重的几条都是按会话或按人的聚合：漏斗要把一个会话的事件排好序看走到第几步，MAU 要把 30 天里的人逐个去重。这类计算的内存随范围里的会话数、人数涨，跟面板最后画出来的点有多少无关：MAU 曲线 30 天只有 30 个点，算它却要记住 30 天里出现过的每一个人。
+
+## 再加一层：明细、汇总、应用各管什么
+
+物化视图那篇（「物化视图：写入时就汇总，所以汇总表只能存幂等的值」）已经把 Patra 的数据分成明细层和汇总层，应用层当时只有计数接口与热读快照。这一版给面板再加一组应用层的表：
+
+<Structure
+  title="面板的数据从哪来"
+  nodes={[
+    { id: "events", label: "events", sub: "明细层 · 90 天", code: true, col: 1, desc: "一行一条富化后的事件。最全，也最大：每天一百多万行。" },
+    { id: "dws", label: "daily_person_activity 等", sub: "汇总层", code: true, col: 2, desc: "写入时由物化视图汇总：每人每天一行、每会话一行、每篇文献 × 会话一行。日活表保留 400 天。" },
+    { id: "ads", label: "ads_daily_* 等", sub: "应用层 · 按天的小表", code: true, col: 3, desc: "每小时由定时任务从明细或汇总层算好：每天每个维度组合一行，形状就是面板要画的样子。" },
+    { id: "grafana", label: "运营分析看板", sub: "Grafana", col: 4, desc: "23 个面板，只读应用层的表（另有坏数据表、对账结果表和 Prometheus）。" }
+  ]}
+  edges={[
+    { from: "events", to: "dws", label: "写入时触发", desc: "插入触发的物化视图：每写进一批就汇总这一批。" },
+    { from: "dws", to: "ads", label: "每小时", desc: "活跃、留存、COUNTER 的「按会话去重」从汇总层算。" },
+    { from: "events", to: "ads", label: "每小时", dashed: true, desc: "漏斗、检索、双击过滤、迟到分布要看单条事件，直接从明细算，只读最近两天。" },
+    { from: "ads", to: "grafana", label: "只读这一层" }
+  ]}
+/>
+
+三层的分工可以这么记：
+
+- **明细层**回答「发生过什么」，什么问题都能答，但每次都要从头算。
+- **汇总层**回答「每人每天、每会话有没有过某件事」，写入时就算好，给门户的计数接口和面板共用。
+- **应用层**只回答一个应用的问题，表的形状照着这个应用来：漏斗面板要「每天每一级走到了多少会话」，表里就存这个。
+
+业界把「面板直接扫明细」当作禁忌，原因就是上面那张表：一块看板十几个图同时扫亿级表，库会被拖垮。通行做法就是加这一层，面板只读它。
+
+## 面板只读 ADS，测试守住这一条
+
+设计里给面板查询定了一条硬约束：只读应用层的表、坏数据表 `dlq_events`、对账结果表 `reconcile_results` 与 Prometheus，单条查询目标 50 MiB 以内、1 秒以内；不读 `events`、`daily_person_activity`、`article_session_reads`。
+
+这条约束不是只写在文档里。看板 JSON 放在仓库里，集成测试把它读出来，逐个面板检查 SQL 里 `FROM` / `JOIN` 后面的表名，必须落在白名单里：
+
+<CodeRef at="patra-api/patra-analytics/patra-analytics-infra/src/integrationTest/java/dev/patra/analytics/infra/ads/AnalyticsOpsDashboardIT.java@c3df651e18fcd34d66a1ece0e2cea00c78e9d881" lines="40-51" />
+
+```java
+  private static final Set<String> ALLOWED_TABLES =
+      Set.of(
+          "ads_daily_active_latest",
+          "ads_cohort_retention_latest",
+          "ads_daily_sessions_latest",
+          "ads_daily_search_latest",
+          "ads_daily_zero_result_terms_latest",
+          "ads_daily_counter_items_latest",
+          "ads_daily_quality_latest",
+          "ads_daily_duplicates",
+          "dlq_events",
+          "reconcile_results");
+```
+
+谁以后图省事在面板里写了一句 `FROM events`，这个测试就红。名字后面的 `_latest` 是「每天只取最近一次计算结果」的视图，为什么要它，下一篇讲定时刷新时再说。
+
+## ADS 有哪些表
+
+每张表一行代表「一天 × 若干维度」，面板按天过滤、再按开关挑行求和：
+
+| 表 | 一行是 | 给哪组面板 |
+|---|---|---|
+| `ads_daily_active` | 天 × 合成 × 口径 | 活跃：DAU / WAU / MAU、黏性 |
+| `ads_person_first_day` | 每个身份 × 合成 × 口径的首日 | 留存的中间表，面板不读 |
+| `ads_cohort_retention` | 同期群首日 × 合成 × 口径 | 留存、新增访客 |
+| `ads_daily_sessions` | 天 × 合成 × 会话类别 × 漏斗级 × 是否单页 | 漏斗、跳出率、会话构成 |
+| `ads_daily_search` | 天 × 合成 × 口径 × 检索模式 | 无结果率、检索点击率 |
+| `ads_daily_zero_result_terms` | 天 × 合成 × 口径 × 检索词 | 无结果词排行（保留 90 天） |
+| `ads_daily_counter_items` | 天 × 文献 × 合成 × 口径 | 文献使用（COUNTER） |
+| `ads_daily_quality` | 天 × 合成 × 来源 × 迟到档 | 迟到分布 |
+| `ads_daily_duplicates` | 天 | 重复率 |
+
+以活跃表为例，它小到什么程度：
+
+<CodeRef at="patra-api/patra-analytics/patra-analytics-infra/src/main/resources/clickhouse/V7__ads_daily_active.sql@c3df651e18fcd34d66a1ece0e2cea00c78e9d881" lines="4-13" />
+
+```sql
+CREATE TABLE IF NOT EXISTS ads_daily_active (
+    day           Date,
+    is_synthetic  Bool,
+    traffic       LowCardinality(String),
+    dau           UInt64,
+    wau           UInt64,
+    mau           UInt64,
+    computed_at   DateTime64(3) DEFAULT now64(3)
+) ENGINE = ReplacingMergeTree(computed_at)
+ORDER BY (day, is_synthetic, traffic);
+```
+
+DAU、WAU、MAU 三个数已经算好，面板读的是几行数字。原先那条 520 MiB 的滚动 MAU，计算挪到了每小时一次的刷新里，而刷新每次只算两天；面板打开时不再付这笔账。
+
+### 两个开关为什么存成两行，而不是相减
+
+面板有两个开关：含不含合成数据（`is_synthetic`）、含不含爬虫（`traffic`：`human` 是真人口径，`all` 是全部流量）。
+
+<Quiz
+  title="你猜会怎样"
+  questions={[
+    {
+      question: "活跃表里同一天有 traffic = 'human' 和 traffic = 'all' 两行。为什么不改成存「真人」和「爬虫」两类，「含爬虫」时两行相加？",
+      options: ["人数按人去重，同一个人可能两类都沾边，两类相加会把他算两次", "两类相加要多一次 GROUP BY，面板会变慢", "爬虫的人数太少，单独存一行浪费空间", "Grafana 的变量只能做过滤，不能做加法"],
+      answer: "A",
+      explain: "DAU、MAU 都是按人去重的数，不能拆成几类再加，这和日活加不成月活是同一个道理。所以 human 和 all 各自算好再存。会话表是例外：一个会话只属于真人、爬虫、不跑脚本三类中的一类，互斥，会话数可以相加，所以它存的是互斥的 session_kind。"
+    }
+  ]}
+/>
+
+合成数据那个开关可以相加：合成与真实的人、会话不重叠（合成设备 ID 以 `sim` 开头），「含合成数据」就是两行相加。
+
+## 代价：数字最多晚 1 小时
+
+ADS 表每小时刷新一次，每次重算昨天和今天（北京时间）。面板上的数字因此最多晚 1 小时，每块图的描述里都写了这一句。想看实时状态（采集拒收、入库滞后），看另一块读 Prometheus 的「Analytics 管线」看板。
+
+连昨天也重算，是因为事件会迟到，跨午夜的会话也要等会话结束。比昨天更早到的事件不再补进 ADS，设计时预期远小于 0.1%。这是用「准确到小时、差一点点迟到」换「面板永远不会拖垮库」。
+
+## 口径照业界做
+
+面板上的每个数，口径都按业界通行的做法定，图的描述里各写一句：
+
+| 指标 | 口径 | 学习站里讲它的条目 |
+|---|---|---|
+| DAU / WAU / MAU | 滚动窗口：今天的 MAU = 含今天往前 30 天里来过的人；黏性 = 平均 DAU ÷ MAU | 日活、周活、月活与黏性：先写清什么叫「活跃」 |
+| N 日留存 | 经典留存：同期群里恰好第 N 天又来的比例，不用「第 N 天及以后任一天」 | 新增、留存与同期群：合成数据里的两个假象 |
+| 漏斗 | `windowFunnel(1800)`：一个会话按顺序最远走到第几步，窗口 30 分钟 | 漏斗与转化率：windowFunnel 返回的是「走到第几步」 |
+| 检索点击率 | Algolia 的定义：至少点了一个结果的检索 ÷ 检索数 | 同上一篇的「检索无结果率与点击率」一节 |
+| 文献使用 | COUNTER 5.1，学术出版界统计文献使用的标准 | 本篇下面一段 |
+
+COUNTER 的四个数分两组：Investigations 是查看类事件（看文献页、读全文、下载 PDF、收藏），Requests 只算取全文（读全文、下载 PDF）。前缀 Unique 表示按会话去重，一个会话里同一篇只算 1；前缀 Total 表示双击过滤，同一个人对同一篇两条事件相隔 30 秒以内只算一条。Unique 从长期保留的汇总表 `article_session_reads` 算；Total 要看每条事件的时刻，只能扫明细，所以也只能放进每小时一次的刷新里做。
+
+<Transfer
+  prompt="运营想在看板上加一块「每天每个检索模式的平均结果数」。有人说这条查询很轻，直接在面板里查 events 就行。你会怎么做？如果他们还想看「每小时」的曲线，又要考虑什么？"
+  points={[
+    { label: "仍然走 ADS", text: "面板只读应用层是硬约束，白名单测试也会拦住 FROM events；单条轻，但看板打开时和其他面板一起并发，范围一拉长就不轻了。" },
+    { label: "加列或加表", text: "在 ads_daily_search 的计算里多算结果数之和（或平均值所需的和与条数），键还是天 × 合成 × 口径 × 模式，面板相除。" },
+    { label: "平均值要存可相加的部分", text: "存「结果数之和」和「检索条数」两列，而不是存平均值：几天、几种模式合起来时，平均值不能直接再平均。" },
+    { label: "按小时要改粒度与新鲜度", text: "表的键要加小时，行数变成 24 倍；而刷新本身每小时一次，最近一个小时的数总是不完整，要在图的描述里写清。" }
+  ]}
+/>

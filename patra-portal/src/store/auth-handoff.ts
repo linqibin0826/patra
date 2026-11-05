@@ -3,7 +3,8 @@ import { create } from "zustand";
 /// 带过去的内容：邮箱，和登录页要显示的提示
 export interface AuthHandoff {
   email: string | null;
-  notice: "password-reset" | null;
+  /// `email-clash`：第三方注册时邮箱撞车过来，没有提示条，焦点在密码框
+  notice: "password-reset" | "email-clash" | null;
 }
 
 interface AuthHandoffState extends AuthHandoff {

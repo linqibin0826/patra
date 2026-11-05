@@ -1,0 +1,168 @@
+---
+title: 重复行怎么数：ReplacingMergeTree 只在合并时去重，数条数一律 uniqExact
+summary: ReplacingMergeTree 在后台合并时才把同一个 event_id 合成一行，合并前的查询会看到重复，所以 Patra 数条数一律用 uniqExact(event_id)、数人用 uniqExact(person_id)，不用 count()。uniq 是近似值、uniqExact 精确但费内存；对账也不拿 count() − uniqExact 当去重证据，因为合并会让它一路降到 0。
+type: concept
+difficulty: advanced
+tags: [analytics, database]
+prerequisites: [analytics-batch-insert-dedup-token]
+topics: [analytics-pipeline]
+sources:
+  - version: v0.18
+    issue: PAP-168
+    pr: 373
+  - version: v0.18
+    issue: PAP-170
+    pr: 373
+  - version: v0.18
+    issue: PAP-171
+    pr: 373
+personalEnv: false
+---
+
+<Diagnose
+  question="入库消费者在提交偏移量前崩溃，重启后批次边界变了，有 7,000 条事件被写了第二次。后台还没合并时，这些事件在 events 里各有几行？"
+  options={["一行：块令牌把第二次写入挡住了", "一行：ReplacingMergeTree 写入时就按 event_id 去重", "两行：令牌不同，第二份照样写进去"]}
+  answer="C"
+  ifRight="对。块令牌挡不住边界变了的重拉，第二份进了表。这篇讲表里有重复时，查询怎么才能数对。"
+  ifWrong="答案是 C。重拉的那批偏移量范围变了，令牌对不上，ClickHouse 当成新的一批照写。这题考的是块令牌只认整批，先读块令牌那篇。"
+  suggest="analytics-batch-insert-dedup-token"
+/>
+
+<Callout kind="lead">
+
+`ReplacingMergeTree` 在后台合并数据片段时，把排序键相同的行只留一行；合并之前，重复的行都还在表里，查询照样看得见。
+
+</Callout>
+
+## 去重发生在合并时，不在写入时
+
+Patra 的明细表 `events` 用的就是它，排序键最后一列是 `event_id`：
+
+<CodeRef at="patra-api/patra-analytics/patra-analytics-infra/src/main/resources/clickhouse/V1__events.sql@8140a9d9482324670b63f00ab3c62690102196c5" lines="30-34" />
+
+```sql
+) ENGINE = ReplacingMergeTree
+PARTITION BY toYYYYMMDD(derived_at, 'Asia/Shanghai')
+ORDER BY (event_name, toDate(derived_at, 'Asia/Shanghai'), article_id, person_id, event_id)
+TTL toDateTime(derived_at) + INTERVAL 90 DAY DELETE
+SETTINGS non_replicated_deduplication_window = 1000, ttl_only_drop_parts = 1;
+```
+
+一条重发的事件内容完全一样，所以它和原件落在同一天的分区里、排序键也完全相同，合并时会被合成一行。可这里大多数人会卡住：**合并什么时候发生，ClickHouse 不保证**。它按片段大小和后台线程的空闲情况自己决定，可能几秒后，可能很久以后；而且它只合并同一个分区里的片段。在那之前，两行都在。
+
+<Params
+  title="动手：同一个 event_id 写了两份，查询会数出几条"
+  guess={{ question: "同一个事件 e1 在 events 里有两行，后台还没合并。SELECT count() FROM events WHERE event_id = e1 会得到几？", options: ["1：表引擎是 ReplacingMergeTree，查询时自动去重", "2：合并之前两行都在，count() 照数", "不确定：取决于两行在不在同一个片段里"], answer: "B", explain: "ReplacingMergeTree 只在合并时去重，查询不会替你去重。两行不管在不在同一个片段，只要还没合并，count() 就是 2。" }}
+  controls={[
+    { type: "switch", id: "merged", label: "后台合并已经跑过", default: false },
+    { type: "switch", id: "exact", label: "查询用 `uniqExact(event_id)`，不用 `count()`", default: false }
+  ]}
+  cases={[
+    { when: { exact: true, merged: false }, results: [{ label: "e1 在表里", value: "2 行", tone: "wait" }, { label: "查询结果", value: "1", tone: "ok" }], verdict: { tone: "ok", head: "数对了。", text: "按 event_id 去重计数，两行同一个 ID 只算一次，不用等合并。" } },
+    { when: { exact: true }, results: [{ label: "e1 在表里", value: "1 行", tone: "ok" }, { label: "查询结果", value: "1", tone: "ok" }], verdict: { tone: "ok", head: "数对了。", text: "合并前合并后都是 1，结果不随合并进度变化。" } },
+    { when: { merged: true }, results: [{ label: "e1 在表里", value: "1 行", tone: "ok" }, { label: "查询结果", value: "1", tone: "wait" }], verdict: { tone: "bad", head: "这次碰巧对了。", text: "合并刚好跑过，count() 是 1；可你写查询时不知道合并跑没跑，同一条查询换个时间就是另一个数。" } },
+    { results: [{ label: "e1 在表里", value: "2 行", tone: "wait" }, { label: "查询结果", value: "2", tone: "bad" }], verdict: { tone: "bad", head: "多数了一条。", text: "合并还没发生，count() 把两行都算上。" } }
+  ]}
+/>
+
+### 那加 FINAL 行不行
+
+ClickHouse 提供 `SELECT ... FINAL`：查询时先把待合并的行就地合并一遍，再返回结果。它能让 `count()` 数对，但一般说来代价不小：查询要多读、多合并，表大的时候明显变慢、更费内存。Patra 没有用 `FINAL`，选的是另一条路：查询本身对重复不敏感。
+
+## 规矩：数条数用 uniqExact(event_id)
+
+入库设计定了一条规矩：凡是数「条数」的查询（检索次数、零结果词、曝光等），一律 `uniqExact(event_id)`，不用 `count()`。同一个事件不管在表里有几行，按 ID 去重只算一次，结果和合并进度无关。
+
+数人也是同一个道理，按人去重：`uniqExact(person_id)`。
+
+### uniq 和 uniqExact 选哪个
+
+ClickHouse 有两个常用的去重计数函数：
+
+| 函数 | 结果 | 内存 |
+|---|---|---|
+| `uniq` | 近似值：用采样和哈希估算，大基数时有小幅误差 | 有上限，基数再大也不怎么涨 |
+| `uniqExact` | 精确值 | 要把见过的每个值都记下来，基数越大越费 |
+
+Patra 的生产查询全部用 `uniqExact`：门户上展示的「N 人看过」是一篇文献的读者，基数小，精确没有负担；对账要逐行比对真值，近似值没法比。
+
+费内存的一面在对账时碰到了。一次性对 1 亿个 UUID 做 `uniqExact` 要几 GB 内存，而 ClickHouse 的 `patra` 账号每条查询上限 1 GiB。所以模拟器的对账按天算、再求和：
+
+<CodeRef at="patra-api/patra-analytics/patra-analytics-simulator/src/main/java/dev/patra/analytics/simulator/truth/Reconciler.java@c3df651e18fcd34d66a1ece0e2cea00c78e9d881" lines="51-56" />
+
+```java
+  private static final String UNIQUE_SQL =
+      """
+      SELECT uniqExact(event_id) AS n FROM events
+      WHERE derived_at >= {from:DateTime64(3, 'UTC')} AND derived_at < {to:DateTime64(3, 'UTC')}
+        AND is_synthetic AND {run}
+      """;
+```
+
+按天拆开不会算错：每天一个分区，同一事件的重发内容一样、`derived_at` 一样，落在同一天，不会跨天各算一次。
+
+## 「N 人看过」是怎么数的
+
+文献页的计数查的是汇总表 `article_session_reads`。它用的是 `AggregatingMergeTree`，同样有「合并前同一个键有多行」的问题，所以查询分三层：
+
+<CodeRef at="patra-api/patra-analytics/patra-analytics-infra/src/main/java/dev/patra/analytics/infra/insight/stats/ClickHouseReaderStatsAdapter.java@8140a9d9482324670b63f00ab3c62690102196c5" lines="24-40" />
+
+```java
+  private static final String SQL =
+      """
+      SELECT article_id,
+             uniqExactIf(person_id, viewed = 1) AS viewers,
+             uniqExactIf(person_id, fulltext = 1) AS fulltext_readers
+      FROM (
+          SELECT article_id, session_id, person_id, max(viewed) AS viewed, max(fulltext) AS fulltext
+          FROM article_session_reads
+          WHERE article_id IN ({ids}){synthetic}
+          GROUP BY article_id, session_id, person_id)
+      WHERE session_id IN (
+          SELECT session_id FROM session_quality
+          WHERE session_id IN (SELECT session_id FROM article_session_reads WHERE article_id IN ({ids}))
+          GROUP BY session_id
+          HAVING max(has_client) = 1 AND max(has_bot) = 0)
+      GROUP BY article_id
+      """;
+```
+
+1. **里层**：按（文献，会话，人）分组取 `max`，把还没合并的多行先手动合成一行。
+2. **会话过滤**：只留真人会话，会话里有浏览器事件、没有爬虫事件。
+3. **外层**：`uniqExactIf(person_id, ...)` 按人去重。同一个人在几个会话里看同一篇，也只算一个读者。
+
+每一层都对重复不敏感：同一事件来两次，里层的 `max` 不变；同一个人来两次，外层的 `uniqExact` 不变。
+
+## 对账为什么不用 count() − uniqExact
+
+流量模拟器会故意把 1% 的事件再发一次，而且把副本放进**另一次写入**（令牌不同），专门绕过块令牌、考验 `event_id` 这一层。验证时，最直觉的做法是看 `count() − uniqExact(event_id)`：多出来的行就是被去重的重复。
+
+<Quiz
+  title="你猜会怎样"
+  questions={[
+    {
+      question: "灌完数据马上算一次 count() − uniqExact(event_id)，得到一个数 X。一天之后再算，会得到什么？",
+      options: ["比 X 小，可能一路降到 0", "还是 X，写进去的重复不会变", "比 X 大，重复会越积越多"],
+      answer: "A",
+      explain: "后台合并会把重复行合成一行，count() 跟着变小，uniqExact 不变，差值就一点点降下去。它反映的是「此刻还没合并掉的重复」，不是「当初写进了多少重复」。"
+    }
+  ]}
+/>
+
+所以模拟器的对账换了一种证明方式：
+
+- **写入了多少行**：取模拟器自己记的已确认写入数（含 1% 重发），不问 ClickHouse。
+- **去重后多少条**：按天 `uniqExact(event_id)` 再求和。
+- **去重有效的证据**：写入行数比去重后多约 1%，而「看过人数」的对账误差仍在 1% 以内。
+
+2026-11-02 在 mini 上灌入 1.0232 亿条的实测：写入 103,342,637 行，去重后 102,320,830 条，故意重发的 1% 全部被去重；看过人数误差 0.001%，读过全文人数误差 0。
+
+<Transfer
+  prompt="产品要在面板上看「昨天一共有多少次检索」，检索事件也在 events 里。你会怎么写这条查询？要是改成「近 90 天每天的检索次数」，又要注意什么？"
+  points={[
+    { label: "不用 count()", text: "用 uniqExact(event_id)：表里可能有还没合并的重复，count() 会多数，而且结果随合并进度变化。" },
+    { label: "按口径过滤", text: "排除爬虫和合成流量（is_bot、is_synthetic），「天」按北京时间切，和其他指标同一套规则。" },
+    { label: "大范围按天拆", text: "90 天的 event_id 一起做 uniqExact 可能撞上每条查询 1 GiB 的上限；按天 GROUP BY 或分天查再拼，每天的去重互不影响。" },
+    { label: "近似够用就用 uniq", text: "面板上的趋势图如果允许小幅误差，uniq 内存有上限，可以换；要和真值或账单对数时仍用 uniqExact。" }
+  ]}
+/>

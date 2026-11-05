@@ -19,6 +19,7 @@ entries:
   - db-jsonb-columns
   - db-explain-query-plans
   - db-trigram-search
+  - analytics-columnar-storage
   - spring-jpa-basics
   - spring-jpa-n-plus-one
   - db-schema-per-subdomain

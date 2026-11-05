@@ -17,4 +17,14 @@ describe("next.config", () => {
     ).toBe(true);
     expect(ignore.some((pattern) => pattern.test("/unsubscribe"))).toBe(false);
   });
+
+  it("开发时不在终端打印第三方登录的回调：地址的查询串里有授权码和 state", () => {
+    const logging = nextConfig.logging;
+    const incoming = logging ? logging.incomingRequests : undefined;
+    const ignore = typeof incoming === "object" ? (incoming.ignore ?? []) : [];
+    expect(
+      ignore.some((pattern) => pattern.test("/api/auth/oauth/callback/github?code=x&state=y")),
+    ).toBe(true);
+    expect(ignore.some((pattern) => pattern.test("/api/auth/oauth/github/start"))).toBe(false);
+  });
 });

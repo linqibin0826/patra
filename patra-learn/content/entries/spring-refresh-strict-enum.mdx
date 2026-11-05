@@ -54,11 +54,11 @@ v0.9 配置中心那一版验收时发现：网关收到 Nacos 的配置变更�
 
 jar 里的枚举类配置写常量原名，并在配置文件里注明原因：
 
-<CodeRef at="patra-api/patra-gateway-boot/src/main/resources/application.yml@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="33-43" />
+<CodeRef at="patra-api/patra-gateway-boot/src/main/resources/application.yml@8140a9d9482324670b63f00ab3c62690102196c5" lines="33-43" />
 
 再用一条单元测试钉住：像刷新时那样新建一个 `StandardEnvironment`，加载 `application.yml`，直接调用这个后处理器，断言不抛异常。
 
-<CodeRef at="patra-api/patra-gateway-boot/src/test/java/dev/patra/gateway/ApplicationConfigTest.java@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="51-80" />
+<CodeRef at="patra-api/patra-gateway-boot/src/test/java/dev/patra/gateway/ApplicationConfigTest.java@8140a9d9482324670b63f00ab3c62690102196c5" lines="51-80" />
 
 <Transfer
   prompt="你的服务里也有几个枚举类配置项（日志格式、重试策略），都用横线小写写在 Nacos 里。怎么判断它们会不会在刷新时踩同一个坑？"

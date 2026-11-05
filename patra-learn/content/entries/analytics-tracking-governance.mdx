@@ -1,0 +1,151 @@
+---
+title: 埋点治理与数据质量：方案定好之后，怎么让它一直被遵守
+summary: 埋点方案写完那天是最干净的一天，之后每次加事件、改字段都可能把它弄乱。业界的办法是三件事一起上：改动走固定流程，格式交给 schema 注册中心让机器拦，上线前按方案验收；再按合法、重复、及时、完整几个维度持续量数据质量。这篇讲 Snowplow、Segment、神策的做法，以及 Patra 的 dlq、`event_id` 去重、`derived_at` 和一组实测数字。
+type: concept
+difficulty: advanced
+tags: [analytics, backend]
+prerequisites: [analytics-tracking-plan, analytics-event-envelope-schema]
+topics: [analytics-pipeline]
+sources:
+  - version: v0.18
+    issue: PAP-164
+    pr: 373
+personalEnv: false
+---
+
+<Diagnose
+  question="门户给 `article_clicked` 多带了一个 schema 里没登记的属性 `source_tab`，和另外两条正常事件放在同一批发给采集端点。这条事件会怎样？"
+  options={["照常收下，多出来的 `source_tab` 原样写进明细表", "这一条进 `events.dlq`，同批另外两条照常进 `events.raw`", "整批被拒绝，采集端点返回 400，三条都不入库"]}
+  answer="B"
+  ifRight="对。属性 schema 写了 `additionalProperties: false`，多一个字段就算不合格；单条事件逐条校验，坏的只连累它自己。这篇讲这道机器检查在业界叫什么、还要配哪些流程。"
+  ifWrong="答案是 B。事件信封那篇讲过：每个事件的属性 schema 都是 `additionalProperties: false`，多一个没登记的字段就进死信 topic；校验是逐条的，同批合格的照常入库。整批拒收只发生在整批不是合法 JSON、超过条数或大小上限时。"
+  suggest="analytics-event-envelope-schema"
+/>
+
+<Callout kind="lead">
+
+埋点治理是让埋点方案持续被遵守的一套流程和机器检查；数据质量是用几个可量的维度，检查治理的结果到底怎么样。
+
+</Callout>
+
+埋点方案那篇讲了行为数据的三种烂法：同一件事好几个名字、字段随手加、数字对不上。方案能在第一天把这些挡住，治理管的是第二天以后。
+
+## 方案会烂，是因为改它的人很多
+
+一份埋点方案上线后，前端加新页面要埋点，产品想多看一个维度要加字段，后端重构可能顺手改了事件名。每次改动单独看都合理，没人统一把关，半年后就回到三种烂法。业界的治理大致是三层：
+
+1. **改动走流程**：先改方案，再改代码，按固定顺序上线。
+2. **格式交给机器拦**：方案写成机器能读的 schema，放进注册中心，不合格的事件进不了主表。
+3. **上线前验收**：在测试环境里按方案逐个核对事件发没发、字段对不对。
+
+## 第一层：改动先改方案，按固定顺序上线
+
+Patra 的埋点方案第 7 节把改动规则写死：改 schema 的顺序是**先改 schema 与方案文档，再改采集端点，再改产生方（门户、模拟器）**，同一个 PR 合入、按这个顺序部署；门户的 TypeScript 类型由 schema 生成，CI 检查两边一致（这部分随门户埋点实现）。顺序反过来会怎样？门户先发了新字段，采集端点还按旧 schema 校验，新事件全进死信。
+
+版本号用 Snowplow 的三段式 SchemaVer。Snowplow 文档把三段叫 major、minor、patch：会让新 schema 验证不了历史数据的改动升第一段，可能让部分历史数据验证不了的升第二段，兼容全部历史数据的升第三段（据 [Snowplow schema 版本](https://docs.snowplow.io/docs/fundamentals/schemas/versioning/)）。Patra 沿用这个规则，把三段叫 MODEL、REVISION、ADDITION；采集端点接受和当前版本 MODEL 相同的任意版本，因为用户已打开的标签页还跑着旧脚本。
+
+Segment 的做法类似但工具化：埋点方案可以在界面上编辑或上传文件修改，上传的改动记进审计记录；同一个事件可以有多个版本的定义，上报时带上版本号去匹配（据 [Segment 创建埋点方案](https://www.twilio.com/docs/segment/protocols/tracking-plan/create)）。
+
+## 第二层：schema 注册中心，让机器来拦
+
+只靠流程不够，总有人忘。所以业界把方案写成 JSON Schema，放进一个所有系统都读的地方，叫 **schema 注册中心**：
+
+- **Snowplow 的 Iglu**：官方文档说它是托管和管理 JSON Schema 的一套工具，也叫 schema 仓库或注册中心；事件按 schema 校验，没通过的「失败事件」不进主表，单独存放，必要时可以重放（据 [Snowplow schemas](https://docs.snowplow.io/docs/fundamentals/schemas/)、[Snowplow failed events](https://docs.snowplow.io/docs/fundamentals/failed-events/)）。
+- **Segment 的 Protocols**：埋点方案就是一组 JSON Schema，和方案对不上的事件或属性会产生一条违规记录；可以严格到直接拦下，被拦的事件转进一个单独的隔离来源供排查；还能在不改代码的情况下改事件名和属性名（据 [Segment Protocols](https://www.twilio.com/docs/segment/protocols)）。
+
+Patra 没有单独部署注册中心，而是把 schema 放在 `patra-analytics-api` 模块的资源目录里，当成仓库内的注册中心：采集端点按它校验，模拟器按它造事件，门户的类型由它生成（release spec 决策 H）。不合格的事件进 `events.dlq`，原因只有五种：
+
+<CodeRef at="patra-api/patra-analytics/patra-analytics-domain/src/main/java/dev/patra/analytics/domain/kernel/model/enums/RejectionReason.java@8140a9d9482324670b63f00ab3c62690102196c5" lines="3-14" />
+
+```java
+/// 事件进 dlq 的原因（埋点方案 §5）：前四个是采集预检的结果，按预检顺序排列；最后一个来自入库。
+public enum RejectionReason {
+  /// 不符合 schema（缺字段、类型不对、多余字段等）
+  SCHEMA_INVALID("schema_invalid"),
+  /// 事件名不在事件字典里
+  UNKNOWN_EVENT("unknown_event"),
+  /// 来源与事件名的绑定不对
+  SOURCE_MISMATCH("source_mismatch"),
+  /// 版本的 MODEL 与当前不同
+  VERSION_REJECTED("version_rejected"),
+  /// 入库时被 ClickHouse 拒绝的单条事件（入库设计 §4.4）
+  INGEST_REJECTED("ingest_rejected");
+```
+
+和 Snowplow 的失败事件、Segment 的隔离来源是同一个思路：坏数据**不丢、不混进主表、单独留着排查**。dlq 的记录有自己的 schema，存原文前先删掉 IP 和 UA。
+
+## 命名规范和验收：方案之外的两道关
+
+**命名规范**要写成能逐条检查的规则。PostHog 的最佳实践给了几条很具体的：只用小写字母；建一张允许使用的动词清单，不要偏离；事件名用「类别:对象_动作」的结构，方便在长列表里找（据 [PostHog 产品分析最佳实践](https://posthog.com/docs/product-analytics/best-practices)）。Patra 用的是 Segment 的 Object Action，机器值一律 snake_case（埋点方案那篇讲过）。哪套都行，要紧的是只有一套，而且写下来。
+
+**埋点验收**是上线前按方案核对。神策的手册给了一套很典型的工具：默认有测试项目和正式项目，测试阶段数据发往测试项目，测通了再切到正式项目；Debug 模式让开发者实时看到每条数据的校验结果（手册提醒它严重影响性能，上线前必须关掉）；数据质量模块可以上传采集方案，系统按方案校验已上报的数据并出一份校验报告（据 [神策数据校验](https://manual.sensorsdata.cn/sa/docs/tech_check)、[神策 Debug 实时查询](https://manual.sensorsdata.cn/sa/docs/debug_real-time_data_query)、[神策数据质量](https://manual.sensorsdata.cn/sa/docs/data_quality/v0300)）。
+
+Patra 的验收靠样例文件：埋点方案在 schema 旁边放了合格样例 30 条、不合格样例 46 条，不合格样例的文件名写明违反了哪条规则。采集端点的测试把全部样例跑一遍：合格的都收，不合格的都拒，而且给出的原因要和文件名对得上。
+
+<Quiz
+  questions={[
+    {
+      question: "要给 `article_viewed` 加一个新的必填属性。按 Patra 的版本规则，schema 版本该怎么变，上线后旧标签页发来的事件会怎样？",
+      options: ["ADDITION 加一，旧事件照收", "REVISION 加一，旧事件照收但标成可疑", "MODEL 加一，旧标签页的这类事件因版本不被接受进 dlq"],
+      answer: "C",
+      explain: "加必填属性会让旧事件不合格，属于 MODEL 级改动；采集端点只接受 MODEL 相同的版本，所以部署前后几分钟里旧标签页的这类事件会以 `version_rejected` 进 dlq。只加可选属性才是 ADDITION。"
+    }
+  ]}
+/>
+
+## 数据质量：几个可以量的维度
+
+治理做得好不好，要用数字说话。英国政府的数据质量框架采用 DAMA UK 的六个维度：准确、完整、唯一、一致、及时、合法（据 [The Government Data Quality Framework](https://www.gov.uk/government/publications/the-government-data-quality-framework/the-government-data-quality-framework)，各维度定义可见其配套的 [问题库](https://best-practice-and-impact.github.io/Data-Quality-Question-Bank/Page_3_Quality_Dimensions.html)）。对行为数据最常盯的是其中四个：
+
+| 维度 | 问的是 | Patra 的对应做法 |
+|---|---|---|
+| 合法（validity） | 格式、类型、取值范围对不对 | JSON Schema 逐条校验，不合格进 `events.dlq` |
+| 唯一（uniqueness） | 同一个事件有没有被记了多次 | 每条事件自带 `event_id`；批次去重令牌拦住重试；数条数一律 `uniqExact(event_id)` |
+| 及时（timeliness） | 数据多久之后才到、时间准不准 | 记下产生、发送、接收三个时间，用 `derived_at` 校正客户端时钟 |
+| 完整（completeness） | 该到的有没有都到 | 管线自己看不出来，要靠外部真值对账 |
+
+下面是 2026-11-02 在 mini 上以只读方式（连接参数 `readonly=1`）查的实测，**数据是流量模拟器造的合成事件，不是真实用户**。查样本日 10-28 的重复行与上报延迟：
+
+```sql
+SELECT
+    count()                    AS rows,
+    uniqExact(event_id)        AS events,
+    rows - events              AS duplicate_rows_still_unmerged,
+    quantileExactIf(0.5)(dateDiff('millisecond', created_at, received_at), source = 'client')  AS client_delay_p50_ms,
+    quantileExactIf(0.99)(dateDiff('millisecond', created_at, received_at), source = 'client') AS client_delay_p99_ms,
+    quantileExactIf(0.99)(dateDiff('millisecond', created_at, received_at), source = 'server') AS server_delay_p99_ms
+FROM events
+WHERE toYYYYMMDD(derived_at, 'Asia/Shanghai') = 20261028 AND is_synthetic
+FORMAT PrettyCompactMonoBlock
+```
+
+想自己照做，把查询存成 `query.sql`，用只读参数发给 ClickHouse 的 HTTP 接口（密码从环境变量读，文件不进仓库）：
+
+```bash
+curl -u "patra:$CLICKHOUSE_PATRA_PASSWORD" 'http://<mini 的地址>:8123/?database=patra_analytics&readonly=1' --data-binary @query.sql
+```
+
+逐个维度读结果：
+
+- **合法**：`dlq_events` 0 行。合成事件都是按 schema 造的，所以都合格；真实流量里这个数不会是 0，它正是要盯的指标。
+- **唯一**：这一天 1,306,686 行，`uniqExact(event_id)` 是 1,303,639，还有 3,047 行重复没被合并掉。模拟器故意重发 1%，这一天约 1.3 万条重发，大部分已经被 ReplacingMergeTree 的后台合并去掉了。
+- **及时**：浏览器事件从产生到采集端点收到，p50 4,020 毫秒、p99 5,020 毫秒，因为模拟门户每 5 秒攒一批上报；服务端事件 p99 70 毫秒。
+- **完整**：管线只能看到收到的，看不到没收到的。Patra 靠模拟器记的真值对账：看过人数误差 0.001%，读过全文人数误差 0；故意重发的 1% 全部被去重，写入 103,342,637 行，去重后 102,320,830 条。
+
+<Callout kind="warn">
+
+「还没合并的重复行」（`count()` 减 `uniqExact`）不能当重复率用。后台合并随时在发生，同一天的这个数今天查是 3,047，过几个小时可能就变小了，它反映的是合并进度，不是管线收了多少重复。要量重复，得像对账那样，拿一个确定的写入行数和去重后的条数比。
+
+</Callout>
+
+这些维度后来做进了运营看板的数据质量那一组（PAP-172），由应用层表 `ads_daily_quality`、`ads_daily_duplicates` 和对账结果表 `reconcile_results` 供数，见「应用层（ADS）」那篇。
+
+<Transfer
+  prompt="你加入一家公司，埋点已经有 300 个事件、四个团队在加埋点，没有任何 schema 校验，面板上的数字经常和业务库对不上。按这篇的三层治理和四个质量维度，你会先做哪几件事？"
+  points={[
+    { label: "先把方案写成 schema", text: "从最关键的十几个事件开始，把事件名和属性写成 JSON Schema，放进所有团队都读的注册中心。" },
+    { label: "先观察再拦截", text: "一开始只记录违规（Segment Protocols 的违规记录就是这个用法），摸清有多少坏数据，再逐步改成拦下进隔离区，避免一上来就丢数据。" },
+    { label: "定改动流程", text: "规定先改方案和 schema、再改校验、最后改埋点代码，用版本号区分兼容与不兼容的改动。" },
+    { label: "按维度量起来", text: "合法看坏数据量，唯一看事件 ID 重复，及时看产生到接收的延迟分布，完整拿业务库里的真实订单数对账。" }
+  ]}
+/>

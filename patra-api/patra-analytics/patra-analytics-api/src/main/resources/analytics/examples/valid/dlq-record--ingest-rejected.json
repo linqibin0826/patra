@@ -1,0 +1,8 @@
+{
+  "received_at": "2026-11-01T08:31:05.118Z",
+  "reason_code": "ingest_rejected",
+  "reason_detail": "Code: 117. DB::Exception: Cannot parse input: expected '{' before: 'not json'. (INCORRECT_DATA)",
+  "event_name": null,
+  "raw": "not json",
+  "raw_truncated": false
+}

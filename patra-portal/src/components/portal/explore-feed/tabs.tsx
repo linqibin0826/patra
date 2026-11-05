@@ -1,6 +1,6 @@
 "use client";
 
-import { Clock, Quote } from "lucide-react";
+import { Clock, Quote, TrendingUp } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Tabs, TabsIndicator, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { FeedTab } from "@/types/portal";
@@ -8,6 +8,7 @@ import type { FeedTab } from "@/types/portal";
 const TABS: { value: FeedTab; label: string; Icon: typeof Clock }[] = [
   { value: "recent", label: "最近更新", Icon: Clock },
   { value: "cited", label: "高被引", Icon: Quote },
+  { value: "hot", label: "热读", Icon: TrendingUp },
 ];
 
 /// 文献流 tab：药丸分段控件，墨色滑块随选中项滑动（URL ?tab= 为唯一状态来源）。

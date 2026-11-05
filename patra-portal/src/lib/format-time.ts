@@ -139,6 +139,35 @@ export function formatGroupedTime(iso: string, now: number): string {
     : `${p.year} 年 ${p.month} 月 ${p.day} 日`;
 }
 
+const WEEKDAYS = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"] as const;
+
+/// 北京时间的日期键 `2026-11-01`（按天分组用）
+export function beijingDayKey(iso: string): string {
+  const p = partsOf(Date.parse(iso));
+  return `${p.year}-${pad(p.month)}-${pad(p.day)}`;
+}
+
+/// 阅读历史的日期组标题（简报 v0.18 §3.7）：`今天 · 11 月 1 日`、`昨天 · 10 月 31 日`、更早 `10 月 30 日 周五`，
+/// 不在今年的带年份 `2025 年 12 月 30 日 周二`
+export function formatDayHeading(iso: string, now: number): string {
+  const p = partsOf(Date.parse(iso));
+  const date = `${p.month} 月 ${p.day} 日`;
+  const group = dayGroupOf(iso, now);
+  if (group === "today") {
+    return `今天 · ${date}`;
+  }
+  if (group === "yesterday") {
+    return `昨天 · ${date}`;
+  }
+  const weekday = WEEKDAYS[new Date(Date.UTC(p.year, p.month - 1, p.day)).getUTCDay()];
+  return p.year === partsOf(now).year ? `${date} ${weekday}` : `${p.year} 年 ${date} ${weekday}`;
+}
+
+/// 北京时间的 `HH:mm`
+export function formatTimeOfDay(iso: string): string {
+  return clock(partsOf(Date.parse(iso)));
+}
+
 /// `now` 加 `days` 天后的 ISO 时间
 export function addDays(now: number, days: number): string {
   return new Date(now + days * DAY).toISOString();
