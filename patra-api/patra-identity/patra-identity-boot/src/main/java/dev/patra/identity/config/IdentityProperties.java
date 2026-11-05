@@ -37,11 +37,37 @@ public record IdentityProperties(
   ///
   /// @param registration 首次注册的参数
   /// @param providers 各平台的注册信息，键是注册 ID；没配客户端 ID 或密钥的不注册
-  public record OAuth(@DefaultValue Registration registration, Map<String, Provider> providers) {
+  public record OAuth(
+      @DefaultValue Registration registration,
+      @DefaultValue Outbound outbound,
+      Map<String, Provider> providers) {
 
     /// 不可变拷贝。
     public OAuth {
       providers = providers == null ? Map.of() : Map.copyOf(providers);
+    }
+
+    /// 访问第三方平台的超时。默认值按 mini 的实测定：TLS 握手 2.3～3.2 秒，单次请求 2.8～3.8 秒。
+    ///
+    /// 一次回调最多调两次平台（令牌加公钥，或令牌加用户信息），最坏约两倍 `requestTimeout`。调大它要同时看门户的
+    /// `CALLBACK_TIMEOUT_MS`，门户不能比 identity 先放弃。
+    ///
+    /// @param connectTimeout 建连上限，含 TLS 握手
+    /// @param requestTimeout 一次请求的总上限，从发出算到读完响应，含建连。必须大于 `connectTimeout`，否则建连上限不起作用
+    public record Outbound(
+        @DefaultValue("10s") Duration connectTimeout,
+        @DefaultValue("15s") Duration requestTimeout) {
+
+      /// 总上限必须大于建连上限。
+      public Outbound {
+        if (requestTimeout.compareTo(connectTimeout) <= 0) {
+          throw new IllegalArgumentException(
+              "request-timeout 必须大于 connect-timeout，实际: "
+                  + requestTimeout
+                  + " <= "
+                  + connectTimeout);
+        }
+      }
     }
 
     /// 首次注册的参数。

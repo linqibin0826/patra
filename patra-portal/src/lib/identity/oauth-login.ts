@@ -22,8 +22,8 @@ import { canSendToken, gatewayFetch } from "@/lib/gateway";
 import { type Problem, parseProblem } from "@/lib/identity/problem";
 import { userSchema } from "@/lib/identity/user-schema";
 
-/// 回调的超时：identity 要依次请求平台的令牌、公钥、资料接口（每个连接 3 秒、读 5 秒）
-const CALLBACK_TIMEOUT_MS = 20_000;
+/// 回调的超时：identity 最多调两次平台（令牌加公钥，或令牌加资料），每次最长 15 秒。要比这个长，否则门户先放弃
+const CALLBACK_TIMEOUT_MS = 35_000;
 const DEVICE_ID_HEADER = "X-Patra-Device-Id";
 
 /// 回调成功的三种结果（identity 设计第 2.2 节）

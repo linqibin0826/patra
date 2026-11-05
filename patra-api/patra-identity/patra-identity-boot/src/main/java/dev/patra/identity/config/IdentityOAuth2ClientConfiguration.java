@@ -4,7 +4,6 @@ import dev.patra.identity.adapter.account.security.DiscardingAuthorizedClientRep
 import dev.patra.identity.adapter.account.security.ProviderErrorAwareTokenResponseConverter;
 import java.net.ProxySelector;
 import java.net.http.HttpClient;
-import java.time.Duration;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import org.springframework.context.annotation.Bean;
@@ -46,9 +45,6 @@ import org.springframework.web.client.RestTemplate;
 @Configuration(proxyBeanMethods = false)
 public class IdentityOAuth2ClientConfiguration {
 
-  private static final Duration CONNECT_TIMEOUT = Duration.ofSeconds(3);
-  private static final Duration READ_TIMEOUT = Duration.ofSeconds(5);
-
   /// 注册信息。没配客户端 ID 或密钥的平台不注册：入口 404，identity 照常启动，不会因为一家还没建好应用就卡住。
   ///
   /// 不用 Boot 的 `spring.security.oauth2.client.registration` 属性：它要求客户端 ID 非空，一家没配整个应用就起不来；
@@ -77,10 +73,11 @@ public class IdentityOAuth2ClientConfiguration {
   /// 换令牌的客户端。消息转换器和错误处理器都是框架要求的，和它的默认值一样，只多了超时，
   /// 以及认出平台用 2xx 回的拒绝（GitHub）。
   ///
+  /// @param identity identity 的配置
   /// @return 客户端
   @Bean
   public OAuth2AccessTokenResponseClient<OAuth2AuthorizationCodeGrantRequest>
-      accessTokenResponseClient() {
+      accessTokenResponseClient(IdentityProperties identity) {
     OAuth2AccessTokenResponseHttpMessageConverter tokenResponseConverter =
         new OAuth2AccessTokenResponseHttpMessageConverter();
     tokenResponseConverter.setAccessTokenResponseConverter(
@@ -89,7 +86,7 @@ public class IdentityOAuth2ClientConfiguration {
         new RestClientAuthorizationCodeTokenResponseClient();
     client.setRestClient(
         RestClient.builder()
-            .requestFactory(outboundRequestFactory())
+            .requestFactory(outboundRequestFactory(identity.oauth().outbound()))
             .configureMessageConverters(
                 converters -> {
                   converters.addCustomConverter(new FormHttpMessageConverter());
@@ -102,10 +99,13 @@ public class IdentityOAuth2ClientConfiguration {
 
   /// 取资料的服务（GitHub）。OIDC 平台不配用户信息地址，框架的 `OidcUserService` 不会发请求。
   ///
+  /// @param identity identity 的配置
   /// @return 服务
   @Bean
-  public OAuth2UserService<OAuth2UserRequest, OAuth2User> oauth2UserService() {
-    RestTemplate restTemplate = new RestTemplate(outboundRequestFactory());
+  public OAuth2UserService<OAuth2UserRequest, OAuth2User> oauth2UserService(
+      IdentityProperties identity) {
+    RestTemplate restTemplate =
+        new RestTemplate(outboundRequestFactory(identity.oauth().outbound()));
     restTemplate.setErrorHandler(new OAuth2ErrorResponseErrorHandler());
     DefaultOAuth2UserService service = new DefaultOAuth2UserService();
     service.setRestOperations(restTemplate);
@@ -115,10 +115,12 @@ public class IdentityOAuth2ClientConfiguration {
   /// 验 `id_token` 的解码器工厂。和框架的 `OidcIdTokenDecoderFactory` 做一样的事，只是取公钥带超时：
   /// 框架的工厂在 7.1 没有设置 HTTP 客户端的口子。
   ///
+  /// @param identity identity 的配置
   /// @return 工厂
   @Bean
-  public JwtDecoderFactory<ClientRegistration> idTokenDecoderFactory() {
-    RestOperations restOperations = new RestTemplate(outboundRequestFactory());
+  public JwtDecoderFactory<ClientRegistration> idTokenDecoderFactory(IdentityProperties identity) {
+    RestOperations restOperations =
+        new RestTemplate(outboundRequestFactory(identity.oauth().outbound()));
     Map<String, JwtDecoder> decoders = new ConcurrentHashMap<>();
     return registration ->
         decoders.computeIfAbsent(
@@ -154,15 +156,20 @@ public class IdentityOAuth2ClientConfiguration {
 
   /// 出站请求工厂：带超时，代理跟随 JVM 默认设置。
   ///
+  /// 两个超时都不是字面意思：JDK 的 `connectTimeout` 含 TLS 握手；`JdkClientHttpRequestFactory` 的
+  /// `readTimeout` 从发出请求就开始计时，一直算到读完响应，建连也算在里面。
+  ///
+  /// @param outbound 超时
   /// @return 工厂
-  private static ClientHttpRequestFactory outboundRequestFactory() {
+  static ClientHttpRequestFactory outboundRequestFactory(
+      IdentityProperties.OAuth.Outbound outbound) {
     JdkClientHttpRequestFactory factory =
         new JdkClientHttpRequestFactory(
             HttpClient.newBuilder()
-                .connectTimeout(CONNECT_TIMEOUT)
+                .connectTimeout(outbound.connectTimeout())
                 .proxy(ProxySelector.getDefault())
                 .build());
-    factory.setReadTimeout(READ_TIMEOUT);
+    factory.setReadTimeout(outbound.requestTimeout());
     return factory;
   }
 }
