@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{html/fragments/layout :: mail('账号通知', '绑定验证码 · VERIFICATION CODE', '绑定登录方式的验证码', ~{::content}, |有人想把 ${providerName} 账号绑定到你的 ${siteName} 账号。|)}">
+<body>
+<th:block th:fragment="content">
+<p style="margin:16px 0 0 0;"><span th:text="${displayName}">陈宇</span>，你好。有人正在把 <span th:text="${providerName}">GitHub</span> 账号 <span style="font-weight:600;" th:text="${accountLabel}">octocat</span> 绑定到你的 <span th:text="${siteName}">Patra</span> 账号 <span style="font-weight:600;" th:text="${username}">chen-yu</span>。绑定后，用这个 <span th:text="${providerName}">GitHub</span> 账号就能登录你的账号。</p>
+<p style="margin:16px 0 0 0;">如果是你本人在操作，在页面上输入下面的验证码。</p>
+<p style="margin:24px 0 0 0;font-size:28px;line-height:1.2;font-weight:600;letter-spacing:6px;" th:text="${code}">483920</p>
+<p class="p-fg3" style="margin:12px 0 0 0;font-size:13px;line-height:1.6;color:#57534e;"><span th:text="|${linkExpiresAt} 前有效。|">11 月 4 日 16:20 前有效。</span>不要把验证码告诉任何人，包括自称 <span th:text="${siteName}">Patra</span> 工作人员的人。</p>
+<p class="p-fg3 p-rule" style="margin:32px 0 0 0;padding-top:20px;border-top:1px solid #e7e1d4;font-size:13px;line-height:1.6;color:#57534e;">不是你在操作？忽略这封邮件即可，账号不会有任何变化。</p>
+</th:block>
+</body>
+</html>

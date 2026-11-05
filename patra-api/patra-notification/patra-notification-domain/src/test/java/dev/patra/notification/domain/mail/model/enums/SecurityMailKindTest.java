@@ -30,6 +30,7 @@ class SecurityMailKindTest {
             "account-deletion-reminder",
             "account-deletion-completed",
             "registration-code",
+            "login-method-link-code",
             "login-method-linked",
             "login-method-unlinked");
   }
@@ -43,13 +44,16 @@ class SecurityMailKindTest {
         .isEqualTo("重设你的 Patra 密码");
   }
 
-  /// 第三方登录的三封：验证码过期就不发，绑定与解绑带安全通知片段。
+  /// 第三方登录的四封：验证码过期就不发，绑定与解绑带安全通知片段。
   @Test
   void should_define_social_login_mails() {
     Map<String, Object> none = Map.of();
     assertThat(SecurityMailKind.REGISTRATION_CODE.subjectFor(none)).isEqualTo("你的 Patra 注册验证码");
     assertThat(SecurityMailKind.REGISTRATION_CODE.skipsWhenLinkExpired()).isTrue();
     assertThat(SecurityMailKind.REGISTRATION_CODE.hasNotice()).isFalse();
+    assertThat(SecurityMailKind.LOGIN_METHOD_LINK_CODE.subjectFor(none)).isEqualTo("绑定登录方式的验证码");
+    assertThat(SecurityMailKind.LOGIN_METHOD_LINK_CODE.skipsWhenLinkExpired()).isTrue();
+    assertThat(SecurityMailKind.LOGIN_METHOD_LINK_CODE.hasNotice()).isFalse();
     assertThat(SecurityMailKind.LOGIN_METHOD_LINKED.subjectFor(none))
         .isEqualTo("你的 Patra 账号绑定了新的登录方式");
     assertThat(SecurityMailKind.LOGIN_METHOD_LINKED.notMeAdvice())
@@ -119,7 +123,7 @@ class SecurityMailKindTest {
             Arrays.stream(SecurityMailKind.values())
                 .filter(kind -> !kind.hasNotice())
                 .map(SecurityMailKind::notMeAdvice))
-        .hasSize(6)
+        .hasSize(7)
         .containsOnlyNulls();
   }
 
@@ -132,6 +136,7 @@ class SecurityMailKindTest {
             SecurityMailKind.EMAIL_VERIFICATION,
             SecurityMailKind.PASSWORD_RESET,
             SecurityMailKind.EMAIL_CHANGE_CONFIRM,
-            SecurityMailKind.REGISTRATION_CODE);
+            SecurityMailKind.REGISTRATION_CODE,
+            SecurityMailKind.LOGIN_METHOD_LINK_CODE);
   }
 }

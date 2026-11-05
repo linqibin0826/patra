@@ -159,6 +159,51 @@ class OAuth2ProtocolAttackIT extends ProviderFlowITSupport {
     assertRejected(callback("google", start.state(), noHeaders()), "OAUTH_REJECTED");
   }
 
+  /// GitHub 拒绝授权码时回 200，错误写在 JSON 里，和 Google、ORCID 的 400 一样算授权没成功，不能说成平台连不上。
+  @Test
+  void should_reject_github_refusal_returned_with_200() {
+    AuthorizationStart start = startLogin("github");
+    FakeProviderFixture.stubGithubTokenResponse(
+        200,
+        "application/json",
+        "{\"error\":\"bad_verification_code\",\"error_description\":\"internal-detail-xyz\"}");
+
+    RawResponse response = callback("github", start.state(), noHeaders());
+
+    assertRejected(response, "OAUTH_REJECTED");
+    assertThat(response.body()).doesNotContain("internal-detail-xyz");
+  }
+
+  @Test
+  void should_answer_503_when_token_response_is_not_json() {
+    AuthorizationStart start = startLogin("github");
+    FakeProviderFixture.stubGithubTokenResponse(200, "text/html", "<html>proxy error</html>");
+
+    RawResponse response = callback("github", start.state(), noHeaders());
+
+    assertThat(response.status()).as(response.body()).isEqualTo(503);
+  }
+
+  @Test
+  void should_answer_503_when_github_token_endpoint_returns_500() {
+    AuthorizationStart start = startLogin("github");
+    FakeProviderFixture.stubGithubTokenResponse(500, "text/plain", "oops");
+
+    RawResponse response = callback("github", start.state(), noHeaders());
+
+    assertThat(response.status()).as(response.body()).isEqualTo(503);
+  }
+
+  @Test
+  void should_answer_503_when_connection_to_github_fails() {
+    AuthorizationStart start = startLogin("github");
+    FakeProviderFixture.stubGithubTokenConnectionFailure();
+
+    RawResponse response = callback("github", start.state(), noHeaders());
+
+    assertThat(response.status()).as(response.body()).isEqualTo(503);
+  }
+
   @Test
   void should_answer_503_when_provider_is_down() {
     AuthorizationStart start = startLogin("google");

@@ -18,6 +18,7 @@ import org.springframework.security.authentication.InternalAuthenticationService
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
 import org.springframework.security.oauth2.core.OAuth2Error;
+import org.springframework.web.client.RestClientException;
 
 /// ProviderLoginFailureHandler 单元测试：框架的错误码翻译成给门户的错误。
 @DisplayName("ProviderLoginFailureHandler 单元测试")
@@ -63,6 +64,18 @@ class ProviderLoginFailureHandlerTest {
   void should_keep_cause_of_server_side_failure() throws Exception {
     assertThat(translated(new OAuth2AuthenticationException("invalid_token_response")))
         .hasCauseInstanceOf(OAuth2AuthenticationException.class);
+  }
+
+  @Test
+  @DisplayName("平台用 2xx 拒绝授权码：原因链里有拒绝，按授权没成功处理，不是 503")
+  void should_translate_token_refusal_to_rejected() throws Exception {
+    OAuth2Error error = new OAuth2Error("invalid_token_response");
+    Exception refused =
+        new RestClientException(
+            "读响应失败", new ProviderTokenRefusedException("bad_verification_code"));
+
+    assertThat(translated(new OAuth2AuthenticationException(error, error.toString(), refused)))
+        .isInstanceOf(ProviderAuthorizationRejectedException.class);
   }
 
   @Test

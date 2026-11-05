@@ -1,34 +1,33 @@
 package dev.patra.identity.domain.account.model.vo;
 
+import dev.patra.identity.domain.account.model.enums.RegistrationCodePurpose;
 import java.time.Instant;
 import java.util.Objects;
+import lombok.Builder;
 
-/// 发出去还没用掉的验证码的公开部分：提交时的用户名和邮箱绑在码上，下一步不能换。
+/// 发出去还没用掉的验证码的公开部分：补填页刷新后靠它回到输验证码这一步，重发也要用用户名和邮箱。
 ///
-/// @param username 用户填的用户名，已规范化
+/// @param purpose 这个码是拿来做什么的
+/// @param username 用户填的用户名，已规范化；绑定用途没有用户名，为 `null`
 /// @param email 用户填的邮箱，已规范化
 /// @param codeExpiresAt 验证码的过期时间
 /// @param nextResendAt 最早可以重发的时间
+@Builder
 public record PendingCode(
-    String username, String email, Instant codeExpiresAt, Instant nextResendAt) {
+    RegistrationCodePurpose purpose,
+    String username,
+    String email,
+    Instant codeExpiresAt,
+    Instant nextResendAt) {
 
-  /// 创建。
-  ///
-  /// @param username 用户填的用户名，已规范化
-  /// @param email 用户填的邮箱，已规范化
-  /// @param codeExpiresAt 验证码的过期时间
-  /// @param nextResendAt 最早可以重发的时间
-  /// @return 验证码的公开部分
-  public static PendingCode of(
-      String username, String email, Instant codeExpiresAt, Instant nextResendAt) {
-    return new PendingCode(username, email, codeExpiresAt, nextResendAt);
-  }
-
-  /// 字段都不能为 `null`。
+  /// 除用户名外的字段都不能为 `null`；注册用途必须有用户名。
   public PendingCode {
-    Objects.requireNonNull(username, "username 不能为 null");
+    Objects.requireNonNull(purpose, "purpose 不能为 null");
     Objects.requireNonNull(email, "email 不能为 null");
     Objects.requireNonNull(codeExpiresAt, "codeExpiresAt 不能为 null");
     Objects.requireNonNull(nextResendAt, "nextResendAt 不能为 null");
+    if (purpose == RegistrationCodePurpose.REGISTER) {
+      Objects.requireNonNull(username, "注册用途的 username 不能为 null");
+    }
   }
 }

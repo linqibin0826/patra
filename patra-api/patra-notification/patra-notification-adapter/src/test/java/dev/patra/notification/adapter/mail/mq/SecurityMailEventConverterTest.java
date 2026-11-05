@@ -11,6 +11,7 @@ import dev.patra.identity.api.account.event.EmailChangeRevertedMailEvent;
 import dev.patra.identity.api.account.event.EmailChangedConfirmationMailEvent;
 import dev.patra.identity.api.account.event.EmailChangedNoticeMailEvent;
 import dev.patra.identity.api.account.event.EmailVerificationMailEvent;
+import dev.patra.identity.api.account.event.LoginMethodLinkCodeMailEvent;
 import dev.patra.identity.api.account.event.LoginMethodLinkedMailEvent;
 import dev.patra.identity.api.account.event.LoginMethodUnlinkedMailEvent;
 import dev.patra.identity.api.account.event.NewDeviceLoginMailEvent;
@@ -26,7 +27,7 @@ import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-/// SecurityMailEventConverter 单元测试：16 种事件各自转成对的类别、收件人、模板变量、操作上下文与链接过期时刻。
+/// SecurityMailEventConverter 单元测试：17 种事件各自转成对的类别、收件人、模板变量、操作上下文与链接过期时刻。
 @DisplayName("SecurityMailEventConverter 单元测试")
 class SecurityMailEventConverterTest {
 
@@ -304,6 +305,32 @@ class SecurityMailEventConverterTest {
 
     assertCommon(mail, SecurityMailKind.REGISTRATION_CODE);
     assertThat(mail.facts()).containsOnlyKeys("code").containsEntry("code", "483920");
+    assertThat(mail.linkExpiresAt()).isEqualTo(EXPIRES);
+  }
+
+  /// 就地绑定的验证码：验证码、要绑到的账号、平台和第三方账号都进模板变量。
+  @Test
+  void should_convert_login_method_link_code() {
+    SecurityMail mail =
+        convert(
+            LoginMethodLinkCodeMailEvent.builder()
+                .eventId(ID)
+                .to(TO)
+                .displayName(NAME)
+                .username("chen-yu")
+                .code("483920")
+                .codeExpiresAt(EXPIRES)
+                .providerName("GitHub")
+                .accountLabel("octocat")
+                .build());
+
+    assertCommon(mail, SecurityMailKind.LOGIN_METHOD_LINK_CODE);
+    assertThat(mail.facts())
+        .containsOnlyKeys("code", "username", "providerName", "accountLabel")
+        .containsEntry("code", "483920")
+        .containsEntry("username", "chen-yu")
+        .containsEntry("providerName", "GitHub")
+        .containsEntry("accountLabel", "octocat");
     assertThat(mail.linkExpiresAt()).isEqualTo(EXPIRES);
   }
 

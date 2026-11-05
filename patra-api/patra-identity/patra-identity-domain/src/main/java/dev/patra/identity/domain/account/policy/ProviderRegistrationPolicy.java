@@ -12,6 +12,7 @@ import lombok.Builder;
 /// @param resendCooldown 同邮箱两次发码的最短间隔
 /// @param perEmailHourly 同邮箱每小时的发码上限
 /// @param perIpHourly 同 IP 每小时的发码上限
+/// @param linkPerEmailDaily 就地绑定同邮箱每天的发码上限：6 位数字猜中就能登录别人的账号，比注册多一道
 @Builder
 public record ProviderRegistrationPolicy(
     Duration pendingTtl,
@@ -19,10 +20,14 @@ public record ProviderRegistrationPolicy(
     int maxCodeAttempts,
     Duration resendCooldown,
     int perEmailHourly,
-    int perIpHourly) {
+    int perIpHourly,
+    int linkPerEmailDaily) {
 
   /// 小时窗口的长度。
   public static final Duration HOUR_WINDOW = Duration.ofHours(1);
+
+  /// 天窗口的长度。
+  public static final Duration DAY_WINDOW = Duration.ofHours(24);
 
   /// 时长必须为正，上限至少为 1。
   public ProviderRegistrationPolicy {
@@ -32,6 +37,7 @@ public record ProviderRegistrationPolicy(
     requireAtLeastOne(maxCodeAttempts, "maxCodeAttempts");
     requireAtLeastOne(perEmailHourly, "perEmailHourly");
     requireAtLeastOne(perIpHourly, "perIpHourly");
+    requireAtLeastOne(linkPerEmailDaily, "linkPerEmailDaily");
   }
 
   /// 校验时长为正。

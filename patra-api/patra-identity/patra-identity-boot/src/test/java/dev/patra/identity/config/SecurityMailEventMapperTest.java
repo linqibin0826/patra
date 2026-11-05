@@ -40,7 +40,7 @@ import java.util.stream.Collectors;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-/// SecurityMailEventMapper 单元测试：16 种安全邮件逐个映射成集成事件，事件 ID 原样、字段齐全、路由键各不相同。
+/// SecurityMailEventMapper 单元测试：17 种安全邮件逐个映射成集成事件，事件 ID 原样、字段齐全、路由键各不相同。
 @DisplayName("SecurityMailEventMapper 单元测试")
 class SecurityMailEventMapperTest {
 
@@ -174,7 +174,7 @@ class SecurityMailEventMapperTest {
   }
 
   @Test
-  @DisplayName("路由键：16 个各不相同，security-mail. 加邮件种类（与 identity 原来的模板名一一对应），都匹配一条 security-mail.* 绑定")
+  @DisplayName("路由键：17 个各不相同，security-mail. 加邮件种类（与 identity 原来的模板名一一对应），都匹配一条 security-mail.* 绑定")
   void should_route_every_event_under_security_mail_prefix() {
     List<OutgoingMail> mails = SecurityMailFixture.all();
 
@@ -186,6 +186,7 @@ class SecurityMailEventMapperTest {
     assertThat(keys)
         .containsExactly(
             "security-mail.registration-code",
+            "security-mail.login-method-link-code",
             "security-mail.login-method-linked",
             "security-mail.login-method-unlinked",
             "security-mail.email-verification",

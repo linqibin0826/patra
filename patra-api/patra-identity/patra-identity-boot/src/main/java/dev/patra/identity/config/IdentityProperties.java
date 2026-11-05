@@ -52,13 +52,15 @@ public record IdentityProperties(
     /// @param resendCooldown 同邮箱两次发码的最短间隔
     /// @param perEmailHourly 同邮箱每小时的发码上限
     /// @param perIpHourly 同 IP 每小时的发码上限
+    /// @param linkPerEmailDaily 就地绑定同邮箱每天的发码上限
     public record Registration(
         @DefaultValue("30m") Duration pendingTtl,
         @DefaultValue("10m") Duration codeTtl,
         @DefaultValue("5") int maxCodeAttempts,
         @DefaultValue("60s") Duration resendCooldown,
         @DefaultValue("5") int perEmailHourly,
-        @DefaultValue("20") int perIpHourly) {}
+        @DefaultValue("20") int perIpHourly,
+        @DefaultValue("10") int linkPerEmailDaily) {}
 
     /// 一家平台的注册信息。
     ///

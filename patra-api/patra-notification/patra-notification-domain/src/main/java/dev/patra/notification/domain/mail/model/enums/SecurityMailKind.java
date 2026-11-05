@@ -71,6 +71,8 @@ public enum SecurityMailKind {
   ACCOUNT_DELETION_COMPLETED("account-deletion-completed", "你的 Patra 账号已注销", null, false),
   /// 第三方首次注册的验证码：只为验证码而发，过期就没用了。
   REGISTRATION_CODE("registration-code", "你的 Patra 注册验证码", null, true),
+  /// 邮箱撞车时就地绑定的验证码：只为验证码而发，过期就没用了。
+  LOGIN_METHOD_LINK_CODE("login-method-link-code", "绑定登录方式的验证码", null, true),
   /// 绑定了新的第三方登录方式。
   LOGIN_METHOD_LINKED(
       "login-method-linked",

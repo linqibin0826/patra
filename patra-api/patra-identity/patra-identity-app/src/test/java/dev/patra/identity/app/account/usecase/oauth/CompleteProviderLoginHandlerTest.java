@@ -116,6 +116,7 @@ class CompleteProviderLoginHandlerTest {
               .resendCooldown(Duration.ofSeconds(60))
               .perEmailHourly(5)
               .perIpHourly(20)
+              .linkPerEmailDaily(10)
               .build(),
           transactions,
           Clock.fixed(NOW, ZoneOffset.UTC));

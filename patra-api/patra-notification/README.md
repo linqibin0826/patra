@@ -87,7 +87,7 @@ inbox 不依赖 preference：偏好只管邮件，站内提醒照常。
 
 全站只有通知服务发信（PAP-105）。工程设计：`docs/patra/specs/2026-10-31-notification-mail-channel-design.md`。
 
-- **安全邮件**：identity 的 16 类事件（`identity.events` / `security-mail.*`）进队列 `notification.security-mail`，死信对 `.dlx` / `.dlq`。事件带收件地址、链接与事实，主题与文案在 `SecurityMailKind`，模板在 infra 的 `resources/mail/`。不进偏好、不能退订、不带退订头。
+- **安全邮件**：identity 的 17 类事件（`identity.events` / `security-mail.*`）进队列 `notification.security-mail`，死信对 `.dlx` / `.dlq`。事件带收件地址、链接与事实，主题与文案在 `SecurityMailKind`，模板在 infra 的 `resources/mail/`。不进偏好、不能退订、不带退订头。
 - **一封信怎么处理**：按投递 ID（安全邮件就是事件 ID）查发送记录 → 只为链接而发的信链接过期就不发 → 事务外经 SMTP 发出 → 短事务里 `markProcessed` 并记发送记录。发信失败分三类（spec 6.6）：服务商已接受过这个幂等键按已发记；永久拒收记 `REJECTED`、不重试；临时失败交给监听容器本地重试 3 次，之后进死信。
 - **监听收原始消息**：自己按类型头还原，不是安全邮件事件就拒收进死信；不让 Spring 按参数类型转，免得把正文（地址、令牌链接）写进异常日志。
 - **幂等键**：每封带 `Resend-Idempotency-Key`（投递 ID），`Message-ID` 也按投递 ID 固定。同一个投递 ID 必须渲染出同一份内容，正文里不放随发送时刻变的东西（有效期写成绝对时刻）。

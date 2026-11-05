@@ -1,6 +1,7 @@
 package dev.patra.identity.adapter.account.rest.response;
 
 import dev.patra.identity.app.account.usecase.query.PendingRegistrationView;
+import dev.patra.identity.domain.account.model.enums.RegistrationCodePurpose;
 import dev.patra.identity.domain.account.model.vo.PendingCode;
 import dev.patra.identity.domain.account.model.vo.PendingRegistration;
 import java.time.Instant;
@@ -25,12 +26,17 @@ public record PendingRegistrationResponse(
 
   /// 发出去还没用掉的验证码。
   ///
-  /// @param username 发码时绑定的用户名：重发要同时提交用户名和邮箱，刷新页面后门户只能从这里拿
+  /// @param purpose `REGISTER` 或 `LINK`：刷新页面后门户靠它回到对的那一步
+  /// @param username 发码时绑定的用户名：重发要同时提交用户名和邮箱，刷新页面后门户只能从这里拿；`LINK` 时为 `null`
   /// @param email 发往的邮箱
   /// @param codeExpiresAt 验证码的过期时间
   /// @param nextResendAt 最早可以重发的时间
   public record PendingCodeResponse(
-      String username, String email, Instant codeExpiresAt, Instant nextResendAt) {
+      RegistrationCodePurpose purpose,
+      String username,
+      String email,
+      Instant codeExpiresAt,
+      Instant nextResendAt) {
 
     /// 从领域值映射。
     ///
@@ -40,7 +46,11 @@ public record PendingRegistrationResponse(
       return code == null
           ? null
           : new PendingCodeResponse(
-              code.username(), code.email(), code.codeExpiresAt(), code.nextResendAt());
+              code.purpose(),
+              code.username(),
+              code.email(),
+              code.codeExpiresAt(),
+              code.nextResendAt());
     }
   }
 

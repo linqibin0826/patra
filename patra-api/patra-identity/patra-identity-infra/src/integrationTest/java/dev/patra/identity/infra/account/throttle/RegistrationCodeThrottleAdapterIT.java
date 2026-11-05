@@ -30,6 +30,7 @@ class RegistrationCodeThrottleAdapterIT {
           .resendCooldown(Duration.ofSeconds(60))
           .perEmailHourly(5)
           .perIpHourly(20)
+          .linkPerEmailDaily(10)
           .build();
   private static final AtomicLong NEXT = new AtomicLong(1);
 
@@ -86,6 +87,44 @@ class RegistrationCodeThrottleAdapterIT {
     }
 
     assertThat(adapter.acquire(email, "198.51.100.1", T0.plusSeconds(61L * 5))).isPresent();
+  }
+
+  @Test
+  @DisplayName("绑定用途同邮箱每天 10 封：第 11 封被拒，等到最早那封滑出窗口；换个邮箱不受影响")
+  void should_limit_link_codes_per_email_per_day() {
+    EmailAddress email = uniqueEmail();
+    Duration step = Duration.ofHours(2);
+    for (int i = 0; i < 10; i++) {
+      assertThat(adapter.acquireForLink(email, uniqueIp(), T0.plus(step.multipliedBy(i))))
+          .isEmpty();
+    }
+    Instant eleventh = T0.plus(step.multipliedBy(10));
+
+    assertThat(adapter.acquireForLink(email, uniqueIp(), eleventh)).contains(Duration.ofHours(4));
+    assertThat(adapter.acquireForLink(uniqueEmail(), uniqueIp(), eleventh)).isEmpty();
+    assertThat(adapter.acquireForLink(email, uniqueIp(), T0.plus(Duration.ofHours(24)))).isEmpty();
+  }
+
+  @Test
+  @DisplayName("注册发码不占绑定的每日配额，也不受它限制")
+  void should_not_apply_daily_link_limit_to_registration_codes() {
+    EmailAddress email = uniqueEmail();
+    Duration step = Duration.ofHours(2);
+    for (int i = 0; i < 11; i++) {
+      assertThat(adapter.acquire(email, uniqueIp(), T0.plus(step.multipliedBy(i)))).isEmpty();
+    }
+
+    assertThat(adapter.acquireForLink(email, uniqueIp(), T0.plus(step.multipliedBy(11)))).isEmpty();
+  }
+
+  @Test
+  @DisplayName("绑定和注册共用冷却与小时窗口")
+  void should_share_cooldown_between_link_and_registration() {
+    EmailAddress email = uniqueEmail();
+
+    assertThat(adapter.acquireForLink(email, uniqueIp(), T0)).isEmpty();
+    assertThat(adapter.acquire(email, uniqueIp(), T0.plusSeconds(10)))
+        .contains(Duration.ofSeconds(50));
   }
 
   @Test
