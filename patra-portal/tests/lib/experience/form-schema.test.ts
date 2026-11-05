@@ -74,6 +74,12 @@ describe("experienceFormSchema：日期", () => {
     });
   });
 
+  it("认不出的写法报格式错误", () => {
+    expect(errorsOf({ ...FILLED, submittedOn: "2026/9/31" })).toEqual({
+      submittedOn: "日期写成 2026-08-14 这样",
+    });
+  });
+
   it("同一天可以", () => {
     expect(
       errorsOf({ ...FILLED, firstDecisionOn: "2026-03-02", finalDecisionOn: "2026-03-02" }),

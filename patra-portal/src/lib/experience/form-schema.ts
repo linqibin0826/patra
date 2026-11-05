@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { parseDateInput } from "@/lib/date-input";
 import { limitState, measure } from "@/lib/discussion/limits";
 import {
   ARTICLE_TYPES,
@@ -94,7 +95,9 @@ export function experienceFormSchema(today: string) {
         }
         return;
       }
-      if (value > today) {
+      if (parseDateInput(value) !== value) {
+        ctx.addIssue({ code: "custom", message: DATE_MESSAGES.format });
+      } else if (value > today) {
         ctx.addIssue({ code: "custom", message: DATE_MESSAGES.future });
       } else if (value < MIN_DATE) {
         ctx.addIssue({ code: "custom", message: DATE_MESSAGES.tooEarly });

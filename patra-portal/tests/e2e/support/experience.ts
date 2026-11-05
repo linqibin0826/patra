@@ -62,7 +62,9 @@ export async function fillExperience(form: Locator, input: ExperienceInput): Pro
   if (input.finalDecisionOn) {
     await form.getByLabel(/^最终决定日期/).fill(input.finalDecisionOn);
   }
-  await form.getByLabel(/^文章类型/).selectOption({ label: input.articleType });
+  // 文章类型是门户下拉：点开后选项在弹层里（挂在 body 下，不在表单里）
+  await form.getByRole("combobox", { name: /^文章类型/ }).click();
+  await form.page().getByRole("option", { name: input.articleType, exact: true }).click();
   if (input.reviewRounds) {
     await form.getByLabel(/^审稿轮数/).fill(input.reviewRounds);
   }

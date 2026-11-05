@@ -20,6 +20,8 @@ interface FormFieldProps {
   hint?: ReactNode;
   /// 错误文案，可以带链接（「该邮箱已注册，去登录」）
   error?: ReactNode;
+  /// 控件自带外框（下拉、日期、数字原语）时不再套输入井
+  bare?: boolean;
   /// 标红但不显示错误文案：错误说明不在这一行时用（第三方注册的邮箱撞车，说明是字段下方的引导块）
   invalid?: boolean;
   children: (control: FieldControl) => ReactNode;
@@ -50,10 +52,17 @@ export function FormField({
   aside,
   hint,
   error,
+  bare,
   invalid,
   children,
 }: FormFieldProps) {
   const messageId = error ? `${id}-error` : hint ? `${id}-hint` : undefined;
+  const control = children({
+    id,
+    className: FIELD_INPUT,
+    "aria-invalid": Boolean(error) || Boolean(invalid),
+    "aria-describedby": messageId,
+  });
   return (
     <div className="flex min-w-0 flex-col gap-2">
       <div className="flex items-baseline justify-between gap-3">
@@ -63,14 +72,7 @@ export function FormField({
         </label>
         {aside}
       </div>
-      <div className={FIELD_BOX}>
-        {children({
-          id,
-          className: FIELD_INPUT,
-          "aria-invalid": Boolean(error) || Boolean(invalid),
-          "aria-describedby": messageId,
-        })}
-      </div>
+      {bare ? control : <div className={FIELD_BOX}>{control}</div>}
       {error ? (
         <p
           key="error"

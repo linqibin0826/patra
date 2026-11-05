@@ -73,6 +73,12 @@ const group = (name: RegExp) => screen.getByRole("radiogroup", { name });
 const radio = (groupName: RegExp, option: string) =>
   within(group(groupName)).getByRole("radio", { name: option });
 
+/// 文章类型：点开下拉再点选项
+async function chooseType(user: ReturnType<typeof userEvent.setup>, label: string) {
+  await user.click(screen.getByRole("combobox", { name: /^文章类型/ }));
+  await user.click(await screen.findByRole("option", { name: label }));
+}
+
 function setDate(name: RegExp, value: string) {
   const input = dateField(name);
   fireEvent.change(input, { target: { value } });
@@ -86,20 +92,21 @@ async function fillRequired(user: ReturnType<typeof userEvent.setup>) {
   setDate(/^首轮决定日期/, "2026-04-13");
   await user.click(radio(/首轮结果/, "大修"));
   await user.click(radio(/最终结果/, "录用"));
-  await user.selectOptions(screen.getByLabelText(/^文章类型/), "ORIGINAL_RESEARCH");
+  await chooseType(user, "原创研究");
 }
 
 describe("新建：初始状态（简报 §3.15）", () => {
-  it("标题、必填说明、焦点在投稿日期、文章类型 6 种", () => {
+  it("标题、必填说明、焦点在投稿日期、文章类型 6 种", async () => {
+    const user = userEvent.setup();
     renderCreate();
     expect(screen.getByRole("heading", { name: "写投稿经验" })).toBeInTheDocument();
     expect(screen.getByText(/带 \* 的必填/)).toBeInTheDocument();
     expect(dateField(/^投稿日期/)).toHaveFocus();
-    expect(dateField(/^投稿日期/)).toHaveAttribute("max", "2026-10-28");
-    expect(dateField(/^投稿日期/)).toHaveAttribute("min", "1990-01-01");
-    const options = within(screen.getByLabelText(/^文章类型/)).getAllByRole("option");
+    const type = screen.getByRole("combobox", { name: /^文章类型/ });
+    expect(type).toHaveTextContent("请选择");
+    await user.click(type);
+    const options = within(await screen.findByRole("listbox")).getAllByRole("option");
     expect(options.map((option) => option.textContent)).toEqual([
-      "请选择",
       "原创研究",
       "综述",
       "系统综述 / Meta 分析",
@@ -144,14 +151,14 @@ describe("一致性联动（spec 6.3）", () => {
       expect(radio(/最终结果/, option)).toBeEnabled();
       expect(radio(/最终结果/, option)).not.toBeChecked();
     }
-    expect(screen.getByLabelText(/^审稿轮数/)).toHaveValue(null);
+    expect(screen.getByLabelText(/^审稿轮数/)).toHaveValue("");
   });
 
   it("审后拒稿：审稿轮数固定为 1", async () => {
     const user = userEvent.setup();
     renderCreate();
     await user.click(radio(/首轮结果/, "审后拒稿"));
-    expect(screen.getByLabelText(/^审稿轮数/)).toHaveValue(1);
+    expect(screen.getByLabelText(/^审稿轮数/)).toHaveValue("1");
     expect(screen.getByLabelText(/^审稿轮数/)).toBeDisabled();
     expect(screen.getByText("首轮即结束，审稿只有 1 轮")).toBeInTheDocument();
   });
@@ -206,6 +213,54 @@ describe("校验", () => {
     setDate(/^投稿日期/, "2026-03-02");
     setDate(/^首轮决定日期/, "2026-03-01");
     expect(await screen.findByText("首轮决定日期不能早于投稿日期")).toBeInTheDocument();
+  });
+
+  it("投稿日期改晚后首轮日期报错，已填的值不清空", async () => {
+    renderCreate();
+    setDate(/^投稿日期/, "2026-03-02");
+    setDate(/^首轮决定日期/, "2026-04-13");
+    setDate(/^投稿日期/, "2026-05-01");
+    fireEvent.focusOut(dateField(/^首轮决定日期/));
+    expect(await screen.findByText("首轮决定日期不能早于投稿日期")).toBeInTheDocument();
+    expect(dateField(/^首轮决定日期/)).toHaveValue("2026-04-13");
+  });
+
+  it("手敲的日期失焦后规范化", async () => {
+    renderCreate();
+    setDate(/^投稿日期/, "2026/3/2");
+    expect(dateField(/^投稿日期/)).toHaveValue("2026-03-02");
+  });
+
+  it("认不出的日期报格式错误", async () => {
+    renderCreate();
+    setDate(/^投稿日期/, "2026/9/31");
+    expect(await screen.findByText("日期写成 2026-08-14 这样")).toBeInTheDocument();
+  });
+
+  it("超出范围的日期：晚于今天、早于 1990 年", async () => {
+    renderCreate();
+    setDate(/^投稿日期/, "2026-10-29");
+    expect(await screen.findByText("日期不能晚于今天")).toBeInTheDocument();
+    setDate(/^投稿日期/, "1989-12-31");
+    expect(await screen.findByText("日期不能早于 1990 年")).toBeInTheDocument();
+  });
+
+  it("从日历选了日期，点日历按钮时冒出的必填错误随之消失", async () => {
+    const user = userEvent.setup();
+    renderCreate();
+    await user.click(screen.getByRole("button", { name: "打开日历：投稿日期" }));
+    const grid = await screen.findByRole("grid");
+    await user.click(within(grid).getByRole("button", { name: /10月20日/ }));
+    expect(dateField(/^投稿日期/)).toHaveValue("2026-10-20");
+    await waitFor(() => expect(screen.queryByText("请填写投稿日期")).not.toBeInTheDocument());
+  });
+
+  it("日期不合法时不算用时", async () => {
+    renderCreate();
+    setDate(/^投稿日期/, "2026-02-30");
+    setDate(/^首轮决定日期/, "2026-04-13");
+    expect(await screen.findByText("日期写成 2026-08-14 这样")).toBeInTheDocument();
+    expect(screen.getByRole("form", { name: "写投稿经验" })).not.toHaveTextContent("首轮用时");
   });
 
   it("两个日期都有效时算出用时，填了最终日期再算总时长", async () => {
