@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { AuthShell } from "@/components/auth/AuthShell";
 import { LoginForm } from "@/components/auth/LoginForm";
+import { readHumanVerification } from "@/lib/auth/human-verification";
 import { safeNextPath } from "@/lib/auth/next-path";
 import { readOAuthEnabled } from "@/lib/auth/oauth-host";
 import { parseOAuthNotice } from "@/lib/auth/oauth-notice";
@@ -17,14 +18,18 @@ export default async function LoginPage({
   const params = await searchParams;
   const raw = params.next;
   const next = safeNextPath(Array.isArray(raw) ? raw[0] : raw);
-  const enabled = await readOAuthEnabled();
+  const [enabled, verification] = await Promise.all([readOAuthEnabled(), readHumanVerification()]);
   return (
     <AuthShell
       title="登录"
       description={enabled ? "用第三方账号，或邮箱和密码登录 Patra" : "用邮箱和密码登录 Patra"}
       back={next}
     >
-      <LoginForm next={next} oauth={{ enabled, notice: parseOAuthNotice(params) }} />
+      <LoginForm
+        next={next}
+        oauth={{ enabled, notice: parseOAuthNotice(params) }}
+        verification={verification}
+      />
     </AuthShell>
   );
 }

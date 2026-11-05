@@ -6,6 +6,8 @@ import { useForm } from "react-hook-form";
 import { AuthLink } from "@/components/auth/AuthLink";
 import { FormAlert } from "@/components/auth/FormAlert";
 import { FormField } from "@/components/auth/FormField";
+import { HumanVerificationWidget } from "@/components/auth/human-verification/HumanVerificationWidget";
+import { useHumanVerification } from "@/components/auth/human-verification/use-human-verification";
 import { PasswordInput } from "@/components/auth/PasswordInput";
 import { ProviderEntries } from "@/components/auth/ProviderEntries";
 import { useAuthSubmit, useServerFieldErrors } from "@/components/auth/use-auth-submit";
@@ -18,9 +20,11 @@ import {
   loginAlertMessage,
   loginNoticeAlert,
   TOAST_MESSAGES,
+  VERIFICATION_MESSAGES,
 } from "@/lib/auth/messages";
 import { authPageHref, forgotPasswordHref } from "@/lib/auth/next-path";
 import type { OAuthNotice } from "@/lib/auth/oauth-notice";
+import type { HumanVerificationConfig } from "@/lib/auth/types";
 import { btnBlock, btnPrimary } from "@/lib/portal-ui";
 import { cn } from "@/lib/utils";
 import { useAuthHandoffStore } from "@/store/auth-handoff";
@@ -28,13 +32,17 @@ import { useAuthHandoffStore } from "@/store/auth-handoff";
 /// 登录表单（spec 第 9 节）：提示条、邮箱、密码（标签行右端「忘记密码？」）、提交按钮、去注册的链接。
 /// `next` 已经过 `safeNextPath`。从重设密码页过来时（PAP-102 spec §8.1）预填邮箱、表单上方是成功提示、
 /// 焦点在密码框。`oauth` 是第三方入口（决策 G）和从第三方回来的结果，不传时没有入口。
+/// 平时不显示人机验证，也不加载第三方资源；后端要求后才显示，之后一直显示。令牌只能用一次，任何失败都要重置。
 export function LoginForm({
   next,
   oauth,
+  verification = null,
 }: {
   next: string;
   oauth?: { enabled: boolean; notice: OAuthNotice | null };
+  verification?: HumanVerificationConfig | null;
 }) {
+  const humanVerification = useHumanVerification(false);
   // 挂载时读一次带过来的内容，读完在 effect 里清空（严格模式下初始化函数跑两次也读得到）
   const [handoff] = useState(() => {
     const { email, notice } = useAuthHandoffStore.getState();
@@ -73,6 +81,20 @@ export function LoginForm({
     action: login,
     successToast: TOAST_MESSAGES.loggedIn,
     onFailure: (failure, credentials) => {
+      humanVerification.reset();
+      if (failure.reason === "verification-required") {
+        humanVerification.demand();
+        setAlert(VERIFICATION_MESSAGES.required);
+        return;
+      }
+      if (failure.reason === "verification-failed") {
+        setAlert(VERIFICATION_MESSAGES.failed);
+        return;
+      }
+      if (failure.reason === "verification-unavailable") {
+        setAlert(VERIFICATION_MESSAGES.unavailable);
+        return;
+      }
       if (failure.reason === "invalid-fields") {
         const first = serverErrors.showFieldErrors(failure.fieldErrors, {
           email: credentials.email,
@@ -110,10 +132,16 @@ export function LoginForm({
   /// 每次提交先清掉提示条和后端字段错误，再校验、请求。提交中再次提交由 `submit` 忽略
   function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (humanVerification.blocked) {
+      return;
+    }
     setAlert(null);
     dismiss();
     serverErrors.clear();
-    void handleSubmit((values) => submit(values))(event);
+    const { token } = humanVerification;
+    void handleSubmit((values) =>
+      submit(token === null ? values : { ...values, verificationToken: token }),
+    )(event);
   }
 
   return (
@@ -180,10 +208,15 @@ export function LoginForm({
             />
           )}
         </FormField>
+        <HumanVerificationWidget
+          config={verification}
+          action="login"
+          verification={humanVerification}
+        />
         <div className="mt-2">
           <button
             type="submit"
-            aria-disabled={submitting || undefined}
+            aria-disabled={submitting || humanVerification.blocked || undefined}
             title={submitting ? "正在登录" : undefined}
             className={cn(btnPrimary, btnBlock)}
           >
