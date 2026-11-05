@@ -516,7 +516,7 @@ patra:
 
 - **流程**：浏览器只和门户打交道。门户转发 `GET /oauth2/authorization/{provider}`，从 302 的 `Location` 取 `state` 写短期 Cookie；回调时先核对 Cookie，再转发 `GET /login/oauth2/code/{provider}`（带 `X-Forwarded-For`、`User-Agent`、`X-Patra-Device-Id`，有会话再带 `Authorization`）。identity 跑官方 `oauth2Login`：state、nonce、PKCE、换令牌、验 `id_token` 都由框架完成，确认身份后令牌就丢弃。
 - **过滤器链**：`IdentityOAuth2SecurityConfiguration` 声明 `AdditionalSecurityFilterChain`（`@Order(1)`），只收三家的发起路径和回调路径，其余仍走安全 starter 的默认断言链。`STATELESS`，不建 `HttpSession`。
-- **注册信息**：`patra.identity.oauth.providers.<id>`（`application.yml`），`ConfiguredClientRegistrations` 建成 `ClientRegistration`；客户端 ID 或密钥没配的平台不注册，入口 404。不用 Boot 的 `spring.security.oauth2.client.registration`：它要求客户端 ID 非空，一家没配整个应用起不来。写明确的端点、不用发现文档，启动不联网；`redirect-uri` 是门户对外的完整地址 `{PATRA_OAUTH_REDIRECT_BASE_URL}/api/auth/oauth/callback/<id>`。出站客户端都带超时（连接 3 秒、读 5 秒），不用容器里的 `RestClient.Builder`：它带内部调用的拦截器，身份断言不能发给第三方。
+- **注册信息**：`patra.identity.oauth.providers.<id>`（`application.yml`），`ConfiguredClientRegistrations` 建成 `ClientRegistration`；客户端 ID 或密钥没配的平台不注册，入口 404。不用 Boot 的 `spring.security.oauth2.client.registration`：它要求客户端 ID 非空，一家没配整个应用起不来。写明确的端点、不用发现文档，启动不联网；`redirect-uri` 是门户对外的完整地址 `{PATRA_OAUTH_REDIRECT_BASE_URL}/api/auth/oauth/callback/<id>`。出站客户端都带超时（`patra.identity.oauth.outbound`：建连 10 秒，含 TLS 握手；一次请求 15 秒，含建连），不用容器里的 `RestClient.Builder`：它带内部调用的拦截器，身份断言不能发给第三方。
 - **Redis 键**：
 
 | 键 | 类型 | 内容 | TTL |

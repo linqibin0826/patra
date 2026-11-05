@@ -357,7 +357,7 @@ PATRA_OAUTH_ORCID_CLIENT_SECRET=
 
 `redirect-uri` 写 `${PATRA_OAUTH_REDIRECT_BASE_URL}/api/auth/oauth/callback/<id>`。框架把它原样放进授权请求，换令牌时从存下的授权请求里取，所以 identity 处理回调时看到的请求地址是内网地址也没关系（已核对 `OAuth2AuthorizationCodeGrantRequest` 和 `OAuth2AuthorizationCodeAuthenticationProvider`：不比较回调地址和请求地址）。
 
-出站：`IdentityOAuth2ClientConfiguration` 建一个带超时的客户端（连接 3 秒、读 5 秒，`JdkClientHttpRequestFactory`，跟随 JVM 默认的 `ProxySelector`），给三处用：
+出站：`IdentityOAuth2ClientConfiguration` 建一个带超时的客户端（`patra.identity.oauth.outbound`：建连 10 秒，含 TLS 握手；一次请求 15 秒，从发出算到读完响应，含建连。`JdkClientHttpRequestFactory`，跟随 JVM 默认的 `ProxySelector`），给三处用：
 
 - `RestClientAuthorizationCodeTokenResponseClient.setRestClient`（保留框架要求的消息转换器和错误处理器）；
 - `DefaultOAuth2UserService.setRestOperations`；
