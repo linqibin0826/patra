@@ -2,7 +2,7 @@ package dev.patra.notification.domain.mail.model.enums;
 
 import java.util.Map;
 
-/// identity 请通知服务发的 16 类安全邮件：模板名、主题、「不是我怎么办」与链接过期后发不发。
+/// identity 请通知服务发的 17 类安全邮件：模板名、主题、「不是我怎么办」与链接过期后发不发。
 ///
 /// 模板名就是 identity 事件路由键 `security-mail.<模板名>` 的后半段，渲染器据此找 `html/<模板名>` 与
 /// `text/<模板名>`。主题与「不是我怎么办」是 v0.16 之前 identity 里的原文，随模板一起搬来。

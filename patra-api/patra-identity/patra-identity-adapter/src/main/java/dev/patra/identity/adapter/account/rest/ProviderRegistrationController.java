@@ -98,7 +98,8 @@ public class ProviderRegistrationController {
         result.sessionToken(), CurrentUserResponse.from(result.account()));
   }
 
-  /// 邮箱撞车时就地绑定：发验证码，重发也调它。凭证有效、邮箱格式合法时一律 202，没资格的邮箱只是不发信；
+  /// 邮箱撞车时就地绑定：发验证码，重发也调它。凭证和邮箱格式合法、且没被限流时回 202；
+  /// 邮箱没注册、账号邮箱未验证或已封禁时同样回 202，只是不发信，不泄露账号状态。
   /// 422 字段或凭证不合法，429 过于频繁（带 `Retry-After`）。
   ///
   /// @param ticket 待补填凭证，可以没有
