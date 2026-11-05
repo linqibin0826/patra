@@ -37,9 +37,10 @@ dev.patra.identity.config           装配（XXL-Job 执行器、catalog 客户�
 
 | 路径 | 成功 | 网关规则（PAP-65 / PAP-93） |
 |---|---|---|
-| `POST /auth/register` | 201 `{ sessionToken, user }` | 公开 |
-| `POST /auth/login` | 200 `{ sessionToken, user }` | 公开 |
+| `POST /auth/register` | 201 `{ sessionToken, user }`；请求体必须带 `verificationToken`（第 19 节） | 公开 |
+| `POST /auth/login` | 200 `{ sessionToken, user }`；被触发时请求体要带 `verificationToken`（第 19 节） | 公开 |
 | `POST /auth/logout` | 204，有当前用户就删会话，没有也 204 | 公开 |
+| `GET /auth/human-verification` | 200 `{ provider, siteKey }`，不缓存（第 19 节） | 公开 |
 | `GET /auth/me` | 200 `user`（下面的结构） | 需要登录 |
 | `PATCH /me/username` | 200 `{ username, nextUsernameChangeAt }` | 需要登录（`/me/**` 整体） |
 | `POST /me/email/verification/resend` | 202 `{ email, nextResendAt }`，无请求体 | 需要登录 |
@@ -537,3 +538,51 @@ patra:
 - **邮件**：`security-mail.registration-code`、`-login-method-link-code`、`-login-method-linked`、`-login-method-unlinked`。
 - **隐私与合规**：只存平台、主体、账号标识、绑定与最近登录时间；头像、昵称不导入，平台给的用户名和邮箱只作预填。ORCID 公共 API 只允许非商业使用，要收费须换会员 API。
 - **测试**：`FakeProviderFixture` 用 WireMock 扮演三家，`OAuth2LoginFlowIT`、`OAuth2ProtocolAttackIT`、`TokenNotRetainedIT`、`ProviderLoginFlowIT`、`ProviderRegistrationFlowIT`、`ProviderInPlaceLinkFlowIT`、`ProviderLinkFlowIT`。真实三家在 mini 上手工验收。
+
+## 19. 人机验证
+
+工程设计：`docs/patra/specs/2026-11-05-identity-human-verification-design.md`。
+
+- **何时要验证**：注册、申请找回密码每次都要。登录平时不要，同一 IP 15 分钟内失败 5 次（IPv6 按 /64，登录成功不清零），或同一邮箱 15 分钟内失败 3 次（复用第 6 节的失败计数）时才要。已锁定的账号直接 429，不要求验证。
+- **校验位置**：`HumanVerificationGuard`，在事务外、其他检查之前。校验失败的请求不占失败限制名额，也不做密码哈希。
+- **错误**：没带令牌 422 `verificationToken` / `VERIFICATION_REQUIRED`；令牌没通过 422 `verificationToken` / `VERIFICATION_FAILED`；第三方不可用或配置缺失 503，`traits` 含 `VERIFICATION_UNAVAILABLE`。验证不了一律拒绝，不放行。
+- **两家**：端口 `HumanVerificationPort`，适配器 `TurnstileAdapter`、`TrustTurnAdapter`。没有“关闭”这个选项。
+
+### 配置（`patra.identity.human-verification`）
+
+| 键 | 说明 | 放在哪 |
+|---|---|---|
+| `provider` | `turnstile`（默认）或 `trustturn` | Nacos |
+| `email-failure-threshold` | 默认 3，必须小于 `login-throttle.max-failures` | Nacos |
+| `ip-failure-threshold`、`ip-failure-window` | 默认 5、15 分钟 | Nacos |
+| `turnstile.allowed-hostnames`、`trust-turn.allowed-origins` | 允许的站点 | Nacos |
+| `PATRA_IDENTITY_TURNSTILE_SITE_KEY`、`PATRA_IDENTITY_TURNSTILE_SECRET` | Turnstile 凭据 | `~/.patra/secrets/identity.env` |
+| `PATRA_IDENTITY_TRUSTTURN_SITE_KEY`、`PATRA_IDENTITY_TRUSTTURN_APP_SECRET` | TRUSTTURN 凭据 | `~/.patra/secrets/identity.env` |
+
+主配置不带默认密钥：放官方测试密钥的话，线上漏配就会全部放行。当前厂商缺凭据时启动失败。
+
+### 切换厂商
+
+改 Nacos 的 `provider`，identity 在线刷新，门户下一次读取 `GET /auth/human-verification` 就用上新厂商，不用重新部署。切到缺凭据的厂商时，校验返回 503 并打 ERROR，不会回退到另一家。
+
+**切到 TRUSTTURN 前要知道**：它的运营方、价格和隐私政策都没有公开说明。切换期间访客的 IP 和浏览器信息会发给它，它也可以对任何请求都返回成功。默认通道始终是 Turnstile，切过去时会打 WARN。请求只带 `site_key`、`ticket`、`expected_action`，不传用户数据；门户只用 iframe 加 `sandbox`，不加载它域名下的脚本。
+
+### 本机联调
+
+本机启动 identity 要配 Turnstile 官方测试密钥（公开值，只接受假令牌，永远通过）：
+
+```bash
+export PATRA_IDENTITY_TURNSTILE_SITE_KEY=1x00000000000000000000AA
+export PATRA_IDENTITY_TURNSTILE_SECRET=1x0000000000000000000000000000000AA
+```
+
+测试密钥的响应带 `metadata.result_with_testing_key`，`hostname` 固定为 `example.com`，也没有 `action`，所以适配器看到这个标记时跳过这两项核对并打 WARN。线上不应出现这条日志。真实密钥绑定 `patra.linqibin.dev`，从 tailnet 用 IP 访问门户时校验不过。
+
+自动化测试不连真实服务，`HumanVerificationFixture` 用 WireMock 扮演两家。
+
+### 已知限制
+
+- 攻击者可以用假令牌让我们反复调第三方校验接口，这里只做长度和字符检查，限流属于网关（PAP-189）。
+- 门槛是软的：同一时刻的并发请求可能都读到“没到门槛”，超出几个可以接受。
+- 没配 `PATRA_GATEWAY_TRUSTED_PROXIES` 或门户取不到真实 IP 时，请求会共用一个 IP 计数，正常用户更容易被要求验证。identity 看不到这个配置，所以不打启动警告。
+- TRUSTTURN 的错误响应格式文档没给，适配器依次读 `error`、`code` 字段，读不到算验证不了。真实响应实测后补到这里。

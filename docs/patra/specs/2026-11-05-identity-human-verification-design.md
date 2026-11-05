@@ -176,20 +176,20 @@ patra:
       ip-failure-window: 15m
       turnstile:
         base-url: https://challenges.cloudflare.com
-        site-key: ...
+        site-key: ${PATRA_IDENTITY_TURNSTILE_SITE_KEY:}
         secret: ${PATRA_IDENTITY_TURNSTILE_SECRET:}
         allowed-hostnames: [patra.linqibin.dev]
       trust-turn:
         base-url: https://api.trustturn.cc
-        site-key: ...
+        site-key: ${PATRA_IDENTITY_TRUSTTURN_SITE_KEY:}
         app-secret: ${PATRA_IDENTITY_TRUSTTURN_APP_SECRET:}
         allowed-origins: [https://patra.linqibin.dev]
 ```
 
 | 项目 | 放在哪 |
 |---|---|
-| `secret`、`app_secret` | `~/.patra/secrets/identity.env`，compose 已经加载，不进仓库 |
-| `site-key`、`allowed-*`、`provider`、门槛 | Nacos 的 `patra-identity.yaml`，`site-key` 可以公开。值写成 `${PATRA_IDENTITY_TURNSTILE_SITE_KEY:<真实值>}`，本机能用环境变量覆盖 |
+| `secret`、`app_secret`、`site-key` | `~/.patra/secrets/identity.env`，compose 已经加载，不进仓库。`site-key` 可以公开，放这里是为了本机用环境变量换成测试值 |
+| `allowed-*`、`provider`、门槛 | Nacos 的 `patra-identity.yaml` |
 | 自动化测试 | `application-test.yml` 指向 WireMock，用假密钥，不用官方测试密钥，这样 `hostname` 和 `action` 核对也被测到 |
 | 本机联调 | 环境变量传 Turnstile 官方测试密钥，写进 identity README |
 

@@ -22,7 +22,7 @@ Patra 的 API 网关：所有外部请求的统一入口，按路径前缀路由
 | 顺序 | 路径 | 结果 |
 |---|---|---|
 | 第一条链 | `/*/_internal/**`、`/*/admin/**`、`/*/actuator/**` | 任何人 403 `GW-0403`；不读令牌、不查会话。服务之间的直连调用不过网关，不受影响 |
-| 第二条链 | `/patra-identity/auth/register`、`/auth/login`、`/auth/logout`、`/v3/api-docs`、`/v3/api-docs/**` | 放行（登出公开是为了幂等：会话已失效也要能到达 identity） |
+| 第二条链 | `/patra-identity/auth/register`、`/auth/login`、`/auth/logout`、`/auth/human-verification`、`/v3/api-docs`、`/v3/api-docs/**` | 放行（登出公开是为了幂等：会话已失效也要能到达 identity） |
 | 第二条链 | `/patra-identity/oauth2/authorization/*`、`/login/oauth2/code/*`、`/auth/oauth/registration`、`/auth/oauth/registration/**` | 放行（第三方登录的发起、回调和首次注册，门户转发；绑定回调带会话时照样换成断言，identity 靠它核对发起人） |
 | 第二条链 | `/patra-identity/**` 其余 | 需登录；匿名 401 `GW-0401` |
 | 第二条链 | `/patra-notification/me/notifications/stream`（推送连接） | 需登录；匿名、已登出 401 `GW-0401`，不借推送池的连接 |
