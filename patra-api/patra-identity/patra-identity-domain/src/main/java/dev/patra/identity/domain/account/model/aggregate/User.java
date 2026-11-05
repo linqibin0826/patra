@@ -1,6 +1,8 @@
 package dev.patra.identity.domain.account.model.aggregate;
 
+import dev.patra.identity.domain.account.exception.InvalidCredentialsException;
 import dev.patra.identity.domain.account.exception.InvalidUserStateTransitionException;
+import dev.patra.identity.domain.account.exception.UserBannedException;
 import dev.patra.identity.domain.account.exception.UserPendingDeletionException;
 import dev.patra.identity.domain.account.exception.UsernameChangeCooldownException;
 import dev.patra.identity.domain.account.model.enums.UserStatus;
@@ -327,6 +329,24 @@ public final class User {
       case ACTIVE -> {}
       case PENDING_DELETION -> throw new UserPendingDeletionException();
       case BANNED, DELETED -> throw new AuthenticationRequiredException();
+    }
+  }
+
+  /// 登录资格：正常和冷静期放行（冷静期内要能登录才能取消注销）；已封禁 403；已注销 401，
+  /// 和密码错误一样，不暴露账号状态。调用方必须先确认身份，否则这里的 403 会泄露封禁。
+  ///
+  /// @throws UserBannedException 已封禁
+  /// @throws InvalidCredentialsException 已注销
+  public void requireLoginEligible() {
+    // 用 switch 表达式：新增状态时编译失败，不会被静默放行
+    RuntimeException rejection =
+        switch (status) {
+          case ACTIVE, PENDING_DELETION -> null;
+          case BANNED -> new UserBannedException();
+          case DELETED -> new InvalidCredentialsException();
+        };
+    if (rejection != null) {
+      throw rejection;
     }
   }
 

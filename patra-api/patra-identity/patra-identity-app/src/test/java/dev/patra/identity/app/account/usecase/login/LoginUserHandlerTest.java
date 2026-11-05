@@ -15,6 +15,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import dev.patra.identity.app.account.service.NewDeviceLoginNotifier;
+import dev.patra.identity.app.account.service.ThrottledPasswordCheck;
 import dev.patra.identity.domain.account.exception.InvalidCredentialsException;
 import dev.patra.identity.domain.account.exception.LoginTemporarilyLockedException;
 import dev.patra.identity.domain.account.exception.UserBannedException;
@@ -156,7 +157,7 @@ class LoginUserHandlerTest {
           credentials,
           userReadPort,
           passwordHashing,
-          loginThrottle,
+          new ThrottledPasswordCheck(loginThrottle),
           sessionIssuer,
           resolver,
           new NewDeviceLoginNotifier(
@@ -481,7 +482,7 @@ class LoginUserHandlerTest {
             credentials,
             userReadPort,
             passwordHashing,
-            loginThrottle,
+            new ThrottledPasswordCheck(loginThrottle),
             sessionIssuer,
             resolver,
             new NewDeviceLoginNotifier(
