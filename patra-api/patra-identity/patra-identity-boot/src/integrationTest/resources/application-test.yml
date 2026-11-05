@@ -21,6 +21,19 @@ PATRA_OAUTH_ORCID_CLIENT_SECRET: test-orcid-secret
 # 对象存储的占位端点：不带 MinIO 的独立 IT 上下文也能装配（不连接）；
 # 继承 IdentityFlowITSupport 的流程测试由 IdentityITMinIOContainerInitializer 覆盖成真实容器
 patra:
+  # 人机验证的占位值：真实环境来自 Nacos 和 ~/.patra/secrets/identity.env；流程测试把地址指到 WireMock
+  identity:
+    human-verification:
+      turnstile:
+        base-url: http://127.0.0.1:1
+        site-key: test-turnstile-site
+        secret: test-turnstile-value
+        allowed-hostnames: [patra.test]
+      trust-turn:
+        base-url: http://127.0.0.1:1
+        site-key: test-trustturn-site
+        app-secret: test-trustturn-value
+        allowed-origins: [https://patra.test]
   # 捕获队列按 __TypeId__ 还原安全邮件事件（PAP-104）
   events:
     consumer:
