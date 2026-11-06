@@ -70,14 +70,11 @@ main 上设了**分支保护**：不是想合并就能合并。PR 页面那颗�
 
 ## AI 评审员
 
-Patra 是单人项目，没有同事帮忙看代码，评审由两位 AI 评审员替补：
-
-- **Claude Action**：PR 打开、转 ready 或有新推送时自动触发，每个 PR 只评一次，会跳过草稿；评 bug，也核对项目规范。
-- **CodeRabbit**：不自动评审，由 Claude 在评论区发 `@coderabbitai review` 才触发，只做首评。它给公开小仓库的免费额度每小时只有一次评审，复评几乎必然被限流。
+Patra 是单人项目，没有同事帮忙看代码，评审由 AI 评审员 **Claude Action** 替补：PR 打开、转 ready 或有新推送时自动触发，每个 PR 只评一次，会跳过草稿；评 bug，也核对项目规范。
 
 对每条意见，规则很硬：**要么修掉并附上提交号，要么明确写不修的理由，不允许已读不回**。
 
-<CodeRef at="CLAUDE.md@cfec9c9f30270dcf03f5cd7b6e54a0cd3b59296b" lines="65-78" />
+<CodeRef at="CLAUDE.md@pending" lines="65-76" />
 
 <Callout kind="warn">
 

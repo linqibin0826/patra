@@ -528,7 +528,7 @@ PAP-161 盘点 Agent 记忆里的排查记录后写了下面 5 篇（2026-10-31�
 | 旧站 | 去处 | 说明 |
 |---|---|---|
 | 1 号线 · 写代码 `l1/write-code` | ops-git-basics、ops-commit-conventions | 「main 不能直接改」「开分支」「push」进 Git 基础篇；「本地钩子是第一道考场」进提交规范篇 |
-| 1 号线 · 开 PR `l1/open-pr` | ops-pull-requests | 「闸机的两把锁」「squash merge」照搬；「AI 评审员」一节按现状改写（Codex 已于 2026-10-20 断开，现为 CodeRabbit + Claude Action） |
+| 1 号线 · 开 PR `l1/open-pr` | ops-pull-requests | 「闸机的两把锁」「squash merge」照搬；「AI 评审员」一节按现状改写（Codex 于 2026-10-20、CodeRabbit 于 2026-11-06 断开，现只有 Claude Action） |
 | 1 号线 · 只考改过的 `l1/changed-only` | ops-ci-changed-only | 「三种开考方式」「分类器」「docs-only 免考」全部进这一篇，以现在的 `detect-changes.sh` 与 `module-graph.json` 为准 |
 | 1 号线 · 并行考试 `l1/parallel-exams` | ops-ci-parallel-and-required-check | 「preflight」「backend 矩阵」「required-check 总闸灯」进这一篇；现在多了 learn 与 coverage 任务，按 `ci.yml` 现状改写 |
 | 2 号线 · mini 领任务 `l2/runner-picks-up` | ops-self-hosted-runner、ops-ci-security | 「领活方式」「常驻环境：.env、.path 与禁自更新」进 runner 篇；「陌生代码上不了这台机器」进流水线安全篇 |

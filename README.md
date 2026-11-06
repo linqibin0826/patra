@@ -42,7 +42,7 @@ Gradle path `:parent:child` 必须与物理目录 `parent/child/` **一一对应
 3. 子模块名遵循 `patra-<service>-<layer>`（layer ∈ domain/api/app/infra/adapter/boot）
 4. apply 对应的 hexagonal convention plugin（见 `build-logic/src/main/kotlin/`）
 
-> 该规则是项目宪法（决策 E，不可逆），违反会被 CodeRabbit 与 `settings.gradle.kts` 的 path_instructions 拦截。
+> 该规则是项目宪法（决策 E，不可逆）。
 
 ## 常用命令
 
@@ -103,21 +103,9 @@ Gradle path `:parent:child` 必须与物理目录 `parent/child/` **一一对应
 
 PR squash-merge 时 GitHub 会用 PR title 作为 commit message，所以 **PR 标题也要符合 conventional commits**。
 
-### CodeRabbit AI Review
+### AI 评审
 
-另一位正式 reviewer 是 Claude Action（`.github/workflows/claude-code-review.yml`），PR 转 ready 时自动评审；流程见 `CLAUDE.md`「PR 与代码评审」。
-
-`.coderabbit.yaml` 配置（PAP-22 深化版）：
-
-- **触发**：不自动评审；PR 转 ready 后由 Claude 发 `@coderabbitai review` 触发**首评**，不复评（0 star 公开仓库的 OSS 额度仅每小时 1 次 PR 评审）。drafts PR、title 含 `WIP` / `DO NOT MERGE` / `SKIP REVIEW` 不评
-- **profile**：`chill`（降噪优先，只报高置信度 bug 与设计风险）+ `request_changes_workflow=false`（**不阻断 PR**，决策 C）
-- **语言**：中文 review；engineer 语气，禁礼貌赞美 + 凑评论
-- **分层 prompt**：按 `**/patra-*-{domain,app,adapter,infra}/**/*.java` 下达不同的 review 指南（domain 禁框架依赖、app 不放业务规则、adapter 关注 DTO 双向耦合等）
-- **Linear KB**：自动拉取 PR 描述中链接的 PAP-XX issue 上下文做 AC 验证（需在 `app.coderabbit.ai/integrations` 完成一次性 OAuth 授权）
-- **自动打标**：根据变更路径自动应用 `area:api` / `area:portal` / `area:infra` / `area:migration` / `area:test`
-- **CI 盲区工具**：CodeRabbit 兜底跑 `yamllint` / `shellcheck` / `hadolint` / `actionlint` / `gitleaks`（这些 CI 没有；`markdownlint` 在文档密集型仓库噪音过大，已关闭）
-- **TDD 守护**：`finishing_touches.docstrings` / `unit_tests` 都关闭，防止 AI 事后补测试破坏 Red-Green-Refactor
-- **交互命令**：在 PR 评论中 `@coderabbitai` + 自然语言指令（如 `@coderabbitai resolve`、`@coderabbitai full review`）
+PR 由 Claude Action（`.github/workflows/claude-code-review.yml`）在转 ready 时自动评审；流程见 `CLAUDE.md`「PR 与代码评审」。
 
 ### 测试体系（PAP-19 基线）
 
