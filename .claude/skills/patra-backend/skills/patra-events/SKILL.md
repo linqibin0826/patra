@@ -2,7 +2,7 @@
 name: patra-events
 description: |
   Patra 领域事件开发指南。当聚合状态变化需要通知同一服务内的其他子域或聚合，或经 RabbitMQ 通知其他服务时使用此技能。
-  触发场景：创建 DomainEvent record、实现 @EventListener / @TransactionalEventListener 处理器、
+  触发场景：创建领域事件 record、实现 @EventListener / @TransactionalEventListener 处理器、
   外送集成事件（EventExternalizationConfiguration）、写 @RabbitListener 消费并去重、
   选择同步订阅还是提交后订阅、处理事件处理器的 OptimisticLockingFailureException、设计事件链。
   即使用户只说"通知其他子域"或"完成后触发"，也应使用此技能。
@@ -12,7 +12,7 @@ allowed-tools: Read, Edit, Write, Grep, Glob, Bash
 
 # Patra 领域事件指南
 
-在 Patra 中实现事件驱动通信时，按此指南选择正确的模式。
+在 Patra 中实现事件驱动通信时，按此指南选择正确的模式。谁产生、谁发布、业务判断放哪，以 `.claude/rules/tech/domain-events.md` 为准：聚合产生事件，Handler 发布。
 
 ## 内部事件 vs 外部事件
 
@@ -22,8 +22,7 @@ allowed-tools: Read, Edit, Write, Grep, Glob, Bash
 ├── 同一服务内的其他子域 / 聚合
 │   └── Spring ApplicationEvent（内部事件）
 │       ├── 必须与业务同成败（计数、站内提醒、开放获取标记）→ @EventListener（同步，同一事务）
-│       ├── 提交后才做、可丢可重建（缓存、限流）→ @TransactionalEventListener(AFTER_COMMIT)
-│       └── 异步处理 → @EventListener + @Async
+│       └── 提交后才做、可丢可重建（缓存、限流、推送）→ @TransactionalEventListener(AFTER_COMMIT)，要异步再加 @Async
 │
 └── 其他微服务
     └── patra-tool-events：事务里 publishEvent(领域事件)，boot 层配置外送到 RabbitMQ（见「跨服务事件」）
@@ -72,10 +71,13 @@ public class PmcOpenAccessListener {
 ### 3. 发布事件
 
 ```java
-// 在写库的同一事务里通过 ApplicationEventPublisher 发布
-eventPublisher.publishEvent(
-    new PmcFullTextFetchedEvent(publicationId, pmcid, licenseCode, manuscript));
+// 示意。事务里：全文记录产生事件，写库后发布
+PmcFullTextFetchedEvent event = fullText.fetchedEvent();
+fullTextRepository.save(fullText);
+events.publishEvent(event);
 ```
+
+现有的 `PmcFullTextFetchPersister` 还在发布处直接构造这个事件。要看数据库结果才知道是否发生、没有聚合的用例、纯技术通知，由 Handler 构造事件。
 
 ## 跨服务事件（patra-tool-events）
 
@@ -103,7 +105,7 @@ eventPublisher.publishEvent(
 |------|---------|
 | 与业务同成败 | `@EventListener`（同步，同一事务，不加 `@Transactional`） |
 | 事务提交后处理 | `@TransactionalEventListener(phase = AFTER_COMMIT)` + `@Transactional(propagation = REQUIRES_NEW)` |
-| 异步处理 | `@EventListener` + `@Async` |
+| 提交后异步处理 | `@Async` + `@TransactionalEventListener(phase = AFTER_COMMIT)`；不用 `@EventListener` + `@Async`，它可能抢在提交前执行 |
 | 条件处理 | `@EventListener(condition = "#event.status == 'COMPLETED'")` |
 
 ## 常见陷阱

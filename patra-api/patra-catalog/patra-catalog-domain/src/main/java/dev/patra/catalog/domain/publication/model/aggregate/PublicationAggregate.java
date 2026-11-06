@@ -428,14 +428,8 @@ public class PublicationAggregate extends AggregateRoot<PublicationId> {
   /// @param isOa 是否有 OA 版本
   /// @param oaStatus 最佳 OA 状态
   public void updateOaStatus(Boolean isOa, OaStatus oaStatus) {
-    OaStatus oldStatus = this.oaStatus;
     this.isOa = Objects.requireNonNullElse(isOa, false);
     this.oaStatus = oaStatus;
-
-    // TODO: 发布 OA 状态变更事件
-    // if (!Objects.equals(oldStatus, oaStatus)) {
-    //     addDomainEvent(new OaStatusChangedEvent(getId(), oldStatus, oaStatus));
-    // }
   }
 
   /// 增加被引次数。

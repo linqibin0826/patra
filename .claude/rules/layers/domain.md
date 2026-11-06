@@ -25,6 +25,7 @@ paths: patra-api/*/*-domain/**/*.java
 1. **聚合即整体**：子实体/值对象变更 = 聚合根状态变更
 2. **聚合根版本锁**：修改聚合内任何数据必须递增 `version` 字段
 3. 通过 `Repository.save(aggregateRoot)` 持久化整个聚合
+4. 领域事件由聚合的行为方法产生并返回，见 [domain-events.md](../tech/domain-events.md)
 
 ## Port 命名规范
 
