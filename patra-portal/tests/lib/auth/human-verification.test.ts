@@ -37,6 +37,16 @@ describe("readHumanVerification", () => {
     expect(init?.cache).toBe("no-store");
   });
 
+  /// 三个页面的首屏要等这个请求，identity 卡住时不能等满网关默认的 10 秒
+  it("最多等 3 秒", async () => {
+    const spy = vi.spyOn(AbortSignal, "timeout");
+    respondWith(200, { provider: "turnstile", siteKey: "site-1" });
+
+    await readHumanVerification();
+
+    expect(spy).toHaveBeenCalledWith(3_000);
+  });
+
   it.each([
     ["响应形状不对", { provider: "turnstile" }],
     ["站点标识为空", { provider: "turnstile", siteKey: "" }],

@@ -104,4 +104,21 @@ describe("ForgotPasswordForm 的人机验证", () => {
     await waitFor(() => expect(requestPasswordReset).toHaveBeenCalledTimes(2));
     expect(vi.mocked(requestPasswordReset).mock.calls[1]).toEqual([EMAIL, "token-1"]);
   });
+
+  it("换个邮箱要重新验证：已发送页拿到的令牌不带到输入页", async () => {
+    vi.mocked(requestPasswordReset).mockResolvedValue(OK);
+    const form = setup();
+    await form.user.type(screen.getByLabelText("邮箱"), EMAIL);
+    await pass(form);
+    await form.user.click(form.submit);
+    await screen.findByText("查看你的邮箱");
+    await pass(form);
+
+    await form.user.click(screen.getByRole("button", { name: "换一个邮箱" }));
+
+    expect(screen.getByRole("button", { name: "发送重设邮件" })).toHaveAttribute(
+      "aria-disabled",
+      "true",
+    );
+  });
 });

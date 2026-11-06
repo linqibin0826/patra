@@ -154,6 +154,7 @@ export function ForgotPasswordForm({
             onClick={() => {
               setSentTo(null);
               setAlert(null);
+              humanVerification.reset();
             }}
             className={cn(btnText, "self-start")}
           >
