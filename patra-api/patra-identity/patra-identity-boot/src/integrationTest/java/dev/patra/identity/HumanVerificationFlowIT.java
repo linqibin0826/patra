@@ -179,6 +179,16 @@ class HumanVerificationFlowIT extends IdentityFlowITSupport {
   }
 
   @Test
+  @DisplayName("校验接口要 4 秒才响应：不算不可用。2026-11-05 实测 identity 容器到 Cloudflare 一次要 2.5～3 秒")
+  void slow_verification_within_budget_still_passes() {
+    HumanVerificationFixture.delayResponses(4_000);
+
+    registerUser(uniqueEmail());
+
+    assertThat(HumanVerificationFixture.turnstileCalls()).isEqualTo(1);
+  }
+
+  @Test
   @DisplayName("第三方不可用：三个接口都 503，不放行")
   void third_party_down_returns_503_on_all_three_endpoints() {
     String email = uniqueEmail();

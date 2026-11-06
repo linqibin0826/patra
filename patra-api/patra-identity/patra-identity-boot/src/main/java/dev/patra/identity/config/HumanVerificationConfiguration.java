@@ -30,8 +30,12 @@ import tools.jackson.databind.json.JsonMapper;
 @Configuration(proxyBeanMethods = false)
 public class HumanVerificationConfiguration {
 
-  private static final Duration CONNECT_TIMEOUT = Duration.ofSeconds(2);
-  private static final Duration READ_TIMEOUT = Duration.ofSeconds(3);
+  /// 建连上限，包含 TLS 握手。2026-11-05 实测 identity 容器到 Cloudflare 的握手要 2.1～2.6 秒。
+  private static final Duration CONNECT_TIMEOUT = Duration.ofSeconds(4);
+
+  /// 单次请求的上限。JDK 客户端的这个超时从发起请求算起，包含建连，所以它才是单次尝试的总预算。
+  /// 同一次实测整个请求要 2.5～3 秒。Turnstile 重试一次，最坏 10 秒，门户等 15 秒。
+  private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(5);
 
   /// 人机验证参数的来源：每次调用都按配置的当前值构造。
   ///
@@ -212,7 +216,7 @@ public class HumanVerificationConfiguration {
                 .connectTimeout(CONNECT_TIMEOUT)
                 .proxy(ProxySelector.getDefault())
                 .build());
-    factory.setReadTimeout(READ_TIMEOUT);
+    factory.setReadTimeout(REQUEST_TIMEOUT);
     return RestClient.builder().requestFactory(factory).build();
   }
 }

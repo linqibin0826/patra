@@ -16,7 +16,7 @@
 - 门槛默认值：邮箱 3 次、IP 5 次、IP 窗口 15 分钟；邮箱门槛必须小于 `login-throttle.max-failures`（默认 5）。
 - 线上 `action` 值：`login`、`register`、`password_reset`。
 - 字段错误：`field` 是 `verificationToken`，`code` 是 `VERIFICATION_REQUIRED` 或 `VERIFICATION_FAILED`；不可用是 503，`traits` 含 `VERIFICATION_UNAVAILABLE`。
-- 出站超时：连接 2 秒，读 3 秒。
+- 出站超时：连接 4 秒，单次请求 5 秒（联调后从 2 秒、3 秒放宽，见工程设计第 5.3 节）。
 - 令牌、`secret`、`app_secret` 不进日志和仓库。`toString` 不输出令牌原文。
 - 代码规范：每个方法写 `///` 注释；参数 ≥ 5 个的 record 用 `@Builder`，否则 `of()`；集合字段在紧凑构造器里 `copyOf`；注入 `Clock`，不直接调 `Instant.now()`。
 - 改完先 `spotlessApply`；提交信息用 `type(scope):` 加中文动词开头，body 每行不超过 100 字符。名字含 TOKEN 的测试字面量用 `"F".repeat(43)` 这种写法，避开 gitleaks。
@@ -159,7 +159,7 @@
   - `policy_supplier_clamps_email_threshold_after_invalid_refresh`（运行中改成 ≥ 锁定门槛，取到“锁定门槛减一”，不抛异常）
   - `logs_warn_when_active_provider_is_trust_turn`（启动和 `EnvironmentChangeEvent` 各一次）
 - [ ] **Step 2:** 运行 `./gradlew :patra-api:patra-identity:patra-identity-boot:test --tests "*HumanVerificationConfigurationTest*"`。Expected: 编译失败。
-- [ ] **Step 3:** 实现。`HumanVerificationProperties` 写法照 `LoginThrottleProperties`（可变、`volatile`、`@Validated`），前缀 `patra.identity.human-verification`，字段见 spec 第 6 节。`application.yml` **不写**默认密钥和 `site-key`。`RestClient` 自建，请求工厂照 `IdentityOAuth2ClientConfiguration#outboundRequestFactory`，超时 2 秒和 3 秒。`application-test.yml` 配假密钥和 WireMock 占位地址。
+- [ ] **Step 3:** 实现。`HumanVerificationProperties` 写法照 `LoginThrottleProperties`（可变、`volatile`、`@Validated`），前缀 `patra.identity.human-verification`，字段见 spec 第 6 节。`application.yml` **不写**默认密钥和 `site-key`。`RestClient` 自建，请求工厂照 `IdentityOAuth2ClientConfiguration#outboundRequestFactory`，超时 4 秒和 5 秒。`application-test.yml` 配假密钥和 WireMock 占位地址。
 - [ ] **Step 4:** 运行测试。Expected: PASS。
 - [ ] **Step 5:** 提交 `feat(identity): 增加人机验证配置，支持在线切换厂商 (PAP-192)`。
 

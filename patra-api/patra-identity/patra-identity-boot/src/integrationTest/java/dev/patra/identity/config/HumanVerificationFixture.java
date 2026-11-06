@@ -58,9 +58,10 @@ public final class HumanVerificationFixture {
   /// 只有静态方法。
   private HumanVerificationFixture() {}
 
-  /// 恢复默认的桩：三个操作令牌通过，其他令牌不通过。
+  /// 恢复默认的桩：三个操作令牌通过，其他令牌不通过，响应不延迟。
   public static void reset() {
     SERVER.resetAll();
+    SERVER.setGlobalFixedDelay(0);
     SERVER.stubFor(
         post(urlEqualTo(TURNSTILE_PATH))
             .atPriority(10)
@@ -101,6 +102,13 @@ public final class HumanVerificationFixture {
                           + ORIGIN
                           + "\"}")));
     }
+  }
+
+  /// 让校验接口慢下来。
+  ///
+  /// @param millis 每个响应延迟的毫秒数
+  public static void delayResponses(int millis) {
+    SERVER.setGlobalFixedDelay(millis);
   }
 
   /// 让两家的校验接口都返回 500。

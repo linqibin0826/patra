@@ -130,7 +130,7 @@ public interface HumanVerificationPort {
 
 ### 5.3 infra
 
-`infra/account/verification/`，出站用自建的 `RestClient`，不用容器里的 `RestClient.Builder`（它带 `lb` 解析），写法和 `IdentityOAuth2ClientConfiguration` 一致：JDK `HttpClient`，`ProxySelector.getDefault()`，连接超时 2 秒，读超时 3 秒。
+`infra/account/verification/`，出站用自建的 `RestClient`，不用容器里的 `RestClient.Builder`（它带 `lb` 解析），写法和 `IdentityOAuth2ClientConfiguration` 一致：JDK `HttpClient`，`ProxySelector.getDefault()`，连接超时 4 秒，单次请求 5 秒（JDK 的读超时从发起请求算起，包含建连）。2026-11-05 实测 identity 容器到 Cloudflare 的握手要 2.1～2.6 秒，整个请求 2.5～3 秒，最早定的 3 秒会经常超时。
 
 **`TurnstileAdapter`**
 
