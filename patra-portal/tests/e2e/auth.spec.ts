@@ -27,7 +27,12 @@ async function logOut(page: Page, path: string) {
 
 /// 离开字段时冒出的错误行会把下方的链接、按钮往下挤。按下和松开之间挤动了，松开时落在别的元素上，
 /// 这次点击就没了。只有真实浏览器有布局，组件测试测不到，所以放在这里
+///
+/// 视口要够高，让表单不用滚动：注册页多了人机验证后比 720 高，滚动后链接落在视口左下角，
+/// 不配网关时 Next 开发模式的问题徽标会盖住它，点击落空的就成了徽标，不是这里要测的挤动。
 test.describe("登录页、注册页：离开字段时冒出的错误不让下方的点击落空", () => {
+  test.use({ viewport: { width: 1280, height: 1000 } });
+
   test("登录页：焦点在空的邮箱框里，直接点「注册」", async ({ page }) => {
     await page.goto("/login?next=%2Fpapers%3Fq%3DGLP-1");
     await waitForTakeover(page, "form");
@@ -45,7 +50,7 @@ test.describe("登录页、注册页：离开字段时冒出的错误不让下�
   });
 
   test.describe("手机上轻触", () => {
-    test.use({ viewport: { width: 375, height: 812 }, isMobile: true, hasTouch: true });
+    test.use({ viewport: { width: 375, height: 1000 }, isMobile: true, hasTouch: true });
 
     test("注册页：邮箱填了一半，直接轻触「登录」", async ({ page }) => {
       await page.goto("/register?next=%2Fjournals%2F7");
