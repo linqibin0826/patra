@@ -71,12 +71,13 @@ public class PmcOpenAccessListener {
 ### 3. 发布事件
 
 ```java
-// 事务里：聚合判断并产生事件，写库后由 Handler 发布
-Optional<CommentDeletedEvent> event = comment.delete(actor, hasReplies, now);
-event.ifPresent(events::publishEvent);
+// 示意。事务里：全文记录产生事件，写库后发布
+PmcFullTextFetchedEvent event = fullText.fetchedEvent();
+fullTextRepository.save(fullText);
+events.publishEvent(event);
 ```
 
-要看数据库结果才知道是否发生、没有聚合的用例、纯技术通知，由 Handler 构造事件。
+现有的 `PmcFullTextFetchPersister` 还在发布处直接构造这个事件。要看数据库结果才知道是否发生、没有聚合的用例、纯技术通知，由 Handler 构造事件。
 
 ## 跨服务事件（patra-tool-events）
 
