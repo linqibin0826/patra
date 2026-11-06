@@ -12,6 +12,7 @@ import java.time.Clock;
 import java.time.Duration;
 import java.util.EnumMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Supplier;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Bean;
@@ -191,11 +192,25 @@ public class HumanVerificationConfiguration {
       case TURNSTILE -> {
         requireConfigured(properties.getTurnstile().getSiteKey(), "turnstile.site-key");
         requireConfigured(properties.getTurnstile().getSecret(), "turnstile.secret");
+        requireNotEmpty(
+            properties.getTurnstile().getAllowedHostnames(), "turnstile.allowed-hostnames");
       }
       case TRUST_TURN -> {
         requireConfigured(properties.getTrustTurn().getSiteKey(), "trust-turn.site-key");
         requireConfigured(properties.getTrustTurn().getAppSecret(), "trust-turn.app-secret");
+        requireNotEmpty(
+            properties.getTrustTurn().getAllowedOrigins(), "trust-turn.allowed-origins");
       }
+    }
+  }
+
+  /// 要求允许名单不为空。名单是空的，真实令牌通过了厂商校验也全部被适配器拒绝，运行起来才发现。
+  ///
+  /// @param values 名单
+  /// @param name 配置项，前缀之后的部分
+  private static void requireNotEmpty(Set<String> values, String name) {
+    if (values == null || values.isEmpty()) {
+      throw new IllegalStateException("patra.identity.human-verification." + name + " 不能为空");
     }
   }
 

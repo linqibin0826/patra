@@ -30,7 +30,43 @@ class HumanVerificationConfigurationTest {
       new ApplicationContextRunner()
           .withUserConfiguration(PropertiesConfig.class, HumanVerificationConfiguration.class)
           .withBean(Clock.class, Clock::systemUTC)
-          .withBean(JsonMapper.class, () -> JsonMapper.builder().build());
+          .withBean(JsonMapper.class, () -> JsonMapper.builder().build())
+          .withPropertyValues(
+              PREFIX + "turnstile.allowed-hostnames=patra.test",
+              PREFIX + "trust-turn.allowed-origins=https://patra.test");
+
+  @Test
+  @DisplayName("Turnstile 的允许名单为空：启动失败")
+  void fails_startup_when_turnstile_allowed_hostnames_empty() {
+    runner
+        .withPropertyValues(
+            PREFIX + "turnstile.site-key=site",
+            PREFIX + "turnstile.secret=value",
+            PREFIX + "turnstile.allowed-hostnames=")
+        .run(
+            context ->
+                assertThat(context)
+                    .getFailure()
+                    .rootCause()
+                    .hasMessageContaining("turnstile.allowed-hostnames"));
+  }
+
+  @Test
+  @DisplayName("TRUSTTURN 的允许名单为空：启动失败")
+  void fails_startup_when_trust_turn_allowed_origins_empty() {
+    runner
+        .withPropertyValues(
+            PREFIX + "provider=trustturn",
+            PREFIX + "trust-turn.site-key=site",
+            PREFIX + "trust-turn.app-secret=value",
+            PREFIX + "trust-turn.allowed-origins=")
+        .run(
+            context ->
+                assertThat(context)
+                    .getFailure()
+                    .rootCause()
+                    .hasMessageContaining("trust-turn.allowed-origins"));
+  }
 
   @Test
   @DisplayName("当前厂商缺密钥：启动失败")
