@@ -17,7 +17,7 @@ patra:
     # 人机验证：切换厂商只改 provider，identity 在线刷新，门户不用重新部署。切到 trustturn 前看 identity README 第 19 节。
     # 凭据只放 ~/.patra/secrets/identity.env，这里不写值；当前厂商缺凭据时 identity 起不来
     human-verification:
-      provider: turnstile
+      provider: trustturn
       turnstile:
         site-key: ${PATRA_IDENTITY_TURNSTILE_SITE_KEY:}
         secret: ${PATRA_IDENTITY_TURNSTILE_SECRET:}

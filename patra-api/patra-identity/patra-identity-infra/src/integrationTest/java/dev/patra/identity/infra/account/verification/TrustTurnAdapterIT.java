@@ -109,20 +109,6 @@ class TrustTurnAdapterIT {
   }
 
   @Test
-  @DisplayName("错误码放在 code 字段也能读到")
-  void reads_error_code_from_code_field() {
-    REMOTE.stubFor(
-        post(urlEqualTo(PATH))
-            .willReturn(
-                aResponse()
-                    .withStatus(400)
-                    .withHeader("Content-Type", "application/json")
-                    .withBody("{\"success\":false,\"code\":\"invalid_ticket\"}")));
-
-    assertThat(verify()).isEqualTo(HumanVerificationResult.REJECTED);
-  }
-
-  @Test
   @DisplayName("签名错误：验证不了，是我们的配置问题")
   void unavailable_on_invalid_request_signature() {
     stubError(401, "invalid_request_signature");
@@ -321,7 +307,7 @@ class TrustTurnAdapterIT {
                     .withBody(body)));
   }
 
-  /// 让接口返回错误码。文档没给错误响应的示例，这里按 `error` 字段模拟。
+  /// 让接口返回错误码。形状来自真实响应：`code` 是错误码，`error` 是给人看的中文说明。
   ///
   /// @param status 状态码
   /// @param code 错误码
@@ -332,7 +318,8 @@ class TrustTurnAdapterIT {
                 aResponse()
                     .withStatus(status)
                     .withHeader("Content-Type", "application/json")
-                    .withBody("{\"success\":false,\"error\":\"" + code + "\"}")));
+                    .withBody(
+                        "{\"success\":false,\"code\":\"" + code + "\",\"error\":\"给人看的说明\"}")));
   }
 
   /// 成功响应。
