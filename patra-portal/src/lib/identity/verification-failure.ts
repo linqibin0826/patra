@@ -3,7 +3,7 @@ import type { Problem } from "@/lib/identity/problem";
 
 const FIELD = "verificationToken";
 
-/// 带人机验证的提交等多久。后端校验令牌最坏要 10 秒（单次上限 5 秒，重试一次），之后还要做哈希、写库。
+/// 带人机验证的提交等多久。identity 校验令牌最坏要 10 秒（`HumanVerificationConfiguration` 里单次上限 5 秒，重试一次），之后还要做哈希、写库。
 /// 门户不能比它先放弃：否则用户看到“没有成功”，后端却可能已经把账号建好了，再试就撞上“已注册”。
 export const VERIFIED_SUBMIT_TIMEOUT_MS = 15_000;
 

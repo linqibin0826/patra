@@ -1,11 +1,11 @@
 import { useState } from "react";
 
-/// 两家组件共用的回调和重置信号。
+/// Turnstile 和 TRUSTTURN 两个组件共用的回调和重置信号。
 export interface HumanVerificationWidgetProps {
   /// 变了就重新验证
   resetKey: number;
   onToken: (token: string) => void;
-  /// 令牌过期或组件重置
+  /// 令牌过期了（Turnstile 的过期回调，或 TRUSTTURN 票据到期），表单据此作废已拿到的令牌
   onClear: () => void;
   onLoadError: () => void;
 }

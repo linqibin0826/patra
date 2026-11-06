@@ -7,7 +7,7 @@ import type { HumanVerificationAction } from "@/lib/auth/types";
 const ORIGIN = "https://api.trustturn.cc";
 /// 浏览器不报 iframe 加载失败，这么久没收到票据就提示；交互式验证可能确实慢，之后收到了照常用
 const LOAD_TIMEOUT_MS = 15_000;
-/// 票据 60 秒过期，文档没有过期事件，提前一点作废
+/// 票据 60 秒过期，TRUSTTURN 的接入文档里没有过期事件，所以提前一点作废，并重建 iframe 取新票据
 const TICKET_TTL_MS = 55_000;
 
 /// 从组件发来的消息里取票据，形状不对时为 null

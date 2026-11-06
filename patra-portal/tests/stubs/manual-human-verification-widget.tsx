@@ -1,7 +1,7 @@
 import type { HumanVerificationState } from "@/components/auth/human-verification/use-human-verification";
 import type { HumanVerificationConfig } from "@/lib/auth/types";
 
-/// 替身：显示当前的重置次数，点按钮才“通过验证”。令牌带着重置次数，能看出提交的是不是新令牌。
+/// 替身：显示厂商和 action，点按钮才“通过验证”。发出的令牌是 `token-<重置次数>`，测试靠它判断提交的是不是重置后的新令牌。
 export function HumanVerificationWidget({
   config,
   action,
