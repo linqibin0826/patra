@@ -1,5 +1,6 @@
 package dev.patra.interaction.domain.post.model.aggregate;
 
+import dev.patra.interaction.domain.post.event.PostDeletedEvent;
 import dev.patra.interaction.domain.post.model.enums.EditKind;
 import dev.patra.interaction.domain.post.model.enums.PostStatus;
 import dev.patra.interaction.domain.post.model.enums.PostType;
@@ -13,6 +14,8 @@ import dev.patra.interaction.domain.post.policy.ExperienceRules;
 import dev.patra.interaction.domain.subject.model.vo.SubjectId;
 import java.time.Instant;
 import java.util.Objects;
+import java.util.Optional;
+import java.util.UUID;
 import lombok.Builder;
 
 /// 一条帖子（本版只有投稿经验）：基表一行加经验扩展表一行。作者、挂载对象、是否匿名发布后都不变。
@@ -67,6 +70,25 @@ public record PostAggregate(
         .status(PostStatus.ACTIVE)
         .createdAt(now)
         .build();
+  }
+
+  /// 删除。
+  ///
+  /// @param ownSubjectId 这条经验自己在登记表里的对象，不是所属期刊的 `subjectId`
+  /// @param now 删除时刻
+  /// @return 删除事件；已删除时什么都没发生，为空
+  public Optional<PostDeletedEvent> delete(SubjectId ownSubjectId, Instant now) {
+    if (isDeleted()) {
+      return Optional.empty();
+    }
+    return Optional.of(
+        PostDeletedEvent.builder()
+            .eventId(UUID.randomUUID())
+            .postId(postId.value())
+            .subjectId(ownSubjectId)
+            .authorId(authorId)
+            .deletedAt(now)
+            .build());
   }
 
   /// 是否这个人写的。

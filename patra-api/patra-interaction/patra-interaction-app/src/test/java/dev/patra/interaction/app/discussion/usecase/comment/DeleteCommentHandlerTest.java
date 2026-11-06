@@ -189,7 +189,7 @@ class DeleteCommentHandlerTest {
     verify(comments, never()).dropThreadStats(anyLong());
   }
 
-  /// 没有回复的根评论整条去掉：减对象评论数、发事件，再删它的楼统计行。
+  /// 没有回复的根评论整条去掉：减对象评论数、删它的楼统计行，最后发事件。
   @Test
   void should_drop_thread_stats_when_root_removed() {
     stub(comment(40L, 40L, null, ACTOR, CommentState.ACTIVE), false);
@@ -199,12 +199,12 @@ class DeleteCommentHandlerTest {
     InOrder order = inOrder(comments, publisher);
     order.verify(comments).delete(40L);
     order.verify(comments).decrementCommentCount(PUB_ID);
-    order.verify(publisher).publishEvent(any(Object.class));
     order.verify(comments).dropThreadStats(40L);
+    order.verify(publisher).publishEvent(any(Object.class));
     verify(comments, never()).removeReply(anyLong());
   }
 
-  /// 删回复级联去掉了占位根：楼内与对象各只减一次（占位本来不计数），最后删楼统计行。
+  /// 删回复级联去掉了占位根：楼内与对象各只减一次（占位本来不计数）；级联和删楼统计行都在发事件之前。
   @Test
   void should_drop_thread_stats_when_cascade_reaches_root() {
     stub(comment(60L, 40L, 40L, ACTOR, CommentState.ACTIVE), false);
@@ -216,9 +216,9 @@ class DeleteCommentHandlerTest {
     order.verify(comments).delete(60L);
     order.verify(comments).removeReply(40L);
     order.verify(comments).decrementCommentCount(PUB_ID);
-    order.verify(publisher).publishEvent(any(Object.class));
     order.verify(comments).delete(40L);
     order.verify(comments).dropThreadStats(40L);
+    order.verify(publisher).publishEvent(any(Object.class));
     verify(comments, times(1)).removeReply(anyLong());
     verify(comments, times(1)).decrementCommentCount(any());
   }

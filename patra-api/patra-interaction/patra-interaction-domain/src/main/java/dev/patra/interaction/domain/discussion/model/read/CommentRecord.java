@@ -52,6 +52,13 @@ public record CommentRecord(
     return state == CommentState.DELETED;
   }
 
+  /// 还能提醒到的父评论作者：父评论已成占位时对方已删掉自己的内容，不再算被回复的人。
+  ///
+  /// @return 父评论正常时是它的作者，否则为 `null`
+  public Long activeParentAuthorId() {
+    return parentState == CommentState.ACTIVE ? parentAuthorId : null;
+  }
+
   /// 正文里提及到的用户（别的子域把正文转纯文本时要用，PAP-141）。
   ///
   /// @return 用户 ID，去重、按第一次出现；占位为空
