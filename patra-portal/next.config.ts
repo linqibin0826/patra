@@ -2,10 +2,11 @@ import type { NextConfig } from "next";
 
 /// 显示人机验证的三个页面：不放行 TRUSTTURN 的脚本，它只能以 iframe 出现。`'unsafe-inline'` 是因为 Next 的水合脚本是内联的，
 /// 用 nonce 要把这些页面全部变成动态渲染并改 proxy，这里的目的也不是防 XSS。只限制这两项，其他资源不动。
+/// `static.cloudflareinsights.com` 是 Cloudflare 隧道自动注入的 Web Analytics 脚本，不放行就统计不到这三个页面。
 function humanVerificationCsp(): string {
   const dev = process.env.NODE_ENV === "development" ? " 'unsafe-eval'" : "";
   return [
-    `script-src 'self' 'unsafe-inline'${dev} https://challenges.cloudflare.com`,
+    `script-src 'self' 'unsafe-inline'${dev} https://challenges.cloudflare.com https://static.cloudflareinsights.com`,
     "frame-src https://challenges.cloudflare.com https://api.trustturn.cc",
   ].join("; ");
 }
