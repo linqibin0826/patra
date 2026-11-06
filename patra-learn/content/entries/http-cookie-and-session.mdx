@@ -60,7 +60,7 @@ personalEnv: false
 - 记录的存活时间取「不活跃超时」和「距离绝对过期」两者中较短的那个。
 - 每个用户的会话数有上限，超过时按创建时间挤掉最老的。
 
-<CodeRef at="patra-api/patra-identity/patra-identity-infra/src/main/resources/redis/session-create.lua@8a1deacc881d2260bb5802caf0ad974aff0d6072" lines="54-67" />
+<CodeRef at="patra-api/patra-identity/patra-identity-infra/src/main/resources/redis/session-create.lua@e3120fa01976688a7eb6f4c627d900e9c4b214d2" lines="54-71" />
 
 这就是服务端会话的好处：想踢掉哪台设备、封禁一个账号，直接删记录，下一次请求就会失败。
 
@@ -68,7 +68,7 @@ personalEnv: false
 
 门户写会话 Cookie 时固定设了这些属性：
 
-<CodeRef at="patra-portal/src/lib/auth/session-cookie.ts@ffc25c0bf848b54ae29bb08571a5c491c1f5089d" lines="21-33" />
+<CodeRef at="patra-portal/src/lib/auth/session-cookie.ts@539946fd365c0858609fb74674b268500dfca1fb" lines="23-35" />
 
 | 属性 | 作用 |
 |---|---|

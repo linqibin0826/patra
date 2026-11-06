@@ -44,7 +44,7 @@ personalEnv: false
 
 每个应用容器在 compose 文件里都声明了 `healthcheck`：容器**从内部**定期自查。六个后端服务和门户、学习站共用同一组节奏参数，用 YAML 锚点写在文件开头：
 
-<CodeRef at="patra-infra/docker/docker-compose.apps.yaml@54d5606c594db6a2f7a880830e2d27dd965cb8cd" lines="27-31" />
+<CodeRef at="patra-infra/docker/docker-compose.apps.yaml@e3120fa01976688a7eb6f4c627d900e9c4b214d2" lines="27-31" />
 
 ```yaml
 x-app-healthcheck: &app-healthcheck

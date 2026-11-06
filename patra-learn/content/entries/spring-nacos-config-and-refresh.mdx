@@ -124,7 +124,7 @@ public class LoginThrottleProperties {
 
 光把配置类写成可变的还不够，使用方也不能把值抄走存起来。identity 交给登录逻辑的是一个 `Supplier`，每调一次就按配置的当前值造一份参数：
 
-<CodeRef at="patra-api/patra-identity/patra-identity-boot/src/main/java/dev/patra/identity/config/IdentityConfiguration.java@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="58-70" />
+<CodeRef at="patra-api/patra-identity/patra-identity-boot/src/main/java/dev/patra/identity/config/IdentityConfiguration.java@4932c00bbb06d014b8c91d5714c705e33b7f3cd6" lines="59-71" />
 
 <Compare
   title="同一次推送，两种写法"

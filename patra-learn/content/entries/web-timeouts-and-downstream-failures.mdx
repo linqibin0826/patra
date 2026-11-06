@@ -5,6 +5,10 @@ type: concept
 difficulty: advanced
 tags: [network, backend]
 prerequisites: [web-reverse-proxy-and-gateway]
+sources:
+  - version: v0.19
+    issue: PAP-180
+    pr: 404
 personalEnv: false
 ---
 
@@ -33,6 +37,12 @@ personalEnv: false
 - **读超时**：连上之后，多久收不到对方的任何字节就算对方死了。网关里是 60 秒。
 
 注意：Patra 网关的读超时是**空闲超时**，不是总时长。只要下游每隔一会儿还在发数据，连接就不会断。所以一个很大的文件慢慢下载，只要不停，几个小时都不会被掐断。
+
+<Callout kind="warn">
+
+这里说的是网关的含义，不是所有客户端都这样。JDK `HttpClient` 的连接超时还包含 TLS 握手，Spring `JdkClientHttpRequestFactory` 的 `readTimeout` 更是从发出请求算到读完响应。换一个客户端，就要重新确认它的超时到底算什么，细节见「JDK 的 connectTimeout 和 Spring 的 readTimeout 都不是字面意思」那篇。
+
+</Callout>
 
 <CodeRef at="patra-api/patra-gateway-boot/src/main/resources/application.yml@8140a9d9482324670b63f00ab3c62690102196c5" lines="33-44" />
 
@@ -85,7 +95,7 @@ personalEnv: false
 
 调用链上每一层都有自己的计时。Patra 的门户调用网关时，默认 10 秒超时（慢后端不应该无限阻塞页面渲染）：
 
-<CodeRef at="patra-portal/src/lib/gateway.ts@4a13287485468f2c489027f1aac0bb6174643e8d" lines="1-5" />
+<CodeRef at="patra-portal/src/lib/gateway.ts@539946fd365c0858609fb74674b268500dfca1fb" lines="1-5" />
 
 <Sequence
   title="catalog 卡住时，各层的计时"

@@ -121,7 +121,7 @@ export async function GET(request: Request): Promise<NextResponse> {
 
 真正发请求的是 `gatewayFetch`。整个门户只有这个文件知道网关在哪：
 
-<CodeRef at="patra-portal/src/lib/gateway.ts@4a13287485468f2c489027f1aac0bb6174643e8d" lines="30-44" />
+<CodeRef at="patra-portal/src/lib/gateway.ts@539946fd365c0858609fb74674b268500dfca1fb" lines="32-46" />
 
 ```ts
 /// 统一网关客户端（server-only）：全仓库只有这里读 `PATRA_GATEWAY_BASE_URL`、向网关发请求。
@@ -135,7 +135,7 @@ export async function gatewayFetch(path: string, init: GatewayRequestInit = {}):
   if (init.json !== undefined && init.body !== undefined) {
     throw new Error("json 和 body 只能给一个");
   }
-  const headers: Record<string, string> = { ...forwardingHeaders(init.client) };
+  const headers: Record<string, string> = { ...forwardingHeaders(init.client), ...init.headers };
   if (init.token) {
     headers.Authorization = `Bearer ${init.token}`;
   }

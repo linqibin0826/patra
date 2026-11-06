@@ -59,7 +59,7 @@ Java 代码几乎全写在类里。一个类通常有三样东西：
 
 图纸本身不能用，得照着造出来。造的写法是 `new 类名(构造器要的东西)`。Patra 的测试里就有一行，造了一个登录处理器：
 
-<CodeRef at="patra-api/patra-identity/patra-identity-app/src/test/java/dev/patra/identity/app/account/usecase/login/LoginUserHandlerTest.java@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="152-166" />
+<CodeRef at="patra-api/patra-identity/patra-identity-app/src/test/java/dev/patra/identity/app/account/usecase/login/LoginUserHandlerTest.java@e3120fa01976688a7eb6f4c627d900e9c4b214d2" lines="153-169" />
 
 `new LoginUserHandler(users, credentials, ..., loginThrottle, ...)` 执行完，内存里就多了一个 `LoginUserHandler` 对象，它的字段里存着这次交进去的那些东西。同一张图纸可以造很多个对象，每个对象各有各的字段值，互不干扰。
 
@@ -134,7 +134,7 @@ public interface LoginThrottlePort {
 
 用到限次功能的是 `LoginUserHandler`。它的字段类型写的是接口，不是 Redis 那个类：
 
-<CodeRef at="patra-api/patra-identity/patra-identity-app/src/main/java/dev/patra/identity/app/account/usecase/login/LoginUserHandler.java@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="70" />
+<CodeRef at="patra-api/patra-identity/patra-identity-app/src/main/java/dev/patra/identity/app/account/usecase/login/LoginUserHandler.java@e3120fa01976688a7eb6f4c627d900e9c4b214d2" lines="66" />
 
 ```java
   private final LoginThrottlePort loginThrottle;
@@ -160,7 +160,7 @@ public interface LoginThrottlePort {
 
 测试里那一行就是第二种实现：
 
-<CodeRef at="patra-api/patra-identity/patra-identity-app/src/test/java/dev/patra/identity/app/account/usecase/login/LoginUserHandlerTest.java@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="145" />
+<CodeRef at="patra-api/patra-identity/patra-identity-app/src/test/java/dev/patra/identity/app/account/usecase/login/LoginUserHandlerTest.java@e3120fa01976688a7eb6f4c627d900e9c4b214d2" lines="146" />
 
 ```java
   private final LoginThrottlePort loginThrottle = mock(LoginThrottlePort.class);

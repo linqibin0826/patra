@@ -70,7 +70,7 @@ personalEnv: false
 
 在交给 Grafana 之前，就在 SQL 里把 ID 转成字符串：
 
-<CodeRef at="patra-infra/docker/grafana/provisioning/dashboards/patra/analytics-ops.json@c3df651e18fcd34d66a1ece0e2cea00c78e9d881" lines="1058" />
+<CodeRef at="patra-infra/docker/grafana/provisioning/dashboards/patra/analytics-ops.json@df36467c9dc87e765c1a8687a7eb238513d5f932" lines="1095" />
 
 ```json
           "rawSql": "SELECT toString(article_id) AS article_id, sum(unique_requests) AS `Unique Item Requests`,\n       sum(unique_investigations) AS `Unique Item Investigations`,\n       sum(total_requests) AS `Total Item Requests`\nFROM ads_daily_counter_items_latest\nWHERE day BETWEEN toDate($__fromTime, 'Asia/Shanghai') AND toDate($__toTime, 'Asia/Shanghai') AND traffic = '${traffic}' AND is_synthetic IN (${synthetic:raw})\nGROUP BY article_id ORDER BY `Unique Item Requests` DESC LIMIT 20",
@@ -78,7 +78,7 @@ personalEnv: false
 
 `toString(article_id) AS article_id` 让这一列从一开始就是字符串，Grafana 和浏览器只是原样搬运。链接里用 `${__value.raw}` 取这一格的原始值，拼进门户的地址：
 
-<CodeRef at="patra-infra/docker/grafana/provisioning/dashboards/patra/analytics-ops.json@c3df651e18fcd34d66a1ece0e2cea00c78e9d881" lines="1067-1084" />
+<CodeRef at="patra-infra/docker/grafana/provisioning/dashboards/patra/analytics-ops.json@df36467c9dc87e765c1a8687a7eb238513d5f932" lines="1104-1125" />
 
 ```json
           {
@@ -87,6 +87,10 @@ personalEnv: false
               "options": "article_id"
             },
             "properties": [
+              {
+                "id": "unit",
+                "value": "string"
+              },
               {
                 "id": "links",
                 "value": [

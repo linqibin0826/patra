@@ -51,7 +51,7 @@ personalEnv: false
 
 门户用 **zod** 把规则写成一份「描述」（叫 schema，结构说明），再交给 **react-hook-form** 去管表单。登录和注册的规则都在一个文件里：
 
-<CodeRef at="patra-portal/src/lib/auth/form-schemas.ts@fe4c6bb68c591a9c9b5fe80f76bbfbbbc6aeae75" lines="17-28" />
+<CodeRef at="patra-portal/src/lib/auth/form-schemas.ts@539946fd365c0858609fb74674b268500dfca1fb" lines="17-22" />
 
 ```ts
 /// 新密码：8 ~ 64 位，不去空格（注册、改密码、重设密码共用；常见密码名单只在后端判）
@@ -60,7 +60,11 @@ const newPasswordField = z
   .min(1, FIELD_MESSAGES.passwordRequired)
   .refine((value) => codePoints(value) >= 8, FIELD_MESSAGES.passwordTooShort)
   .refine((value) => codePoints(value) <= 64, FIELD_MESSAGES.passwordTooLong);
+```
 
+<CodeRef at="patra-portal/src/lib/auth/form-schemas.ts@539946fd365c0858609fb74674b268500dfca1fb" lines="35-39" />
+
+```ts
 /// 登录表单：后端的登录接口只检查密码非空，前端也只查这一条，不去空格
 export const loginSchema = z.object({
   email: emailField,
@@ -72,7 +76,7 @@ export const loginSchema = z.object({
 
 登录表单把这份 schema 交给 react-hook-form：
 
-<CodeRef at="patra-portal/src/components/auth/LoginForm.tsx@fe4c6bb68c591a9c9b5fe80f76bbfbbbc6aeae75" lines="47-54" />
+<CodeRef at="patra-portal/src/components/auth/LoginForm.tsx@539946fd365c0858609fb74674b268500dfca1fb" lines="62-69" />
 
 ```tsx
   } = useForm({
@@ -113,7 +117,7 @@ react-hook-form 替你收集各输入框的值、在该校验的时候按 schema
 | 密码 8 到 64 位 | 查 | 查 | 填错马上提示，后端兜底 |
 | 不能是常见密码 | 不查 | 查 | 要对照一份名单，名单在后端（`form-schemas.ts` 第 17 行注释） |
 | 收藏夹不能重名 | 不查 | 查 | 要查数据库里已有的收藏夹，只有后端知道（`collection-form.ts` 第 6 行注释） |
-| 两次输入的密码一致 | 查 | 不查 | 「确认密码」只为防手滑，不传给后端（`form-schemas.ts` 第 30 行注释） |
+| 两次输入的密码一致 | 查 | 不查 | 「确认密码」只为防手滑，不传给后端（`form-schemas.ts` 第 41 行注释） |
 
 规律是：**凡是关系到数据对不对、安不安全的，后端必须查**；前端能不能也查，看它手里有没有足够的信息。只为体验存在的规则（确认密码），只放前端就够了。
 

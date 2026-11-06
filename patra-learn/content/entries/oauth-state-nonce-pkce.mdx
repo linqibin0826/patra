@@ -1,0 +1,138 @@
+---
+title: state、nonce、PKCE 分别防什么
+summary: 这三个一次性随机值都在发起授权时生成，防的是三种不同的攻击：回调不是这个浏览器发起的、id_token 不是这次流程发的、授权码被截走后被别人换成令牌。
+type: concept
+difficulty: advanced
+tags: [security, backend]
+topics: [login-session]
+prerequisites: [oauth-social-login-overview]
+sources:
+  - version: v0.19
+    issue: PAP-180
+    pr: 390
+  - version: v0.19
+    issue: PAP-186
+    pr: 391
+personalEnv: false
+---
+
+<Diagnose
+  question="攻击者自己在 GitHub 上走完授权，拿到一个带他自己授权码的回调地址，停在这一步不打开，然后诱导受害者点开这个地址。如果应用完全不核对回调是谁发起的，受害者最后会怎样？"
+  options={["受害者的浏览器登录成了攻击者的账号，之后存的东西都落进攻击者账号", "受害者的 GitHub 账号被攻击者接管，因为授权码换到了他的令牌", "什么都不会发生，因为授权码已经绑定了攻击者的浏览器"]}
+  answer="A"
+  ifRight="对，这叫登录 CSRF。攻击者不偷你的账号，而是让你登录他的账号。`state` 防的就是它。往下读另外两个值防什么。"
+  ifWrong="答案是 A。授权码是攻击者的，换出来的身份也是攻击者的，所以受害者被登录成了攻击者。如果对授权码流程还不熟，先读第三方登录全景那篇。"
+  suggest="oauth-social-login-overview"
+/>
+
+<Callout kind="lead">
+
+三个值都是应用在发起授权时现造的一次性随机值，各防一种「混进来」：`state` 防回调不是这个浏览器发起的；`nonce` 防 `id_token` 不是这次流程发的；PKCE 防授权码被截走后被别人换成令牌。
+
+</Callout>
+
+## 三个值在流程里走哪条路
+
+三个值的路线不同，看清路线就明白各自防什么。
+
+<Sequence
+  title="一次 Google 登录里，三个值的去向"
+  actors={[
+    { id: "browser", label: "浏览器" },
+    { id: "app", label: "应用后端" },
+    { id: "platform", label: "平台" }
+  ]}
+  messages={[
+    { from: "browser", to: "app", label: "点「用 Google 登录」", caption: "应用现造 `state`、`nonce` 和 `code_verifier`，连同授权请求一起存在后端。" },
+    { from: "app", to: "browser", label: "302：state、nonce、code_challenge", caption: "前两个原样放进跳转地址。PKCE 只放哈希 `code_challenge`，原文 `code_verifier` 留在后端。" },
+    { from: "browser", to: "platform", label: "带着这些参数去授权", caption: "用户在平台上同意。平台记下 `nonce` 和 `code_challenge`。" },
+    { from: "platform", to: "browser", label: "302：code、state", caption: "平台把 `state` 原样带回来，并发一个授权码。" },
+    { from: "browser", to: "app", label: "回调：code、state", caption: "应用核对 `state`。对不上，这个回调就不是这次流程，到此为止。" },
+    { from: "app", to: "platform", label: "code + secret + code_verifier", caption: "后端换令牌时才亮出 `code_verifier` 原文。平台算哈希，和之前记下的比较。" },
+    { from: "platform", to: "app", label: "令牌 + id_token（含 nonce）", caption: "应用验 `id_token` 的签名，再比较里面的 `nonce` 和存下的是否相同。" }
+  ]}
+  summary={{ caption: "state 去平台走一圈回到应用；nonce 被写进签名的 id_token 里回来；PKCE 的原文只在最后一步出现，且不经过浏览器。" }}
+/>
+
+## state：这个回调是这个浏览器发起的吗
+
+回调地址是公开的，谁都能拼一个请求过来。`state` 把「发起」和「回调」串起来：发起时造一个随机值并记住，回调带回来的必须和记住的一样。
+
+它防的除了诊断题里的登录 CSRF，还有更危险的**绑定 CSRF**：如果诱导的是已登录的受害者，攻击者的第三方账号就可能绑到受害者的账号上，从此攻击者能直接登录。
+
+Patra 让 `state` 经受两道检查。门户把它写进短期 Cookie，回调时先比较，证明「是这个浏览器发起的」；identity 用它当键从 Redis 取出授权请求，证明「是我们发的」。取出即删，同一个回调第二次来就拿不到记录。
+
+<CodeRef at="patra-api/patra-identity/patra-identity-adapter/src/main/java/dev/patra/identity/adapter/account/security/StoredAuthorizationRequestRepository.java@e3120fa01976688a7eb6f4c627d900e9c4b214d2" lines="64-83" />
+
+## nonce：这张 id_token 是这次流程发的吗
+
+`id_token` 有平台的签名，但签名只证明「平台发过它」，不证明「是为这一次流程发的」。别的流程里拿到的一张真 `id_token`，签名同样对得上。
+
+所以发起时把 `nonce` 放进授权请求，平台把它原样写进 `id_token`。应用比较它和自己存下的值，不一样就拒绝。
+
+`nonce` 属于 OIDC。GitHub 走纯 OAuth2，没有 `id_token`，也就没有 `nonce`。
+
+<CodeRef at="patra-api/patra-identity/patra-identity-boot/src/integrationTest/java/dev/patra/identity/OAuth2ProtocolAttackIT.java@4932c00bbb06d014b8c91d5714c705e33b7f3cd6" lines="102-112" />
+
+## PKCE：截走授权码的人能换到令牌吗
+
+授权码要经过浏览器，有被截走的可能。PKCE 给「换令牌」这一步加了一个只有发起方才答得出的问题：
+
+1. 发起方造一个随机串 `code_verifier`，留在自己手里。
+2. 授权请求只带它的 SHA-256 哈希 `code_challenge`（Patra 的请求里 `code_challenge_method` 是 `S256`）。
+3. 换令牌时带上原文，平台算一次哈希，和当初记下的比较。
+
+截走授权码的人只见过哈希，推不出原文，换不到令牌。PKCE 最初是为没法保管密钥的手机应用设计的，后来有密钥的后端应用也一样推荐打开。
+
+<Callout kind="warn">
+
+三家的情况不一样。Google、GitHub 打开了 PKCE；ORCID 的发现文档没有声明它，所以保持关闭，也没有实测。对方没声明时，打开后能登录也可能只是忽略了这个参数，证明不了有保护作用；这条流程由后端换令牌，还有 client secret、`state` 和 nonce。
+
+</Callout>
+
+<CodeRef at="patra-api/patra-identity/patra-identity-boot/src/integrationTest/java/dev/patra/identity/OAuth2LoginFlowIT.java@e3120fa01976688a7eb6f4c627d900e9c4b214d2" lines="18-49" />
+
+## 把它们放在一起
+
+| | `state` | `nonce` | PKCE |
+|---|---|---|---|
+| 防什么 | 登录 CSRF、绑定 CSRF | 别的流程的 `id_token` 被塞进来 | 授权码被截走后换令牌 |
+| 谁来验 | 应用 | 应用 | 平台 |
+| 什么时候验 | 回调到达时 | 拿到 `id_token` 后 | 换令牌时 |
+| 经过浏览器吗 | 经过 | 经过 | 只有哈希经过 |
+| 适用范围 | 所有授权码流程 | 只有 OIDC | 平台要支持 |
+
+这三个值都不用 Patra 自己写：`oauth2Login` 负责生成和校验。Patra 只决定把授权请求存在哪里（Redis，键是 `state`，10 分钟过期）。存的是 `nonce` 和 `code_verifier` 这些授权请求自己的东西，它们不是令牌。
+
+<Quiz
+  questions={[
+    {
+      question: "应用把 `state` 写死成配置里的同一个常量，每次都一样。回调时照常比较，也都能通过。会出什么问题？",
+      options: ["攻击者看一次就知道这个值，伪造的回调一样能通过，比较形同虚设", "平台发现 `state` 重复，会直接拒绝这次授权", "问题不大，比较还在做，只是少了一点随机性"],
+      answer: "A",
+      explain: "`state` 的作用来自「每次不同、别人猜不到」。写死之后它就证明不了回调属于哪一次发起。"
+    },
+    {
+      question: "GitHub 的授权码被人从日志里看到了。在 Patra 里，他能换到令牌吗？",
+      options: ["能，授权码就是换令牌用的", "能，只要他先拿到 `state`", "不能，他没有 `client_secret`，也没有 `code_verifier`"],
+      answer: "C",
+      explain: "换令牌要带客户端密钥和 PKCE 原文，两样都只在后端。所以门户日志也只记常量接口名，查询串里的授权码不进日志。"
+    },
+    {
+      question: "`id_token` 的签名验过了，`nonce` 对不上。应该怎么处理？",
+      options: ["放行：签名对就说明确实是平台发的", "拒绝：它是真的，但不是这次流程发的", "再请求一次平台，确认用户是否还在线"],
+      answer: "B",
+      explain: "签名只回答「是谁发的」。Patra 用伪造的 `nonce` 测过，结果是 `OAUTH_REJECTED`，既不建账号也不发会话。"
+    }
+  ]}
+/>
+
+<Transfer
+  prompt="一个纯前端的单页应用要接第三方登录，没有后端，放不了 `client_secret`。这三个值里哪个的分量变重了？`code_verifier` 放在哪里，要注意什么？"
+  points={[
+    { label: "PKCE 成了主力", text: "没有密钥，授权码被截走后再没有别的东西挡着，PKCE 是换令牌这一步主要的保护。" },
+    { label: "state 还要", text: "登录 CSRF 和有没有后端无关，回调仍然要和这个浏览器发起时存的值比较。" },
+    { label: "原文的去处", text: "`code_verifier` 只能留在浏览器本地存储里，换令牌时才用，绝不放进跳转地址。" },
+    { label: "风险还在", text: "令牌也落到了浏览器里，页面一旦有 XSS 就可能被读走。这正是把令牌留在后端的理由之一。" }
+  ]}
+/>

@@ -44,7 +44,7 @@ compose 文件像是整套服务的 application.yml：你声明想要的状态�
       <<: *app-healthcheck
 ```
 
-<CodeRef at="patra-infra/docker/docker-compose.apps.yaml@54d5606c594db6a2f7a880830e2d27dd965cb8cd" lines="237-251" />
+<CodeRef at="patra-infra/docker/docker-compose.apps.yaml@e3120fa01976688a7eb6f4c627d900e9c4b214d2" lines="243-257" />
 
 逐行读：
 
@@ -63,7 +63,7 @@ compose 文件像是整套服务的 application.yml：你声明想要的状态�
 
 几个应用共用同一套参数，用 YAML 的锚点复写：
 
-<CodeRef at="patra-infra/docker/docker-compose.apps.yaml@54d5606c594db6a2f7a880830e2d27dd965cb8cd" lines="27-31" />
+<CodeRef at="patra-infra/docker/docker-compose.apps.yaml@e3120fa01976688a7eb6f4c627d900e9c4b214d2" lines="27-31" />
 
 - `interval: 10s`：每 10 秒检查一次
 - `timeout: 5s`：单次检查最多等 5 秒

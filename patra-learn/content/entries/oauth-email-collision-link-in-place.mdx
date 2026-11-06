@@ -1,0 +1,150 @@
+---
+title: 邮箱撞车：验证邮箱后就地绑定，不泄露账号状态
+summary: 第三方首次登录填的邮箱已注册时，直接绑定不行，因为邮箱框可以随便改。Patra 改成验证这个邮箱后就地绑定，只允许邮箱已验证的账号，响应看不出账号状态。同邮箱每天 10 封，把一个月猜中的概率从约 1.8% 降到约 0.15%。
+type: decision
+difficulty: advanced
+tags: [security, backend]
+prerequisites: [oauth-verify-email-before-account, web-rate-limiting]
+topics: [login-session]
+sources:
+  - version: v0.19
+    issue: PAP-183
+    pr: 395
+  - version: v0.19
+    issue: PAP-186
+    pr: 399
+personalEnv: false
+---
+
+<Diagnose
+  question="小陈已有 Patra 账号。一个人第一次用 GitHub 登录，在补填页填了小陈的邮箱。系统看邮箱已存在，直接把这个 GitHub 绑到小陈的账号上并登录。这样做会怎样？"
+  options={["没有问题：邮箱相同就是同一个人，省去一步操作", "小陈会多收到一封通知，体验差一点，其他没有影响", "任何人都能填小陈的邮箱，把自己的 GitHub 绑进他的账号"]}
+  answer="C"
+  ifRight="对。邮箱框是用户自己填的，直接绑定等于把账号送人。往下读怎样才能既省事又不出这个问题。"
+  ifWrong="答案是 C。填邮箱不证明任何事，能收这个邮箱的信才证明。这和首次注册时验证通过才建账号是同一个道理，先读那篇。"
+  suggest="oauth-verify-email-before-account"
+/>
+
+## 背景
+
+第一轮的做法是：填了已注册的邮箱就回 409 `ALREADY_REGISTERED`，提示先用原方式登录，再到设置页绑定。这样安全，但要绕一圈。第一轮验收之后，用户拍板要能当场绑上。
+
+难点有三个：不能只凭填写的邮箱就绑；不能绑到别人抢注的账号；还不能让接口变成查询账号状态的工具。
+
+## 选项
+
+<DecisionOptions
+  options={[
+    { name: "验证这个邮箱后就地绑定", summary: "当场发验证码到这个邮箱，填回发起页后把第三方账号绑到已有账号并登录。", pros: "用户少走一圈；要的是能收这个邮箱的信，第三方给的邮箱不起作用。", cons: "邮件成了这条路唯一的凭证；6 位码猜中就能登录别人的账号，要额外限次。", chosen: true },
+    { name: "直接绑定", summary: "邮箱相同就绑上。", pros: "最省事。", cons: "邮箱框可以改成任何人的邮箱，账号直接被接管。" },
+    { name: "只提示，不提供当场绑定", summary: "先用原方式登录，到设置页绑定。", pros: "没有新的攻击面。", cons: "用户要绕一圈。这条路保留，作为验证码用不了时的退路。" }
+  ]}
+/>
+
+## 选择
+
+<Callout kind="lead" label="选了什么">
+
+验证邮箱后就地绑定。这是证明邮箱归属后绑定，不是按邮箱合并。不要求输密码，因为能收这个邮箱的人本来也能走找回密码进入账号，这条路没有给他更多能力。
+
+</Callout>
+
+这句话成立有两个前提，下面分别讲。
+
+## 未验证邮箱的账号绝不能绑
+
+邮箱密码注册仍然先建账号后验证。账号邮箱还没验证，就说明注册的人不一定是邮箱主人。老王可以先用小陈的邮箱注册并设好密码，小陈来就地绑定时，绑上去的账号里还留着老王的密码，这就是预劫持。
+
+所以资格写在领域模型里，封禁、已注销的账号同样不行；注销冷静期内的账号和登录一样，可以：
+
+<CodeRef at="patra-api/patra-identity/patra-identity-domain/src/main/java/dev/patra/identity/domain/account/model/aggregate/User.java@9fcc2b2ee38cd6412e95bf0c2c91521ea35f4e2e" lines="133-136" />
+
+```java
+  public boolean canReceiveProviderLink() {
+    return isEmailVerified()
+        && (status == UserStatus.ACTIVE || status == UserStatus.PENDING_DELETION);
+  }
+```
+
+绑定时在事务里锁住用户行，再查一次资格和邮箱：验证码发出之后，账号可能已经被封禁或改了邮箱。
+
+<CodeRef at="patra-api/patra-identity/patra-identity-app/src/main/java/dev/patra/identity/app/account/usecase/oauth/LinkPendingRegistrationHandler.java@9fcc2b2ee38cd6412e95bf0c2c91521ea35f4e2e" lines="101-106" />
+
+## 响应不能泄露账号状态
+
+「这个邮箱已注册」现有的注册接口已经会说，这一点不是新泄露。但「邮箱验没验证」「账号是否被封禁」不能多说。
+
+做法是：不符合条件时也生成一个验证码存进 Redis，只是不发出去。
+
+<Compare
+  title="同样调 /link-code，四种邮箱的结果"
+  variants={[
+    { label: "有资格", steps: ["限流检查", "写一个验证码", "发邮件"], results: [{ label: "响应", value: "202", tone: "ok" }, { label: "错码几次作废", value: "5 次", tone: "ok" }, { label: "收到信", value: "是", tone: "ok" }], verdict: { tone: "ok", head: "正常流程。", text: "邮箱主人能收到验证码。" } },
+    { label: "邮箱未验证", steps: ["限流检查", "写一个验证码", "不发邮件"], results: [{ label: "响应", value: "202", tone: "ok" }, { label: "错码几次作废", value: "5 次", tone: "ok" }, { label: "收到信", value: "否", tone: "wait" }], verdict: { tone: "ok", head: "外面看不出差别。", text: "写的是谁也收不到的码。万一被猜中，事务里复核不过，也回 `INVALID`。" } },
+    { label: "已封禁", steps: ["限流检查", "写一个验证码", "不发邮件"], results: [{ label: "响应", value: "202", tone: "ok" }, { label: "错码几次作废", value: "5 次", tone: "ok" }, { label: "收到信", value: "否", tone: "wait" }], verdict: { tone: "ok", head: "外面看不出差别。", text: "和未验证的情况完全一样。" } },
+    { label: "没注册", steps: ["限流检查", "写一个验证码", "不发邮件"], results: [{ label: "响应", value: "202", tone: "ok" }, { label: "错码几次作废", value: "5 次", tone: "ok" }, { label: "收到信", value: "否", tone: "wait" }], verdict: { tone: "ok", head: "外面看不出差别。", text: "同样的响应、同样的错误次数和过期时间。" } }
+  ]}
+/>
+
+如果不写这个码会怎样？刷新页面取到的 `pendingCode`、错码时的 `INVALID` 和 `EXPIRED`，都会和正常情况不同，一试就露馅。门户的文案也配合：这一步不说「已发送」，而说如果这个邮箱可以绑定，你会收到验证码。
+
+<CodeRef at="patra-api/patra-identity/patra-identity-app/src/main/java/dev/patra/identity/app/account/usecase/oauth/SendProviderLinkCodeHandler.java@4932c00bbb06d014b8c91d5714c705e33b7f3cd6" lines="65-75" />
+
+```java
+    throttle
+        .acquireForLink(email, command.clientIp(), now)
+        .ifPresent(
+            wait -> {
+              throw new RegistrationCodeLimitedException(wait);
+            });
+    Optional<User> target = users.findByEmail(email).filter(User::canReceiveProviderLink);
+    IssuedCode issued =
+        codes.issue(
+            command.ticket(), registration, RegistrationCodePurpose.LINK, null, email.value(), now);
+    target.ifPresent(user -> sendMail(user, email, registration, issued));
+```
+
+两个路径的耗时差一次写邮件，这一点和找回密码接口一样，没有抹平。
+
+## 6 位数字，猜中就能登录
+
+「能收邮件的人本来也能走找回密码」只对收得到信的人成立，猜码的人收不到信。找回密码的令牌是 32 字节随机数，这里只有 6 位数字。
+
+每封验证码错 5 次作废，所以「发几封」决定了能猜几次。试试加上每日上限会怎样：
+
+<Params
+  title="连续猜一个月，猜中的概率"
+  guess={{ question: "同邮箱原有每小时 5 封的上限，每封能猜 5 次。这样连续猜一个月，猜中 6 位数字的概率大约是多少？", options: ["约 0.002%，一百万种可能根本猜不到", "约 1.8%，只要一直猜，并不算小", "约 18%，差不多每五次攻击成功一次"], answer: "B", explain: "每小时 25 次，一个月约 18000 次，除以一百万种可能，约 1.8%。对一个能登录别人账号的凭证来说太高了。" }}
+  controls={[
+    { type: "switch", id: "daily", label: "加上同邮箱每天 10 封", default: false },
+    { type: "switch", id: "eight", label: "验证码改成 8 位数字", default: false }
+  ]}
+  cases={[
+    { when: { daily: false, eight: false }, results: [{ label: "每天能猜", value: "600 次" }, { label: "一个月猜中", value: "约 1.8%", tone: "bad" }], verdict: { tone: "bad", head: "只有小时上限。", text: "每小时 5 封、每封 5 次，24 小时不停。受害者每小时收到 5 封信，容易发现，但概率不能算小。" } },
+    { when: { daily: true, eight: false }, results: [{ label: "每天能猜", value: "50 次" }, { label: "一个月猜中", value: "约 0.15%", tone: "ok" }], verdict: { tone: "ok", head: "Patra 选的这个。", text: "只动后端，不改接口。限额只算这个接口，不影响普通注册。" } },
+    { when: { daily: false, eight: true }, results: [{ label: "每天能猜", value: "600 次" }, { label: "一个月猜中", value: "约 0.018%", tone: "ok" }], verdict: { tone: "ok", head: "概率更低，代价也更大。", text: "要改接口约定和门户的输入框，所以当时没选。" } },
+    { results: [{ label: "每天能猜", value: "50 次" }, { label: "一个月猜中", value: "约 0.0015%", tone: "ok" }], verdict: { tone: "ok", head: "两者都上。", text: "概率最低，同样要改接口约定和输入框。" } }
+  ]}
+/>
+
+超限时回和其他限流一样的 429，没有做成「假装 202 但不发信」。配额只按邮箱计，排在判断资格之前，所以有资格、未验证、没注册的邮箱到第 11 封都是同样的 429、同样的等待时间。假装 202 的话，真用户当天收不到信也不知道为什么。
+
+## 代价
+
+<Callout kind="cost">
+
+- 别人可以耗光某个邮箱当天的配额。这期间本人仍可以先用原方式登录，到设置页绑定。
+- 邮件是这条路唯一的凭证，所以这封验证码邮件要写明把哪个第三方账号绑到哪个 Patra 账号，提醒不要告诉任何人，防止被诱导转发。
+- 这样建的会话同样不写 `auth_at`，不算再认证。
+
+</Callout>
+
+<Transfer
+  prompt="另一个站点比 Patra 更严格：注册接口不透露邮箱是否已注册，一律回「请查收邮件」。在这样的站点上做第三方首次登录，邮箱撞车要怎么设计？哪些地方和 Patra 不同？"
+  points={[
+    { label: "入口不能靠 409", text: "不能先告诉用户「邮箱已注册」再给绑定选项，界面上只能有一条统一的路：验证这个邮箱。" },
+    { label: "由邮件内容分流", text: "服务端判断：没注册的邮箱发注册码，有资格的账号发绑定码，用途写在记录里，用户输入后按用途处理。" },
+    { label: "限流还是排在前面", text: "配额只按邮箱计，放在判断账号状态之前，429 才看不出状态。" },
+    { label: "耗时", text: "如果这个站连存在性都不想泄露，发信和不发信的耗时差也要考虑，比如把发信放到异步任务。" }
+  ]}
+/>

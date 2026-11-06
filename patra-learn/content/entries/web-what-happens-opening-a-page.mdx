@@ -65,7 +65,7 @@ personalEnv: false
 
 Patra 的门户对公网开放，地址是 patra.linqibin.dev。它运行在作者家里常驻的一台 Mac mini 上（文中叫 mini），互联网上的请求不是直接打到这台机器，而是先到一个中转：Cloudflare 的隧道。
 
-<CodeRef at="patra-infra/docker/README.md@c3df651e18fcd34d66a1ece0e2cea00c78e9d881" lines="394-398" />
+<CodeRef at="patra-infra/docker/README.md@e3120fa01976688a7eb6f4c627d900e9c4b214d2" lines="396-400" />
 
 隧道之后，门户要展示文献数据，还得问后端：门户把请求交给**网关**，网关再按路径转给具体的服务（比如 catalog）。点一点下面的方块，再按按钮看一条请求怎么走。
 

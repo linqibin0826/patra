@@ -1,0 +1,180 @@
+---
+title: 第三方登录：OAuth2 与 OIDC 解决什么问题
+summary: 想让读者用 GitHub 登录，又不能碰他的 GitHub 密码，OAuth2 和 OIDC 就是为这件事定的流程。这篇是第三方登录系列的入口：核心概念各管什么、Google、GitHub、ORCID 有什么差别，以及 Patra v0.19 用了哪部分。
+type: concept
+difficulty: basic
+tags: [security, backend, network]
+prerequisites: [http-cookie-and-session, http-https-and-certificates]
+topics: [login-session]
+sources:
+  - version: v0.19
+    issue: PAP-180
+    pr: 390
+  - version: v0.19
+    issue: PAP-186
+    pr: 391
+personalEnv: false
+---
+
+<Diagnose
+  question="一个网站想让读者用 GitHub 账号登录。最朴素的做法：在自己的页面上放两个框，让读者输入 GitHub 的用户名和密码，网站拿去替他登录。这个做法最大的问题是什么？"
+  options={["网站要多做一个登录页面，开发和维护的工作量变大", "两个框要多输一次，读者容易输错，登录成功率会下降", "网站拿到了读者的 GitHub 密码，读者既限制不了它能做什么，也收不回来"]}
+  answer="C"
+  ifRight="对。把密码交给别的网站，等于把整个账号交了出去。OAuth2 要解决的正是：不交密码，也能让网站确认你是谁。"
+  ifWrong="答案是 C。密码能做的事没有范围限制，给出去也没法单独收回，只能改密码。这题考的是「凭据」的概念：服务靠它认人，谁拿到谁就是你。先读 Cookie 与会话那篇。"
+  suggest="http-cookie-and-session"
+/>
+
+## 痛点：要确认「你是谁」，又不能碰你的密码
+
+v0.19 之前，读者只能用邮箱和密码注册 Patra。这一版的目标是：小陈点「用 GitHub 登录」，几步之后账号就建好了；老王已有账号，在设置页绑定 ORCID，下次直接用 ORCID 进原来的账号。
+
+这里有一个绕不开的矛盾。Patra 要确认「这个人确实是 GitHub 上的这个账号」，能证明这件事的只有 GitHub；而 GitHub 只有在用户输入自己的密码后才知道他是谁。这个密码又绝不能经过 Patra。
+
+## 以前怎么做，哪里不够
+
+| 做法 | 能做到 | 不够的地方 |
+|---|---|---|
+| 只用邮箱和密码 | 账号完全自己管 | 读者要再记一个密码，注册多一道门槛 |
+| 让读者把第三方密码交给网站 | 网站确实能登录第三方 | 密码出了手，范围限制不了，收回只能改密码 |
+| 认第三方给的邮箱，邮箱一样就当同一个人 | 不用用户多操作 | 第三方不一定给邮箱，给了也不一定验证过；后面几篇会讲它怎样变成账号被接管 |
+
+## OAuth2 和 OIDC 是什么
+
+<Callout kind="lead">
+
+OAuth2 是一个授权协议：用户在平台自己的页面上同意，平台发一个有范围的令牌给应用，应用全程碰不到密码。OIDC（OpenID Connect）是建在 OAuth2 上的一层约定，多发一张平台签名的 `id_token`，写明「这是谁」。
+
+它们不是账号系统。平台只回答「这个人控制着我这里的这个账号」，Patra 的账号、会话和权限仍然是 Patra 自己的。
+
+</Callout>
+
+## 核心思路：回来时只带一张取件号
+
+用户在平台上同意之后，要有东西从平台传回应用。这条路要经过浏览器，而浏览器地址栏、历史记录、日志都可能留下痕迹，所以回来时只带一个一次性的**授权码**。真正的令牌由应用的后端，凭只有它知道的密钥，直接向平台换。
+
+<Callout kind="analogy">
+
+像到办事大厅开证明。你不会把家门钥匙交给窗口，而是自己去派出所说明情况，拿回一张取件号。窗口凭取件号和自己的工作证到派出所领证明。取件号被人看到也没用，因为领证明还要那张工作证。
+
+</Callout>
+
+## 核心概念全貌
+
+<Structure
+  title="第三方登录的核心概念"
+  intro="点方块或连线，看它管什么。"
+  nodes={[
+    { id: "client", label: "客户端", sub: "client", col: 1, desc: "想确认用户身份的应用，提前在平台注册过，有 `client_id` 和 `client_secret`。在 Patra 里，三家平台各注册了本机和线上两套应用。" },
+    { id: "authz", label: "授权服务器", sub: "第三方平台", col: 2, desc: "平台负责认人、发令牌的部分。对外有两个地址：用户访问的授权地址，后端访问的令牌接口。" },
+    { id: "code", label: "授权码", sub: "code", col: 3, desc: "用户同意后经浏览器带回来的一次性短串。单拿它什么也做不了，要和客户端密钥一起才能换到令牌。" },
+    { id: "access", label: "access_token", code: true, col: 2, row: 2, desc: "调平台接口用的令牌。GitHub 不是 OIDC，Patra 要靠它查一次 `/user` 才知道是谁，查完就丢。" },
+    { id: "idtoken", label: "id_token", code: true, col: 3, row: 2, desc: "OIDC 才有的身份凭证，平台签名的 JWT，里面的 `sub` 是用户在这个平台上的稳定编号。Google 和 ORCID 给这个。" },
+    { id: "identity", label: "外部身份", sub: "provider + subject", col: 1, row: 2, desc: "Patra 记下的绑定关系：哪家平台的哪个账号属于哪个 Patra 用户。老用户再次登录就按它查。" }
+  ]}
+  edges={[
+    { from: "client", to: "authz", label: "跳去授权" },
+    { from: "authz", to: "code", label: "用户同意" },
+    { from: "code", to: "idtoken", label: "换" },
+    { from: "code", to: "access", label: "换" },
+    { from: "access", to: "identity", label: "查出是谁" }
+  ]}
+/>
+
+| 概念 | 一句话 | 在 Patra 里 |
+|---|---|---|
+| 客户端 | 在平台注册过的应用 | 密钥只放后端，不进仓库 |
+| 授权服务器 | 平台认人、发令牌的部分 | `https://github.com/login/oauth/authorize` 是授权地址 |
+| 授权码 | 一次性的取件号 | 回调地址上的 `?code=…&state=…` |
+| `access_token` | 调平台接口的令牌 | 只在一次请求里活着，不进数据库和 Redis |
+| `id_token` | 平台签名的身份凭证 | Google、ORCID 用它；验签后取 `sub` |
+| 外部身份 | 绑定关系 | 表 `idn_user_external_identity`，唯一约束 `(provider, subject)` |
+
+## 从头走一遍：每个概念是被上一步逼出来的
+
+<Stepper
+  title="让小陈用 GitHub 登录 Patra"
+  nodes={[
+    { id: "browser", label: "浏览器", sub: "小陈" },
+    { id: "backend", label: "Patra 后端", sub: "有密钥" },
+    { id: "platform", label: "平台", sub: "GitHub" }
+  ]}
+  links={[
+    { from: "browser", to: "platform", label: "跳转" },
+    { from: "platform", to: "browser", label: "跳回" },
+    { from: "browser", to: "backend", label: "回调" },
+    { from: "backend", to: "platform", label: "换令牌" }
+  ]}
+  steps={[
+    { caption: "朴素做法：把小陈跳到 GitHub，他在 GitHub 自己的页面上同意。密码只输给了 GitHub。", focus: ["browser", "platform"], links: ["browser>platform"], tokens: [{ id: "user", label: "小陈", at: "platform" }] },
+    { caption: "如果 GitHub 直接把令牌写在跳回的地址上，令牌就进了地址栏和浏览器历史。", focus: ["browser", "platform"], links: ["platform>browser"], tokens: [{ id: "token", label: "令牌", at: "browser", state: "dropped" }], notes: [{ at: "browser", text: "令牌暴露", tone: "bad" }] },
+    { caption: "所以跳回时只带一次性的授权码，它被看到也换不出令牌。", focus: ["browser", "backend"], links: ["platform>browser", "browser>backend"], tokens: [{ id: "code", label: "授权码", at: "backend" }] },
+    { caption: "后端拿授权码和自己的密钥，直接向平台换令牌。这一步不经过浏览器。", focus: ["backend", "platform"], links: ["backend>platform"], tokens: [{ id: "token", label: "令牌", at: "backend" }], notes: [{ at: "backend", text: "令牌只到这里", tone: "ok" }] },
+    { caption: "OAuth2 到这里只说「拿到了能调接口的令牌」，并没有规定怎么知道是谁。GitHub 要再调一次用户信息接口；OIDC 平台直接多发一张 `id_token`。", focus: ["backend"], notes: [{ at: "backend", text: "知道是谁了", tone: "ok" }] },
+    { caption: "Patra 按 `(provider, subject)` 查外部身份：查到是老用户，发 Patra 自己的会话；查不到就走首次注册。令牌这时丢弃。", focus: ["backend"], notes: [{ at: "backend", text: "发会话，丢令牌", tone: "ok" }] }
+  ]}
+  guesses={[
+    { before: 2, question: "小陈已经在 GitHub 上同意了。如果 GitHub 把令牌直接写在跳回的地址上，最麻烦的是什么？", options: ["地址太长，有些浏览器会截断，登录就失败", "令牌进了地址栏、历史记录和日志，谁看到谁就能用", "令牌写在地址上就没法验签，只能当普通字符串"], answer: "B", explain: "令牌是凭据，经过浏览器地址栏的东西都可能留下痕迹。授权码一次性且单拿没用，所以才多绕这一步。" }
+  ]}
+/>
+
+上面只有主线。真实流程还要防回调被伪造、防授权码被截走，这是下一篇 `state`、`nonce`、PKCE 的事。
+
+## 三家不一样在哪
+
+Patra v0.19 接了三家，正好覆盖两种流程。Google 和 ORCID 走 OIDC，GitHub 只是纯 OAuth2。
+
+| | Google | GitHub | ORCID |
+|---|---|---|---|
+| 权限范围 | `openid email` | `read:user` | `openid` |
+| 流程 | OIDC | 纯 OAuth2 | OIDC |
+| 怎么知道是谁 | `id_token` 的 `sub` | 调 `/user` 取 `id` | `id_token` 的 `sub`，规范化成裸 iD |
+| 设置页显示 | 邮箱 | `login` | iD |
+| 邮箱 | `id_token` 里有 | 只有公开邮箱，常为空 | 发现文档声明的字段里没有 |
+| PKCE | 开 | 开 | 关（对方没有声明支持） |
+
+ORCID 是给科研人员发永久编号的组织，这个编号叫 iD。它的公共 API 只允许非商业使用，Patra 目前是学习项目，符合条件；以后要收费就得换会员 API。
+
+三家的注册信息都写在配置里：
+
+<CodeRef at="patra-api/patra-identity/patra-identity-boot/src/main/resources/application.yml@e3120fa01976688a7eb6f4c627d900e9c4b214d2" lines="107-139" />
+
+## 常见误解
+
+- **以为 `access_token` 能证明身份。** OAuth2 讲的是授权，令牌回答「能做什么」。「这是谁」要么另调接口，要么靠 OIDC 的 `id_token`。
+- **以为邮箱一样就是同一个人。** Patra 只按 `(provider, subject)` 认第三方账号，永不按邮箱合并。邮箱是用户自己填的，要证明能收信才算数。
+- **以为接了第三方，Patra 就能替用户调平台接口。** 这次只做登录。确认身份后令牌就丢弃，头像和昵称也不导入，用户名只作预填建议。
+- **以为第三方登录过，就算刚验证过身份。** 平台的登录状态可能早就在了，所以 Patra 的再认证只认密码。
+
+## 什么时候用，代价是什么
+
+<Callout kind="cost">
+
+想降低注册门槛、不想再让用户多记一个密码时值得接。它不能替代账号系统，也不是没有成本：
+
+- 登录多依赖了外部平台和出站网络，这条路连不上时只能用邮箱密码。
+- 回调地址要在平台后台提前注册，Google 和 ORCID 正式环境都要求 HTTPS（Google 只对 `localhost` 例外）。Patra 为此每个环境一套应用，经内网地址访问门户时不显示第三方入口。
+- 自动化测试只能用模拟平台，真实三家的行为要在部署后手工验收。
+
+</Callout>
+
+## 学习路线
+
+| 档 | 学什么 | 对应篇目 |
+|---|---|---|
+| 协议 | 三个一次性值分别防什么 | `state`、`nonce`、PKCE 分别防什么 |
+| 框架 | Spring Security 替你做了什么、哪里要换 | `oauth2Login`：两个过滤器与一组扩展点 |
+| 决策 | 架构放在哪、账号何时建、再认证、撞车 | 门户收回调；验证邮箱后才建账号；再认证只认密码；邮箱撞车就地绑定 |
+| 实战 | 真实碰到的坑和排查 | 加一条过滤器链，默认链没了；第三方登录时好时坏；JDK 和 Spring 的两个超时 |
+
+Patra 只当客户端。自己当授权服务器、开放给别的应用接入，以及多站单点登录都没有做，要学这部分请看 OAuth2 和 OIDC 的官方规范。
+
+<Recap
+  prompt="不看上文，用自己的话讲一遍：第三方登录解决什么问题、回调为什么只带授权码、OAuth2 和 OIDC 差在哪、Patra 最后记下了什么？"
+  points={[
+    { label: "解决什么", text: "应用要确认用户在平台上的身份，又不能接触用户在平台上的密码。" },
+    { label: "为什么是授权码", text: "回来的路要经过浏览器，容易留痕；授权码一次性，单拿没用，令牌由后端凭密钥直接换。" },
+    { label: "OAuth2 和 OIDC", text: "OAuth2 只给能调接口的令牌；OIDC 多发一张签名的 `id_token`，直接说明是谁。" },
+    { label: "Patra 记什么", text: "只记 `(provider, subject)` 这样的外部身份，账号和会话是自己的，令牌用完即丢。" }
+  ]}
+/>

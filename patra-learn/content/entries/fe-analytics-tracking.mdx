@@ -41,7 +41,7 @@ personalEnv: false
 
 不管哪条路，事件里都要有设备 ID 和会话 ID（「设备 ID、会话与『一个人』」那篇讲过它们的规则）。门户在 `proxy.ts` 里统一处理。proxy 是 Next 16 对中间件的叫法：它在每个页面请求进入渲染之前先跑一遍，能改请求、改响应。
 
-<CodeRef at="patra-portal/src/proxy.ts@ffc25c0bf848b54ae29bb08571a5c491c1f5089d" lines="96-119" />
+<CodeRef at="patra-portal/src/proxy.ts@539946fd365c0858609fb74674b268500dfca1fb" lines="96-119" />
 
 ```ts
 export async function proxy(req: NextRequest) {

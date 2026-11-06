@@ -38,7 +38,7 @@ Next.js 不需要你声明一页是静态还是动态，它看页面渲染时用
 
 用户主页一上来就调用 `lookupSession()` 查当前用户。顺着它往下找，最终读的是 Cookie：
 
-<CodeRef at="patra-portal/src/lib/auth/session-cookie.ts@ffc25c0bf848b54ae29bb08571a5c491c1f5089d" lines="40-44" />
+<CodeRef at="patra-portal/src/lib/auth/session-cookie.ts@539946fd365c0858609fb74674b268500dfca1fb" lines="42-46" />
 
 ```ts
 /// 读会话令牌；没有 Cookie 或值为空时返回 null。
@@ -50,7 +50,7 @@ export async function readSessionToken(): Promise<string | null> {
 
 另外，门户调网关的请求都走 `gateway.ts`，这里发出的请求一律不缓存：
 
-<CodeRef at="patra-portal/src/lib/gateway.ts@4a13287485468f2c489027f1aac0bb6174643e8d" lines="52-55" />
+<CodeRef at="patra-portal/src/lib/gateway.ts@539946fd365c0858609fb74674b268500dfca1fb" lines="54-57" />
 
 ```ts
   return fetch(`${baseUrl}${path}`, {

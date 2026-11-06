@@ -44,7 +44,7 @@ export async function login(input: Credentials): Promise<LoginResult> {
 
 客户端组件这边就是普通的 import 和调用。登录表单把 `login` 交给提交逻辑，提交时 `await` 它：
 
-<CodeRef at="patra-portal/src/components/auth/LoginForm.tsx@fe4c6bb68c591a9c9b5fe80f76bbfbbbc6aeae75" lines="56-59" />
+<CodeRef at="patra-portal/src/components/auth/LoginForm.tsx@539946fd365c0858609fb74674b268500dfca1fb" lines="71-74" />
 
 ```tsx
   const { submitting, submit } = useAuthSubmit({

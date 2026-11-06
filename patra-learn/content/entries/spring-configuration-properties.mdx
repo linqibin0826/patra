@@ -75,7 +75,7 @@ public class LoginThrottleProperties {
 
 这个类自己不会进容器，要有人用 `@EnableConfigurationProperties` 登记它。identity 的装配类登记了它，再用它造出领域层要的规则对象：
 
-<CodeRef at="patra-api/patra-identity/patra-identity-boot/src/main/java/dev/patra/identity/config/IdentityConfiguration.java@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="62-70" />
+<CodeRef at="patra-api/patra-identity/patra-identity-boot/src/main/java/dev/patra/identity/config/IdentityConfiguration.java@4932c00bbb06d014b8c91d5714c705e33b7f3cd6" lines="63-71" />
 
 ```java
   @Bean
@@ -95,7 +95,7 @@ public class LoginThrottleProperties {
 
 identity 的其他配置用的是另一种写法，record 加 `@DefaultValue`（下面只截了开头几个字段）：
 
-<CodeRef at="patra-api/patra-identity/patra-identity-boot/src/main/java/dev/patra/identity/config/IdentityProperties.java@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="20-24" />
+<CodeRef at="patra-api/patra-identity/patra-identity-boot/src/main/java/dev/patra/identity/config/IdentityProperties.java@eb45ccde6f359692196b4b874ddaead6b9ffe0c2" lines="23-27" />
 
 ```java
 @ConfigurationProperties(prefix = "patra.identity")
@@ -178,7 +178,7 @@ public record IdentityProperties(
 
 identity 的 jar 里写着 IP 属地数据文件的目录，默认在用户主目录下。容器里没有那个目录，于是 compose 给容器设了一个环境变量，把它改成挂载进来的目录：
 
-<CodeRef at="patra-api/patra-identity/patra-identity-boot/src/main/resources/application.yml@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="101-104" />
+<CodeRef at="patra-api/patra-identity/patra-identity-boot/src/main/resources/application.yml@e3120fa01976688a7eb6f4c627d900e9c4b214d2" lines="140-143" />
 
 ```yaml
     # IP 属地（PAP-99）：ip2region 两个 xdb 所在目录，由 patra-infra/scripts/fetch-ip2region.sh 下载；

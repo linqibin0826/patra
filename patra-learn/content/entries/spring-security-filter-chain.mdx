@@ -47,7 +47,7 @@ Spring Cloud Gateway 有两种实现：响应式的 WebFlux 版和 servlet 的 W
 
 ## 网关的两条链
 
-<CodeRef at="patra-api/patra-gateway-boot/src/main/java/dev/patra/gateway/security/GatewaySecurityConfiguration.java@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="47-49" />
+<CodeRef at="patra-api/patra-gateway-boot/src/main/java/dev/patra/gateway/security/GatewaySecurityConfiguration.java@e3120fa01976688a7eb6f4c627d900e9c4b214d2" lines="47-49" />
 
 ```java
   static final String[] BLOCKED_PATHS = {"/*/_internal/**", "/*/admin/**", "/*/actuator/**"};
@@ -58,7 +58,7 @@ Spring Cloud Gateway 有两种实现：响应式的 WebFlux 版和 servlet 的 W
 
 第一条链的写法有个讲究。链里没有认证过滤器，所有人在这条链上都是匿名的。匿名的人撞上 `denyAll`，框架默认走的是「未登录」入口，回 401。网关把入口换成了「拒绝访问」的输出，这样无论带不带令牌，拿到的都是同一个 403，网关也不用为这些路径去查会话：
 
-<CodeRef at="patra-api/patra-gateway-boot/src/main/java/dev/patra/gateway/security/GatewaySecurityConfiguration.java@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="84-98" />
+<CodeRef at="patra-api/patra-gateway-boot/src/main/java/dev/patra/gateway/security/GatewaySecurityConfiguration.java@e3120fa01976688a7eb6f4c627d900e9c4b214d2" lines="90-104" />
 
 ```java
   @Bean
@@ -82,7 +82,7 @@ Spring Cloud Gateway 有两种实现：响应式的 WebFlux 版和 servlet 的 W
 
 第二条链在框架默认的过滤器之间插了一个自己的认证过滤器，然后写了按路径的授权规则：
 
-<CodeRef at="patra-api/patra-gateway-boot/src/main/java/dev/patra/gateway/security/GatewaySecurityConfiguration.java@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="111-143" />
+<CodeRef at="patra-api/patra-gateway-boot/src/main/java/dev/patra/gateway/security/GatewaySecurityConfiguration.java@e3120fa01976688a7eb6f4c627d900e9c4b214d2" lines="117-149" />
 
 ```java
     http.addFilterBefore(sessionFilter, AnonymousAuthenticationFilter.class)

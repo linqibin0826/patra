@@ -60,7 +60,7 @@ v0.10 工具层重组之前，这件事是这样做的：工具库里注册了�
 
 **1. Long 转字符串只在 HTTP 出口。** 从容器的 mapper `rebuild()` 派生出一个副本，只多一个 `Long` 序列化器，用它替换 MVC 的 JSON 转换器。容器里的 mapper 本身不受影响。
 
-<CodeRef at="patra-tool/patra-tool-web/src/main/java/dev/patra/tool/web/json/LongToStringHttpMessageConvertersCustomizer.java@b6e01875bb5692356021c8a19562f557f319fc54" lines="12-41" />
+<CodeRef at="patra-tool/patra-tool-web/src/main/java/dev/patra/tool/web/json/LongToStringHttpMessageConvertersCustomizer.java@e3120fa01976688a7eb6f4c627d900e9c4b214d2" lines="12-48" />
 
 **2. 注入类型写 `JsonMapper`，不写 `ObjectMapper`。** `XmlMapper` 也是 `ObjectMapper` 的子类，有 XML 的服务里按 `ObjectMapper` 注入会撞上两个候选。
 

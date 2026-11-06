@@ -1,0 +1,133 @@
+---
+title: 门户收回调，identity 换令牌
+summary: 浏览器只和门户打交道，客户端密钥又只能放后端，所以回调地址注册在门户，门户核对 state 后转发，由 identity 跑协议并返回结果。state 因此要过两道检查：Cookie 证明是这个浏览器发起的，Redis 证明是我们发的。
+type: decision
+difficulty: advanced
+tags: [security, backend, frontend]
+prerequisites: [oauth-state-nonce-pkce, fe-route-handler-bff]
+topics: [login-session]
+sources:
+  - version: v0.19
+    issue: PAP-180
+    pr: 390
+  - version: v0.19
+    issue: PAP-186
+    pr: 391
+personalEnv: false
+---
+
+<Diagnose
+  question="Patra 的约束：浏览器只和门户打交道，Cookie 只由门户写；`client_secret` 只能放在后端。第三方平台的回调地址该怎么安排？"
+  options={["注册 identity 的地址，让平台把用户直接跳到 identity", "注册门户的地址，门户自己拿授权码和密钥换令牌", "注册门户的地址，门户转发给 identity，由 identity 换令牌"]}
+  answer="C"
+  ifRight="对。两条约束一起决定了回调的入口在门户、协议在 identity。往下读这样安排之后，`state` 为什么要查两次。"
+  ifWrong="答案是 C。跳到 identity 违反「浏览器只和门户打交道」，门户换令牌就要把密钥放到门户。这题考的是 BFF：门户的 Route Handler 替浏览器转发请求，先读那篇。"
+  suggest="fe-route-handler-bff"
+/>
+
+## 背景
+
+Patra 的门户是 BFF：浏览器的请求先到门户，门户再经网关调后端，登录会话的 Cookie 也只由门户写。接第三方登录时，这个结构碰上两个约束：
+
+- 平台会把用户的浏览器跳到回调地址，这个地址必须是浏览器能到的公网地址。
+- 换令牌要用 `client_secret`，它只应该放在后端。
+
+所以要决定回调落在哪里，协议在哪里跑。
+
+## 选项
+
+<DecisionOptions
+  options={[
+    { name: "门户收回调，identity 换令牌", summary: "门户转发发起和回调两个请求，identity 跑 `oauth2Login` 并返回结果，门户按结果写 Cookie 和跳转。", pros: "密钥和协议都在后端；Cookie 仍只有门户写；identity 不用管浏览器。", cons: "门户多两个转发路由，要手动处理跳转。", chosen: true },
+    { name: "门户自己跑协议", summary: "门户收回调、换令牌、验 `id_token`，只把结果告诉后端。", pros: "少一次转发。", cons: "`client_secret` 要放进门户，违反第二条约束；账号规则还是要回后端判断。" },
+    { name: "回调直接到 identity", summary: "平台把浏览器直接跳到 identity 的地址。", pros: "没有转发，和框架默认用法最接近。", cons: "浏览器开始直接访问后端服务，写登录 Cookie 的就不止门户一处了。" }
+  ]}
+/>
+
+## 选择
+
+<Callout kind="lead" label="选了什么">
+
+门户收回调，identity 换令牌。决定性的理由是两条约束都不用破：密钥留在后端，Cookie 仍只由门户写。
+
+</Callout>
+
+一次登录的完整路径如下（门户调 identity 都经网关，网关不解析协议，只放行，图里省略）：
+
+<Sequence
+  title="第三方登录的完整路径"
+  actors={[
+    { id: "browser", label: "浏览器" },
+    { id: "portal", label: "门户" },
+    { id: "identity", label: "identity" },
+    { id: "platform", label: "平台" }
+  ]}
+  messages={[
+    { from: "browser", to: "portal", label: "GET start", caption: "用户点「用 GitHub 登录」，请求到门户的发起路由。" },
+    { from: "portal", to: "identity", label: "GET /oauth2/authorization/github", caption: "门户转发，不跟随跳转。identity 造好授权请求，存进 Redis。" },
+    { from: "identity", to: "portal", label: "302 Location: 平台", caption: "identity 把平台的授权地址放在 `Location` 里还给门户。" },
+    { from: "portal", to: "browser", label: "302 平台 + state Cookie", caption: "门户从地址里取出 `state` 写进 Cookie，再把地址原样跳给浏览器。" },
+    { from: "browser", to: "platform", label: "用户在平台上同意", caption: "这一段 Patra 完全看不到，密码只输给平台。" },
+    { from: "platform", to: "browser", label: "302 门户回调?code&state", caption: "平台把浏览器跳回门户注册过的回调地址。" },
+    { from: "browser", to: "portal", label: "GET callback", caption: "门户先比较查询串的 `state` 和 Cookie。对不上，不调 identity，直接显示失败。" },
+    { from: "portal", to: "identity", label: "GET /login/oauth2/code/github", caption: "查询串原样转发。identity 按 `state` 取出并删除授权请求。" },
+    { from: "identity", to: "platform", label: "换令牌、验身份", caption: "令牌只在这一次请求里活着，用完丢弃。" },
+    { from: "identity", to: "portal", label: "200 三种结果之一", caption: "已登录（带会话令牌）、要注册（带 `ticket`）、绑定成功。" },
+    { from: "portal", to: "browser", label: "写 Cookie，302 落地页", caption: "Cookie 由门户写。`ticket` 只进 HttpOnly Cookie，不进地址栏。" }
+  ]}
+/>
+
+## state 为什么要查两次
+
+identity 不建 `HttpSession`，框架默认把授权请求存在会话里的办法用不了，改存 Redis。这解决了存储问题，却带来一个缺口：Redis 记录不认浏览器。
+
+<Compare
+  title="攻击者把自己发起的回调链接发给受害者"
+  variants={[
+    { label: "只查 Redis", steps: ["攻击者自己发起授权，Redis 里有真实的记录", "受害者点开攻击者的回调链接", "identity 按 state 找到记录，继续换令牌"], results: [{ label: "受害者", value: "登录成攻击者", tone: "bad" }], verdict: { tone: "bad", head: "登录 CSRF。", text: "state 确实是我们发的，只是不是发给这个浏览器的。" } },
+    { label: "只查 Cookie", steps: ["门户比较查询串和 Cookie", "相等就转发给 identity", "identity 没有发起记录可对"], results: [{ label: "state 真伪", value: "没人核对", tone: "bad" }, { label: "nonce 与 PKCE 原文", value: "没有地方存", tone: "bad" }], verdict: { tone: "bad", head: "缺了服务端的那一半。", text: "Cookie 只说明这个浏览器见过这个值，证明不了它是系统发的，同一个 state 也无法只用一次。" } },
+    { label: "两处都查", steps: ["门户比较查询串和 Cookie，不一致就不转发", "identity 从 Redis 取出记录，取出即删", "继续换令牌"], results: [{ label: "受害者的浏览器", value: "没有这个 Cookie 或值对不上，被门户拦下", tone: "ok" }, { label: "重放回调", value: "记录已删，被拒绝", tone: "ok" }], verdict: { tone: "ok", head: "两半证明对上才放行。", text: "Cookie 证明是这个浏览器发起的，Redis 证明是我们发的，并且只能用一次。" } }
+  ]}
+/>
+
+门户这一半的代码。查询串里的 `state` 必须恰好一个，且等于 Cookie 的值，否则不转发：
+
+<CodeRef at="patra-portal/src/lib/identity/oauth-login.ts@eb45ccde6f359692196b4b874ddaead6b9ffe0c2" lines="94-105" />
+
+```ts
+export async function finishProviderCallback(provider: Provider, search: string): Promise<string> {
+  const { state, ret } = await readOAuthFlow();
+  await clearOAuthFlowCookies();
+  const back = originHref(ret);
+  const notice = (kind: OAuthNoticeKind) => oauthNoticeHref(back, { kind, provider });
+  const given = new URLSearchParams(search).getAll("state");
+  if (!state || given.length !== 1 || given[0] !== state) {
+    return notice("rejected");
+  }
+```
+
+<Callout kind="insight" label="顺带想通的">
+
+这个 Cookie 用 `SameSite=Lax`，不能用 `Strict`。平台跳回门户是一次从别的站点来的顶层导航，`Strict` 的 Cookie 不会随它发送，回调就永远对不上。`Lax` 在这种顶层 GET 跳转上会带上，而攻击者从别的页面发起的跨站子请求仍然带不上。
+
+</Callout>
+
+## 代价
+
+<Callout kind="cost">
+
+- 门户多两个转发路由，要手动处理跳转（`redirect: manual`），而且门户要等 identity 跑完协议，它的回调超时必须比 identity 调平台的最坏耗时更长。
+- identity 不把 `ticket` 绑定到浏览器。把攻击者的 `ticket` 塞进受害者的浏览器也是一种预劫持，这一层只靠门户的 HttpOnly Cookie 和 `state` 核对来防，门户要有防 `ticket` 注入的端到端测试。
+- 这个决策建立在「所有客户端都经门户」上。以后如果有不经门户的客户端，比如手机 App，这条路走不通，要另外设计。
+
+</Callout>
+
+<Transfer
+  prompt="约束换一条：一个新系统没有 BFF，前端是部署在 CDN 上的单页应用，直接调后端 API，登录态用后端写的 HttpOnly Cookie。回调地址该注册谁？state 的两道检查要怎么调整？"
+  points={[
+    { label: "回调给后端", text: "没有 BFF，浏览器要能到的只有 API 域名，回调注册在后端，换令牌也在那里，密钥仍不离开后端。" },
+    { label: "Cookie 由后端写", text: "发起时后端写 state Cookie、回调时自己比较，「转发」这一步消失，两道检查合在一处做。" },
+    { label: "服务端记录还要", text: "仍要有存 nonce 和 PKCE 原文的地方，并保证一次性。" },
+    { label: "跳回前端", text: "结果要跳回前端页面，别把令牌或一次性凭证放进这个跳转地址。" }
+  ]}
+/>

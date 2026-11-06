@@ -47,7 +47,7 @@ dev.patra.interaction.{domain|app|infra|adapter|api}.{subject|collection|discuss
 
 所以「新建收藏夹」相关的类，在每一层都能在 `collection` 这个目录下找到：domain 里的 `collection`，app 里的 `collection`，infra、adapter 里的 `collection`。
 
-<CodeRef at=".claude/rules/tech/package-layout.md@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="9-20" />
+<CodeRef at=".claude/rules/tech/package-layout.md@e3120fa01976688a7eb6f4c627d900e9c4b214d2" lines="9-20" />
 
 数据库也跟着切：同一个库，每个子域一个 schema，schema 名就是子域名（`collection.collection`、`discussion.comment`）。
 
@@ -108,7 +108,7 @@ dev.patra.interaction.{domain|app|infra|adapter|api}.{subject|collection|discuss
 
 最容易越界的是写。比如投稿经验被删了，有帮助里点在它上面的记录也要清掉。post 子域不能自己去调 reaction 的仓库删数据，规矩是：post 发布自己的事件，reaction 订阅。
 
-<CodeRef at=".claude/rules/tech/package-layout.md@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="47-53" />
+<CodeRef at=".claude/rules/tech/package-layout.md@e3120fa01976688a7eb6f4c627d900e9c4b214d2" lines="48-54" />
 
 真实情况正是如此：投稿经验删除时发布 `PostDeletedEvent`，reaction 订阅它，在同一个事务里清掉被删目标的有帮助。post 不知道 reaction 的存在，reaction 要不要接这个事件，只有 reaction 自己决定。
 

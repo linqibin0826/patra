@@ -44,7 +44,7 @@ Next 的文档专门提醒过：页面或布局里如果有副作用（比如记
 
 proxy 那一层同样看不到。门户的 proxy 里正好有一段要区分「站内跳转、预取」和「地址栏直接打开」，代码注释写明了它为什么不用这些头：
 
-<CodeRef at="patra-portal/src/proxy.ts@ffc25c0bf848b54ae29bb08571a5c491c1f5089d" lines="128-134" />
+<CodeRef at="patra-portal/src/proxy.ts@539946fd365c0858609fb74674b268500dfca1fb" lines="128-134" />
 
 ```ts
   // 站内跳转与预取是页面里发起的 fetch，本来就不看 HTTP 状态码，直接放行。

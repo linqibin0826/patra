@@ -1,0 +1,121 @@
+---
+title: 第三方登录时好时坏：3 秒连接超时撞上 3 秒的 TLS 握手
+summary: 真实验收时三家登录频繁失败，日志是 HttpConnectTimeoutException。先误判成 Google 的网络问题，因为 curl 抽样给了 15 秒超时，全部成功。分解耗时后才发现 TCP 约 3 毫秒、TLS 握手 2.3～3.2 秒，而代码的连接超时只有 3 秒，还包含握手。
+type: troubleshooting
+difficulty: practice
+tags: [network, java, backend]
+topics: [login-session]
+prerequisites: [web-timeouts-and-downstream-failures, oauth-social-login-overview]
+sources:
+  - version: v0.19
+    issue: PAP-180
+    pr: 404
+personalEnv: false
+---
+
+<Diagnose
+  question="后端调第三方接口，代码里连接超时设了 3 秒，日志偶发 `HttpConnectTimeoutException`。你在同一台机器上用 curl 抽样，给了 15 秒超时，全部成功。这说明什么？"
+  options={["抽样什么也没证明：15 秒比 3 秒宽得多，慢一点的请求也会算成功", "网络没有问题，是第三方接口当时偶发故障，等一会儿就好了", "curl 和 Java 走的不是同一条路，要先查 Java 的代理配置"]}
+  answer="A"
+  ifRight="对。要测的是「3 秒够不够」，抽样却问的是「15 秒内能不能完成」。这篇讲这次抽样怎么带偏了排查，后来又是怎么查到根因的。"
+  ifWrong="答案是 A。抽样的条件比被测的代码宽松，只要不是彻底不通就全是成功，反而让人以为网络没问题。这题考的是超时到底在限制什么，先读超时与失败分类那篇。"
+  suggest="web-timeouts-and-downstream-failures"
+/>
+
+<Callout kind="lead" label="结论先说">
+
+部署机的出口 TLS 握手要 2.3～3.2 秒，而 JDK 的 `connectTimeout` 包含 TLS 握手，代码只给了 3 秒，握手一慢就超时。
+
+- **怎么修**：建连放宽到 10 秒、一次请求放宽到 15 秒、门户等回调放宽到 35 秒，并从硬编码移到配置
+- **值得记住**：抽样时的超时不能比被测代码宽；「时好时坏」先分解每一段的耗时，再下判断
+
+</Callout>
+
+## 现象
+
+v0.19 部署后用真实账号验收，三家的第三方登录都频繁失败。identity 的日志里：
+
+- 08:56～08:57，6 次 `HttpConnectTimeoutException`：GitHub 用户信息 4 次，Google 和 ORCID 的令牌各 1 次。
+- 08:09，1 次下载 Google 公钥失败，消息是 `HttpTimeoutException: Request cancelled`。
+
+连不上平台时 identity 回 503，用户看到的就是登录失败。再试一次又可能成功。
+
+## 怎么查
+
+<DebugTrail
+  steps={[
+    { hypothesis: "是 Google 的网络问题？", result: "用 curl 抽样，超时给了 15 秒，全部成功，于是误判成 Google 那边的网络问题。这个判断后来被推翻：15 秒的抽样根本测不出「3 秒够不够」。", verdict: "ruled-out" },
+    { hypothesis: "时间到底花在哪一段？", result: "在 identity 容器里分段测：TCP 约 3 毫秒，TLS 握手 2.3～3.2 秒，单次请求 2.8～3.8 秒。握手已经顶到 3 秒这条线上了。", verdict: "closer" },
+    { hypothesis: "`connectTimeout` 算不算 TLS 握手？", result: "造一个 TCP 能连上、握手不完成的服务端实测：到点报 `HttpConnectTimeoutException`。所以它包含握手，3 秒确实不够。", verdict: "closer" },
+    { hypothesis: "只放宽连接超时就够了吗？08:09 那个 `Request cancelled` 是什么？", result: "连接 10 秒、读 5 秒时实测，5.0 秒报 `HttpTimeoutException: Request cancelled`，和 08:09 的消息相同。Spring 的 `readTimeout` 从发出请求算到读完响应，建连也算在内。两个超时都要放宽。", verdict: "found" }
+  ]}
+/>
+
+## 根因
+
+问题不在平台，也不是网络断了。出口慢是常态，3 秒的上限恰好压在握手耗时的波动范围内，所以才时好时坏。
+
+<Sequence
+  title="一次失败的换令牌，时间花在哪"
+  actors={[
+    { id: "identity", label: "identity", sub: "connectTimeout 3 秒" },
+    { id: "platform", label: "第三方平台" }
+  ]}
+  messages={[
+    { from: "identity", to: "platform", label: "TCP 建连", time: "0 ms", caption: "计时开始。TCP 这一段很快。" },
+    { from: "platform", to: "identity", label: "TCP 连上", time: "3 ms", caption: "约 3 毫秒就连上了。如果「连接超时」只算这一段，3 秒绰绰有余。" },
+    { from: "identity", to: "platform", label: "TLS 握手开始", time: "3 ms", caption: "连接还没算建立完，JDK 的计时器还在走。" },
+    { from: "identity", to: "platform", label: "握手还没完成，3 秒到", time: "3.0 s", bad: true, dashed: true, caption: "这次握手要 3.2 秒，慢了 0.2 秒。到点报 `HttpConnectTimeoutException`。" }
+  ]}
+  summary={{ time: "3.0 s", caption: "握手 2.3 秒时能过，3.2 秒时失败：同一份代码，时好时坏。" }}
+/>
+
+两个超时参数的真实含义单独写在「JDK 的 connectTimeout 和 Spring 的 readTimeout 都不是字面意思」那篇。
+
+<Callout kind="insight" label="为什么 curl 抽样会骗人">
+
+抽样本身没有错，错在条件。被测代码的上限是 3 秒，抽样的上限是 15 秒，握手 3.2 秒的请求在 curl 那边是成功，在代码这边是失败。要复现时好时坏，抽样的条件要和代码一样严，或者干脆记下每一段的耗时。
+
+</Callout>
+
+## 修法
+
+| | 原来 | 现在 | 为什么是这个数 |
+|---|---|---|---|
+| 建连（含 TLS 握手） | 3 秒 | 10 秒 | 约为实测最慢握手的 3 倍 |
+| 一次请求（发出到读完，含建连） | 5 秒 | 15 秒 | 约为实测最慢单次请求的 4 倍，握手用满后还留 5 秒给平台响应 |
+| 门户等回调 | 20 秒 | 35 秒 | 一次回调最多调两次平台，最坏约 30 秒；门户原来的 20 秒会比 identity 先放弃 |
+
+网关不用改：它的 `read-timeout` 60 秒是空闲超时，比 30 秒长。
+
+<CodeRef at="patra-api/patra-identity/patra-identity-boot/src/main/java/dev/patra/identity/config/IdentityOAuth2ClientConfiguration.java@eb45ccde6f359692196b4b874ddaead6b9ffe0c2" lines="157-174" />
+
+<CodeRef at="patra-portal/src/lib/identity/oauth-login.ts@eb45ccde6f359692196b4b874ddaead6b9ffe0c2" lines="25-26" />
+
+<Callout kind="cost">
+
+平台真的卡住时，用户最长要等 30 秒多才看到错误，这期间占着 identity 一个请求线程。这个时长只有带有效 `state` 的回调才能触发。
+
+这次只让 identity 等得起，没有让它变快：出站经过部署机上的代理，握手为什么要 2～3 秒没有查。修复合入时也还没有在部署机上用真实账号复测。
+
+</Callout>
+
+## 第一版测试只在 CI 上失败
+
+修复时写了一个「握手慢也不超时」的测试，本机通过，CI 失败。假服务端的做法是接受一次连接、过一会儿断开。服务端断开后，Linux 上的 JDK 客户端会重连一次，macOS 上不会。重连卡到 15 秒，撞上了单元测试的全局超时。
+
+测试依赖了服务端断开的时机，也就依赖了 JDK 在不同系统上的重连行为。改法是不让服务端断开：只监听端口不接受连接，系统替它完成 TCP 握手，之后一个字节都不回，到第 6 秒断言请求还在等。
+
+<CodeRef at="patra-api/patra-identity/patra-identity-boot/src/test/java/dev/patra/identity/config/IdentityOAuth2ClientConfigurationTest.java@eb45ccde6f359692196b4b874ddaead6b9ffe0c2" lines="54-73" />
+
+把默认值改回 3 秒和 5 秒时，这个用例仍然失败，所以它确实守住了这次修复。
+
+<Transfer
+  prompt="另一个服务调支付渠道的接口，读超时设了 2 秒，偶发超时。运维说他在机器上用 `curl --max-time 30` 测了几十次，都是通的。你接下来会怎么做？"
+  points={[
+    { label: "先质疑抽样", text: "30 秒的条件测不出 2 秒够不够，要用和代码一样的上限，或者记录每次的真实耗时。" },
+    { label: "分段看耗时", text: "把 DNS、TCP、TLS、等首字节、读完响应分开量，看哪一段顶到了上限。curl 的 `-w` 能打出各段时间。" },
+    { label: "查超时的定义", text: "这个客户端的「读超时」是空闲超时还是总时长，包不包含建连，要实测，不要看名字。" },
+    { label: "放宽要有依据", text: "按实测最慢值留余量；再看调用链上游的超时是否比它长，否则上游先放弃。" }
+  ]}
+/>

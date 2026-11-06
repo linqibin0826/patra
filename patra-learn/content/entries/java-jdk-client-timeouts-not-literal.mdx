@@ -1,0 +1,115 @@
+---
+title: JDK 的 connectTimeout 和 Spring 的 readTimeout 都不是字面意思
+summary: JDK HttpClient 的 connectTimeout 包含 TLS 握手；Spring JdkClientHttpRequestFactory 的 readTimeout 从发出请求算到读完响应，建连也算在内。所以总上限必须大于建连上限，只放宽连接超时修不好。
+type: pitfall
+difficulty: practice
+tags: [java, spring, network]
+topics: [login-session]
+prerequisites: [web-timeouts-and-downstream-failures, http-https-and-certificates]
+sources:
+  - version: v0.19
+    issue: PAP-180
+    pr: 404
+personalEnv: false
+---
+
+<Diagnose
+  question="用 `JdkClientHttpRequestFactory` 调一个 HTTPS 接口，JDK 的 `connectTimeout` 设 10 秒，Spring 的 `setReadTimeout` 设 5 秒。TCP 马上连上了，TLS 握手却迟迟不完成。会发生什么？"
+  options={["握手有 10 秒可以用，完成之后再开始计 5 秒读超时", "第 5 秒报 `Request cancelled`，连接超时还没到就放弃了", "第 10 秒报连接超时，读超时这时还没开始计时"]}
+  answer="B"
+  ifRight="对。Spring 这个 `readTimeout` 在发出请求时就开始计时，建连也算在里面。往下读两个参数的真实含义。"
+  ifWrong="答案是 B。名字叫读超时，计时却从发出请求开始，所以 5 秒先到。这题考的是「建连」和「读」分别指什么，以及 HTTPS 建连要多一步握手，先读超时那篇。"
+  suggest="web-timeouts-and-downstream-failures"
+/>
+
+## 坑
+
+<Callout kind="lead" label="坑在哪">
+
+按名字理解超时，会把它们设错：`connectTimeout` 不止管 TCP，还包含 TLS 握手；`JdkClientHttpRequestFactory` 的 `readTimeout` 不是读超时，是从发出请求到读完响应的总上限。
+
+</Callout>
+
+## 为什么
+
+| 参数 | 望文生义 | 实际 | 到点报什么 |
+|---|---|---|---|
+| JDK `HttpClient.Builder.connectTimeout` | TCP 建连 | 包含 TLS 握手：TCP 连上、握手不完成，照样到点 | `HttpConnectTimeoutException` |
+| Spring `JdkClientHttpRequestFactory.setReadTimeout` | 两次收到数据之间的空闲 | `JdkClientHttpRequest` 在 `sendAsync` 之后就起计时器，算到响应流关闭，建连也在里面 | `HttpTimeoutException: Request cancelled` |
+| JDK `HttpRequest.Builder.timeout` | 等响应的时间 | 同样从建连算起，建连阶段到点也报连接超时 | `HttpConnectTimeoutException` |
+
+以上是 JDK 25、spring-web 7.0.10 下的实测结果。
+
+这和 Patra 网关的读超时不一样：网关的 `read-timeout` 是空闲超时，只要还在收到数据就不会断。同样叫读超时，含义取决于用的是哪个客户端。`patra-tool-http-client` 用的是 Apache HttpClient 5，也不适用这里的结论。
+
+<Params
+  title="握手慢下来时，三种配置各在哪一步放弃"
+  guess={{ question: "原来是连接 3 秒、请求 5 秒。握手要 6 秒时报连接超时。只把连接超时改成 10 秒，握手 6 秒时会怎样？", options: ["握手完成，请求成功", "第 5 秒报 `Request cancelled`", "第 10 秒报连接超时"], answer: "B", explain: "总上限还是 5 秒，它把建连也算在里面。只改连接超时，只是换了一个报错。" }}
+  controls={[
+    { type: "switch", id: "connect-wide", label: "建连上限放宽到 10 秒（原来 3 秒）", default: false },
+    { type: "switch", id: "request-wide", label: "总上限放宽到 15 秒（原来 5 秒）", default: false },
+    { type: "slider", id: "handshake", label: "这次 TLS 握手要多久", min: 0.5, max: 12, step: 0.5, default: 3, unit: "秒" }
+  ]}
+  cases={[
+    { when: { "connect-wide": false, handshake: [0.5, 2.5] }, results: [{ label: "握手", value: "{handshake}，没到上限", tone: "ok" }, { label: "结果", value: "继续请求", tone: "ok" }], verdict: { tone: "ok", head: "这次能过。", text: "这就是「时好时坏」里好的那一半。" } },
+    { when: { "connect-wide": false }, results: [{ label: "第 3 秒", value: "`HttpConnectTimeoutException`", tone: "bad" }], verdict: { tone: "bad", head: "建连上限含握手。", text: "TCP 早就连上了，握手没完成，照样算建连超时。" } },
+    { when: { "request-wide": false, handshake: [0.5, 4.5] }, results: [{ label: "握手", value: "{handshake}，没到上限", tone: "ok" }, { label: "结果", value: "继续请求，总上限还剩不多", tone: "wait" }], verdict: { tone: "ok", head: "这次能过。", text: "可握手之后留给平台响应的时间很少。" } },
+    { when: { "request-wide": false }, results: [{ label: "第 5 秒", value: "`Request cancelled`", tone: "bad" }], verdict: { tone: "bad", head: "只改连接超时修不好。", text: "总上限把建连算在内，5 秒先到。报错换了一个，请求照样失败。" } },
+    { when: { handshake: [0.5, 9.5] }, results: [{ label: "握手", value: "{handshake}，没到上限", tone: "ok" }, { label: "留给响应", value: "至少还有 5 秒", tone: "ok" }], verdict: { tone: "ok", head: "Patra 现在的配置。", text: "握手用满 10 秒时，也还留 5 秒给平台响应。" } },
+    { results: [{ label: "第 10 秒", value: "`HttpConnectTimeoutException`", tone: "bad" }], verdict: { tone: "bad", head: "这才该放弃。", text: "握手超过 10 秒，当作连不上。" } }
+  ]}
+/>
+
+<Callout kind="insight" label="怎么认出它">
+
+看到 `HttpTimeoutException: Request cancelled`，先查总上限，别当成下游主动断开。看到 `HttpConnectTimeoutException`，别只想到 TCP 不通，还要量一下 TLS 握手。
+
+</Callout>
+
+## 怎么避开
+
+总上限必须大于建连上限，否则建连上限不起作用。Patra 把它做成启动时的校验，配错了起不来：
+
+<CodeRef at="patra-api/patra-identity/patra-identity-boot/src/main/java/dev/patra/identity/config/IdentityProperties.java@eb45ccde6f359692196b4b874ddaead6b9ffe0c2" lines="57-71" />
+
+```java
+    public record Outbound(
+        @DefaultValue("10s") Duration connectTimeout,
+        @DefaultValue("15s") Duration requestTimeout) {
+
+      /// 总上限必须大于建连上限。
+      public Outbound {
+        if (requestTimeout.compareTo(connectTimeout) <= 0) {
+          throw new IllegalArgumentException(
+              "request-timeout 必须大于 connect-timeout，实际: "
+                  + requestTimeout
+                  + " <= "
+                  + connectTimeout);
+        }
+      }
+    }
+```
+
+配置项也不再叫读超时，改叫 `request-timeout`，名字说的就是它实际做的事。
+
+<CodeRef at="patra-api/patra-identity/patra-identity-boot/src/main/java/dev/patra/identity/config/IdentityOAuth2ClientConfiguration.java@eb45ccde6f359692196b4b874ddaead6b9ffe0c2" lines="157-174" />
+
+测试不靠读文档，而是造一个什么都不回的服务端，看请求到底在什么时候放弃：
+
+<CodeRef at="patra-api/patra-identity/patra-identity-boot/src/test/java/dev/patra/identity/config/IdentityOAuth2ClientConfigurationTest.java@eb45ccde6f359692196b4b874ddaead6b9ffe0c2" lines="82-110" />
+
+<Callout kind="warn">
+
+放宽超时也有代价：平台真的卡住时，请求线程要多占这么久。调用链上的上游也要跟着算，否则上游先放弃。Patra 的门户等回调从 20 秒放宽到 35 秒，就是因为一次回调最坏要 30 秒。
+
+</Callout>
+
+<Transfer
+  prompt="你接手一个服务，它用 `RestTemplate` 配 `SimpleClientHttpRequestFactory` 调下游，配置写着 `readTimeout: 5s`。同事说「和 identity 那个一样，是总上限」。你怎么判断这句话对不对？还有哪些客户端要这样确认？"
+  points={[
+    { label: "不能按名字类推", text: "同样叫 `readTimeout`，不同实现含义不同，这里的结论只针对 `JdkClientHttpRequestFactory`。" },
+    { label: "用实验确认", text: "造一个连得上但不回话、或者每隔几秒回一点数据的服务端，看请求在什么时候放弃、报什么错。" },
+    { label: "看包不包含握手", text: "同一个实验用 HTTPS 再跑一次，确认连接超时算不算 TLS 握手。" },
+    { label: "其他客户端", text: "Apache HttpClient、OkHttp、Reactor Netty，以及网关自己的超时，都有各自的定义，换客户端就要重新确认。" }
+  ]}
+/>

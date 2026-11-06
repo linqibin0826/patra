@@ -1,0 +1,145 @@
+---
+title: oauth2Login：两个过滤器与一组扩展点
+summary: Spring Security 的 oauth2Login 就是在过滤器链上加两个过滤器：一个发起授权，一个处理回调。协议由框架完成，Patra 只换扩展点：授权请求存哪、令牌留不留、结果怎么写。这篇也讲三个要主动改的默认行为。
+type: concept
+difficulty: advanced
+tags: [spring, security, backend]
+topics: [login-session]
+prerequisites: [oauth-social-login-overview, spring-security-filter-chain]
+sources:
+  - version: v0.19
+    issue: PAP-180
+    pr: 390
+personalEnv: false
+---
+
+<Diagnose
+  question="identity 里没有一个 Controller 写着 `/oauth2/authorization/github` 或 `/login/oauth2/code/github`。可这两个请求都有正确的响应。是谁在处理它们？"
+  options={["Spring Boot 启动时按配置自动生成了两个 Controller", "Spring Security 过滤器链上的过滤器，请求根本没走到 Controller", "网关替 identity 处理了，请求根本没转发过去"]}
+  answer="B"
+  ifRight="对。过滤器匹配到这两个路径，自己把响应写了。往下读这两个过滤器各做什么，以及 Patra 换了哪些零件。"
+  ifWrong="答案是 B。安全相关的路径可以在过滤器里直接处理完，走不到 Controller。这题考的是过滤器链：请求到 Controller 之前先过一串过滤器，每个都能自己写响应结束。先读 Spring Security 那篇。"
+  suggest="spring-security-filter-chain"
+/>
+
+<Callout kind="lead">
+
+`oauth2Login` 是往过滤器链上加两个过滤器：`OAuth2AuthorizationRequestRedirectFilter` 负责发起授权，`OAuth2LoginAuthenticationFilter` 负责处理回调。`state`、`nonce`、PKCE、换令牌、验签都由它们完成，应用只提供配置和几个可替换的零件。
+
+</Callout>
+
+## 差点手写
+
+这一版最初打算自己写协议流程，理由有两条：这是学习项目，手写学得多；Patra 的门户是 BFF（浏览器只和门户打交道，门户转发给后端），以为 `oauth2Login` 不适合这种架构。
+
+对照官方扩展点核对之后，两条都不成立。协议的安全细节恰恰最不该自己写，而 BFF 也完全够用。关键是这一点：`redirect-uri` 写门户的公网地址，框架把它原样放进授权请求，换令牌时也从存下的授权请求里取，并不比较它和当前请求的地址。所以 identity 处理回调时看到的是内网地址也没有关系。
+
+于是改用官方的 `spring-boot-starter-security-oauth2-client`，这也是企业里的常规做法。
+
+## 两个过滤器各做什么
+
+<Stepper
+  title="一次 GitHub 登录经过的零件"
+  nodes={[
+    { id: "redirect", label: "发起过滤器", sub: "RedirectFilter" },
+    { id: "store", label: "授权请求仓库", sub: "Redis" },
+    { id: "login", label: "回调过滤器", sub: "AuthenticationFilter" },
+    { id: "provider", label: "认证提供者", sub: "换令牌、验签" },
+    { id: "handler", label: "成功处理器", sub: "写 JSON" }
+  ]}
+  links={[
+    { from: "redirect", to: "store", label: "存" },
+    { from: "login", to: "store", label: "取出并删" },
+    { from: "login", to: "provider" },
+    { from: "provider", to: "handler" }
+  ]}
+  steps={[
+    { caption: "`GET /oauth2/authorization/github` 进发起过滤器。解析器按注册信息造好授权请求，含 `state` 和 PKCE。", focus: ["redirect"], tokens: [{ id: "req", label: "授权请求", at: "redirect" }] },
+    { caption: "授权请求存进仓库，过滤器回 302，把用户跳去平台。请求到此结束，没走到 Controller。", focus: ["redirect", "store"], links: ["redirect>store"], tokens: [{ id: "req", label: "授权请求", at: "store" }], notes: [{ at: "store", text: "10 分钟过期", tone: "wait" }] },
+    { caption: "用户同意后回调到 `/login/oauth2/code/github`，进回调过滤器。它按 `state` 从仓库取出授权请求，取出即删。", focus: ["login", "store"], links: ["login>store"], tokens: [{ id: "req", label: "授权请求", at: "login" }], notes: [{ at: "store", text: "已删除" }] },
+    { caption: "认证提供者拿授权码换令牌。权限范围含 `openid` 的走 OIDC 这条路，验 `id_token`；不含的走纯 OAuth2，调用户信息接口。", focus: ["provider"], links: ["login>provider"], tokens: [{ id: "req", label: "用户信息", at: "provider" }] },
+    { caption: "成功后交给成功处理器。框架默认回跳转，Patra 换成写 JSON，告诉门户这次是已登录、要注册，还是绑定成功。", focus: ["handler"], links: ["provider>handler"], tokens: [{ id: "req", label: "结果", at: "handler" }], notes: [{ at: "handler", text: "200 JSON", tone: "ok" }] }
+  ]}
+  guesses={[
+    { before: 4, question: "同一个回调过滤器要同时支持 Google（OIDC）和 GitHub（纯 OAuth2）。框架靠什么判断走哪条路？", options: ["看令牌接口的地址是哪个域名，分别处理", "配置里要手动给每家写一个流程类型开关", "看这一家配的权限范围里有没有 `openid`"], answer: "C", explain: "`openid` 就是 OIDC 的开关。ORCID 和 Google 配了它，GitHub 配的是 `read:user`，Patra 不需要多写任何判断。" }
+  ]}
+/>
+
+## Patra 换了哪些零件
+
+配置全在这条链上，只匹配发起和回调两组路径，其余请求仍走默认链：
+
+<CodeRef at="patra-api/patra-identity/patra-identity-boot/src/main/java/dev/patra/identity/config/IdentityOAuth2SecurityConfiguration.java@e3120fa01976688a7eb6f4c627d900e9c4b214d2" lines="66-87" />
+
+```java
+    http.securityMatcher(paths);
+    StatelessSecurityDefaults.apply(http, problemWriter);
+    http.oauth2Login(
+            login ->
+                login
+                    .authorizationEndpoint(
+                        endpoint ->
+                            endpoint
+                                .authorizationRequestRepository(repository)
+                                .authorizationRequestResolver(resolver))
+                    .tokenEndpoint(endpoint -> endpoint.accessTokenResponseClient(tokenClient))
+                    .userInfoEndpoint(endpoint -> endpoint.userService(userService))
+                    .authorizedClientRepository(authorizedClients)
+                    .successHandler(successHandler)
+                    .failureHandler(failureHandler))
+```
+
+| 扩展点 | 框架默认 | Patra 的做法 | 为什么 |
+|---|---|---|---|
+| 授权请求仓库 | 存 `HttpSession` | 存 Redis，取出即删 | identity 不建会话，保持无状态 |
+| 换令牌、取资料的客户端 | 没有超时 | 带超时的客户端 | 平台卡住时不能一直占着请求线程 |
+| 验 `id_token` 的解码器工厂 | 没有设置 HTTP 客户端的口子 | 自己声明一个，做一样的事，只多了超时 | 取公钥也要有超时 |
+| 已授权客户端仓库 | 把令牌留在内存 | 什么都不存 | 只做登录，不留令牌 |
+| 成功、失败处理器 | 回跳转 | 写 JSON 或错误响应 | 调用方是门户，由门户决定跳去哪 |
+| 注册信息 | Boot 的配置属性 | 自己建 `ClientRegistration` | 见下面第二个默认行为 |
+
+## 三个默认行为要主动改
+
+这三处不改也能跑通，所以更要留意。
+
+<Callout kind="warn" label="默认留存 access token">
+
+回调过滤器认证成功后，会把带令牌的「已授权客户端」存进仓库。Boot 的默认实现存在内存里。Patra 不需要替用户调平台接口，就声明一个什么都不存的实现，声明成 Bean 后 Boot 的默认实现随之让位。`TokenNotRetainedIT` 走完流程后检查 Redis 和外部身份表里都没有令牌的字面量，已授权客户端也读不出来。
+
+</Callout>
+
+<CodeRef at="patra-api/patra-identity/patra-identity-adapter/src/main/java/dev/patra/identity/adapter/account/security/DiscardingAuthorizedClientRepository.java@e3120fa01976688a7eb6f4c627d900e9c4b214d2" lines="9-12" />
+
+<CodeRef at="patra-api/patra-identity/patra-identity-boot/src/integrationTest/java/dev/patra/identity/TokenNotRetainedIT.java@e3120fa01976688a7eb6f4c627d900e9c4b214d2" lines="37-57" />
+
+<Callout kind="warn" label="issuer-uri 让启动时联网">
+
+配 `issuer-uri` 最省事，代价是 Spring Boot 启动时要联网读发现文档，服务能不能启动就依赖外部平台。Boot 的 `spring.security.oauth2.client.registration` 属性还要求客户端 ID 非空，一家没配整个应用起不来。Patra 把三家的端点都写明确，自己建 `ClientRegistration`：没配的平台不注册，入口回 404，其余照常。`issuerUri` 这个字段仍然填，但只用来比较 `id_token` 里的 `iss`，不会触发联网。集成测试断言启动期间模拟平台收到 0 个请求。
+
+</Callout>
+
+<CodeRef at="patra-api/patra-identity/patra-identity-boot/src/main/java/dev/patra/identity/config/ConfiguredClientRegistrations.java@e3120fa01976688a7eb6f4c627d900e9c4b214d2" lines="60-84" />
+
+<CodeRef at="patra-api/patra-identity/patra-identity-boot/src/integrationTest/java/dev/patra/identity/OAuth2LoginFlowIT.java@e3120fa01976688a7eb6f4c627d900e9c4b214d2" lines="13-16" />
+
+<Callout kind="warn" label="`{baseUrl}` 解析成内网地址">
+
+`redirect-uri` 的默认写法带占位符 `{baseUrl}`，按当前请求解析。identity 在内网，解析出来就是内网地址，平台不认。所以要按环境写完整地址。
+
+</Callout>
+
+## 还有两个留意的地方
+
+**处理器里的异常到不了全局异常处理器。** 回调的成功处理器在过滤器里运行，抛出的业务异常进不了 MVC 的 `GlobalRestExceptionHandler`，所以 Patra 的处理器要自己写错误响应。成功响应同样绕开了 MVC，雪花 ID 转字符串也要用那个转换器写。
+
+**绑定不走发起过滤器。** 发起绑定要先判断再认证，结果要以 JSON 回给门户的弹框。框架的发起过滤器会捕获解析器抛出的所有异常并回 500，业务错误传不出来。所以绑定走自己的接口，只复用官方的解析器造授权请求。
+
+<Transfer
+  prompt="要接第四家平台，比如一家标准的 OIDC 提供商。按这套结构，要改哪些地方？哪些完全不用碰？"
+  points={[
+    { label: "加配置", text: "在 `patra.identity.oauth.providers` 下加一项，写明授权、令牌、公钥地址、`iss` 和权限范围，权限范围含 `openid`。密钥放外部注入。" },
+    { label: "协议不用碰", text: "`state`、`nonce`、PKCE、验签和走 OIDC 这条路都由框架按配置完成，不写 Controller。" },
+    { label: "Patra 的规则要改", text: "`IdentityProvider` 枚举和表上的 `provider` 检查约束要加一家，`ProviderAccountMapper` 要写清 `subject` 和账号标识取什么。" },
+    { label: "别忘了回调", text: "门户路由按 provider 转发，平台后台要提前注册每个环境的回调地址。" }
+  ]}
+/>

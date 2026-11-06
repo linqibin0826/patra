@@ -83,7 +83,7 @@ import "server-only";
 
 反过来不行：客户端组件不能引入服务端组件，引进来就成了客户端代码。但它可以**接收**服务端组件已经画好的结果。根布局里的 `QueryProvider` 是客户端组件，它包着的 `children` 却是各个服务端页面：
 
-<CodeRef at="patra-portal/src/app/layout.tsx@ffc25c0bf848b54ae29bb08571a5c491c1f5089d" lines="53-58" />
+<CodeRef at="patra-portal/src/app/layout.tsx@539946fd365c0858609fb74674b268500dfca1fb" lines="54-60" />
 
 ```tsx
         <QueryProvider>
@@ -91,6 +91,7 @@ import "server-only";
           <NotificationStream />
           <AnalyticsRoot />
           <Toaster position="bottom-right" />
+          <SignedInToast />
         </QueryProvider>
 ```
 

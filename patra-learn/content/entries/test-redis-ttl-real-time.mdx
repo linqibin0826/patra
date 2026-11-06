@@ -56,7 +56,7 @@ Patra 的会话存储注入了 `Clock`，测试可以把它拨快，用来测「
 
 测试用较短的绝对过期，让「续了期」和「没续期」算出的 TTL 至少差出几十秒，再用一个比差值小的容差去断言：
 
-<CodeRef at="patra-api/patra-identity/patra-identity-infra/src/integrationTest/java/dev/patra/identity/infra/session/store/RedisSessionStoreIT.java@5073ab1358404ecd989e722373cd9f7edafe238b" lines="157-172" />
+<CodeRef at="patra-api/patra-identity/patra-identity-infra/src/integrationTest/java/dev/patra/identity/infra/session/store/RedisSessionStoreIT.java@e3120fa01976688a7eb6f4c627d900e9c4b214d2" lines="172-187" />
 
 ```java
 Duration oneHour = Duration.ofHours(1);

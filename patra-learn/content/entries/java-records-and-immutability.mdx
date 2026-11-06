@@ -142,13 +142,13 @@ public record CommentEdit(
 
 Patra 把这条写进了代码规范：record 里有集合，就必须在紧凑构造器里做防御性拷贝。
 
-<CodeRef at=".claude/rules/code-style.md@79a711f5ee5e7ea63b9b48d6e7bc29d664684f99" lines="33-43" />
+<CodeRef at=".claude/rules/code-style.md@0b871f9d85d0b1a7c87a9c733febd56fa3e89787" lines="44-54" />
 
 ## 参数多了换 Builder
 
 `new LoginAttempt(type, email, ticketId)` 三个参数还看得清；参数一多，`new UserCard(1L, null, 「陈宇」, null, 3, …)` 这样一长串，就很难看出哪个值对哪个组件。Patra 的规范按参数个数分：
 
-<CodeRef at=".claude/rules/code-style.md@79a711f5ee5e7ea63b9b48d6e7bc29d664684f99" lines="11-15" />
+<CodeRef at=".claude/rules/code-style.md@0b871f9d85d0b1a7c87a9c733febd56fa3e89787" lines="22-26" />
 
 - 不超过 4 个：写一个静态工厂方法 `of(…)`，比如上面 `CommentEdit` 文件里接着就有 `CommentEdit.of(…)`；
 - 5 个及以上：加 Lombok 的 `@Builder`，按名字一个个填。

@@ -50,7 +50,7 @@ Redis 里每个键都可以设置**过期时间（TTL）**，到点自动删除�
 
 Patra 登录会话就靠它。建会话时，除了把各项信息写成一个哈希，还会给这个键设上过期时间：
 
-<CodeRef at="patra-api/patra-identity/patra-identity-infra/src/main/resources/redis/session-create.lua@8a1deacc881d2260bb5802caf0ad974aff0d6072" lines="60-61" />
+<CodeRef at="patra-api/patra-identity/patra-identity-infra/src/main/resources/redis/session-create.lua@e3120fa01976688a7eb6f4c627d900e9c4b214d2" lines="64-65" />
 
 ```lua
 redis.call('HSET', sessionKey, unpack(fields))

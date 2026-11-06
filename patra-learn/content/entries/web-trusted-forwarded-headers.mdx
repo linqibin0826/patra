@@ -75,7 +75,7 @@ v0.12 用户中心那一版要做登录记录、登录设备列表和「新设�
 
 <CodeRef at="patra-api/patra-gateway-boot/src/main/resources/application.yml@8140a9d9482324670b63f00ab3c62690102196c5" lines="14-22" />
 
-<CodeRef at="patra-api/patra-gateway-boot/src/main/java/dev/patra/gateway/security/GatewaySecurityConfiguration.java@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="145-164" />
+<CodeRef at="patra-api/patra-gateway-boot/src/main/java/dev/patra/gateway/security/GatewaySecurityConfiguration.java@e3120fa01976688a7eb6f4c627d900e9c4b214d2" lines="151-170" />
 
 剥头过滤器还有一层来历：springdoc 的 Scalar 组件会无条件注册一个「应用」入站转发头的 `ForwardedHeaderFilter`，客户端带 `X-Forwarded-Prefix` 就能改写网关看到的路径，让 `StripPrefix` 剥错一段。网关自己声明同类型的 Bean 把它顶掉，并开 `removeOnly`。
 

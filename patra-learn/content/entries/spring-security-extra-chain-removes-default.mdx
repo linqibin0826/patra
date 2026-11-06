@@ -1,0 +1,101 @@
+---
+title: 加一条过滤器链，默认链没了
+summary: starter 的默认过滤器链带 @ConditionalOnMissingBean(SecurityFilterChain.class)。identity 为第三方登录多声明一条链，默认链就会让位，/me/** 的身份断言认证也跟着消失。Patra 用一个专门的附加链类型解决。
+type: pitfall
+difficulty: practice
+tags: [spring, security, backend]
+topics: [login-session]
+prerequisites: [spring-security-filter-chain, spring-boot-auto-configuration]
+sources:
+  - version: v0.19
+    issue: PAP-180
+    pr: 390
+personalEnv: false
+---
+
+<Diagnose
+  question="公司的 starter 提供一条默认过滤器链，条件是 `@ConditionalOnMissingBean(SecurityFilterChain.class)`。你的服务新增一条只匹配 `/login/oauth2/code/*` 的 `SecurityFilterChain`。其他路径，比如 `/me`，会怎样？"
+  options={["两条链共存，`/me` 仍走默认链，和原来一样", "启动报错，容器里有两个同类型的 Bean", "两条链被框架合并成一条，`/me` 也走第三方登录", "默认链不再创建，`/me` 上没有了原来的认证过滤器"]}
+  answer="D"
+  ifRight="对。条件只看容器里有没有这个类型的 Bean，不看新链匹配哪些路径。往下读为什么网关又离不开这个让位，以及怎么两头都顾上。"
+  ifWrong="答案是 D。`@ConditionalOnMissingBean` 看到已经有 `SecurityFilterChain`，默认链就不建了，它不关心新链只匹配几个路径。这题考的是自动配置的条件装配，先读 Spring Boot 自动配置那篇。"
+  suggest="spring-boot-auto-configuration"
+/>
+
+## 坑
+
+<Callout kind="lead" label="坑在哪">
+
+给服务多加一条 `SecurityFilterChain`，starter 的默认链会整条消失，其他路径上的认证也一起没了。新链只匹配几个路径也一样。
+
+</Callout>
+
+这个坑是 v0.19 设计 `oauth2Login` 接入时对照源码发现的，没有等到线上才踩。
+
+## 为什么
+
+`patra-tool-security` 给下游服务的默认链做一件事：从 `Authorization: Bearer` 的身份断言建立当前用户。条件装配让它在应用自己声明了链时让位。
+
+这个让位是有用的：网关声明的两条链要整套替代默认链。可 identity 不一样，它只想**多加**一条给第三方登录用，`/me/**` 还要靠默认链上的断言认证。条件分不清这两种意图，只看类型。
+
+<Callout kind="insight" label="怎么认出它">
+
+加了一条新链之后，新链之外的接口开始报「没登录」，带着有效凭据也一样。启动不报错，新链上的功能也正常，只有其他路径出问题。
+
+</Callout>
+
+## 怎么避开
+
+把两种意图做成两种类型。starter 新增 `AdditionalSecurityFilterChain`：
+
+<CodeRef at="patra-tool/patra-tool-security/src/main/java/dev/patra/tool/security/autoconfigure/AdditionalSecurityFilterChain.java@e3120fa01976688a7eb6f4c627d900e9c4b214d2" lines="9-14" />
+
+默认链的条件忽略它：
+
+<CodeRef at="patra-tool/patra-tool-security/src/main/java/dev/patra/tool/security/autoconfigure/SecurityServletAutoConfiguration.java@e3120fa01976688a7eb6f4c627d900e9c4b214d2" lines="127-131" />
+
+```java
+  @Bean
+  @ConditionalOnMissingBean(
+      value = SecurityFilterChain.class,
+      ignored = AdditionalSecurityFilterChain.class)
+  public SecurityFilterChain patraSecurityFilterChain(
+```
+
+<Compare
+  title="应用声明哪种类型，默认链怎样"
+  variants={[
+    { label: "声明 SecurityFilterChain", steps: ["工厂方法返回 `SecurityFilterChain`", "条件发现已有这个类型的 Bean", "默认链不创建"], results: [{ label: "默认链", value: "让位", tone: "wait" }, { label: "谁这样用", value: "网关：整套替代", tone: "ok" }], verdict: { tone: "ok", head: "替代。", text: "应用接管全部路径。" } },
+    { label: "声明 AdditionalSecurityFilterChain", steps: ["工厂方法返回 `AdditionalSecurityFilterChain`", "条件忽略这个类型，认为还没有链", "默认链照常创建", "两条链按 `@Order` 排序，请求走第一条匹配的"], results: [{ label: "默认链", value: "留着", tone: "ok" }, { label: "谁这样用", value: "identity：多加一条", tone: "ok" }], verdict: { tone: "ok", head: "共存。", text: "新链只管自己匹配的路径，其余仍走默认链。" } }
+  ]}
+/>
+
+identity 的声明：
+
+<CodeRef at="patra-api/patra-identity/patra-identity-boot/src/main/java/dev/patra/identity/config/IdentityOAuth2SecurityConfiguration.java@e3120fa01976688a7eb6f4c627d900e9c4b214d2" lines="53-55" />
+
+```java
+  @Bean
+  @Order(1)
+  public AdditionalSecurityFilterChain identityOAuth2FilterChain(
+```
+
+<Callout kind="warn">
+
+工厂方法的返回类型必须写 `AdditionalSecurityFilterChain`。条件按工厂方法的返回类型判断，写成 `SecurityFilterChain`、里面再返回子类，条件认不出来，默认链还是会消失。另外要用 `@Order` 排到默认链前面，并用 `securityMatcher` 限定路径，否则新链会把所有请求都接走。
+
+</Callout>
+
+两种行为都有测试守着，断言容器里到底剩哪几条链：
+
+<CodeRef at="patra-tool/patra-tool-security/src/test/java/dev/patra/tool/security/autoconfigure/SecurityServletAutoConfigurationTest.java@e3120fa01976688a7eb6f4c627d900e9c4b214d2" lines="103-129" />
+
+<Transfer
+  prompt="自动配置里 `@ConditionalOnMissingBean` 很常见。你在服务里给某个组件多声明了一个 Bean，比如一个专门调第三方的 `RestClient.Builder` 或 `JsonMapper`。可能出什么同类的问题？怎么避免？"
+  points={[
+    { label: "同一种机制", text: "框架默认的那个实例可能因为你多声明了一个同类型的 Bean 而消失，其他依赖默认实例的地方拿到的就变了，甚至报多个候选。" },
+    { label: "先看条件", text: "加 Bean 之前，查对应的自动配置写的什么条件，是按类型还是按名字。" },
+    { label: "不要声明成 Bean", text: "只给一处用的客户端可以在内部直接 `new`，不进容器，就不会触发条件。identity 调第三方的客户端就是这样自建的。" },
+    { label: "写测试守住", text: "用 `ApplicationContextRunner` 断言容器里有哪些 Bean，让这种隐含行为变得可见。" }
+  ]}
+/>

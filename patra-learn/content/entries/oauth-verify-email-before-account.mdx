@@ -1,0 +1,131 @@
+---
+title: 第三方首次登录：邮箱验证通过才建账号
+summary: 先建账号后验证邮箱，会被预劫持：攻击者用自己的 GitHub 加受害者的邮箱建号，受害者走找回密码进了账号，攻击者的 GitHub 还绑在上面。Patra 改成验证码通过才建账号，用验证码不用邮件链接。
+type: decision
+difficulty: advanced
+tags: [security, backend]
+prerequisites: [oauth-social-login-overview]
+topics: [login-session]
+sources:
+  - version: v0.19
+    issue: PAP-183
+    pr: 390
+personalEnv: false
+---
+
+<Diagnose
+  question="第三方首次登录时，用户自己填邮箱，系统先建好账号，再发验证邮件。老王用自己的 GitHub 填了小陈的邮箱。小陈后来注意到这个邮箱已被注册，走找回密码进入了这个账号。这时老王还能进这个账号吗？"
+  options={["不能，重设密码后这个账号的其他登录方式都失效了", "能，他的 GitHub 还绑在这个账号上，随时能登录", "不能，邮箱未验证的账号不允许用第三方登录"]}
+  answer="B"
+  ifRight="对，这就是预劫持：攻击者抢在受害者之前埋好一条进账号的路，等受害者把账号用起来。往下读 Patra 怎么把这条路堵死。"
+  ifWrong="答案是 B。第三方登录只看 `(provider, subject)`，和密码是否重设过无关，老王的 GitHub 一直有效。如果对外部身份的概念还不熟，先读第三方登录全景那篇。"
+  suggest="oauth-social-login-overview"
+/>
+
+## 背景
+
+Patra 的用户表里邮箱不能为空，第三方又不一定给邮箱：GitHub 只有公开邮箱，常为空；ORCID 发现文档声明的字段里没有。而且 Patra 一律自己验证邮箱，所以首次登录要让用户填用户名和邮箱。
+
+邮箱是用户自己填的，什么都能填。v0.12 的默认流程是账号先建、邮箱后验证，如果第三方照搬这个流程，就会出下面的事：
+
+<Stepper
+  title="先建账号时，老王怎么埋下这条路"
+  nodes={[
+    { id: "wang", label: "老王", sub: "攻击者" },
+    { id: "patra", label: "Patra", sub: "账号" },
+    { id: "chen", label: "小陈", sub: "邮箱主人" }
+  ]}
+  links={[
+    { from: "wang", to: "patra", label: "GitHub 登录" },
+    { from: "chen", to: "patra", label: "找回密码" }
+  ]}
+  steps={[
+    { caption: "老王用自己的 GitHub 首次登录，补填时写了小陈的邮箱。", focus: ["wang"], links: ["wang>patra"], tokens: [{ id: "gh", label: "老王的 GitHub", at: "wang" }] },
+    { caption: "账号立刻建好，邮箱是小陈的，老王的 GitHub 绑在上面。验证邮件发给小陈，他不一定理会。", focus: ["patra"], links: ["wang>patra"], tokens: [{ id: "gh", label: "老王的 GitHub", at: "patra" }], notes: [{ at: "patra", text: "邮箱未验证", tone: "wait" }] },
+    { caption: "小陈后来想注册，发现邮箱被占用，于是走找回密码。他能收信，顺利进了账号，也重设了密码。", focus: ["chen", "patra"], links: ["chen>patra"], tokens: [{ id: "gh", label: "老王的 GitHub", at: "patra" }, { id: "pw", label: "小陈的密码", at: "patra" }], notes: [{ at: "patra", text: "小陈以为是自己的", tone: "wait" }] },
+    { caption: "小陈把这个账号用了起来。老王的 GitHub 还绑着，他随时能用 GitHub 登录进来。", focus: ["wang", "patra"], links: ["wang>patra"], tokens: [{ id: "gh", label: "老王的 GitHub", at: "patra" }, { id: "pw", label: "小陈的密码", at: "patra" }], notes: [{ at: "patra", text: "两个人都能进", tone: "bad" }] }
+  ]}
+  guesses={[
+    { before: 4, question: "小陈已经重设了密码。老王的 GitHub 这时怎么样？", options: ["随密码重设一起失效，老王进不来了", "还绑在账号上，老王继续用 GitHub 就能登录", "要等小陈下次登录时再确认一次才算数"], answer: "B", explain: "找回密码只动密码凭据，不碰外部身份，登录也只看 `(provider, subject)`。这条路埋下之后，小陈察觉不到。" }
+  ]}
+/>
+
+## 选项
+
+<DecisionOptions
+  options={[
+    { name: "验证码通过才建账号", summary: "账号在邮箱验证通过的那一刻才创建，之前只有 Redis 里的待补填记录。", pros: "验证通过前账号不存在，预劫持无从下手；第三方注册的用户邮箱都已验证，也不存在填错邮箱卡死。", cons: "多一种邮件和一套限次逻辑。", chosen: true },
+    { name: "先建账号，再验证", summary: "沿用 v0.12 邮箱密码注册的默认流程。", pros: "流程统一，不用新增任何东西。", cons: "就是上面的预劫持。" },
+    { name: "按第三方给的邮箱自动合并", summary: "第三方给了邮箱，并且和已有账号相同，就直接绑上。", pros: "用户少一步操作。", cons: "第三方给的邮箱不能代替 Patra 自己的验证。Patra 的邮箱一律自己验证，永不按邮箱合并。" }
+  ]}
+/>
+
+## 选择
+
+<Callout kind="lead" label="选了什么">
+
+账号在邮箱验证通过时才创建，并且用验证码，不用邮件链接。决定性的理由是：只要验证通过前账号不存在，老王就没有东西可埋。
+
+</Callout>
+
+为什么是验证码？差别在攻击者诱导受害者时：
+
+<Compare
+  title="老王发起，邮件发到小陈的信箱"
+  variants={[
+    { label: "邮件链接", steps: ["老王用自己的 GitHub 填小陈的邮箱", "小陈收到邮件，里面有一个确认链接", "小陈顺手点开", "账号建好，老王的 GitHub 绑在上面"], results: [{ label: "预劫持", value: "成功", tone: "bad" }], verdict: { tone: "bad", head: "一次点击就够了。", text: "链接在小陈的浏览器里点开就算通过，流程却是老王发起的。" } },
+    { label: "验证码", steps: ["老王用自己的 GitHub 填小陈的邮箱", "小陈收到邮件，里面有 6 位验证码", "验证码只能填回发起的页面，那个页面在老王的浏览器里", "老王拿不到验证码，账号建不出来"], results: [{ label: "预劫持", value: "失败", tone: "ok" }], verdict: { tone: "ok", head: "验证码回不到老王手里。", text: "除非小陈主动把验证码告诉老王，所以邮件里写明不要告诉任何人，不是自己在注册就忽略。" } }
+  ]}
+/>
+
+验证码对了才进这个事务，用户、资料、外部身份和会话在里面一起出现：
+
+<CodeRef at="patra-api/patra-identity/patra-identity-app/src/main/java/dev/patra/identity/app/account/usecase/oauth/CompleteProviderRegistrationHandler.java@4932c00bbb06d014b8c91d5714c705e33b7f3cd6" lines="92-120" />
+
+```java
+    AuthenticatedUser authenticated =
+        Objects.requireNonNull(
+            transactions.execute(
+                status -> {
+                  requireFree(email, username, now);
+                  User created = User.register(email, username);
+                  created.markEmailVerified(now);
+                  User saved = users.save(created);
+```
+
+几个数字：
+
+| 项 | 值 |
+|---|---|
+| 待补填记录 | 存 Redis，30 分钟，键里是 `ticket` 的哈希，`ticket` 本身只放 HttpOnly Cookie |
+| 验证码 | 6 位数字，10 分钟，只存哈希，错 5 次作废，重发后旧码作废 |
+| 发送限制 | 同邮箱 60 秒冷却、每小时 5 封；同 IP 每小时 20 封 |
+| 绑定关系 | 码绑定提交时的用户名和邮箱，下一步不能换 |
+
+预劫持有专门的用例守着：老王用 GitHub 填小陈的邮箱并发了码，此时没有这个邮箱的账号；小陈正常注册并重设密码后，账号上没有任何外部身份；老王再登录仍是「要注册」。
+
+<CodeRef at="patra-api/patra-identity/patra-identity-boot/src/integrationTest/java/dev/patra/identity/ProviderRegistrationFlowIT.java@e3120fa01976688a7eb6f4c627d900e9c4b214d2" lines="231-261" />
+
+<Callout kind="insight" label="顺带想通的">
+
+外部身份一旦绑上就只认 `(provider, subject)`，所以任何能悄悄加一条绑定的路都要小心。实现中的评审还发现一条：攻击者拿到密码和会话后先改邮箱，绑定的安全邮件就发给了自己；原主点「不是我」撤销时，邮箱、密码、会话都恢复了，攻击者的第三方账号却还能进来。所以撤销改邮箱时要删除全部外部身份，代价是原主自己绑的也要重新绑。
+
+</Callout>
+
+## 代价
+
+<Callout kind="cost">
+
+多一种邮件和一套限次逻辑。现有的邮箱令牌表外键指向用户表，账号还不存在时用不上，验证码只能放 Redis。这里替代了 v0.12 决策 B 之下「先建账号后验证」的默认流程，只限第三方；邮箱密码注册仍然先建后验，邮箱撞车时要特别处理未验证的账号，见「邮箱撞车」那篇。
+
+</Callout>
+
+<Transfer
+  prompt="一个论坛支持微信登录，微信不提供手机号，用户要自己填。产品经理说先放人进来，短信验证以后再补。这样会有什么问题？你会怎么改？"
+  points={[
+    { label: "同一种预劫持", text: "攻击者用自己的微信填别人的手机号。手机号主人之后凭短信找回进入账号，攻击者的微信还绑着。" },
+    { label: "建账号的时机", text: "把建账号放到短信验证通过之后，之前只留一条有过期时间的待补填记录。" },
+    { label: "凭证回到发起方", text: "验证码必须填回发起的页面，不用点一下就通过的链接。" },
+    { label: "要限次", text: "短信验证码同样要按手机号和 IP 限次，错几次就作废。" }
+  ]}
+/>
