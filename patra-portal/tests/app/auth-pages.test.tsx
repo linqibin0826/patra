@@ -5,6 +5,13 @@ import type { ReactElement } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import "@testing-library/jest-dom/vitest";
 
+vi.mock("@/lib/auth/human-verification", () => ({
+  readHumanVerification: async () => ({ provider: "turnstile", siteKey: "site-1" }),
+}));
+vi.mock(
+  "@/components/auth/human-verification/HumanVerificationWidget",
+  () => import("@tests/stubs/human-verification-widget"),
+);
 vi.mock("next/navigation", () => ({ useRouter: () => ({ replace: vi.fn(), prefetch: vi.fn() }) }));
 vi.mock("next/headers", () => import("@tests/stubs/cookie-jar"));
 vi.mock("@/lib/auth/actions", () => ({ login: vi.fn(), logout: vi.fn(), register: vi.fn() }));

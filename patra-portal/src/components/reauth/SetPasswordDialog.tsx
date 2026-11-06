@@ -1,11 +1,15 @@
 "use client";
 
 import { Mail } from "lucide-react";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { FormAlert } from "@/components/auth/FormAlert";
+import { HumanVerificationWidget } from "@/components/auth/human-verification/HumanVerificationWidget";
+import { useHumanVerification } from "@/components/auth/human-verification/use-human-verification";
 import { StateIcon } from "@/components/auth/StateIcon";
 import { Dialog } from "@/components/ui/dialog";
-import { resendWaitMessage, SET_PASSWORD_MESSAGES } from "@/lib/auth/messages";
+import { fetchHumanVerification } from "@/lib/auth/human-verification-actions";
+import { resendWaitMessage, SET_PASSWORD_MESSAGES, verificationMessage } from "@/lib/auth/messages";
+import type { HumanVerificationConfig } from "@/lib/auth/types";
 import { requestPasswordReset } from "@/lib/identity/token-actions";
 import { orUnavailable } from "@/lib/or-unavailable";
 import { btnPrimary, btnSecondary, btnText } from "@/lib/portal-ui";
@@ -26,7 +30,25 @@ interface SetPasswordDialogProps {
 
 /// 设置密码（决策 E，画板 Security）：没有密码的账号走现有的找回密码流程，重设处理器没有凭据行时会新建。设好后所有设备
 /// 下线，发送之前就要说清楚。这个对话框里没有密码框。
+/// 申请接口每次都要人机验证令牌。对话框所在的页面很多，所以打开时才读厂商配置，读取期间不能发送。
 export function SetPasswordDialog({ open, onClose, email, reason }: SetPasswordDialogProps) {
+  const humanVerification = useHumanVerification(true);
+  const [verification, setVerification] = useState<HumanVerificationConfig | null | undefined>(
+    undefined,
+  );
+  useEffect(() => {
+    if (!open) return;
+    let active = true;
+    setVerification(undefined);
+    fetchHumanVerification()
+      .catch(() => null)
+      .then((config) => {
+        if (active) setVerification(config);
+      });
+    return () => {
+      active = false;
+    };
+  }, [open]);
   const [step, setStep] = useState<"ask" | "sent">("ask");
   const [alert, setAlert] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -37,11 +59,12 @@ export function SetPasswordDialog({ open, onClose, email, reason }: SetPasswordD
 
   /// 发送，首次和「重新发送」共用；失败回到第一步显示原因
   async function send() {
-    if (busy) return;
+    if (busy || humanVerification.token === null) return;
     setBusy(true);
     setAlert(null);
-    const result = await orUnavailable(requestPasswordReset(email));
+    const result = await orUnavailable(requestPasswordReset(email, humanVerification.token));
     setBusy(false);
+    humanVerification.reset();
     if (result.ok) {
       setNextAt(Date.parse(result.nextRequestAt) || Date.now() + DEFAULT_WAIT_MS);
       setStep("sent");
@@ -51,7 +74,7 @@ export function SetPasswordDialog({ open, onClose, email, reason }: SetPasswordD
     setAlert(
       result.reason === "throttled"
         ? resendWaitMessage(result.retryAfterSeconds ?? 60, true)
-        : SET_PASSWORD_MESSAGES.failed,
+        : (verificationMessage(result.reason) ?? SET_PASSWORD_MESSAGES.failed),
     );
   }
 
@@ -60,6 +83,7 @@ export function SetPasswordDialog({ open, onClose, email, reason }: SetPasswordD
     if (busy) return;
     setStep("ask");
     setAlert(null);
+    humanVerification.reset();
     onClose();
   }
 
@@ -100,9 +124,18 @@ export function SetPasswordDialog({ open, onClose, email, reason }: SetPasswordD
             ) : left > 0 ? (
               <span>{resendWaitMessage(left, false)}</span>
             ) : (
-              <button type="button" className={btnText} onClick={() => void send()}>
-                {SET_PASSWORD_MESSAGES.resend}
-              </button>
+              !humanVerification.blocked && (
+                <button type="button" className={btnText} onClick={() => void send()}>
+                  {SET_PASSWORD_MESSAGES.resend}
+                </button>
+              )
+            )}
+            {!busy && left <= 0 && (
+              <HumanVerificationWidget
+                config={verification}
+                action="password_reset"
+                verification={humanVerification}
+              />
             )}
             <span role="status" className="sr-only">
               {announcement}
@@ -126,6 +159,11 @@ export function SetPasswordDialog({ open, onClose, email, reason }: SetPasswordD
             </li>
             <li>{reason ? SET_PASSWORD_MESSAGES.reasonLast : SET_PASSWORD_MESSAGES.last}</li>
           </ol>
+          <HumanVerificationWidget
+            config={verification}
+            action="password_reset"
+            verification={humanVerification}
+          />
           <div className="flex justify-end gap-3 max-[880px]:flex-col-reverse">
             <button
               type="button"
@@ -139,7 +177,7 @@ export function SetPasswordDialog({ open, onClose, email, reason }: SetPasswordD
               ref={sendRef}
               type="button"
               className={btnPrimary}
-              aria-disabled={busy || undefined}
+              aria-disabled={busy || humanVerification.blocked || undefined}
               onClick={() => void send()}
             >
               {busy ? SET_PASSWORD_MESSAGES.sending : SET_PASSWORD_MESSAGES.send}

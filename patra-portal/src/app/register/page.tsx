@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { AuthShell } from "@/components/auth/AuthShell";
 import { RegisterForm } from "@/components/auth/RegisterForm";
+import { readHumanVerification } from "@/lib/auth/human-verification";
 import { safeNextPath } from "@/lib/auth/next-path";
 import { readOAuthEnabled } from "@/lib/auth/oauth-host";
 import { parseOAuthNotice } from "@/lib/auth/oauth-notice";
@@ -17,7 +18,7 @@ export default async function RegisterPage({
   const params = await searchParams;
   const raw = params.next;
   const next = safeNextPath(Array.isArray(raw) ? raw[0] : raw);
-  const enabled = await readOAuthEnabled();
+  const [enabled, verification] = await Promise.all([readOAuthEnabled(), readHumanVerification()]);
   return (
     <AuthShell
       title="注册"
@@ -26,7 +27,11 @@ export default async function RegisterPage({
       }
       back={next}
     >
-      <RegisterForm next={next} oauth={{ enabled, notice: parseOAuthNotice(params) }} />
+      <RegisterForm
+        next={next}
+        oauth={{ enabled, notice: parseOAuthNotice(params) }}
+        verification={verification}
+      />
     </AuthShell>
   );
 }

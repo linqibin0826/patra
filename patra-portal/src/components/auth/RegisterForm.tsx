@@ -6,6 +6,8 @@ import { useForm } from "react-hook-form";
 import { AuthLink } from "@/components/auth/AuthLink";
 import { FormAlert } from "@/components/auth/FormAlert";
 import { FormField } from "@/components/auth/FormField";
+import { HumanVerificationWidget } from "@/components/auth/human-verification/HumanVerificationWidget";
+import { useHumanVerification } from "@/components/auth/human-verification/use-human-verification";
 import { PasswordInput } from "@/components/auth/PasswordInput";
 import { ProviderEntries } from "@/components/auth/ProviderEntries";
 import { UsernameField } from "@/components/auth/UsernameField";
@@ -21,22 +23,28 @@ import {
   TOAST_MESSAGES,
   usernameHint,
   usernameMessage,
+  verificationMessage,
 } from "@/lib/auth/messages";
 import { authPageHref } from "@/lib/auth/next-path";
 import type { OAuthNotice } from "@/lib/auth/oauth-notice";
+import type { HumanVerificationConfig } from "@/lib/auth/types";
 import { btnBlock, btnPrimary } from "@/lib/portal-ui";
 import { cn } from "@/lib/utils";
 import { useVerificationResendStore } from "@/store/verification-resend";
 
 /// 注册表单（v0.8 spec 第 9 节，v0.12 简报 §3.1）：提示条、邮箱、用户名、密码、确认密码、提交按钮、
 /// 去登录的链接。`next` 已经过 `safeNextPath`。`oauth` 是第三方入口（决策 G）和从第三方回来的结果，不传时没有入口。
+/// 人机验证每次都要，组件一直显示；令牌只能用一次，任何失败都要重置。
 export function RegisterForm({
   next,
   oauth,
+  verification = null,
 }: {
   next: string;
   oauth?: { enabled: boolean; notice: OAuthNotice | null };
+  verification?: HumanVerificationConfig | null;
 }) {
+  const humanVerification = useHumanVerification(true);
   const [alert, setAlert] = useState<string | null>(null);
   const { oauthAlert, dismiss } = useOAuthAlert(oauth?.notice ?? null, loginNoticeAlert);
   const serverErrors = useServerFieldErrors();
@@ -66,6 +74,12 @@ export function RegisterForm({
     // 注册时发出的首封验证邮件计入重发冷却：60 秒内横幅上是倒计时（简报 §3.4）
     onSuccess: () => startResendCooldown(Date.now() + 60_000),
     onFailure: (failure, input) => {
+      humanVerification.reset();
+      const verificationAlert = verificationMessage(failure.reason);
+      if (verificationAlert) {
+        setAlert(verificationAlert);
+        return;
+      }
       if (failure.reason === "taken") {
         serverErrors.show({
           ...(failure.email && {
@@ -117,11 +131,20 @@ export function RegisterForm({
   /// 确认密码只在前端比对，不传给后端；用户名交的是去空白、转小写之后的值。
   function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (humanVerification.token === null) {
+      return;
+    }
     setAlert(null);
     dismiss();
     serverErrors.clear();
+    const verificationToken = humanVerification.token;
     void handleSubmit((values) =>
-      submit({ email: values.email, username: values.username, password: values.password }),
+      submit({
+        email: values.email,
+        username: values.username,
+        password: values.password,
+        verificationToken,
+      }),
     )(event);
   }
 
@@ -214,10 +237,15 @@ export function RegisterForm({
             />
           )}
         </FormField>
+        <HumanVerificationWidget
+          config={verification}
+          action="register"
+          verification={humanVerification}
+        />
         <div className="flex flex-col gap-4">
           <button
             type="submit"
-            aria-disabled={submitting || undefined}
+            aria-disabled={submitting || humanVerification.blocked || undefined}
             title={submitting ? "正在注册" : undefined}
             className={cn(btnPrimary, btnBlock)}
           >

@@ -1,5 +1,5 @@
 import { type APIRequestContext, expect, type Page, test } from "@playwright/test";
-import { ROUND_TRIP, waitForTakeover } from "@tests/e2e/support/account";
+import { ROUND_TRIP, waitForTakeover, waitForVerification } from "@tests/e2e/support/account";
 
 const MOCK = "http://localhost:4031";
 const PASSWORD = "qingshan-2026";
@@ -565,12 +565,17 @@ test.describe("设置页登录方式", () => {
     const dialog = page.getByRole("dialog", { name: "先设置一个密码" });
     await expect(dialog).toContainText("所有设备都会退出登录");
     await expect(dialog.locator('input[type="password"]')).toHaveCount(0);
-    await dialog.getByRole("button", { name: "发送设置邮件" }).click();
+    const send = dialog.getByRole("button", { name: "发送设置邮件" });
+    await waitForVerification(send);
+    await send.click();
     await expect(page.getByRole("dialog", { name: "查看你的邮箱" })).toBeVisible(ROUND_TRIP);
     const forgot = (await gatewayLog(request)).find((item) =>
       item.path.endsWith("/auth/password/forgot"),
     );
-    expect(forgot?.body).toEqual({ email: "chen.yu@example.com" });
+    expect(forgot?.body).toEqual({
+      email: "chen.yu@example.com",
+      verificationToken: expect.any(String),
+    });
   });
 
   test("没有密码但绑了两家：解绑走设置密码，不调接口", async ({ page, request }) => {

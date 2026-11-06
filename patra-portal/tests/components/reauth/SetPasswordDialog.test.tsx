@@ -5,6 +5,13 @@ import "@testing-library/jest-dom/vitest";
 import { SetPasswordDialog } from "@/components/reauth/SetPasswordDialog";
 import { requestPasswordReset } from "@/lib/identity/token-actions";
 
+vi.mock(
+  "@/components/auth/human-verification/HumanVerificationWidget",
+  () => import("@tests/stubs/human-verification-widget"),
+);
+vi.mock("@/lib/auth/human-verification-actions", () => ({
+  fetchHumanVerification: vi.fn(async () => ({ provider: "turnstile", siteKey: "site-1" })),
+}));
 vi.mock("@/lib/identity/token-actions", () => ({ requestPasswordReset: vi.fn() }));
 
 afterEach(() => vi.clearAllMocks());
@@ -40,7 +47,7 @@ describe("SetPasswordDialog", () => {
     const { user } = renderDialog();
     vi.mocked(requestPasswordReset).mockResolvedValue(SENT);
     await user.click(screen.getByRole("button", { name: "发送设置邮件" }));
-    expect(requestPasswordReset).toHaveBeenCalledWith(EMAIL);
+    expect(requestPasswordReset).toHaveBeenCalledWith(EMAIL, "token-0");
     const dialog = await screen.findByRole("dialog", { name: "查看你的邮箱" });
     expect(dialog).toHaveTextContent(`设置密码的邮件已发到 ${EMAIL}，链接 1 小时内有效。`);
     expect(dialog).toHaveTextContent(/已发送 · \d+ 秒后可重发/);

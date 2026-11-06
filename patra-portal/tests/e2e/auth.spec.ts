@@ -1,5 +1,10 @@
 import { expect, type Page, test } from "@playwright/test";
-import { freshAccount, ROUND_TRIP, waitForTakeover } from "@tests/e2e/support/account";
+import {
+  freshAccount,
+  ROUND_TRIP,
+  waitForTakeover,
+  waitForVerification,
+} from "@tests/e2e/support/account";
 
 /// 真人点一下要按住一会儿。Playwright 默认的点击按下就松开，测不出按住期间页面的挤动
 const PRESS = { delay: 100 };
@@ -22,7 +27,12 @@ async function logOut(page: Page, path: string) {
 
 /// 离开字段时冒出的错误行会把下方的链接、按钮往下挤。按下和松开之间挤动了，松开时落在别的元素上，
 /// 这次点击就没了。只有真实浏览器有布局，组件测试测不到，所以放在这里
+///
+/// 视口要够高，让表单不用滚动：注册页多了人机验证后比 720 高，滚动后链接落在视口左下角，
+/// 不配网关时 Next 开发模式的问题徽标会盖住它，点击落空的就成了徽标，不是这里要测的挤动。
 test.describe("登录页、注册页：离开字段时冒出的错误不让下方的点击落空", () => {
+  test.use({ viewport: { width: 1280, height: 1000 } });
+
   test("登录页：焦点在空的邮箱框里，直接点「注册」", async ({ page }) => {
     await page.goto("/login?next=%2Fpapers%3Fq%3DGLP-1");
     await waitForTakeover(page, "form");
@@ -40,7 +50,7 @@ test.describe("登录页、注册页：离开字段时冒出的错误不让下�
   });
 
   test.describe("手机上轻触", () => {
-    test.use({ viewport: { width: 375, height: 812 }, isMobile: true, hasTouch: true });
+    test.use({ viewport: { width: 375, height: 1000 }, isMobile: true, hasTouch: true });
 
     test("注册页：邮箱填了一半，直接轻触「登录」", async ({ page }) => {
       await page.goto("/register?next=%2Fjournals%2F7");
@@ -77,7 +87,9 @@ test.describe("页面接管表单之前就提交：邮箱、密码不进地址�
     await page.getByLabel("密码", { exact: true }).fill("correct horse");
     await page.getByLabel("确认密码").fill("correct horse");
     const submitted = page.waitForRequest((request) => request.isNavigationRequest());
-    await page.getByRole("button", { name: "注册" }).click();
+    // 服务端渲染的按钮在拿到人机验证令牌之前带 aria-disabled，Playwright 会一直等它可用；
+    // 这里测的是脚本还没接管时浏览器的原生提交，真实浏览器不看 aria-disabled
+    await page.getByRole("button", { name: "注册" }).click({ force: true });
     const request = await submitted;
     expect(request.method()).toBe("POST");
     expect(new URL(request.url()).search).toBe("?next=%2Fjournals%2F7");
@@ -110,7 +122,9 @@ test.describe("账号：注册、登录、退出", () => {
       await page.getByLabel("用户名").fill(account.username);
       await page.getByLabel("密码", { exact: true }).fill(account.password);
       await page.getByLabel("确认密码").fill(account.password);
-      await page.getByRole("button", { name: "注册" }).click();
+      const submit = page.getByRole("button", { name: "注册" });
+      await waitForVerification(submit);
+      await submit.click();
 
       await expect(page).toHaveURL(SOURCE, ROUND_TRIP);
       await expect(page.getByText("注册成功，已登录")).toBeVisible();

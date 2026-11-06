@@ -11,6 +11,10 @@ import { queryKeys } from "@/lib/query-keys";
 import { useVerificationResendStore } from "@/store/verification-resend";
 
 const router = { replace: vi.fn(), prefetch: vi.fn() };
+vi.mock(
+  "@/components/auth/human-verification/HumanVerificationWidget",
+  () => import("@tests/stubs/human-verification-widget"),
+);
 vi.mock("next/navigation", () => ({ useRouter: () => router }));
 vi.mock("@/lib/auth/actions", () => ({ login: vi.fn(), logout: vi.fn(), register: vi.fn() }));
 vi.mock("sonner", () => ({ toast: { success: vi.fn() } }));
@@ -342,6 +346,7 @@ describe("RegisterForm · 提交", () => {
       email: USER.email,
       username: USER.username,
       password: PASSWORD,
+      verificationToken: "token-0",
     });
   });
 

@@ -1,5 +1,5 @@
 import { randomBytes } from "node:crypto";
-import { expect, type Page } from "@playwright/test";
+import { expect, type Locator, type Page } from "@playwright/test";
 
 /// 提交后要经过网关和目标页的服务端渲染，比默认的 5 秒宽一些
 export const ROUND_TRIP = { timeout: 15_000 };
@@ -39,6 +39,11 @@ export async function waitForTakeover(page: Page, selector: string) {
   );
 }
 
+/// 等人机验证通过：组件是真实加载的官方 always-pass 组件，拿到令牌后提交按钮才可用。要能访问 challenges.cloudflare.com。
+export async function waitForVerification(submit: Locator) {
+  await expect(submit).not.toHaveAttribute("aria-disabled", "true", { timeout: 30_000 });
+}
+
 /// 在注册页注册，回到首页（已登录）
 export async function register(page: Page, account: Account) {
   await page.goto("/register");
@@ -47,7 +52,9 @@ export async function register(page: Page, account: Account) {
   await page.getByLabel("用户名").fill(account.username);
   await page.getByLabel("密码", { exact: true }).fill(account.password);
   await page.getByLabel("确认密码").fill(account.password);
-  await page.getByRole("button", { name: "注册" }).click();
+  const submit = page.getByRole("button", { name: "注册" });
+  await waitForVerification(submit);
+  await submit.click();
   await expect(page).toHaveURL("/", ROUND_TRIP);
 }
 
@@ -57,7 +64,25 @@ export async function login(page: Page, account: Pick<Account, "email" | "passwo
   await waitForTakeover(page, "form");
   await page.getByLabel("邮箱").fill(account.email);
   await page.getByLabel("密码", { exact: true }).fill(account.password);
-  await page.getByRole("button", { name: "登录" }).click();
+  const submit = page.getByRole("button", { name: "登录" });
+  await submit.click();
+  // 所有用例共用一个 IP，失败累计到门槛后，登录也会被要求先过人机验证
+  const required = page.getByText("请先完成下面的人机验证");
+  const settled = await Promise.race([
+    page.waitForURL((url) => url.pathname !== "/login", ROUND_TRIP).then(() => "left"),
+    required.waitFor(ROUND_TRIP).then(() => "required"),
+    page
+      .getByRole("alert")
+      .filter({ hasNotText: "人机验证" })
+      .filter({ hasText: /\S/ })
+      .first()
+      .waitFor(ROUND_TRIP)
+      .then(() => "failed"),
+  ]).catch(() => "timeout");
+  if (settled === "required") {
+    await waitForVerification(submit);
+    await submit.click();
+  }
 }
 
 /// 打开页面。next dev 首次编译一个路由时会让已打开的页面整页刷新，正在进行的跳转被打断（`net::ERR_ABORTED`）：

@@ -8,6 +8,7 @@ import {
   REGISTER_UNAVAILABLE_MESSAGE,
   TOAST_MESSAGES,
   usernameMessage,
+  VERIFICATION_MESSAGES,
 } from "@/lib/auth/messages";
 
 describe("fieldErrorMessage", () => {
@@ -126,5 +127,16 @@ describe("其余文案", () => {
       emailTaken: "该邮箱已注册，",
       emailTakenLink: "去登录",
     });
+  });
+});
+
+describe("人机验证的提示", () => {
+  it.each([
+    ["verification-required", VERIFICATION_MESSAGES.required],
+    ["verification-failed", VERIFICATION_MESSAGES.failed],
+    ["verification-unavailable", VERIFICATION_MESSAGES.unavailable],
+  ] as const)("%s 的文案和账号锁定不同", (reason, message) => {
+    expect(loginAlertMessage({ ok: false, reason })).toBe(message);
+    expect(message).not.toContain("尝试次数过多");
   });
 });

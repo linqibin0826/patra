@@ -125,6 +125,8 @@ interface WidgetProps {
 | `verification-failed` | 422，`errors` 含 `verificationToken` / `VERIFICATION_FAILED` |
 | `verification-unavailable` | 503，`traits` 含 `VERIFICATION_UNAVAILABLE` |
 
+这三个请求的超时是 15 秒，不用默认的 10 秒。后端校验令牌最坏要 10 秒，门户不能比它先放弃，否则用户看到“没有成功”，后端却可能已经把账号建好了。
+
 判断放在现有的字段错误处理之前：`verificationToken` 不在 `USER_FIELDS` 里，不判断的话会被当成门户的 bug 记日志并返回 `unavailable`。
 
 ### 5.4 文案（`src/lib/auth/messages.ts`）
@@ -154,6 +156,7 @@ frame-src  https://challenges.cloudflare.com https://api.trustturn.cc
 
 - `'unsafe-inline'`：Next 的水合脚本是内联的，用 nonce 要把这些页面全部变成动态渲染并改 proxy，不值得。目的是不放行 TRUSTTURN 的脚本，不是防 XSS。
 - 开发模式加 `'unsafe-eval'`，否则 webpack 的 dev 脚本跑不了。
+- **隐性约束**：CSP 随文档响应下发，登录或注册成功后是客户端导航，所以这批用户之后的页面都跑在这份 CSP 下，直接打开其他页面的用户没有。目前门户没有 `<iframe>`、`next/script`、`<object>`、`new Worker`，没有页面受影响。以后在这三个页面以外加第三方脚本或同源 iframe，要同时改这里，否则只有从登录页进来的用户会坏。
 - **`SetPasswordDialog` 在设置页**，不在这三个页面，没有 CSP，这个对话框的隔离靠组件本身：TRUSTTURN 只用 iframe。这里不扩大范围。
 
 ## 8. 测试
@@ -182,7 +185,7 @@ frame-src  https://challenges.cloudflare.com https://api.trustturn.cc
 
 ## 9. 实测记录
 
-上线实测后补：`sandbox` 下 TRUSTTURN 组件能否工作、它实际发出的请求和采集的内容、错误响应格式。
+上线实测后补：`sandbox` 下 TRUSTTURN 组件能否工作、票据消息的 `event.source` 是不是 `widget.html` 这个窗口（如果由它内部的子 iframe 发出，现在的校验会拦掉）、它实际发出的请求和采集的内容、错误响应格式。
 
 ## 10. 留给实施者决定
 

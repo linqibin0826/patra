@@ -6,6 +6,10 @@ import { ForgotPasswordForm } from "@/components/auth/ForgotPasswordForm";
 import { requestPasswordReset } from "@/lib/identity/token-actions";
 import { useAuthHandoffStore } from "@/store/auth-handoff";
 
+vi.mock(
+  "@/components/auth/human-verification/HumanVerificationWidget",
+  () => import("@tests/stubs/human-verification-widget"),
+);
 vi.mock("@/lib/identity/token-actions", () => ({ requestPasswordReset: vi.fn() }));
 
 const NOW = Date.parse("2026-10-23T08:00:00Z");

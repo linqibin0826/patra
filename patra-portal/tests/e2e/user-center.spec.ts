@@ -6,6 +6,7 @@ import {
   ROUND_TRIP,
   register,
   waitForTakeover,
+  waitForVerification,
 } from "@tests/e2e/support/account";
 import { latestToken } from "@tests/e2e/support/mailpit";
 
@@ -156,7 +157,9 @@ test.describe("用户中心", () => {
     await anon.page.getByRole("link", { name: "忘记密码？" }).click();
     await expect(anon.page).toHaveURL("/forgot-password");
     await expect(anon.page.getByLabel("邮箱")).toHaveValue(account.email);
-    await anon.page.getByRole("button", { name: "发送重设邮件" }).click();
+    const sendReset = anon.page.getByRole("button", { name: "发送重设邮件" });
+    await waitForVerification(sendReset);
+    await sendReset.click();
     await expect(anon.page.getByRole("heading", { level: 1, name: "查看你的邮箱" })).toBeVisible(
       ROUND_TRIP,
     );

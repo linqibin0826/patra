@@ -27,10 +27,14 @@ function clientIp(raw: string | null): string | null {
 }
 
 /// 从请求头取浏览器来源。proxy 用 `req.headers` 调它，其余地方用 `readClientOrigin`。
+///
+/// 外网访问经 Cloudflare Tunnel 和 OrbStack 端口转发进来，连接地址都是同一个内网地址，所以优先取
+/// `cf-connecting-ip`：Cloudflare 会覆盖访客带来的这个头，外网伪造不了。能直连 4000 端口的 tailnet 或局域网设备
+/// 可以伪造，这些都是自己的设备。没有这个头或值不合法时，走 `x-forwarded-for`。
 export function clientOriginFromHeaders(headers: Headers): ClientOrigin {
   const userAgent = headers.get("user-agent");
   return {
-    ip: clientIp(headers.get("x-forwarded-for")),
+    ip: clientIp(headers.get("cf-connecting-ip")) ?? clientIp(headers.get("x-forwarded-for")),
     userAgent: userAgent && isSendableHeaderValue(userAgent) ? userAgent : null,
   };
 }
