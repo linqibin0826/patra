@@ -1,9 +1,9 @@
 package dev.patra.interaction.domain.discussion.model.aggregate;
 
+import dev.patra.interaction.domain.discussion.event.CommentDeletedEvent;
 import dev.patra.interaction.domain.discussion.exception.CommentNotFoundException;
 import dev.patra.interaction.domain.discussion.exception.CommentNotOwnedException;
 import dev.patra.interaction.domain.discussion.exception.ReplyTargetGoneException;
-import dev.patra.interaction.domain.discussion.model.enums.CommentRemoval;
 import dev.patra.interaction.domain.discussion.model.enums.CommentState;
 import dev.patra.interaction.domain.discussion.model.read.RevisionRecord;
 import dev.patra.interaction.domain.discussion.model.vo.CommentEdit;
@@ -15,6 +15,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 import lombok.Builder;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
@@ -152,17 +153,43 @@ public final class CommentAggregate {
     return Optional.of(CommentEdit.of(updated, archived, added));
   }
 
-  /// 删除这条要做什么（spec 5.6）。
+  /// 删除（spec 5.6）：有直接回复变占位，清掉正文与修改历史、楼中楼保留；没有就整条去掉。写库由调用方按事件的
+  /// `placeholder` 决定。
   ///
   /// @param actorId 操作者
   /// @param hasReplies 有没有直接回复
-  /// @return 处理方式
+  /// @param now 删除时刻
+  /// @return 删除事件；已是占位时什么都没发生，为空
   /// @throws CommentNotOwnedException 不是作者
-  public CommentRemoval removalFor(long actorId, boolean hasReplies) {
+  public Optional<CommentDeletedEvent> delete(long actorId, boolean hasReplies, Instant now) {
     requireAuthor(actorId);
     if (state == CommentState.DELETED) {
-      return CommentRemoval.NONE;
+      return Optional.empty();
     }
-    return hasReplies ? CommentRemoval.PLACEHOLDER : CommentRemoval.REMOVE;
+    return Optional.of(
+        CommentDeletedEvent.builder()
+            .eventId(UUID.randomUUID())
+            .commentId(commentId)
+            .version(version)
+            .subjectId(subjectId)
+            .authorId(authorId)
+            .placeholder(hasReplies)
+            .deletedAt(now)
+            .build());
+  }
+
+  /// 是不是已经没有回复的占位：它下面最后一条回复被去掉时，它也跟着去掉，不留空壳。
+  ///
+  /// @param hasReplies 有没有直接回复
+  /// @return 是占位且没有回复时为 `true`
+  public boolean isOrphanedPlaceholder(boolean hasReplies) {
+    return state == CommentState.DELETED && !hasReplies;
+  }
+
+  /// 还能提醒到的作者：占位的作者已删掉自己的内容，不再算被回复的人。
+  ///
+  /// @return 正常评论是作者，占位为 `null`
+  public Long authorIdIfActive() {
+    return state == CommentState.ACTIVE ? authorId : null;
   }
 }

@@ -22,4 +22,13 @@ public record SubjectView(
     String key,
     SubjectState state,
     SubjectSnapshot snapshot,
-    SubjectOwner owner) {}
+    SubjectOwner owner) {
+
+  /// 这个人是不是对象的匿名所有者：提醒里要把他显示成「匿名作者」。外部对象没有所有者，一律不是。
+  ///
+  /// @param userId 用户
+  /// @return 是匿名所有者时为 `true`
+  public boolean isAnonymousOwner(long userId) {
+    return owner != null && owner.anonymous() && owner.userId() == userId;
+  }
+}

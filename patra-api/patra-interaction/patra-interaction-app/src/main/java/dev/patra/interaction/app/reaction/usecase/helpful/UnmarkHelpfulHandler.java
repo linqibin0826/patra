@@ -1,24 +1,18 @@
 package dev.patra.interaction.app.reaction.usecase.helpful;
 
-import dev.patra.interaction.domain.reaction.event.HelpfulUnmarkedEvent;
 import dev.patra.interaction.domain.reaction.model.vo.HelpfulMark;
 import dev.patra.interaction.domain.reaction.model.vo.HelpfulTarget;
 import dev.patra.interaction.domain.reaction.port.repository.HelpfulRepository;
 import dev.patra.tool.core.security.CurrentUserPort;
 import dev.patra.tool.cqrs.CommandHandler;
-import java.time.Clock;
-import java.time.Instant;
-import java.time.temporal.ChronoUnit;
 import java.util.Optional;
-import java.util.UUID;
 import lombok.RequiredArgsConstructor;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.support.TransactionOperations;
 
 /// 取消有帮助（spec §4.2）：只要登录，不查发表资格（与删除自己的评论一致），也不查目标（目标删了，明细已随之删掉，
-/// 取消就是什么都不做）。事务里拿目标锁、删明细，真删掉才给目标计数、受益人获赞各 −1、发布
-/// {@link HelpfulUnmarkedEvent}（只在服务内，不外送，PAP-141）。不退额度。
+/// 取消就是什么都不做）。事务里拿目标锁、删明细，真删掉才给目标计数、受益人获赞各 −1。不退额度，不发事件：产品规则是
+/// 取消不撤回提醒，没有谁要知道这件事。
 @Component
 @RequiredArgsConstructor
 public class UnmarkHelpfulHandler implements CommandHandler<UnmarkHelpfulCommand, HelpfulResult> {
@@ -26,8 +20,6 @@ public class UnmarkHelpfulHandler implements CommandHandler<UnmarkHelpfulCommand
   private final HelpfulRepository helpful;
   private final CurrentUserPort currentUser;
   private final TransactionOperations transactions;
-  private final ApplicationEventPublisher events;
-  private final Clock clock;
 
   /// 取消。
   ///
@@ -37,7 +29,6 @@ public class UnmarkHelpfulHandler implements CommandHandler<UnmarkHelpfulCommand
   public HelpfulResult handle(UnmarkHelpfulCommand command) {
     long userId = currentUser.require().userId();
     HelpfulTarget target = HelpfulTarget.of(command.type(), command.targetId());
-    Instant now = clock.instant().truncatedTo(ChronoUnit.MICROS);
     return transactions.execute(
         status -> {
           helpful.lockTarget(target);
@@ -48,14 +39,6 @@ public class UnmarkHelpfulHandler implements CommandHandler<UnmarkHelpfulCommand
                 if (mark.creditedUserId() != null) {
                   helpful.adjustReceived(mark.creditedUserId(), -1);
                 }
-                events.publishEvent(
-                    HelpfulUnmarkedEvent.builder()
-                        .eventId(UUID.randomUUID())
-                        .targetType(target.type())
-                        .targetId(target.id())
-                        .userId(userId)
-                        .unmarkedAt(now)
-                        .build());
               });
           return HelpfulResult.of(false, helpful.countOf(target));
         });

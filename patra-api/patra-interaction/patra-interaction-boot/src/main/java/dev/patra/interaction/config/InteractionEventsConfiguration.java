@@ -23,7 +23,7 @@ import org.springframework.modulith.events.RoutingTarget;
 /// `patra-interaction-api` 里的哪个 record。领域层不贴 `@Externalized`，外送只在这里配置。
 ///
 /// 只外送有队列订阅的事件：事件模块发送时带 `mandatory`，没有队列可投的消息被 broker 退回、登记行每分钟补投、永远发
-/// 不出去。所以「有帮助已取消」不外送（通知服务对它没有动作）。新增外送事件时，通知服务要先绑定它的路由键。
+/// 不出去。新增外送事件时，通知服务要先绑定它的路由键。
 ///
 /// 上线后改外送领域事件的类名或字段，先确认 `event_publication` 是空的（`patra-tool-events` README）。
 @Configuration(proxyBeanMethods = false)

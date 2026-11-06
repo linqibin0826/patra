@@ -6,11 +6,9 @@ import dev.patra.interaction.app.discussion.service.MentionDraft;
 import dev.patra.interaction.app.discussion.service.MentionResolution;
 import dev.patra.interaction.app.discussion.service.ResolvedBody;
 import dev.patra.interaction.app.discussion.usecase.query.CommentView;
-import dev.patra.interaction.domain.discussion.event.CommentPublishedEvent;
 import dev.patra.interaction.domain.discussion.exception.InvalidDiscussionRequestException;
 import dev.patra.interaction.domain.discussion.exception.ReplyTargetGoneException;
 import dev.patra.interaction.domain.discussion.model.aggregate.CommentAggregate;
-import dev.patra.interaction.domain.discussion.model.enums.CommentState;
 import dev.patra.interaction.domain.discussion.model.read.CommentRecord;
 import dev.patra.interaction.domain.discussion.model.vo.NewComment;
 import dev.patra.interaction.domain.discussion.policy.CommentText;
@@ -22,7 +20,6 @@ import dev.patra.interaction.domain.subject.model.enums.SubjectType;
 import dev.patra.interaction.domain.subject.model.read.SubjectView;
 import dev.patra.interaction.domain.subject.model.read.UserCard;
 import dev.patra.interaction.domain.subject.model.vo.SubjectId;
-import dev.patra.interaction.domain.subject.model.vo.SubjectOwner;
 import dev.patra.interaction.domain.subject.port.gateway.PublishGuardGateway;
 import dev.patra.interaction.domain.subject.port.gateway.SubjectGateway;
 import dev.patra.interaction.domain.subject.port.markdown.PlainTextPort;
@@ -34,7 +31,6 @@ import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
@@ -45,7 +41,7 @@ import org.springframework.transaction.support.TransactionOperations;
 /// 1. 本地校验（类型、能力、key、父评论 ID、正文、@ 候选），任何远程调用之前；
 /// 2. 事务外：发表资格（identity）→ 解析对象（文献首次评论时登记）→ 预读父评论 → 解析 @（identity）；
 /// 3. 事务：发表守卫计数 → 回复时拿楼锁、重读父评论判能否回复 → 插入 → 楼内回复数（回复时）与对象评论数 +1 →
-///    发布 {@link CommentPublishedEvent}（带事件 ID 与事务外转好的纯文本，PAP-141）；
+///    发布新评论产生的 `CommentPublishedEvent`（带事件 ID 与事务外转好的纯文本，PAP-141）；
 /// 4. 拼响应：自己的名片用资格那一步的。
 @Component
 @RequiredArgsConstructor
@@ -90,22 +86,24 @@ public class PublishCommentHandler implements CommandHandler<PublishCommentComma
             status -> {
               guard.admit(author, PublishKind.COMMENT);
               CommentAggregate locked = parent == null ? null : lockParent(parent);
-              long newId =
-                  comments.insert(
-                      NewComment.builder()
-                          .subjectId(subjectId)
-                          .rootId(locked == null ? null : locked.getRootId())
-                          .parentId(locked == null ? null : locked.getCommentId())
-                          .authorId(author)
-                          .body(resolved.body())
-                          .mentionedUserIds(resolved.mentionedUserIds())
-                          .createdAt(now)
-                          .build());
+              NewComment comment =
+                  NewComment.builder()
+                      .subjectId(subjectId)
+                      .rootId(locked == null ? null : locked.getRootId())
+                      .parentId(locked == null ? null : locked.getCommentId())
+                      .authorId(author)
+                      .body(resolved.body())
+                      .mentionedUserIds(resolved.mentionedUserIds())
+                      .createdAt(now)
+                      .build();
+              long newId = comments.insert(comment);
               if (locked != null) {
                 comments.recordReply(locked.getRootId(), now);
               }
               comments.incrementCommentCount(subjectId);
-              events.publishEvent(published(newId, subject, locked, author, resolved, plain, now));
+              events.publishEvent(
+                  comment.publishedEvent(
+                      newId, subject, locked == null ? null : locked.authorIdIfActive(), plain));
               return newId;
             });
     CommentRecord record = reads.findById(id).orElseThrow();
@@ -138,45 +136,5 @@ public class PublishCommentHandler implements CommandHandler<PublishCommentComma
         comments.find(parent.getCommentId()).orElseThrow(ReplyTargetGoneException::new);
     locked.requireRepliable();
     return locked;
-  }
-
-  /// 「评论已发表」事件。
-  ///
-  /// @param commentId 新评论
-  /// @param subject 对象
-  /// @param parent 锁内读到的父评论，根评论为 `null`
-  /// @param author 作者
-  /// @param resolved 正文与提及
-  /// @param plain 正文的纯文本
-  /// @param now 发表时刻
-  /// @return 事件
-  private static CommentPublishedEvent published(
-      long commentId,
-      SubjectView subject,
-      CommentAggregate parent,
-      long author,
-      ResolvedBody resolved,
-      String plain,
-      Instant now) {
-    SubjectOwner owner = subject.owner();
-    return CommentPublishedEvent.builder()
-        .eventId(UUID.randomUUID())
-        .commentId(commentId)
-        .version(CommentAggregate.INITIAL_VERSION)
-        .subjectId(subject.subjectId())
-        .subjectType(subject.type())
-        .subjectOwner(owner)
-        .rootCommentId(parent == null ? commentId : parent.getRootId())
-        .parentCommentId(parent == null ? null : parent.getCommentId())
-        .parentAuthorId(
-            parent != null && parent.getState() == CommentState.ACTIVE
-                ? parent.getAuthorId()
-                : null)
-        .authorId(author)
-        .authorAnonymous(owner != null && owner.anonymous() && owner.userId() == author)
-        .mentionedUserIds(resolved.mentionedUserIds())
-        .plainText(plain)
-        .publishedAt(now)
-        .build();
   }
 }

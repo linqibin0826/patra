@@ -3,6 +3,7 @@ package dev.patra.interaction.domain.post.model.aggregate;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import dev.patra.interaction.domain.post.event.PostDeletedEvent;
 import dev.patra.interaction.domain.post.model.enums.ArticleType;
 import dev.patra.interaction.domain.post.model.enums.EditKind;
 import dev.patra.interaction.domain.post.model.enums.FinalOutcome;
@@ -18,6 +19,7 @@ import dev.patra.interaction.domain.subject.model.vo.SubjectId;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
 /// 帖子聚合：发布、作者判定与编辑决策（内容没变什么都不做；发布后 5 分钟内覆盖不记版本；之后记下被替换的旧版本）。
@@ -63,6 +65,34 @@ class PostAggregateTest {
   void should_identify_author() {
     assertThat(post.isAuthor(AUTHOR)).isTrue();
     assertThat(post.isAuthor(8L)).isFalse();
+  }
+
+  /// 删除一条正常的经验：产生事件，带这条经验自己的登记对象（不是期刊）和删除时刻。
+  @Test
+  void should_produce_deleted_event_when_active() {
+    SubjectId ownSubject = SubjectId.of(3L);
+
+    PostDeletedEvent event = post.delete(ownSubject, CREATED).orElseThrow();
+
+    assertThat(event)
+        .usingRecursiveComparison()
+        .ignoringFields("eventId")
+        .isEqualTo(
+            PostDeletedEvent.builder()
+                .eventId(UUID.randomUUID())
+                .postId(1L)
+                .subjectId(ownSubject)
+                .authorId(AUTHOR)
+                .deletedAt(CREATED)
+                .build());
+  }
+
+  /// 已删除再删：什么都没发生，不产生事件。
+  @Test
+  void should_not_produce_event_when_already_deleted() {
+    PostAggregate deleted = post.toBuilder().status(PostStatus.DELETED).build();
+
+    assertThat(deleted.delete(SubjectId.of(3L), CREATED)).isEmpty();
   }
 
   /// 内容一字没变：什么都不做。

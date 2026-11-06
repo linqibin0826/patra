@@ -60,19 +60,4 @@ class ReactionEventsTest {
         .subjectId(SubjectId.of(4L))
         .subjectType(SubjectType.PUBLICATION);
   }
-
-  /// 有帮助已取消缺事件 ID。
-  @Test
-  void should_reject_unmarked_without_event_id() {
-    assertThatThrownBy(
-            () ->
-                HelpfulUnmarkedEvent.builder()
-                    .targetType(HelpfulTargetType.POST)
-                    .targetId(1L)
-                    .userId(3L)
-                    .unmarkedAt(AT)
-                    .build())
-        .isInstanceOf(NullPointerException.class)
-        .hasMessageContaining("eventId");
-  }
 }

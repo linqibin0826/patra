@@ -23,6 +23,22 @@ class CommentRecordTest {
     assertThat(comment(CommentState.DELETED, null).mentionedUserIds()).isEmpty();
   }
 
+  /// 父评论正常时给出它的作者；父评论已成占位时没有可提醒的人。
+  @Test
+  void should_give_parent_author_only_when_parent_active() {
+    CommentRecord.CommentRecordBuilder reply =
+        CommentRecord.builder().parentId(9L).parentAuthorId(7L);
+
+    assertThat(reply.parentState(CommentState.ACTIVE).build().activeParentAuthorId()).isEqualTo(7L);
+    assertThat(reply.parentState(CommentState.DELETED).build().activeParentAuthorId()).isNull();
+  }
+
+  /// 根评论没有父评论，也就没有父评论作者。
+  @Test
+  void should_have_no_parent_author_when_root() {
+    assertThat(comment(CommentState.ACTIVE, "正文").activeParentAuthorId()).isNull();
+  }
+
   /// 一条根评论。
   ///
   /// @param state 状态
