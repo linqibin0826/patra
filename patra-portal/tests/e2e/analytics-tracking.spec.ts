@@ -34,6 +34,7 @@ test("打开文献：浏览器事件经第一方路径发出，门户回 204，�
   page,
   request,
 }) => {
+  test.skip(!process.env.PATRA_GATEWAY_BASE_URL, "未设置 PATRA_GATEWAY_BASE_URL：跳过埋点冒烟");
   const errors: string[] = [];
   page.on("console", (message) => {
     if (message.type() === "error") errors.push(message.text());
