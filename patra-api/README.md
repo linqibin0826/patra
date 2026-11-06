@@ -179,19 +179,22 @@ Patra 项目遵循**测试金字塔**，各层使用不同的测试策略：
 
 ```bash
 # 1. Domain 层：纯单元测试（JUnit 5 + AssertJ，无框架依赖）
-./gradlew :patra-{service}:patra-{service}-domain:test
+./gradlew :patra-api:patra-{service}:patra-{service}-domain:test
 
 # 2. Application 层：Mock 单元测试（Mock 所有 Port 接口）
-./gradlew :patra-{service}:patra-{service}-app:test
+./gradlew :patra-api:patra-{service}:patra-{service}-app:test
 
-# 3. Infrastructure 层：单元测试 + 集成测试
-./gradlew :patra-{service}:patra-{service}-infra:test
+# 3. Infrastructure 层：单元测试在 test，集成测试在 integrationTest（TestContainers，需本机 Docker）
+./gradlew :patra-api:patra-{service}:patra-{service}-infra:test
+./gradlew :patra-api:patra-{service}:patra-{service}-infra:integrationTest
 
-# 4. Adapter 层：单元测试 + 切片测试
-./gradlew :patra-{service}:patra-{service}-adapter:test
+# 4. Adapter 层：单元测试在 test，切片测试（@WebMvcTest）在 integrationTest
+./gradlew :patra-api:patra-{service}:patra-{service}-adapter:test
+./gradlew :patra-api:patra-{service}:patra-{service}-adapter:integrationTest
 
-# 5. Boot 层：E2E 端到端测试（@SpringBootTest + TestContainers + Awaitility）
-./gradlew :patra-{service}:patra-{service}-boot:test
+# 5. Boot 层：@SpringBootTest 集成测试在 integrationTest，E2E 在 e2eTest（不是每个服务都有 E2E）
+./gradlew :patra-api:patra-{service}:patra-{service}-boot:integrationTest
+./gradlew :patra-api:patra-{service}:patra-{service}-boot:e2eTest
 
 # PR 前门控（check 本身不跑集成测试；e2eTest 也不在这条命令里，由 CI 跑）
 ./gradlew check integrationTest
