@@ -1,5 +1,6 @@
 -- 结算一次登录尝试（在校验密码之后，必定执行一次）。
 -- KEYS[1] 失败计数  KEYS[2] 在途登记  KEYS[3] 锁
+-- 三个键带同一个哈希标签，Redis Cluster 下在同一个槽，才能在一段脚本里操作（见 LoginThrottleAdapter#keys）。
 -- ARGV[1] 在途登记 ID  ARGV[2] 结果：SUCCESS / FAILURE / CANCEL
 -- ARGV[3] 失败次数上限  ARGV[4] 计数窗口毫秒  ARGV[5] 锁定毫秒
 -- 返回：0 没有锁；正数是锁的剩余毫秒

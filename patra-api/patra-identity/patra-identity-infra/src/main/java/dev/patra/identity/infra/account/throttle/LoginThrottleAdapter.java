@@ -168,13 +168,19 @@ public final class LoginThrottleAdapter implements LoginThrottlePort {
 
   /// 三个键：失败计数、在途登记、锁。
   ///
+  /// 账号类型和邮箱哈希放在哈希标签 `{...}` 里：Redis Cluster 只用花括号里的内容算槽，所以三个键
+  /// 一定在同一个槽。开始和结算脚本要原子地操作这三个键，不在同一个槽时 Cluster 会报 `CROSSSLOT`。
+  /// 标签按邮箱区分，不同邮箱的键仍然分散到各节点，不会都挤进一个槽。
+  ///
   /// @param accountType 账号类型
   /// @param email 邮箱
   /// @return 键名
   static List<String> keys(AccountType accountType, EmailAddress email) {
-    String suffix = accountType.getCode() + ":" + sha256Hex(email.value());
+    String hashTag = "{" + accountType.getCode() + ":" + sha256Hex(email.value()) + "}";
     return List.of(
-        "idn:login-failures:" + suffix, "idn:login-inflight:" + suffix, "idn:login-lock:" + suffix);
+        "idn:login-failures:" + hashTag,
+        "idn:login-inflight:" + hashTag,
+        "idn:login-lock:" + hashTag);
   }
 
   /// 计算 SHA-256 的十六进制形式。

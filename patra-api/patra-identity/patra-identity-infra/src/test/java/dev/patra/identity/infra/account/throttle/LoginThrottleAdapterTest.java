@@ -10,6 +10,7 @@ import dev.patra.identity.domain.session.exception.TemporarilyUnavailableExcepti
 import dev.patra.tool.core.security.AccountType;
 import io.lettuce.core.RedisLoadingException;
 import io.lettuce.core.RedisNoScriptException;
+import io.lettuce.core.cluster.SlotHash;
 import java.time.Duration;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
@@ -33,9 +34,9 @@ class LoginThrottleAdapterTest {
         LoginThrottleAdapter.keys(AccountType.USER, EmailAddress.of("chen.yu@example.com"));
 
     assertThat(keys).hasSize(3);
-    assertThat(keys.get(0)).matches("idn:login-failures:user:[0-9a-f]{64}");
-    assertThat(keys.get(1)).matches("idn:login-inflight:user:[0-9a-f]{64}");
-    assertThat(keys.get(2)).matches("idn:login-lock:user:[0-9a-f]{64}");
+    assertThat(keys.get(0)).matches("idn:login-failures:\\{user:[0-9a-f]{64}}");
+    assertThat(keys.get(1)).matches("idn:login-inflight:\\{user:[0-9a-f]{64}}");
+    assertThat(keys.get(2)).matches("idn:login-lock:\\{user:[0-9a-f]{64}}");
     assertThat(String.join(",", keys)).doesNotContain("chen.yu");
   }
 
@@ -47,6 +48,15 @@ class LoginThrottleAdapterTest {
 
     assertThat(suffix(a.get(0))).isEqualTo(suffix(a.get(2)));
     assertThat(suffix(a.get(0))).isNotEqualTo(suffix(b.get(0)));
+  }
+
+  @Test
+  @DisplayName("同一个邮箱的三个键落在同一个 Cluster 槽，脚本才能一次操作它们")
+  void should_place_keys_of_same_email_in_same_cluster_slot() {
+    List<String> keys =
+        LoginThrottleAdapter.keys(AccountType.USER, EmailAddress.of("chen.yu@example.com"));
+
+    assertThat(keys.stream().map(SlotHash::getSlot).distinct()).hasSize(1);
   }
 
   @Test
