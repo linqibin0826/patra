@@ -176,7 +176,7 @@ patra:
 
 - 按「账号类型 + 邮箱」计数，没注册过的邮箱也一样。15 分钟内失败 5 次锁 15 分钟，成功一次清零。再认证、改密码时的当前密码校验共用这把锁：错计失败，锁定期内 429；重设密码成功后清零并解锁。找回密码的申请与提交不计入。
 - 只有确认的失败才计数；正在校验的尝试单独登记，「失败数 + 在途数」到上限时返回 429（1 秒），不上锁。
-- Redis 键：`idn:login-failures:user:{邮箱 SHA-256}`、`idn:login-inflight:…`、`idn:login-lock:…`，脚本在 `infra/src/main/resources/redis/`。
+- Redis 键：`idn:login-failures:{user:<邮箱 SHA-256>}`、`idn:login-inflight:…`、`idn:login-lock:…`，脚本在 `infra/src/main/resources/redis/`。花括号是哈希标签，让三个键在 Redis Cluster 下落在同一个槽。
 - 配置：
 
 ```yaml

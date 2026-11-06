@@ -298,8 +298,8 @@ abstract class IdentityFlowITSupport {
   /// @param email 规范化之后的邮箱
   /// @return 失败计数键、锁键
   static List<String> loginThrottleKeys(String email) {
-    String suffix = AccountType.USER.getCode() + ":" + sha256Hex(email);
-    return List.of("idn:login-failures:" + suffix, "idn:login-lock:" + suffix);
+    String hashTag = "{" + AccountType.USER.getCode() + ":" + sha256Hex(email) + "}";
+    return List.of("idn:login-failures:" + hashTag, "idn:login-lock:" + hashTag);
   }
 
   /// 某用户最新一条登录记录的 ID，也就是会话 ID。
