@@ -49,7 +49,7 @@ Gradle path `:parent:child` 必须与物理目录 `parent/child/` **一一对应
 ```bash
 ./gradlew clean assemble           # 构建全部模块（不跑测试 / lint）
 ./gradlew clean build              # 构建 + 测试 + SpotBugs + Spotless + JaCoCo
-./gradlew check                    # 仅运行测试 + 代码质量（含 spotbugsMain + spotlessCheck）
+./gradlew check                    # 单元测试 + 代码质量（含 spotbugsMain + spotlessCheck），不跑集成测试
 ./gradlew spotlessApply            # 一次性格式化全部 Java + *.gradle.kts
 ./gradlew spotbugsMain             # 跑 SpotBugs 静态分析（HTML 报告在 build/reports/spotbugs/）
 ./gradlew :patra-api:patra-catalog:patra-catalog-boot:bootRun  # 启动 catalog 服务
@@ -116,7 +116,7 @@ PR 由 Claude Action（`.github/workflows/claude-code-review.yml`）在转 ready
   - 单元：`./gradlew test` 或 `./gradlew :<module>:test`
   - 集成：`./gradlew integrationTest`（启 Testcontainers）
   - E2E：`./gradlew e2eTest`
-  - 一把梭：`./gradlew check`
+  - PR 前门控：`./gradlew check integrationTest`（`check` 本身不跑集成测试；`e2eTest` 也不在这条命令里，由 CI 跑）
 
 ### CI 流水线（`.github/workflows/ci.yml`）
 

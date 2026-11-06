@@ -193,8 +193,8 @@ Patra 项目遵循**测试金字塔**，各层使用不同的测试策略：
 # 5. Boot 层：E2E 端到端测试（@SpringBootTest + TestContainers + Awaitility）
 ./gradlew :patra-{service}:patra-{service}-boot:test
 
-# 运行所有测试
-./gradlew check
+# PR 前门控（check 本身不跑集成测试；e2eTest 也不在这条命令里，由 CI 跑）
+./gradlew check integrationTest
 ```
 
 ### 测试覆盖率要求

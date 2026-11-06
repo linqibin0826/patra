@@ -28,4 +28,4 @@ patra-api 是 Java 25 + Spring Boot 4 + Gradle 项目，TDD / 验证时遵循以
 
 1. **编译**：`./gradlew compileJava compileTestJava`——IDE 不标红不等于编译通过（IDE 可能用增量缓存）
 2. **六边形纯净性**：domain 层由 convention plugin（`build-logic/`）禁用框架依赖，`./gradlew :<service>-domain:check` 通过才算纯净
-3. **全栈门控（PR 前必跑）**：`./gradlew check`，包含各模块 `test` 与 `integrationTest`（TestContainers 起 PG17），不得以"太慢"为由跳过
+3. **全栈门控（PR 前必跑）**：`./gradlew check integrationTest`（集成测试用 TestContainers，需本机 Docker），不得以"太慢"为由跳过。`check` 本身不跑集成测试；`e2eTest` 也不在这条命令里，由 CI 跑
