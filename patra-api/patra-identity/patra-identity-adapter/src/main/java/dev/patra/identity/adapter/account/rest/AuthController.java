@@ -5,9 +5,11 @@ import dev.patra.identity.adapter.account.rest.request.ReauthRequest;
 import dev.patra.identity.adapter.account.rest.request.RegisterRequest;
 import dev.patra.identity.adapter.account.rest.response.AuthenticatedUserResponse;
 import dev.patra.identity.adapter.account.rest.response.CurrentUserResponse;
+import dev.patra.identity.adapter.account.rest.response.HumanVerificationResponse;
 import dev.patra.identity.adapter.account.rest.response.ReauthenticatedResponse;
 import dev.patra.identity.app.account.usecase.login.AuthenticatedUser;
 import dev.patra.identity.app.account.usecase.login.LoginUserCommand;
+import dev.patra.identity.app.account.usecase.query.HumanVerificationQueryService;
 import dev.patra.identity.app.account.usecase.query.UserQueryService;
 import dev.patra.identity.app.account.usecase.reauth.ReauthenticateUserCommand;
 import dev.patra.identity.app.account.usecase.reauth.Reauthenticated;
@@ -16,8 +18,10 @@ import dev.patra.tool.cqrs.CommandBus;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.CacheControl;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -35,6 +39,17 @@ public class AuthController {
 
   private final CommandBus commandBus;
   private final UserQueryService userQueryService;
+  private final HumanVerificationQueryService humanVerificationQueryService;
+
+  /// 当前人机验证厂商和站点标识。匿名可访问，不缓存：切换厂商后下一次读取就要用上。
+  ///
+  /// @return 厂商和站点标识
+  @GetMapping("/human-verification")
+  public ResponseEntity<HumanVerificationResponse> humanVerification() {
+    return ResponseEntity.ok()
+        .cacheControl(CacheControl.noStore())
+        .body(HumanVerificationResponse.from(humanVerificationQueryService.current()));
+  }
 
   /// 注册并登录。成功返回 201。客户端 IP 取规范化之后的 `getRemoteAddr()`（{@link ClientIp}）：网关写的 `Forwarded` /
   /// `X-Forwarded-For` 已按 `forward-headers-strategy: framework` 解析，经受信转发链路（门户 → 网关）
@@ -60,6 +75,7 @@ public class AuthController {
                 .deviceId(request.deviceId())
                 .clientIp(ClientIp.from(http))
                 .userAgent(userAgent)
+                .verificationToken(request.verificationToken())
                 .build());
     return toResponse(result);
   }
@@ -84,6 +100,7 @@ public class AuthController {
                 .deviceId(request.deviceId())
                 .clientIp(ClientIp.from(http))
                 .userAgent(userAgent)
+                .verificationToken(request.verificationToken())
                 .build());
     return toResponse(result);
   }

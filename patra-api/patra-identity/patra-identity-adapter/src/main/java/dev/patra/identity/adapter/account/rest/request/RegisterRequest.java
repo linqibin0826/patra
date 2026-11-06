@@ -7,10 +7,16 @@ package dev.patra.identity.adapter.account.rest.request;
 /// @param password 密码
 /// @param clientType 客户端类型，不传按 `web`
 /// @param deviceId 设备标识，可不传
+/// @param verificationToken 人机验证令牌，可以没有
 public record RegisterRequest(
-    String email, String username, String password, String clientType, String deviceId) {
+    String email,
+    String username,
+    String password,
+    String clientType,
+    String deviceId,
+    String verificationToken) {
 
-  /// 不输出密码。
+  /// 不输出密码和人机验证令牌。
   ///
   /// @return 描述
   @Override

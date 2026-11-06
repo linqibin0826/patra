@@ -1,8 +1,10 @@
 package dev.patra.identity.app.account.usecase.password;
 
+import dev.patra.identity.app.account.service.HumanVerificationGuard;
 import dev.patra.identity.domain.account.exception.PasswordResetLimitedException;
 import dev.patra.identity.domain.account.model.aggregate.User;
 import dev.patra.identity.domain.account.model.enums.EmailTokenPurpose;
+import dev.patra.identity.domain.account.model.enums.HumanVerificationAction;
 import dev.patra.identity.domain.account.model.read.UserAccountReadModel;
 import dev.patra.identity.domain.account.model.vo.EmailAddress;
 import dev.patra.identity.domain.account.model.vo.EmailTokenSecret;
@@ -38,6 +40,7 @@ import org.springframework.transaction.support.TransactionOperations;
 public class RequestPasswordResetHandler
     implements CommandHandler<RequestPasswordResetCommand, PasswordResetRequested> {
 
+  private final HumanVerificationGuard verificationGuard;
   private final UserRepository users;
   private final UserReadPort userReadPort;
   private final PasswordResetThrottlePort passwordResetThrottle;
@@ -51,6 +54,7 @@ public class RequestPasswordResetHandler
 
   /// 创建处理器。
   ///
+  /// @param verificationGuard 人机验证
   /// @param users 用户仓储
   /// @param userReadPort 读端口
   /// @param passwordResetThrottle 限流
@@ -61,6 +65,7 @@ public class RequestPasswordResetHandler
   /// @param transactions 事务
   /// @param clock 时钟
   public RequestPasswordResetHandler(
+      HumanVerificationGuard verificationGuard,
       UserRepository users,
       UserReadPort userReadPort,
       PasswordResetThrottlePort passwordResetThrottle,
@@ -70,6 +75,7 @@ public class RequestPasswordResetHandler
       EmailDeliveryPort emailDelivery,
       TransactionOperations transactions,
       Clock clock) {
+    this.verificationGuard = verificationGuard;
     this.users = users;
     this.userReadPort = userReadPort;
     this.passwordResetThrottle = passwordResetThrottle;
@@ -92,6 +98,8 @@ public class RequestPasswordResetHandler
             violation -> {
               throw new InvalidUserFieldsException(List.of(violation));
             });
+    // 在限流之前：没过的请求不能占别人邮箱的限流名额
+    verificationGuard.require(HumanVerificationAction.PASSWORD_RESET, command.verificationToken());
     EmailAddress email = EmailAddress.of(command.email());
     Instant now = clock.instant();
     passwordResetThrottle

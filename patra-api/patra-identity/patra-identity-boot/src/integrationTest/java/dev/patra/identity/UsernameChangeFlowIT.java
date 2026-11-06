@@ -2,6 +2,7 @@ package dev.patra.identity;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import dev.patra.identity.config.HumanVerificationFixture;
 import dev.patra.identity.config.IdentityClockITSpringConfig;
 import dev.patra.identity.config.IdentityITPostgreSQLContainerInitializer;
 import dev.patra.identity.config.IdentitySecurityMailITSpringConfig;
@@ -126,7 +127,10 @@ class UsernameChangeFlowIT {
         .post()
         .uri("/auth/register")
         .contentType(MediaType.APPLICATION_JSON)
-        .body(Map.of("email", email, "username", username, "password", PASSWORD))
+        .body(
+            HumanVerificationFixture.withToken(
+                "/auth/register",
+                Map.of("email", email, "username", username, "password", PASSWORD)))
         .exchange()
         .expectBody(String.class)
         .returnResult();

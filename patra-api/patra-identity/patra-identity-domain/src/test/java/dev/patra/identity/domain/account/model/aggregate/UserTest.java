@@ -4,7 +4,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import dev.patra.identity.domain.account.exception.InvalidCredentialsException;
 import dev.patra.identity.domain.account.exception.InvalidUserStateTransitionException;
+import dev.patra.identity.domain.account.exception.UserBannedException;
 import dev.patra.identity.domain.account.exception.UserPendingDeletionException;
 import dev.patra.identity.domain.account.exception.UsernameChangeCooldownException;
 import dev.patra.identity.domain.account.model.enums.UserStatus;
@@ -196,6 +198,24 @@ class UserTest {
 
     assertThatThrownBy(deletedUser()::requireActive)
         .isInstanceOf(AuthenticationRequiredException.class);
+  }
+
+  @Test
+  @DisplayName("登录资格：ACTIVE 和 PENDING_DELETION 可以登录，BANNED 403，DELETED 401")
+  void should_guard_login_by_status() {
+    User active = User.register(EMAIL, USERNAME);
+    assertThatCode(active::requireLoginEligible).doesNotThrowAnyException();
+
+    User pending = User.register(EMAIL, USERNAME);
+    pending.requestDeletion(T0, COOLING);
+    assertThatCode(pending::requireLoginEligible).doesNotThrowAnyException();
+
+    User banned = User.register(EMAIL, USERNAME);
+    banned.ban(T0);
+    assertThatThrownBy(banned::requireLoginEligible).isInstanceOf(UserBannedException.class);
+
+    assertThatThrownBy(deletedUser()::requireLoginEligible)
+        .isInstanceOf(InvalidCredentialsException.class);
   }
 
   @Test

@@ -1,5 +1,6 @@
 package dev.patra.identity.app.account.usecase.register;
 
+import dev.patra.identity.app.account.service.HumanVerificationGuard;
 import dev.patra.identity.app.account.usecase.login.AuthenticatedUser;
 import dev.patra.identity.domain.account.exception.UserIdentifierTakenException;
 import dev.patra.identity.domain.account.model.aggregate.EmailToken;
@@ -7,6 +8,7 @@ import dev.patra.identity.domain.account.model.aggregate.User;
 import dev.patra.identity.domain.account.model.aggregate.UserPasswordCredential;
 import dev.patra.identity.domain.account.model.aggregate.UserProfile;
 import dev.patra.identity.domain.account.model.enums.EmailTokenPurpose;
+import dev.patra.identity.domain.account.model.enums.HumanVerificationAction;
 import dev.patra.identity.domain.account.model.read.UserAccountReadModel;
 import dev.patra.identity.domain.account.model.vo.EmailAddress;
 import dev.patra.identity.domain.account.model.vo.PasswordHash;
@@ -48,7 +50,7 @@ import org.springframework.transaction.support.TransactionOperations;
 
 /// 注册前台用户，成功后直接建会话。
 ///
-/// 顺序：五个字段一起校验（有错一次报全）→ 邮箱、用户名的占用一起查（别人保留期内的旧名也算占用，
+/// 顺序：五个字段一起校验（有错一次报全）→ 人机验证（事务外，没过的请求探测不了占用情况，也不做哈希）→ 邮箱、用户名的占用一起查（别人保留期内的旧名也算占用，
 /// 有错一次报全）→ 哈希 → 在一个事务里存用户、存空资料、存凭据、建会话。
 /// 哈希放在事务外：事务开始时就会占住数据库连接，而哈希可能要排队几秒。
 /// 建会话放在事务里：Redis 写失败整个注册回滚，用户重试不会撞 409。
@@ -59,6 +61,7 @@ import org.springframework.transaction.support.TransactionOperations;
 @RequiredArgsConstructor
 public class RegisterUserHandler implements CommandHandler<RegisterUserCommand, AuthenticatedUser> {
 
+  private final HumanVerificationGuard verificationGuard;
   private final UserRepository users;
   private final UserProfileRepository profiles;
   private final UserPasswordCredentialRepository credentials;
@@ -92,6 +95,7 @@ public class RegisterUserHandler implements CommandHandler<RegisterUserCommand, 
     if (!violations.isEmpty()) {
       throw new InvalidUserFieldsException(violations);
     }
+    verificationGuard.require(HumanVerificationAction.REGISTER, command.verificationToken());
     EmailAddress email = EmailAddress.of(command.email());
     Username username = Username.of(command.username());
     LoginClient client = LoginClient.of(command.clientType(), command.deviceId());

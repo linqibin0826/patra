@@ -3,7 +3,6 @@ package dev.patra.identity.app.account.usecase.oauth;
 import dev.patra.identity.app.account.service.NewDeviceLoginNotifier;
 import dev.patra.identity.app.account.usecase.login.AuthenticatedUser;
 import dev.patra.identity.domain.account.exception.InvalidCredentialsException;
-import dev.patra.identity.domain.account.exception.UserBannedException;
 import dev.patra.identity.domain.account.model.aggregate.ExternalIdentity;
 import dev.patra.identity.domain.account.model.aggregate.User;
 import dev.patra.identity.domain.account.model.read.UserAccountReadModel;
@@ -80,12 +79,7 @@ public class CompleteProviderLoginHandler
                 status -> {
                   User locked =
                       users.findByIdForUpdate(userId).orElseThrow(InvalidCredentialsException::new);
-                  if (locked.isDeleted()) {
-                    throw new InvalidCredentialsException();
-                  }
-                  if (locked.isBanned()) {
-                    throw new UserBannedException();
-                  }
+                  locked.requireLoginEligible();
                   // 锁内重读为准：并发登录靠这把锁串行，乐观锁不会撞
                   ExternalIdentity identity =
                       identities

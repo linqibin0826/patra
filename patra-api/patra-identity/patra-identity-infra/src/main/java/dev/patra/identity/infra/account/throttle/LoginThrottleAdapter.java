@@ -5,6 +5,7 @@ import dev.patra.identity.domain.account.model.vo.EmailAddress;
 import dev.patra.identity.domain.account.policy.LoginThrottlePolicy;
 import dev.patra.identity.domain.account.port.throttle.LoginAttempt;
 import dev.patra.identity.domain.account.port.throttle.LoginThrottlePort;
+import dev.patra.identity.domain.account.port.throttle.LoginThrottleStatus;
 import dev.patra.identity.domain.session.exception.TemporarilyUnavailableException;
 import dev.patra.identity.infra.session.support.TransientRedisFailures;
 import dev.patra.tool.core.security.AccountType;
@@ -17,6 +18,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -50,6 +52,30 @@ public final class LoginThrottleAdapter implements LoginThrottlePort {
   public LoginThrottleAdapter(StringRedisTemplate redis, Supplier<LoginThrottlePolicy> policy) {
     this.redis = Objects.requireNonNull(redis, "redis 不能为 null");
     this.policy = Objects.requireNonNull(policy, "policy 不能为 null");
+  }
+
+  /// 读失败次数和锁的剩余时间。两次读取不要求原子：这个状态只用来判断要不要先过人机验证。
+  ///
+  /// @param accountType 账号类型
+  /// @param email 邮箱
+  /// @return 状态
+  @Override
+  public LoginThrottleStatus status(AccountType accountType, EmailAddress email) {
+    List<String> keys = keys(accountType, email);
+    try {
+      String failures = redis.opsForValue().get(keys.get(0));
+      Long lockMillis = redis.getExpire(keys.get(2), TimeUnit.MILLISECONDS);
+      return LoginThrottleStatus.of(
+          failures == null ? 0 : Integer.parseInt(failures),
+          lockMillis != null && lockMillis > 0
+              ? Optional.of(Duration.ofMillis(lockMillis))
+              : Optional.empty());
+    } catch (RuntimeException e) {
+      if (TransientRedisFailures.isTransient(e)) {
+        throw new TemporarilyUnavailableException(e);
+      }
+      throw e;
+    }
   }
 
   /// 开始一次尝试。

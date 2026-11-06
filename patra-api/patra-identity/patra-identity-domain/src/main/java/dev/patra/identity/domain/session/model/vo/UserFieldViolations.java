@@ -23,6 +23,15 @@ public final class UserFieldViolations {
   /// 注册验证码字段名，和请求体一致。
   public static final String CODE = "code";
 
+  /// 人机验证令牌字段名，和请求体一致。
+  public static final String VERIFICATION_TOKEN = "verificationToken";
+
+  /// 要先过人机验证，但没带令牌。
+  public static final String VERIFICATION_REQUIRED = "VERIFICATION_REQUIRED";
+
+  /// 人机验证的令牌没通过。
+  public static final String VERIFICATION_FAILED = "VERIFICATION_FAILED";
+
   /// 没有可用的验证码：过期、已用或错满次数。
   public static final String EXPIRED = "EXPIRED";
 
@@ -715,6 +724,20 @@ public final class UserFieldViolations {
   /// @return 字段错误
   public static FieldViolation usernamesTooMany() {
     return FieldViolation.of(USERNAMES, TOO_MANY, "一次最多 100 个用户名");
+  }
+
+  /// 这次操作要先过人机验证，但没带令牌。
+  ///
+  /// @return 字段错误
+  public static FieldViolation verificationRequired() {
+    return FieldViolation.of(VERIFICATION_TOKEN, VERIFICATION_REQUIRED, "请先完成人机验证");
+  }
+
+  /// 人机验证的令牌没通过。
+  ///
+  /// @return 字段错误
+  public static FieldViolation verificationFailed() {
+    return FieldViolation.of(VERIFICATION_TOKEN, VERIFICATION_FAILED, "人机验证没有通过，请重试");
   }
 
   /// 第 `index` 条链接的子字段路径，如 `links[1].url`。

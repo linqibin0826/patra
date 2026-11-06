@@ -411,7 +411,7 @@ analytics 的执行器 `patra-analytics`（端口 6701，不映射到宿主机�
 - 门户没配 `PATRA_PORTAL_PUBLIC_URL`，「复制链接」按请求的 `Host` 拼成 `http://patra.linqibin.dev/...`，点开后由 Always Use HTTPS 跳到 https。
 - 外网访问也经 OrbStack 端口转发进入，门户看到的来源都是 `192.168.97.1`，登录设备列表里外网用户同样显示「内网」。
 - 会话 Cookie 仍是 `PATRA_SESSION_COOKIE_SECURE=false`（不带 `Secure`、不带 `__Host-` 前缀），经 https 访问照常能用。
-- 没有人机验证，注册邮件经 Resend 以 `linqibin.dev` 发出：被刷注册会影响域名的发信信誉。
+- 人机验证的真实密钥只绑定 `patra.linqibin.dev`：从 tailnet 用 IP 访问门户时校验不过，注册、找回密码和被触发验证的登录都要走公网域名。凭据放 `~/.patra/secrets/identity.env`，见 identity README 第 19 节。
 
 ## 应用侧配置（patra-api，本仓库范围外）
 

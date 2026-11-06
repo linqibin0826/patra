@@ -52,6 +52,7 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 @EnableConfigurationProperties({
   IdentityProperties.class,
   LoginThrottleProperties.class,
+  HumanVerificationProperties.class,
   AvatarStorageProperties.class
 })
 public class IdentityConfiguration {

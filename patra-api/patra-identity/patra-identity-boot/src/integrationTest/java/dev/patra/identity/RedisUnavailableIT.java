@@ -2,6 +2,7 @@ package dev.patra.identity;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import dev.patra.identity.config.HumanVerificationFixture;
 import dev.patra.identity.config.IdentityITPostgreSQLContainerInitializer;
 import dev.patra.identity.config.IdentitySecurityMailITSpringConfig;
 import dev.patra.tool.test.container.initializer.RabbitMQContainerInitializer;
@@ -68,7 +69,8 @@ class RedisUnavailableIT {
                 Map.of(
                     "email", "no-redis@example.com",
                     "username", "u-no-redis",
-                    "password", "No-Redis-Pass-13"))
+                    "password", "No-Redis-Pass-13",
+                    "verificationToken", HumanVerificationFixture.REGISTER))
             .exchange()
             .expectBody(String.class)
             .returnResult();

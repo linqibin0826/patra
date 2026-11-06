@@ -13,6 +13,13 @@ import java.util.Optional;
 /// Redis 不可用时，所有方法都抛 {@link TemporarilyUnavailableException}。
 public interface LoginThrottlePort {
 
+  /// 读一个邮箱当前的状态，只读。人机验证据此判断要不要先过验证。
+  ///
+  /// @param accountType 账号类型
+  /// @param email 邮箱
+  /// @return 失败次数和锁的剩余时间
+  LoginThrottleStatus status(AccountType accountType, EmailAddress email);
+
   /// 开始一次尝试，在校验密码之前调用。
   ///
   /// @param accountType 账号类型

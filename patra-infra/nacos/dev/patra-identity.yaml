@@ -14,3 +14,15 @@ patra:
     mail:
       links:
         base-url: ${PATRA_PORTAL_BASE_URL:http://linqibins-mac-mini:4000}
+    # 人机验证：切换厂商只改 provider，identity 在线刷新，门户不用重新部署。切到 trustturn 前看 identity README 第 19 节。
+    # 凭据只放 ~/.patra/secrets/identity.env，这里不写值；当前厂商缺凭据时 identity 起不来
+    human-verification:
+      provider: turnstile
+      turnstile:
+        site-key: ${PATRA_IDENTITY_TURNSTILE_SITE_KEY:}
+        secret: ${PATRA_IDENTITY_TURNSTILE_SECRET:}
+        allowed-hostnames: [patra.linqibin.dev]
+      trust-turn:
+        site-key: ${PATRA_IDENTITY_TRUSTTURN_SITE_KEY:}
+        app-secret: ${PATRA_IDENTITY_TRUSTTURN_APP_SECRET:}
+        allowed-origins: [https://patra.linqibin.dev]

@@ -13,11 +13,17 @@ class RegisterRequestTest {
   @DisplayName("toString 输出邮箱和用户名，不输出密码")
   void should_hide_password_in_to_string() {
     assertThat(
-            new RegisterRequest("chen.yu@example.com", "chen-yu", "Secret-Value-1", null, null)
+            new RegisterRequest(
+                    "chen.yu@example.com",
+                    "chen-yu",
+                    "Secret-Value-1",
+                    null,
+                    null,
+                    "Verify-Value-1")
                 .toString())
         .contains("chen.yu@example.com")
         .contains("username=chen-yu")
         .contains("clientType=")
-        .doesNotContain("Secret-Value-1");
+        .doesNotContain("Secret-Value-1", "Verify-Value-1");
   }
 }

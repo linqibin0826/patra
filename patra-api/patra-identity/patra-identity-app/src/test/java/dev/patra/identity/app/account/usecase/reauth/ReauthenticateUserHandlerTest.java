@@ -11,6 +11,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import dev.patra.identity.app.account.service.CurrentPasswordVerifier;
+import dev.patra.identity.app.account.service.ThrottledPasswordCheck;
 import dev.patra.identity.domain.account.exception.CurrentPasswordMismatchException;
 import dev.patra.identity.domain.account.exception.LoginTemporarilyLockedException;
 import dev.patra.identity.domain.account.model.aggregate.User;
@@ -77,7 +78,8 @@ class ReauthenticateUserHandlerTest {
           currentUserPort,
           users,
           userReadPort,
-          new CurrentPasswordVerifier(credentials, passwordHashing, loginThrottle),
+          new CurrentPasswordVerifier(
+              credentials, passwordHashing, new ThrottledPasswordCheck(loginThrottle)),
           sessions,
           ReauthenticationPolicy.of(Duration.ofMinutes(10), Duration.ofSeconds(10)));
 

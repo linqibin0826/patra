@@ -15,6 +15,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import dev.patra.identity.app.account.service.CurrentPasswordVerifier;
+import dev.patra.identity.app.account.service.ThrottledPasswordCheck;
 import dev.patra.identity.app.account.usecase.login.AuthenticatedUser;
 import dev.patra.identity.domain.account.exception.CurrentPasswordMismatchException;
 import dev.patra.identity.domain.account.exception.UserPendingDeletionException;
@@ -118,7 +119,8 @@ class ChangePasswordHandlerTest {
           userReadPort,
           passwordHashing,
           new PasswordPolicy(Set.of("password123")::contains),
-          new CurrentPasswordVerifier(credentials, passwordHashing, loginThrottle),
+          new CurrentPasswordVerifier(
+              credentials, passwordHashing, new ThrottledPasswordCheck(loginThrottle)),
           tokens,
           sessions,
           new SessionTerminator(sessions, records),

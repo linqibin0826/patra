@@ -49,7 +49,7 @@ public class GatewaySecurityConfiguration {
   static final String[] BLOCKED_PATHS = {"/*/_internal/**", "/*/admin/**", "/*/actuator/**"};
 
   /// identity 上匿名也能访问的路径：注册、登录、登出（幂等，会话已失效也要能到达）、
-  /// 邮箱验证（邮件链接在哪台设备点都要能用；带会话时照样换成断言）、找回密码的申请与提交
+  /// 当前人机验证厂商（门户渲染登录、注册页时还没有会话）、邮箱验证（邮件链接在哪台设备点都要能用；带会话时照样换成断言）、找回密码的申请与提交
   /// （`/auth/password/**`，忘了密码的人没有会话）、改邮箱的确认与撤销（`/auth/email/change/**`，
   /// 新旧邮箱的链接在哪台设备点都要能用；申请在 `/me/email/change`，不在这个前缀下）、
   /// 第三方登录的发起、回调和首次注册（`oauth2Login` 的默认路径，门户转发；绑定回调带会话时照样换成断言，
@@ -59,6 +59,7 @@ public class GatewaySecurityConfiguration {
     "/patra-identity/auth/register",
     "/patra-identity/auth/login",
     "/patra-identity/auth/logout",
+    "/patra-identity/auth/human-verification",
     "/patra-identity/auth/email/verify",
     "/patra-identity/auth/password/**",
     "/patra-identity/auth/email/change/**",

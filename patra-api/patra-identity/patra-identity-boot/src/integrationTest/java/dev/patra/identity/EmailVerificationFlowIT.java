@@ -3,6 +3,7 @@ package dev.patra.identity;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.patra.identity.api.account.event.EmailVerificationMailEvent;
+import dev.patra.identity.config.HumanVerificationFixture;
 import dev.patra.identity.config.IdentityClockITSpringConfig;
 import dev.patra.identity.config.IdentityITPostgreSQLContainerInitializer;
 import dev.patra.identity.config.IdentitySecurityMailITFixture;
@@ -98,7 +99,14 @@ class EmailVerificationFlowIT {
         post(
             "/auth/register",
             Map.of(
-                "email", "flow.mail@example.com", "username", "u-flow-mail", "password", PASSWORD),
+                "email",
+                "flow.mail@example.com",
+                "username",
+                "u-flow-mail",
+                "password",
+                PASSWORD,
+                "verificationToken",
+                HumanVerificationFixture.REGISTER),
             headers(
                 Map.of(
                     "X-Forwarded-Host", "evil.example",
@@ -285,7 +293,15 @@ class EmailVerificationFlowIT {
     RawResponse response =
         post(
             "/auth/register",
-            Map.of("email", email, "username", username, "password", PASSWORD),
+            Map.of(
+                "email",
+                email,
+                "username",
+                username,
+                "password",
+                PASSWORD,
+                "verificationToken",
+                HumanVerificationFixture.REGISTER),
             new HttpHeaders());
     assertThat(response.status()).as(response.body()).isEqualTo(201);
     return response;
@@ -297,7 +313,16 @@ class EmailVerificationFlowIT {
   /// @return 响应
   private RawResponse login(String email) {
     RawResponse response =
-        post("/auth/login", Map.of("email", email, "password", PASSWORD), new HttpHeaders());
+        post(
+            "/auth/login",
+            Map.of(
+                "email",
+                email,
+                "password",
+                PASSWORD,
+                "verificationToken",
+                HumanVerificationFixture.LOGIN),
+            new HttpHeaders());
     assertThat(response.status()).as(response.body()).isEqualTo(200);
     return response;
   }
