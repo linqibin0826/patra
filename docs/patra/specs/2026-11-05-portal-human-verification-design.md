@@ -150,11 +150,12 @@ interface WidgetProps {
 只给 `/login`、`/register`、`/forgot-password` 加，写在 `next.config.ts` 的 `headers()`，只限制这两项，其他资源不动：
 
 ```text
-script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com
+script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com https://static.cloudflareinsights.com
 frame-src  https://challenges.cloudflare.com https://api.trustturn.cc
 ```
 
 - `'unsafe-inline'`：Next 的水合脚本是内联的，用 nonce 要把这些页面全部变成动态渲染并改 proxy，不值得。目的是不放行 TRUSTTURN 的脚本，不是防 XSS。
+- `static.cloudflareinsights.com`：Cloudflare 隧道自动往页面注入的 Web Analytics 脚本。上线后发现被拦，用户决定放行。
 - 开发模式加 `'unsafe-eval'`，否则 webpack 的 dev 脚本跑不了。
 - **隐性约束**：CSP 随文档响应下发，登录或注册成功后是客户端导航，所以这批用户之后的页面都跑在这份 CSP 下，直接打开其他页面的用户没有。目前门户没有 `<iframe>`、`next/script`、`<object>`、`new Worker`，没有页面受影响。以后在这三个页面以外加第三方脚本或同源 iframe，要同时改这里，否则只有从登录页进来的用户会坏。
 - **`SetPasswordDialog` 在设置页**，不在这三个页面，没有 CSP，这个对话框的隔离靠组件本身：TRUSTTURN 只用 iframe。这里不扩大范围。

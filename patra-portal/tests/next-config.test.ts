@@ -53,6 +53,15 @@ describe("人机验证页面的 CSP", () => {
     },
   );
 
+  it.each(["/login", "/register", "/forgot-password"])(
+    "%s 放行 Cloudflare 隧道注入的统计脚本",
+    async (path) => {
+      const scriptSrc = (await cspOf(path))?.split(";").find((d) => d.includes("script-src"));
+
+      expect(scriptSrc).toContain("https://static.cloudflareinsights.com");
+    },
+  );
+
   it("只有开发模式才放行 unsafe-eval", async () => {
     vi.stubEnv("NODE_ENV", "production");
     expect(await cspOf("/login")).not.toContain("unsafe-eval");
