@@ -21,7 +21,8 @@ import tools.jackson.core.JacksonException;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
-/// TRUSTTURN 校验。运营方和数据处理方式都没有公开说明，所以请求只带站点标识、票据和期望的动作，不传任何用户数据。
+/// TRUSTTURN 校验。运营方和数据处理方式都没有公开说明，所以服务端请求只带站点标识、票据和期望的动作，不传任何用户数据。
+/// 访客浏览器加载组件时自己连它，那部分不经过这里。
 ///
 /// `success` 为真之外，还要 `site_key` 相同、`action` 一致、`origin` 在允许名单里。`risk` 文档没说明取值，只打 DEBUG。
 /// 不重试：文档没有提供幂等机制，票据可能已被消费。

@@ -225,6 +225,18 @@ class HumanVerificationConfigurationTest {
                 HumanVerificationProvider.TRUST_TURN, "b"));
   }
 
+  /// Nacos 里写成 `${PATRA_...:}`，环境变量没设时绑定出来是空串，不是 null。
+  @Test
+  @DisplayName("站点标识是空串时算没配")
+  void site_keys_exclude_blank_values() {
+    HumanVerificationProperties properties = new HumanVerificationProperties();
+    properties.getTurnstile().setSiteKey("a");
+    properties.getTrustTurn().setSiteKey("");
+
+    assertThat(HumanVerificationConfiguration.siteKeys(properties))
+        .isEqualTo(Map.of(HumanVerificationProvider.TURNSTILE, "a"));
+  }
+
   /// 测试用的配置注册。
   @Configuration(proxyBeanMethods = false)
   @EnableConfigurationProperties({HumanVerificationProperties.class, LoginThrottleProperties.class})

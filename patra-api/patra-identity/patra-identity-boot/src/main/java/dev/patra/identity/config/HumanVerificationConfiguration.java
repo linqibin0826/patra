@@ -22,8 +22,9 @@ import tools.jackson.databind.json.JsonMapper;
 
 /// 人机验证的装配。
 ///
-/// 启动时缺凭据或门槛不合法直接失败。刷新配置不走这里：切到缺凭据的厂商时校验返回“验证不了”，
-/// 其他不合法的值见 {@link #currentPolicy}，都不会让登录报 500，也不会放行。
+/// 启动时缺凭据或门槛不合法直接失败。运行中刷新配置时没法这样拒绝，因为 Spring 先绑定新值、后校验，
+/// 校验不通过新值也已生效：切到缺凭据的厂商时校验返回“验证不了”，其他不合法的值由 {@link #currentPolicy} 兜底，
+/// 都不会让登录报 500，也不会放行。
 ///
 /// 出站用自己建的 `RestClient`，不用容器里的 `RestClient.Builder`：它带内部调用的拦截器，身份断言不能发给第三方。
 @Slf4j
@@ -158,17 +159,19 @@ public class HumanVerificationConfiguration {
     return threshold;
   }
 
-  /// 各厂商的站点标识，没配的不放进去。
+  /// 各厂商的站点标识，没配的不放进去。环境变量没设时绑定出来是空串，也算没配。
   ///
   /// @param properties 人机验证配置
   /// @return 站点标识
   static Map<HumanVerificationProvider, String> siteKeys(HumanVerificationProperties properties) {
     Map<HumanVerificationProvider, String> keys = new EnumMap<>(HumanVerificationProvider.class);
-    if (properties.getTurnstile().getSiteKey() != null) {
-      keys.put(HumanVerificationProvider.TURNSTILE, properties.getTurnstile().getSiteKey());
+    String turnstile = properties.getTurnstile().getSiteKey();
+    if (turnstile != null && !turnstile.isBlank()) {
+      keys.put(HumanVerificationProvider.TURNSTILE, turnstile);
     }
-    if (properties.getTrustTurn().getSiteKey() != null) {
-      keys.put(HumanVerificationProvider.TRUST_TURN, properties.getTrustTurn().getSiteKey());
+    String trustTurn = properties.getTrustTurn().getSiteKey();
+    if (trustTurn != null && !trustTurn.isBlank()) {
+      keys.put(HumanVerificationProvider.TRUST_TURN, trustTurn);
     }
     return Map.copyOf(keys);
   }
