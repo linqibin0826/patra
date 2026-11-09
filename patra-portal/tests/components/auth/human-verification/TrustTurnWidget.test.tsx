@@ -31,6 +31,12 @@ afterEach(() => {
 });
 
 describe("TrustTurnWidget", () => {
+  it("iframe 高度固定为组件卡片的 65px，下方不留空白", () => {
+    renderWidget();
+
+    expect(frame().classList).toContain("h-[65px]");
+  });
+
   it("iframe 带 sandbox，地址里的参数做了编码", () => {
     renderWidget();
 
@@ -132,5 +138,29 @@ describe("TrustTurnWidget", () => {
     });
 
     expect(handlers.onLoadError).not.toHaveBeenCalled();
+  });
+
+  it("组件发来就绪消息后，用户迟迟不点也不提示加载失败", () => {
+    vi.useFakeTimers();
+    renderWidget();
+    post({ type: "trustturn:state", state: "ready" });
+
+    act(() => {
+      vi.advanceTimersByTime(15_000);
+    });
+
+    expect(handlers.onLoadError).not.toHaveBeenCalled();
+  });
+
+  it("只到「验证中」、15 秒内没到就绪，仍然提示加载失败", () => {
+    vi.useFakeTimers();
+    renderWidget();
+    post({ type: "trustturn:state", state: "verifying" });
+
+    act(() => {
+      vi.advanceTimersByTime(15_000);
+    });
+
+    expect(handlers.onLoadError).toHaveBeenCalledOnce();
   });
 });
