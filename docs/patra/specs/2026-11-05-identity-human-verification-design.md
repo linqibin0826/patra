@@ -243,5 +243,5 @@ patra:
 - `HumanVerificationGuard` 的具体方法签名、异常类名。
 - 请求和响应的 DTO 写法。
 - Turnstile 请求用表单还是 JSON（文档两种都支持）。
-- TRUSTTURN 错误响应的 JSON 字段名：文档只列了错误码，没有给响应示例。按 `error`、`code` 依次读取，读不到按 `UNAVAILABLE`；真实响应的格式实测后补进本文。
+- TRUSTTURN 错误响应的 JSON 字段名：文档只列了错误码，没有给响应示例。11/06 实测是 `{"success":false,"code":"invalid_ticket","error":"中文说明"}`，只按 `code` 分类，读不到按 `UNAVAILABLE`。
 - 启动校验和刷新校验的具体实现位置。

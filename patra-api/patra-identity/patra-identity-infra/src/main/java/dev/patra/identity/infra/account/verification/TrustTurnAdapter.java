@@ -27,7 +27,10 @@ import tools.jackson.databind.json.JsonMapper;
 /// `success` 为真之外，还要 `site_key` 相同、`action` 一致、`origin` 在允许名单里。`risk` 文档没说明取值，只打 DEBUG。
 /// 不重试：文档没有提供幂等机制，票据可能已被消费。
 ///
-/// 文档只列了错误码，没给错误响应的示例，这里依次读 `error`、`code` 字段，读不到算验证不了。
+/// 文档没给失败响应的示例，2026-11-06 用真实凭据调用得到的形状是
+/// `{"success":false,"code":"invalid_ticket","error":"给人看的中文说明"}`。只认 `code`，`error` 可能改措辞。
+/// `code` 属于票据本身的问题时返回 `REJECTED`，用户重新验证即可；其他错误码、读不到 `code` 都返回
+/// `UNAVAILABLE`，说明是我们的配置或对方服务有问题。
 @Slf4j
 public final class TrustTurnAdapter implements HumanVerificationPort {
 
@@ -190,10 +193,7 @@ public final class TrustTurnAdapter implements HumanVerificationPort {
   /// @param root 响应
   /// @return 结果
   private static HumanVerificationResult classifyFailure(JsonNode root) {
-    String code = root.path("error").asString("");
-    if (code.isEmpty()) {
-      code = root.path("code").asString("");
-    }
+    String code = root.path("code").asString("");
     if (TICKET_REJECTED_CODES.contains(code)) {
       return HumanVerificationResult.REJECTED;
     }

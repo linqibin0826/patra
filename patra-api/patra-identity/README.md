@@ -563,9 +563,9 @@ patra:
 
 ### 切换厂商
 
-改 Nacos 的 `provider`，identity 在线刷新，门户下一次读取 `GET /auth/human-verification` 就用上新厂商，不用重新部署。切到缺凭据的厂商时，校验返回 503 并打 ERROR，不会回退到另一家。
+线上当前用 TRUSTTURN（2026-11-06 起）。改 `patra-infra/nacos/dev/patra-identity.yaml` 的 `provider` 并提交，CD 会同步到 Nacos；救急时可以先手动改 Nacos，但要马上补提交，否则下次后端 CD 会把它改回仓库里的值。identity 在线刷新，门户下一次读取 `GET /auth/human-verification` 就用上新厂商，不用重新部署。切到缺凭据的厂商时，校验返回 503 并打 ERROR，不会回退到另一家。
 
-**切到 TRUSTTURN 前要知道**：它的运营方、价格和隐私政策都没有公开说明。切换期间访客的 IP 和浏览器信息会发给它，它也可以对任何请求都返回成功。默认通道始终是 Turnstile，切过去时会打 WARN。请求只带 `site_key`、`ticket`、`expected_action`，不传用户数据；门户只用 iframe 加 `sandbox`，不加载它域名下的脚本。
+**用 TRUSTTURN 要知道**：它的运营方、价格和隐私政策都没有公开说明。使用期间访客的 IP 和浏览器信息会发给它，它也可以对任何请求都返回成功。代码里没配 `provider` 时的默认值是 Turnstile；当前厂商是 TRUSTTURN 时，启动和每次刷新都会打 WARN。请求只带 `site_key`、`ticket`、`expected_action`，不传用户数据；门户只用 iframe 加 `sandbox`，不加载它域名下的脚本。
 
 ### 本机联调
 
@@ -585,4 +585,4 @@ export PATRA_IDENTITY_TURNSTILE_SECRET=1x0000000000000000000000000000000AA
 - 攻击者可以用假令牌让我们反复调第三方校验接口，这里只做长度和字符检查，限流属于网关（PAP-189）。
 - 门槛是软的：同一时刻的并发请求可能都读到“没到门槛”，超出几个可以接受。
 - 没配 `PATRA_GATEWAY_TRUSTED_PROXIES` 或门户取不到真实 IP 时，请求会共用一个 IP 计数，正常用户更容易被要求验证。identity 看不到这个配置，所以不打启动警告。
-- TRUSTTURN 的错误响应格式文档没给，适配器依次读 `error`、`code` 字段，读不到算验证不了。真实响应实测后补到这里。
+- TRUSTTURN 的错误响应文档没给示例，实测是 `{"success":false,"code":"invalid_ticket","error":"中文说明"}`：票据不对返回 403，签名或 `site_key` 不对返回 401。适配器只按 `code` 分类，读不到算验证不了。
