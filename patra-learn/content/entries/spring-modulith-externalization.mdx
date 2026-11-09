@@ -93,7 +93,7 @@ private static RoutingTarget target(String routingKey) {
 }
 ```
 
-- `selectByType`：只外送集合里列出的五种领域事件。「有帮助已取消」不在里面，因为没有队列订阅它（原因见下面第三件事）。
+- `selectByType`：只外送集合里列出的五种领域事件。没有队列订阅的事件不能放进来（原因见下面第三件事）。
 - `mapping`：把领域事件换成 `patra-interaction-api` 里的集成事件，只拷字段。为什么要换，「领域事件与集成事件」那篇讲过。
 - `route`：都发到 `interaction.events` 交换机，路由键就是事件类型，比如 `comment.published`。
 

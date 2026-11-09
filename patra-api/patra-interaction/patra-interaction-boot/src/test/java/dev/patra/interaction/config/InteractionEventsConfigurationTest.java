@@ -13,7 +13,6 @@ import dev.patra.interaction.domain.discussion.event.CommentEditedEvent;
 import dev.patra.interaction.domain.discussion.event.CommentPublishedEvent;
 import dev.patra.interaction.domain.post.event.PostDeletedEvent;
 import dev.patra.interaction.domain.reaction.event.HelpfulMarkedEvent;
-import dev.patra.interaction.domain.reaction.event.HelpfulUnmarkedEvent;
 import dev.patra.interaction.domain.reaction.model.enums.HelpfulTargetType;
 import dev.patra.interaction.domain.subject.model.enums.SubjectType;
 import dev.patra.interaction.domain.subject.model.vo.SubjectId;
@@ -25,8 +24,7 @@ import org.springframework.amqp.core.TopicExchange;
 import org.springframework.modulith.events.EventExternalizationConfiguration;
 import org.springframework.modulith.events.RoutingTarget;
 
-/// 外送配置（PAP-141）：只选中五种领域事件，都发到 `interaction.events`、路由键为事件类型，映射成 api 里的 record；
-/// 有帮助已取消不外送（没有队列订阅，发了会被退回、一直补投）。
+/// 外送配置（PAP-141）：只选中五种领域事件，都发到 `interaction.events`、路由键为事件类型，映射成 api 里的 record。
 class InteractionEventsConfigurationTest {
 
   private static final Instant AT = Instant.parse("2026-10-31T01:00:00Z");
@@ -60,19 +58,9 @@ class InteractionEventsConfigurationTest {
     assertThat(HelpfulMarked.ROUTING_KEY).isEqualTo("helpful.marked");
   }
 
-  /// 有帮助已取消与无关对象不外送。
+  /// 无关对象不外送。
   @Test
-  void should_not_externalize_unmarked_or_unrelated_objects() {
-    HelpfulUnmarkedEvent unmarked =
-        HelpfulUnmarkedEvent.builder()
-            .eventId(UUID.randomUUID())
-            .targetType(HelpfulTargetType.POST)
-            .targetId(1L)
-            .userId(2L)
-            .unmarkedAt(AT)
-            .build();
-
-    assertThat(externalization.supports(unmarked)).isFalse();
+  void should_not_externalize_unrelated_objects() {
     assertThat(externalization.supports("x")).isFalse();
   }
 

@@ -1,7 +1,6 @@
 package dev.patra.interaction.app.post.usecase.experience;
 
 import dev.patra.interaction.app.post.service.PostRegistry;
-import dev.patra.interaction.domain.post.event.PostDeletedEvent;
 import dev.patra.interaction.domain.post.exception.PostForbiddenException;
 import dev.patra.interaction.domain.post.exception.PostNotFoundException;
 import dev.patra.interaction.domain.post.model.aggregate.PostAggregate;
@@ -15,7 +14,6 @@ import dev.patra.tool.core.security.CurrentUserPort;
 import dev.patra.tool.cqrs.CommandHandler;
 import java.time.Clock;
 import java.time.Instant;
-import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
@@ -23,7 +21,7 @@ import org.springframework.transaction.support.TransactionOperations;
 
 /// 删除投稿经验（spec 6.3）：不存在 404、不是作者 403、已删除直接返回（幂等）；不查发表资格（2026-10-27 用户定）。
 /// 事务里拿作者锁、再判一次，在锁内读当前登记快照，软删并把登记行置为 UNAVAILABLE（原样传回快照）：期刊列表与汇总不再计入，讨论区不能再回复。
-/// 同一事务里发布 {@link PostDeletedEvent}，外送后通知服务据此删掉这条经验下的全部提醒（PAP-143）。
+/// 同一事务里发布聚合产生的 `PostDeletedEvent`，外送后通知服务据此删掉这条经验下的全部提醒（PAP-143）。
 @Component
 @RequiredArgsConstructor
 public class DeleteExperienceHandler implements CommandHandler<DeleteExperienceCommand, Void> {
@@ -54,21 +52,18 @@ public class DeleteExperienceHandler implements CommandHandler<DeleteExperienceC
     transactions.executeWithoutResult(
         status -> {
           posts.lockAuthor(userId);
-          if (posts.find(id).map(PostAggregate::isDeleted).orElse(true)) {
-            return;
-          }
-          SubjectSnapshot snapshot = registry.snapshotOf(id);
           Instant now = clock.instant();
-          posts.markDeleted(id, now);
-          gateway.updateLocal(SubjectType.POST, id.value(), SubjectState.UNAVAILABLE, snapshot);
-          events.publishEvent(
-              PostDeletedEvent.builder()
-                  .eventId(UUID.randomUUID())
-                  .postId(id.value())
-                  .subjectId(registry.subjectIdOf(id))
-                  .authorId(userId)
-                  .deletedAt(now)
-                  .build());
+          posts
+              .find(id)
+              .flatMap(locked -> locked.delete(registry.subjectIdOf(id), now))
+              .ifPresent(
+                  event -> {
+                    SubjectSnapshot snapshot = registry.snapshotOf(id);
+                    posts.markDeleted(id, now);
+                    gateway.updateLocal(
+                        SubjectType.POST, id.value(), SubjectState.UNAVAILABLE, snapshot);
+                    events.publishEvent(event);
+                  });
         });
     return null;
   }

@@ -50,7 +50,7 @@ import org.springframework.test.web.servlet.client.EntityExchangeResult;
 
 /// interaction 的集成事件（PAP-141 验收），经 HTTP、真实 PG 与真实 RabbitMQ：五种事件在事务提交后送到
 /// `interaction.events`、路由键对、发出的 JSON 能读成 `patra-interaction-api` 里的 record（契约），正文是 PAP-128 的
-/// 纯文本；回滚不外送；有帮助已取消不外送；broker 停着时登记行留着，恢复后补投送达、事件 ID 不变；登记表里的领域
+/// 纯文本；回滚不外送；取消有帮助不外送；broker 停着时登记行留着，恢复后补投送达、事件 ID 不变；登记表里的领域
 /// 事件能经 Modulith 的序列化器原样读回（补投靠它）。
 class InteractionEventsFlowIT extends InteractionFlowITSupport {
 
@@ -216,9 +216,9 @@ class InteractionEventsFlowIT extends InteractionFlowITSupport {
     awaitRegistryEmpty();
   }
 
-  /// 有帮助已取消不外送：取消之后登记表是空的（真外送了，没有队列绑定它，会被退回、留在登记表里）。
+  /// 取消有帮助不外送：取消之后登记表是空的（真外送了，没有队列绑定它，会被退回、留在登记表里）。
   @Test
-  void should_not_externalize_helpful_unmarked() {
+  void should_not_externalize_when_helpful_removed() {
     long id = comment(A, "publication", PAPER, "有帮助", null);
     assertThat(status(call(HttpMethod.PUT, B, "/comments/" + id + "/helpful", null)))
         .isEqualTo(200);

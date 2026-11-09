@@ -7,7 +7,7 @@ import java.util.UUID;
 import lombok.Builder;
 
 /// 集成事件：有帮助已点（交换机 `interaction.events`，路由键 {@value #ROUTING_KEY}，PAP-141）。只在真插入了一条明细时发：
-/// 同一人点、取消、再点会发两次（两个不同的 `eventId`），按人去重由消费方做。有帮助已取消不外送。
+/// 同一人点、取消、再点会发两次（两个不同的 `eventId`），按人去重由消费方做。取消不发事件。
 ///
 /// @param eventId 事件 ID：补投、重投都不变，消费方据此去重
 /// @param targetType 目标种类：`COMMENT` / `POST`

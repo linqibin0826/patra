@@ -66,6 +66,7 @@ import org.springframework.transaction.annotation.Transactional;
 /// 3. **命名约定**: Port/Repository/JPA 实体/Aggregate 命名和位置
 /// 4. **封装规则**: JPA 实体不暴露、Port 必须 public、Event 位置
 /// 5. **事务边界**: 方法级 @Transactional 只在 app 层（infra 只放行 MANDATORY 守卫），不许类级注解，命令 Handler 不加注解
+/// 6. **事件发布**: `ApplicationEventPublisher` 只在 app 层和 `Outbox*` 适配器
 ///
 /// @author linqibin
 /// @since 0.1.0
@@ -76,6 +77,10 @@ public class HexagonalArchitectureRules {
 
   /// JPA 实体注解的全类名；按名字匹配，规则类不依赖 JPA。
   private static final String JPA_ENTITY = "jakarta.persistence.Entity";
+
+  /// Spring 事件发布器接口的全类名。
+  private static final String EVENT_PUBLISHER =
+      "org.springframework.context.ApplicationEventPublisher";
 
   /// Domain 层允许依赖的业务公共包列表（ArchUnit 包模式，如 `"dev.patra.tool.."`）。
   private final List<String> allowedCommonPackages;
@@ -485,6 +490,28 @@ public class HexagonalArchitectureRules {
     };
   }
 
+  // ==================== 事件发布规则 ====================
+
+  /// 事件由 Handler 发布：`ApplicationEventPublisher` 只能用在 app 层和 `Outbox*` 适配器。
+  ///
+  /// `Outbox*` 适配器是把发信这类指令写进发件箱的端口实现，发布的不是领域事件。按全类名匹配，因为
+  /// `ApplicationContext` 也继承这个接口，只用它取 bean 的类不算在发事件。
+  ///
+  /// @return ArchRule 规则实例
+  public ArchRule eventPublisherOnlyInAppLayer() {
+    return noClasses()
+        .that()
+        .resideOutsideOfPackage("..app..")
+        .and()
+        .haveSimpleNameNotStartingWith("Outbox")
+        .should()
+        .dependOnClassesThat()
+        .haveFullyQualifiedName(EVENT_PUBLISHER)
+        .as("ApplicationEventPublisher 只能用在 app 层和 Outbox* 适配器")
+        .because("聚合产生事件、Handler 发布，见 .claude/rules/tech/domain-events.md")
+        .allowEmptyShould(true);
+  }
+
   // ==================== 便捷方法 ====================
 
   /// 获取所有架构规则列表。
@@ -523,6 +550,9 @@ public class HexagonalArchitectureRules {
     rules.add(transactionsOnlyInAppLayer());
     rules.add(noClassLevelTransactions());
     rules.add(commandHandlersShouldNotBeTransactional());
+
+    // 事件发布规则
+    rules.add(eventPublisherOnlyInAppLayer());
 
     return Collections.unmodifiableList(rules);
   }

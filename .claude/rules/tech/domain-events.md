@@ -14,7 +14,7 @@ paths: patra-api/**/*.java, patra-tool/**/*.java
 | 构造事件 | 同上，方法返回事件；聚合外的数据和时刻作为参数传入 |
 | 写库、发布 | Handler 调 `events.publishEvent(...)`，放在事务最后一步 |
 
-聚合不持有发布器，也不暂存事件。Handler 里不写「要不要发」的业务判断。
+聚合不持有发布器，也不暂存事件。Handler 里不写「要不要发」的业务判断。还没有聚合实例的新建，由描述它的值对象产生事件（`NewComment#publishedEvent`）。
 
 ```java
 // 聚合判断并产生事件，没发生就返回空
@@ -31,13 +31,14 @@ event.ifPresent(events::publishEvent);
 - 没有聚合的用例，如批量标已读
 - 纯技术通知，如 `UnreadCountsChangedEvent`
 
-例外里的业务判断仍放 domain。邮件投递端口的实现（`OutboxEmailDeliveryAdapter`）在 infra 发布发信指令，它不是领域事件。
+例外里的业务判断仍放 domain。邮件投递端口的实现（`OutboxEmailDeliveryAdapter`）在 infra 发布发信指令，它不是领域事件。`ApplicationEventPublisher` 只能用在 app 层和 `Outbox*` 适配器，由 ArchUnit 守。
 
 ## 3. 订阅选哪种
 
 | 这件后续的事 | 写法 | 例子 |
 |------|------|------|
 | 要和主业务同成同败 | `@EventListener` | 删评论时清有帮助 |
+| 主流程没有事务，要当场做但失败不影响它 | `@EventListener`，监听器自己开事务、捕获异常 | 采集后写阅读历史 |
 | 提交后才做、丢了可接受 | `@Async` + `@TransactionalEventListener(AFTER_COMMIT)` | 推未读数 |
 | 通知其他服务、不能丢 | 外送到 MQ，服务代码不写 `@ApplicationModuleListener` | 有帮助提醒 |
 

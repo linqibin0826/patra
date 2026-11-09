@@ -1,6 +1,5 @@
 package dev.patra.catalog.app.fulltext.usecase.fetch;
 
-import dev.patra.catalog.domain.fulltext.event.PmcFullTextFetchedEvent;
 import dev.patra.catalog.domain.fulltext.model.enums.FullTextUnavailableReason;
 import dev.patra.catalog.domain.fulltext.model.read.FetchCandidate;
 import dev.patra.catalog.domain.fulltext.model.vo.FullTextMedia;
@@ -35,7 +34,7 @@ public class PmcFullTextFetchPersister {
   private final ApplicationEventPublisher events;
   private final FullTextRetrySchedule retrySchedule;
 
-  /// 记录抓取成功：全文记录 `FETCHED`，并发布 [PmcFullTextFetchedEvent]，由文献子域在同一事务里
+  /// 记录抓取成功：全文记录 `FETCHED`，并发布它产生的 `PmcFullTextFetchedEvent`，由文献子域在同一事务里
   /// 标为开放获取并替换 PMC 位置。
   ///
   /// @param c 候选
@@ -51,7 +50,7 @@ public class PmcFullTextFetchPersister {
       List<FullTextMedia> media,
       Instant fetchedAt) {
     String prefix = FullTextObjectStoragePort.objectPrefix(c.pmcid(), selected.versionPrefix());
-    fullTextRepository.save(
+    PublicationFullText fullText =
         PublicationFullText.builder()
             .publicationId(c.publicationId())
             .pmcid(c.pmcid())
@@ -67,10 +66,9 @@ public class PmcFullTextFetchPersister {
             .media(media)
             .fetchedAt(fetchedAt)
             .attemptCount(0)
-            .build());
-    events.publishEvent(
-        new PmcFullTextFetchedEvent(
-            c.publicationId(), c.pmcid(), selected.licenseCode(), selected.manuscript()));
+            .build();
+    fullTextRepository.save(fullText);
+    events.publishEvent(fullText.fetchedEvent());
   }
 
   /// 记录不可用；可再查的原因按次数或放开日期算下次再查时间，撤稿等终态不再查。

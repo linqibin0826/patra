@@ -1,5 +1,6 @@
 package dev.patra.catalog.domain.fulltext.model.vo;
 
+import dev.patra.catalog.domain.fulltext.event.PmcFullTextFetchedEvent;
 import dev.patra.catalog.domain.fulltext.model.enums.FullTextUnavailableReason;
 import dev.patra.catalog.domain.kernel.model.enums.FullTextStatus;
 import java.time.Instant;
@@ -56,5 +57,12 @@ public record PublicationFullText(
   /// 防御性拷贝 `media`，`null` 视为空。
   public PublicationFullText {
     media = media != null ? List.copyOf(media) : List.of();
+  }
+
+  /// 「PMC 全文已抓取」事件。只对抓取成功的记录有意义：其他状态没有 `manuscript`，这里会抛空指针。
+  ///
+  /// @return 事件
+  public PmcFullTextFetchedEvent fetchedEvent() {
+    return new PmcFullTextFetchedEvent(publicationId, pmcid, licenseCode, manuscript);
   }
 }

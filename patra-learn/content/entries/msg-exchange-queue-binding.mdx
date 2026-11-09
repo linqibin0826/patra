@@ -106,7 +106,7 @@ return EventQueue.named(InboxConsumer.NAME)
 
 看上面的第二个按钮。RabbitMQ 默认对投不出去的消息悄悄丢掉，生产者什么也不知道。Patra 发送时加了一个标志（`mandatory`），让这种消息被退回来，生产者才能知道「没有人要它」。这件事后面讲发送确认时再展开，这里先记住：**没有队列绑定的路由键，消息就是投不出去**。
 
-所以 Patra 有一条约定：事件要外送，必须先有队列订阅它。`interaction` 的外送配置里就没有「有帮助已取消」，因为通知服务对它没有动作，也就没有队列绑定它。
+所以 Patra 有一条约定：事件要外送，必须先有队列订阅它。`interaction` 的外送配置只列了五种事件，每一种都有 `notification.inbox` 队列绑定。
 
 <Quiz
   questions={[
