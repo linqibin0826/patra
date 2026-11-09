@@ -31,7 +31,7 @@ afterEach(() => {
 });
 
 describe("TrustTurnWidget", () => {
-  it("iframe 高度固定为组件卡片的 65px，下方不留空白", () => {
+  it("iframe 固定高度为 65px", () => {
     renderWidget();
 
     expect(frame().classList).toContain("h-[65px]");
