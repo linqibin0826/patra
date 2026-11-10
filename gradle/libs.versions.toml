@@ -67,10 +67,10 @@ httpclient = "4.5.14"
 commons-beanutils = "1.11.0"  # 经 commons-validator 1.7 传递引入
 spring-retry = "2.0.13"
 commons-lang3 = "3.19.0"      # build-logic：spring-boot-gradle-plugin → commons-compress 1.27.1 传递引入 3.16.0
-# 下面三个覆盖 Spring Boot 4.1.2 管理的版本，取 Boot 4.2 已换用的版本线
+# 下面三个覆盖 Spring Boot 4.1.2 管理的版本：它带的版本有已披露的漏洞。取 Boot 4.2 换用的版本，升到 Boot 4.2 后可删
 rabbit-amqp-client = "5.37.1"  # Boot 4.1.2 管理 5.30.0，经 spring-rabbit 引入
 opentelemetry = "1.67.0"       # Boot 4.1.2 管理 1.62.0，经 spring-boot-opentelemetry 引入
-thymeleaf = "3.1.6.RELEASE"    # Boot 4.1.2 管理 3.1.5，它依赖 ognl 3.3.4；3.1.6 起依赖 ognl 3.4.17
+thymeleaf = "3.1.6.RELEASE"    # Boot 4.1.2 管理的 3.1.5 依赖有漏洞的 ognl 3.3.4；3.1.6 起依赖 ognl 3.4.17
 lz4-java = "1.11.4"            # 经 kafka-clients 4.2.2 传递引入 1.11.2
 snappy-java = "1.1.10.12"      # 经 minio 8.6.0、kafka-clients 4.2.2 传递引入 1.1.10.7
 guava = "33.8.0-jre"           # 经 clickhouse client-v2 0.11.0 等传递引入 33.4.8

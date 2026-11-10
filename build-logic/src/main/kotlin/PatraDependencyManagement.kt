@@ -51,8 +51,9 @@ fun Project.applyPatraDependencyManagement(libs: VersionCatalog) {
     // 安全版本覆盖（上游 BOM / 传递依赖尚未跟进漏洞修复）
     fun version(alias: String) = libs.findVersion(alias).get().requiredVersion
 
-    // Spring Boot BOM 里的版本用同名项目属性覆盖：BOM 的 ${xxx.version} 会先查项目属性。
-    // 不用 bomProperty：boot 模块的 Spring Boot 插件会自己再导入一次 Boot BOM，那次导入只认项目属性
+    // 覆盖 Spring Boot BOM 管理的版本：键必须是 BOM 内部的版本属性名（如 ${rabbit-amqp-client.version}），
+    // 依赖管理插件解析 BOM 时先取同名的项目属性。不用 bomProperty：boot 模块的 Spring Boot 插件还会自己
+    // 导入一次 Boot BOM，bomProperty 只作用于下面这次导入，项目属性对两次都生效（Boot 插件文档推荐的写法）
     extra["rabbit-amqp-client.version"] = version("rabbit-amqp-client")
     extra["opentelemetry.version"] = version("opentelemetry")
     extra["thymeleaf.version"] = version("thymeleaf")
