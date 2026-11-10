@@ -6,7 +6,7 @@
 
 **架构**: 微服务 + 六边形架构 + DDD + 事件驱动
 **技术栈**: Java 25 | Spring Boot 4.1.2 | Spring Data JPA | PostgreSQL 17 | Nacos
-**构建工具**: Gradle 9.5.0 (Kotlin DSL) + Convention Plugins
+**构建工具**: Gradle 9.9.0 (Kotlin DSL) + Convention Plugins
 
 ## 核心服务
 

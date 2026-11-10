@@ -26,6 +26,7 @@ import io.spring.gradle.dependencymanagement.dsl.DependencyManagementExtension
 import org.gradle.api.Project
 import org.gradle.api.artifacts.VersionCatalog
 import org.gradle.kotlin.dsl.configure
+import org.gradle.kotlin.dsl.extra
 
 /// 应用 Patra 统一的依赖管理配置
 ///
@@ -44,12 +45,17 @@ fun Project.applyPatraDependencyManagement(libs: VersionCatalog) {
     val springCloudAlibabaVersion = libs.findVersion("spring-cloud-alibaba").get().requiredVersion
     val testcontainersVersion = libs.findVersion("testcontainers").get().requiredVersion
     // 强制版本约束
-    val commonsCompressVersion = libs.findVersion("commons-compress").get().requiredVersion
     val httpclientVersion = libs.findVersion("httpclient").get().requiredVersion
     val objenesisVersion = libs.findVersion("objenesis").get().requiredVersion
     val log4jVersion = libs.findVersion("log4j").get().requiredVersion
     // 安全版本覆盖（上游 BOM / 传递依赖尚未跟进漏洞修复）
     fun version(alias: String) = libs.findVersion(alias).get().requiredVersion
+
+    // Spring Boot BOM 里的版本用同名项目属性覆盖：BOM 的 ${xxx.version} 会先查项目属性。
+    // 不用 bomProperty：boot 模块的 Spring Boot 插件会自己再导入一次 Boot BOM，那次导入只认项目属性
+    extra["rabbit-amqp-client.version"] = version("rabbit-amqp-client")
+    extra["opentelemetry.version"] = version("opentelemetry")
+    extra["thymeleaf.version"] = version("thymeleaf")
 
     extensions.configure<DependencyManagementExtension> {
         imports {
@@ -70,14 +76,19 @@ fun Project.applyPatraDependencyManagement(libs: VersionCatalog) {
             // commons-validator 1.7 传递引入
             dependency("commons-beanutils:commons-beanutils:${version("commons-beanutils")}")
             dependency("org.springframework.retry:spring-retry:${version("spring-retry")}")
+            // kafka-clients、minio、clickhouse 客户端传递引入，各自的来源版本见 libs.versions.toml
+            dependency("at.yawk.lz4:lz4-java:${version("lz4-java")}")
+            dependency("org.xerial.snappy:snappy-java:${version("snappy-java")}")
+            dependency("com.google.guava:guava:${version("guava")}")
+            // testcontainers 1.21.4 要 1.24.0，minio 8.6.0 要 1.28.0。放这里而不放下面的 force：
+            // force 管不到依赖管理插件自己解析 POM 用的临时配置，依赖图提交会把那里的 1.24.0 报成漏洞
+            dependency("org.apache.commons:commons-compress:${version("commons-compress")}")
         }
     }
 
     // 强制版本约束，解决传递依赖冲突
     configurations.all {
         resolutionStrategy {
-            // Testcontainers vs MinIO 版本冲突
-            force("org.apache.commons:commons-compress:$commonsCompressVersion")
             // Elasticsearch 依赖冲突
             force("org.apache.httpcomponents:httpclient:$httpclientVersion")
             // Mockito vs Kryo 版本冲突
