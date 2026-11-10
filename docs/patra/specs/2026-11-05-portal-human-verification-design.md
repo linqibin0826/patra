@@ -77,10 +77,10 @@ interface WidgetProps {
 
 **TrustTurnWidget**
 
-- `<iframe src="https://api.trustturn.cc/widget.html?site_key=...&action=..." sandbox="allow-scripts allow-same-origin allow-forms" title="TRUSTTURN 人机验证">`，宽 100%，最小高度 88px。
+- `<iframe src="https://api.trustturn.cc/widget.html?site_key=...&action=..." sandbox="allow-scripts allow-same-origin allow-forms" title="TRUSTTURN 人机验证">`，宽 100%，高度固定 65px。组件只有一张卡片，它自己的样式把卡片定死为 65px 高、超出部分隐藏；不设高度会停在浏览器默认的 150px，下面多出约 85px 空白。它发来的 `trustturn:resize` 报的是 iframe 当前高度（iframe 比 120 矮时报 120），不是卡片高度，所以不按这条消息调。接入文档示例里的「最小高度 88px」同样会留空白，不照抄。
 - 监听 `message`：`event.origin` 严格等于 `https://api.trustturn.cc`，`event.source` 是这个 iframe，`data.type === "trustturn:verified"`，才取 `data.detail.verificationTicket`。
 - 票据 60 秒过期，文档没有过期事件：拿到票据 55 秒后调 `onClear` 并重新加载 iframe。`resetKey` 变化时同样重新加载。
-- iframe 加载失败浏览器不报错，所以 15 秒没收到票据时显示加载失败的提示，但仍然监听，之后验证成功了提示就消失。交互式验证可能确实慢，这是软提示。
+- iframe 加载失败浏览器不报错，所以 15 秒内既没收到 `{ type: "trustturn:state", state: "ready" }`、也没收到票据时，显示加载失败的提示；之后仍然监听，收到票据时提示消失。就绪消息超过 15 秒才到时（网络很慢），提示会一直留到用户点完、拿到票据。就绪消息文档里没写，是实测看到的：先发 `verifying`，几秒后发 `ready`。不能只等票据：组件是要用户点一下的复选框，用户 15 秒内没点就没有票据，上线时曾因此把「还没点」误报成加载失败。
 - `sandbox` 下组件能否工作要实测。实测结果写进本文第 9 节。
 
 ## 5. 表单状态
