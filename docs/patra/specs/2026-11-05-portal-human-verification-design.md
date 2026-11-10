@@ -186,7 +186,15 @@ frame-src  https://challenges.cloudflare.com https://api.trustturn.cc
 
 ## 9. 实测记录
 
-上线实测后补：`sandbox` 下 TRUSTTURN 组件能否工作、票据消息的 `event.source` 是不是 `widget.html` 这个窗口（如果由它内部的子 iframe 发出，现在的校验会拦掉）、它实际发出的请求和采集的内容、错误响应格式。
+原计划上线后实测四件事：`sandbox` 下 TRUSTTURN 组件能否工作、票据消息的 `event.source` 是不是 `widget.html` 这个窗口（如果由它内部的子 iframe 发出，现在的校验会拦掉）、它实际发出的请求和采集的内容、错误响应格式。结果：
+
+- **`sandbox` 和 `event.source`**：11-06 线上切到 TRUSTTURN 后，注册和找回密码都走通，后端收到了票据，说明组件在现有 `sandbox` 下能用，票据消息也通过了来源校验。
+- **加载阶段**（11-09 用无头 Chromium 打开线上 `/register`，没有点组件）：iframe 加载 `api.trustturn.cc/widget.html?site_key=…&action=…`，它再加载 `cdn.trustturn.cc` 的 1 个样式和 7 个脚本、`api.trustturn.cc` 的 1 个脚本，20 秒内没有 POST 或 XHR。页面本身没有它域名下的脚本。
+- **给父页面的消息**：`trustturn:state` 先报 `verifying`，iframe 开始加载后约 9 秒报 `ready`；`trustturn:resize` 连发多次，`height` 一直是 150。门户只处理 `trustturn:verified`，由此留下两个问题，已由 #416 修复（改法见第 4 节）：
+  - iframe 没设高度，停在浏览器默认的 150px，组件内容只有 65px，下方空出约 85px。`resize` 报的就是 iframe 当前的 150，照它调高度消不掉空白。#416 把 iframe 固定为 65px 高。
+  - TRUSTTURN 是要用户点一下的复选框，第 4 节的 15 秒加载计时只在拿到票据时清掉，用户 15 秒内没点就会误报加载失败；点完拿到票据后提示消失。#416 改成收到 `state: ready` 或票据都清掉计时；`ready` 晚于 15 秒才到时，提示仍要等拿到票据才消失。
+- **采集的内容**：脚本经 JSVMP 虚拟机混淆，静态搜不到 canvas、WebGL、`navigator` 这类调用，看不出采集了什么。点组件验证时它往外发了什么没有调查（用户决定不抓包）。
+- **错误响应格式**：见 identity 工程设计第 9 节。
 
 ## 10. 留给实施者决定
 
