@@ -12,6 +12,9 @@ export const FIELD_MESSAGES = {
   passwordTooShort: "密码至少 8 位",
   passwordTooLong: "密码最长 64 位",
   passwordTooCommon: "这个密码太常见，容易被猜到，请换一个",
+  /// 只由后端判断：重设密码时前端不知道账号的邮箱和用户名；注册、改密码虽然知道，也不在前端判，
+  /// 三个表单行为一致，判法只在后端维护一份
+  passwordTooSimilar: "密码不能包含你的用户名或邮箱，请换一个",
   passwordInvalid: "密码不符合要求",
   confirmRequired: "请再输入一次密码",
   confirmNewRequired: "请再输入一次新密码",
@@ -75,6 +78,8 @@ export function fieldErrorMessage(field: "email" | "password", code: string | nu
       return FIELD_MESSAGES.passwordTooLong;
     case "TOO_COMMON":
       return FIELD_MESSAGES.passwordTooCommon;
+    case "TOO_SIMILAR":
+      return FIELD_MESSAGES.passwordTooSimilar;
     default:
       return FIELD_MESSAGES.passwordInvalid;
   }

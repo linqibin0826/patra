@@ -50,6 +50,9 @@ public final class UserFieldViolations {
   /// 在常见密码名单里。
   public static final String TOO_COMMON = "TOO_COMMON";
 
+  /// 密码和账号的邮箱或用户名相同或相近。
+  public static final String TOO_SIMILAR = "TOO_SIMILAR";
+
   /// 含不合法的 Unicode（孤立的代理项）或不允许的字符。
   public static final String INVALID_CHARACTER = "INVALID_CHARACTER";
 
@@ -270,6 +273,14 @@ public final class UserFieldViolations {
   /// @return 字段错误
   public static FieldViolation passwordTooCommon(String field) {
     return FieldViolation.of(field, TOO_COMMON, "这个密码太常见，容易被猜到，请换一个");
+  }
+
+  /// 密码和账号的邮箱或用户名相同或相近，按指定的字段名报错。
+  ///
+  /// @param field 字段名
+  /// @return 字段错误
+  public static FieldViolation passwordTooSimilar(String field) {
+    return FieldViolation.of(field, TOO_SIMILAR, "密码不能包含你的用户名或邮箱，请换一个");
   }
 
   /// 客户端类型不认识。

@@ -11,6 +11,7 @@ import dev.patra.identity.domain.account.model.vo.EmailTokenSecret;
 import dev.patra.identity.domain.account.model.vo.PasswordHash;
 import dev.patra.identity.domain.account.model.vo.PlainPassword;
 import dev.patra.identity.domain.account.model.vo.RequestOrigin;
+import dev.patra.identity.domain.account.model.vo.UserIdentifiers;
 import dev.patra.identity.domain.account.model.vo.mail.PasswordResetDoneMail;
 import dev.patra.identity.domain.account.policy.PasswordPolicy;
 import dev.patra.identity.domain.account.port.hashing.PasswordHashingPort;
@@ -46,7 +47,8 @@ import org.springframework.transaction.support.TransactionOperations;
 /// 顺序：提交限流（对猜令牌的限制，格式不对也计）→ 字段（令牌为空 / 格式不对与密码不合规一次报全，
 /// 令牌不被消费）→ 哈希（事务外）→
 /// 事务里：按哈希查令牌（用途不符 422）→ 锁用户行（不存在、封禁、注销 422）→ 条件消费 → 令牌邮箱
-/// 必须等于当前邮箱 → 换哈希（没有凭据行就新建）→ 批量作废令牌（待确认的改邮箱随之取消）→
+/// 必须等于当前邮箱 → 新密码不能和这个账号的邮箱、用户名相近（422，事务回滚，令牌还能再用）→
+/// 换哈希（没有凭据行就新建）→ 批量作废令牌（待确认的改邮箱随之取消）→
 /// 写验证时间 → 撤销全部会话并记 `PASSWORD_RESET` → 登记「密码已重设」（与重设同成同败，PAP-104）→
 /// 事务后清零登录失败。不自动登录。
 @Slf4j
@@ -91,8 +93,10 @@ public class ResetPasswordHandler implements CommandHandler<ResetPasswordCommand
         violations.add(UserFieldViolations.tokenInvalid());
       }
     }
+    // 这时还不知道令牌是哪个账号的，「和邮箱、用户名相近」留到事务里查到用户之后再校验
     passwordPolicy
-        .validate(command.newPassword(), UserFieldViolations.NEW_PASSWORD)
+        .validate(
+            command.newPassword(), UserFieldViolations.NEW_PASSWORD, UserIdentifiers.unknown())
         .ifPresent(violations::add);
     if (!violations.isEmpty()) {
       throw new InvalidUserFieldsException(violations);
@@ -124,6 +128,19 @@ public class ResetPasswordHandler implements CommandHandler<ResetPasswordCommand
                   if (!email.equals(consumed.getEmail())) {
                     throw invalid();
                   }
+                  // 到这里才查到密码属于哪个账号，所以「和邮箱、用户名相近」只能在事务里查。
+                  // 排在令牌的各项检查之后：链接已失效或用途不符时先报链接的问题，
+                  // 免得用户按提示换了密码、再提交一次才发现链接早就不能用。
+                  // 抛异常会回滚事务，上面 tokens.consume 对令牌的消费一并撤销，令牌还能再用
+                  passwordPolicy
+                      .validate(
+                          command.newPassword(),
+                          UserFieldViolations.NEW_PASSWORD,
+                          UserIdentifiers.of(email.value(), user.getUsername().value()))
+                      .ifPresent(
+                          violation -> {
+                            throw new InvalidUserFieldsException(List.of(violation));
+                          });
                   UserPasswordCredential credential =
                       credentials
                           .findByUserId(userId)

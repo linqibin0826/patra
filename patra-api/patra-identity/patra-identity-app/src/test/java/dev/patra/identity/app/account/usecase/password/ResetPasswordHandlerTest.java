@@ -174,6 +174,53 @@ class ResetPasswordHandlerTest {
   }
 
   @Test
+  @DisplayName("新密码包含令牌所属账号的用户名或邮箱 @ 前面那一段：422 newPassword/TOO_SIMILAR，不改密码、不撤销会话、不发信")
+  void should_reject_new_password_similar_to_username_or_email() {
+    assertThatThrownBy(
+            () ->
+                handler.handle(
+                    ResetPasswordCommand.of(SECRET.value(), "Chen-Yu-2026", "127.0.0.1", null)))
+        .isInstanceOf(InvalidUserFieldsException.class)
+        .satisfies(
+            e ->
+                assertThat(((InvalidUserFieldsException) e).getFieldViolations())
+                    .extracting(FieldViolation::field, FieldViolation::code)
+                    .containsExactly(
+                        org.assertj.core.groups.Tuple.tuple("newPassword", "TOO_SIMILAR")));
+    assertThatThrownBy(
+            () ->
+                handler.handle(
+                    ResetPasswordCommand.of(SECRET.value(), "chen.yu-888", "127.0.0.1", null)))
+        .isInstanceOf(InvalidUserFieldsException.class)
+        .satisfies(
+            e ->
+                assertThat(((InvalidUserFieldsException) e).getFieldViolations())
+                    .extracting(FieldViolation::field, FieldViolation::code)
+                    .containsExactly(
+                        org.assertj.core.groups.Tuple.tuple("newPassword", "TOO_SIMILAR")));
+    verify(credentials, never()).save(any());
+    verifyNoInteractions(sessions, emailDelivery, loginThrottle);
+  }
+
+  @Test
+  @DisplayName("令牌已过期或已用过（消费不成功）时先报 token/INVALID：不让用户改完密码才发现链接早就失效")
+  void should_report_dead_token_before_similar_password() {
+    when(tokens.consume(SECRET.hash(), EmailTokenPurpose.PASSWORD_RESET, NOW))
+        .thenReturn(Optional.empty());
+
+    assertThatThrownBy(
+            () ->
+                handler.handle(
+                    ResetPasswordCommand.of(SECRET.value(), "Chen-Yu-2026", "127.0.0.1", null)))
+        .isInstanceOf(InvalidUserFieldsException.class)
+        .satisfies(
+            e ->
+                assertThat(((InvalidUserFieldsException) e).getFieldViolations())
+                    .extracting(FieldViolation::field, FieldViolation::code)
+                    .containsExactly(org.assertj.core.groups.Tuple.tuple("token", "INVALID")));
+  }
+
+  @Test
   @DisplayName("令牌为空：422 token/REQUIRED；格式不对：422 token/INVALID，不查库")
   void should_reject_blank_or_malformed_token() {
     assertThatThrownBy(

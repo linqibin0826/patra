@@ -69,7 +69,7 @@ class RedisUnavailableIT {
                 Map.of(
                     "email", "no-redis@example.com",
                     "username", "u-no-redis",
-                    "password", "No-Redis-Pass-13",
+                    "password", "Offline-Pass-13",
                     "verificationToken", HumanVerificationFixture.REGISTER))
             .exchange()
             .expectBody(String.class)
@@ -89,7 +89,7 @@ class RedisUnavailableIT {
         .post()
         .uri("/auth/login")
         .contentType(MediaType.APPLICATION_JSON)
-        .body(Map.of("email", "no-redis@example.com", "password", "No-Redis-Pass-13"))
+        .body(Map.of("email", "no-redis@example.com", "password", "Offline-Pass-13"))
         .exchange()
         .expectStatus()
         .isEqualTo(503)
