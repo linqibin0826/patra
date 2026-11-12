@@ -27,6 +27,7 @@ describe("fieldErrorMessage", () => {
     ["TOO_SHORT", "密码至少 8 位"],
     ["TOO_LONG", "密码最长 64 位"],
     ["TOO_COMMON", "这个密码太常见，容易被猜到，请换一个"],
+    ["TOO_SIMILAR", "密码不能包含你的用户名或邮箱，请换一个"],
     ["INVALID_CHARACTER", "密码不符合要求"],
     ["SOMETHING_NEW", "密码不符合要求"],
     [null, "密码不符合要求"],

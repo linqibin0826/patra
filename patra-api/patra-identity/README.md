@@ -167,7 +167,7 @@ patra:
 
 ## 5. 密码
 
-- 规则：8 到 64 个码点，不去空格，不能在常见密码名单里（注册、改密码、重设密码同一条规则）。登录只要求非空、不含孤立代理项；超过 1024 个码点的密码直接按密码错误处理，不做哈希。与 NIST SP 800-63B-4「单因子至少 15 位」的有意偏离按 ASVS 7.1.1 记录在账号安全设计第 14 节。
+- 规则：8 到 64 个码点，不去空格，不能在常见密码名单里，不能和账号的邮箱或用户名相同或相近（注册、改密码、重设密码同一条规则）。相近的判法：密码和账号信息都做 NFKC、转小写、去掉首尾空白，再拿密码比完整邮箱、邮箱 `@` 前面那一段、用户名——等于其中一样就拒，其中一样至少 4 个码点且密码包含它也拒。只在设置密码时查，以后改用户名或邮箱不回头查旧密码。重设密码要到事务里查到令牌所属的用户才能比，被拒时事务回滚，令牌还能再用。登录只要求非空、不含孤立代理项；超过 1024 个码点的密码直接按密码错误处理，不做哈希。与 NIST SP 800-63B-4「单因子至少 15 位」的有意偏离按 ASVS 7.1.1 记录在账号安全设计第 14 节。
 - 哈希：Argon2id，`m=19456 KiB, t=2, p=1`，盐 16 字节、输出 32 字节；哈希和校验前都做 NFKC。开发机上单次约 20 毫秒（mini 上的耗时等 PAP-66 部署后实测）。
 - 并发：同时进行的哈希计算最多 4 个，排队超过 3 秒返回 503。
 - 常见密码名单：`infra/src/main/resources/password/common-passwords.txt.gz`，取自 Django 6.0 的 `django/contrib/auth/common-passwords.txt.gz`（Royce Williams 整理，19640 行），SHA-256 `3c1baed62596de36860824eb3f436d5932d37ca8b06e59df78f5a44ec175afe4`。许可证见同目录的 `common-passwords.LICENSE`（BSD 3-Clause）。比较时对密码做 NFKC、转小写、去掉首尾空白。
@@ -236,7 +236,7 @@ patra:
 
 请求本身格式不对时由 Spring 直接处理，返回默认格式的 ProblemDetail，没有 `code`：请求体不是 JSON 对象（`[]`、`"x"`、空请求体、坏 JSON）或字段类型不对返回 400；`Content-Type` 不是 JSON 返回 415；方法不对（比如 GET）返回 405；路径里的 `userId` 不是数字或溢出返回 400，负数和 0 按用户不存在返回 404 `IDN-0404`；`/users/{username}` 路径里带 `%20`、`%25` 等百分号编码时被 Spring Security 的请求防火墙拒绝，返回 400。
 
-原因码：邮箱 `REQUIRED`、`TOO_LONG`、`INVALID_FORMAT`、`ALREADY_REGISTERED`（409）；用户名 `REQUIRED`、`INVALID_CHARACTER`、`TOO_SHORT`、`TOO_LONG`、`INVALID_FORMAT`、`DIGITS_ONLY`、`RESERVED`、`UNCHANGED`（改名）、`ALREADY_TAKEN`（409）；昵称 `INVALID_CHARACTER`、`TOO_SHORT`、`TOO_LONG`、`INVALID_FORMAT`、`RESERVED`；资料与隐私见第 12 节；头像（字段 `file`）`REQUIRED`、`UNSUPPORTED_TYPE`、`TOO_SMALL`、`TOO_MANY_PIXELS`、`UNREADABLE`；密码 `REQUIRED`、`INVALID_CHARACTER`、`TOO_SHORT`、`TOO_LONG`、`TOO_COMMON`（改密码、重设时字段名是 `currentPassword` / `newPassword`，改邮箱时新邮箱字段名是 `newEmail`）；客户端类型 `INVALID_FORMAT`；设备标识 `INVALID_FORMAT`（不是 43 个 base64url 字符）。
+原因码：邮箱 `REQUIRED`、`TOO_LONG`、`INVALID_FORMAT`、`ALREADY_REGISTERED`（409）；用户名 `REQUIRED`、`INVALID_CHARACTER`、`TOO_SHORT`、`TOO_LONG`、`INVALID_FORMAT`、`DIGITS_ONLY`、`RESERVED`、`UNCHANGED`（改名）、`ALREADY_TAKEN`（409）；昵称 `INVALID_CHARACTER`、`TOO_SHORT`、`TOO_LONG`、`INVALID_FORMAT`、`RESERVED`；资料与隐私见第 12 节；头像（字段 `file`）`REQUIRED`、`UNSUPPORTED_TYPE`、`TOO_SMALL`、`TOO_MANY_PIXELS`、`UNREADABLE`；密码 `REQUIRED`、`INVALID_CHARACTER`、`TOO_SHORT`、`TOO_LONG`、`TOO_COMMON`、`TOO_SIMILAR`（改密码、重设时字段名是 `currentPassword` / `newPassword`，改邮箱时新邮箱字段名是 `newEmail`）；客户端类型 `INVALID_FORMAT`；设备标识 `INVALID_FORMAT`（不是 43 个 base64url 字符）。
 
 ## 8. 本地运行和测试
 

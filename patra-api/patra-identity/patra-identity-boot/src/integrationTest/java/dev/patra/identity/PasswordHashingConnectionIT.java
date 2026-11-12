@@ -72,11 +72,11 @@ class PasswordHashingConnectionIT {
     doAnswer(recordActiveConnections).when(passwordHashing).verifyAgainstDummy(any());
 
     awaitIdle(pool);
-    post("/auth/register", "pool@example.com", "Pool-Holder-01");
+    post("/auth/register", "pool@example.com", "Idle-Holder-01");
     awaitIdle(pool);
-    post("/auth/login", "pool@example.com", "Pool-Holder-01");
+    post("/auth/login", "pool@example.com", "Idle-Holder-01");
     awaitIdle(pool);
-    post("/auth/login", "pool-nobody@example.com", "Pool-Holder-02");
+    post("/auth/login", "pool-nobody@example.com", "Idle-Holder-02");
 
     assertThat(activeConnections).hasSize(3).containsOnly(0);
   }

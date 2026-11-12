@@ -167,6 +167,33 @@ class ChangePasswordHandlerTest {
   }
 
   @Test
+  @DisplayName("新密码包含账号的用户名或邮箱 @ 前面那一段：422 newPassword/TOO_SIMILAR，和当前密码的字段错误一起报；不校验当前密码、不做哈希")
+  void should_reject_new_password_similar_to_username_or_email() {
+    assertThatThrownBy(
+            () -> handler.handle(ChangePasswordCommand.of("", "Chen-Yu-2026", "127.0.0.1", null)))
+        .isInstanceOf(InvalidUserFieldsException.class)
+        .satisfies(
+            e ->
+                assertThat(((InvalidUserFieldsException) e).getFieldViolations())
+                    .extracting(FieldViolation::field, FieldViolation::code)
+                    .containsExactly(
+                        org.assertj.core.groups.Tuple.tuple("currentPassword", "REQUIRED"),
+                        org.assertj.core.groups.Tuple.tuple("newPassword", "TOO_SIMILAR")));
+    assertThatThrownBy(
+            () ->
+                handler.handle(
+                    ChangePasswordCommand.of("Correct-Horse-02", "chen.yu-888", "127.0.0.1", null)))
+        .isInstanceOf(InvalidUserFieldsException.class)
+        .satisfies(
+            e ->
+                assertThat(((InvalidUserFieldsException) e).getFieldViolations())
+                    .extracting(FieldViolation::field, FieldViolation::code)
+                    .containsExactly(
+                        org.assertj.core.groups.Tuple.tuple("newPassword", "TOO_SIMILAR")));
+    verifyNoInteractions(loginThrottle, passwordHashing, sessions, emailDelivery);
+  }
+
+  @Test
   @DisplayName("注销冷静期内：409，不碰登录失败限制")
   void should_reject_pending_deletion_with_409() {
     when(users.findById(42L)).thenReturn(Optional.of(user(UserStatus.PENDING_DELETION)));

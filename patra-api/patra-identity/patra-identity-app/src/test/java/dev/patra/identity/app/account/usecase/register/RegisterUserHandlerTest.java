@@ -365,6 +365,28 @@ class RegisterUserHandlerTest {
   }
 
   @Test
+  @DisplayName("密码包含正在注册的用户名或邮箱 @ 前面那一段时报 TOO_SIMILAR，不查占用、不做哈希")
+  void should_reject_password_similar_to_username_or_email() {
+    assertThatThrownBy(
+            () -> handler.handle(command("lin.qing@example.com", "chen-yu", "Chen-Yu-2026")))
+        .isInstanceOf(InvalidUserFieldsException.class)
+        .satisfies(
+            e ->
+                assertThat(((InvalidUserFieldsException) e).getFieldViolations())
+                    .extracting(v -> v.field() + ":" + v.code())
+                    .containsExactly("password:TOO_SIMILAR"));
+    assertThatThrownBy(
+            () -> handler.handle(command("lin.qing@example.com", "chen-yu", "lin.qing888")))
+        .isInstanceOf(InvalidUserFieldsException.class)
+        .satisfies(
+            e ->
+                assertThat(((InvalidUserFieldsException) e).getFieldViolations())
+                    .extracting(v -> v.field() + ":" + v.code())
+                    .containsExactly("password:TOO_SIMILAR"));
+    verifyNoInteractions(users, formerUsernames, passwordHashing);
+  }
+
+  @Test
   @DisplayName("1 MB 的邮箱、用户名和密码在长度校验处拒绝，不做哈希")
   void should_reject_huge_input_without_hashing() {
     String hugeEmail = "a".repeat(1_000_000) + "@example.com";

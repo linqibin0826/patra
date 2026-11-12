@@ -14,7 +14,7 @@ const emailField = z
   .max(254, FIELD_MESSAGES.emailInvalid)
   .pipe(z.email(FIELD_MESSAGES.emailInvalid));
 
-/// 新密码：8 ~ 64 位，不去空格（注册、改密码、重设密码共用；常见密码名单只在后端判）
+/// 新密码：8 ~ 64 位，不去空格（注册、改密码、重设密码共用；常见密码名单、和账号的邮箱或用户名相近只在后端判）
 const newPasswordField = z
   .string()
   .min(1, FIELD_MESSAGES.passwordRequired)

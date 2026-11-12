@@ -96,7 +96,7 @@ class AccountFlowIT {
                 Map.of(
                     "email", "mass@example.com",
                     "username", "mass-user",
-                    "password", "Mass-Assign-03",
+                    "password", "Extra-Fields-03",
                     "id", 1,
                     "userId", "1",
                     "status", "BANNED",
@@ -118,7 +118,7 @@ class AccountFlowIT {
   @Test
   @DisplayName("邮箱不存在和密码错误的响应体，除时间戳和 traceId 外完全相同")
   void should_return_identical_401_for_unknown_email_and_wrong_password() {
-    register("victim@example.com", "Victim-Pass-04");
+    register("victim@example.com", "Quiet-River-04");
 
     EntityExchangeResult<String> unknown = login("nobody-here@example.com", "Whatever-Pass-05");
     EntityExchangeResult<String> wrong = login("victim@example.com", "Wrong-Pass-06");
@@ -132,7 +132,7 @@ class AccountFlowIT {
   @Test
   @DisplayName("连续失败 5 次后被锁，正确密码也返回 429；锁到期后恢复")
   void should_lock_after_five_failures_and_recover() {
-    register("locked@example.com", "Locked-Pass-07");
+    register("locked@example.com", "Steady-Gate-07");
     for (int i = 0; i < 4; i++) {
       assertThat(login("locked@example.com", "Wrong-" + i).getStatus().value()).isEqualTo(401);
     }
@@ -143,13 +143,13 @@ class AccountFlowIT {
     JsonNode retryAfterSeconds = JSON.readTree(fifth.getResponseBody()).get("retryAfterSeconds");
     assertThat(retryAfterSeconds.isNumber()).isTrue();
     assertThat(retryAfterSeconds.asLong()).isEqualTo(2);
-    assertThat(login("locked@example.com", "Locked-Pass-07").getStatus().value()).isEqualTo(429);
+    assertThat(login("locked@example.com", "Steady-Gate-07").getStatus().value()).isEqualTo(429);
 
     await()
         .atMost(Duration.ofSeconds(10))
         .untilAsserted(
             () ->
-                assertThat(login("locked@example.com", "Locked-Pass-07").getStatus().value())
+                assertThat(login("locked@example.com", "Steady-Gate-07").getStatus().value())
                     .isEqualTo(200));
   }
 
@@ -157,7 +157,7 @@ class AccountFlowIT {
   @DisplayName("封禁后密码对返回 403、密码错返回 401；解封后能登录；用户不存在返回 404")
   void should_ban_and_unban() {
     String userId =
-        JSON.readTree(register("banned@example.com", "Banned-Pass-08").getResponseBody())
+        JSON.readTree(register("banned@example.com", "Amber-Field-08").getResponseBody())
             .get("user")
             .get("userId")
             .asString();
@@ -168,7 +168,7 @@ class AccountFlowIT {
         .exchange()
         .expectStatus()
         .isNoContent();
-    assertThat(login("banned@example.com", "Banned-Pass-08").getStatus().value()).isEqualTo(403);
+    assertThat(login("banned@example.com", "Amber-Field-08").getStatus().value()).isEqualTo(403);
     assertThat(login("banned@example.com", "Wrong-Pass-08").getStatus().value()).isEqualTo(401);
     restClient
         .post()
@@ -183,7 +183,7 @@ class AccountFlowIT {
         .exchange()
         .expectStatus()
         .isNoContent();
-    assertThat(login("banned@example.com", "Banned-Pass-08").getStatus().value()).isEqualTo(200);
+    assertThat(login("banned@example.com", "Amber-Field-08").getStatus().value()).isEqualTo(200);
     restClient.post().uri("/admin/users/1/ban").exchange().expectStatus().isNotFound();
   }
 
@@ -192,9 +192,9 @@ class AccountFlowIT {
   void should_never_store_or_echo_plain_password(CapturedOutput output) {
     List<String> passwords =
         List.of(
-            "Leak-Probe-Register-09",
-            "Leak-Probe-Wrong-10",
-            "Leak-Probe-Dup-11",
+            "Trace-Probe-Register-09",
+            "Trace-Probe-Wrong-10",
+            "Trace-Probe-Dup-11",
             "password123",
             "Lp-12");
     List<String> bodies = new ArrayList<>();

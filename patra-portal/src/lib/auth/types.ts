@@ -38,7 +38,7 @@ export interface RegisterInput extends Credentials {
 /// 422 里的一个字段错误。
 export interface FieldError {
   field: string;
-  /// 原因码：REQUIRED、TOO_LONG、INVALID_FORMAT、TOO_SHORT、TOO_COMMON、INVALID_CHARACTER；后端没给时为 null
+  /// 原因码：REQUIRED、TOO_LONG、INVALID_FORMAT、TOO_SHORT、TOO_COMMON、TOO_SIMILAR、INVALID_CHARACTER；后端没给时为 null
   code: string | null;
 }
 

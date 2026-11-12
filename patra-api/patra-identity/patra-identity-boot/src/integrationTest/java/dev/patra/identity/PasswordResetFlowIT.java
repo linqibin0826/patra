@@ -103,6 +103,35 @@ class PasswordResetFlowIT extends IdentityFlowITSupport {
   }
 
   @Test
+  @DisplayName("新密码包含用户名：422 newPassword/TOO_SIMILAR，密码没改、令牌没被消费，换一个密码用同一条链接能重设")
+  void should_reject_similar_password_and_keep_reset_token_usable() {
+    String email = "flow.reset.similar@example.com";
+    register(email, "u-flow-reset-similar");
+    assertThat(post("/auth/password/forgot", Map.of("email", email), noHeaders()).status())
+        .isEqualTo(202);
+    String resetToken = tokenIn(mailEvent(PasswordResetMailEvent.class, email).resetUrl());
+
+    RawResponse similar =
+        post(
+            "/auth/password/reset",
+            Map.of("token", resetToken, "newPassword", "U-Flow-Reset-Similar!"),
+            noHeaders());
+
+    assertThat(similar.status()).as(similar.body()).isEqualTo(422);
+    JsonNode violation = json(similar).get("errors").get(0);
+    assertThat(violation.get("field").asString()).isEqualTo("newPassword");
+    assertThat(violation.get("code").asString()).isEqualTo("TOO_SIMILAR");
+    assertThat(login(email, PASSWORD).status()).as("原密码还能登录").isEqualTo(200);
+    RawResponse retried =
+        post(
+            "/auth/password/reset",
+            Map.of("token", resetToken, "newPassword", "Another-Horse-03"),
+            noHeaders());
+    assertThat(retried.status()).as(retried.body()).isEqualTo(200);
+    assertThat(login(email, "Another-Horse-03").status()).isEqualTo(200);
+  }
+
+  @Test
   @DisplayName("令牌一小时后 422；提交每 IP 每分钟第 11 次 429 带 Retry-After")
   void should_expire_reset_token_after_one_hour_and_throttle_submits() {
     String email = "flow.reset.expire@example.com";

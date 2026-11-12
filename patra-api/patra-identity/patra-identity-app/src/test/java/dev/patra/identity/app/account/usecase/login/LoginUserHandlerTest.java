@@ -433,6 +433,21 @@ class LoginUserHandlerTest {
   }
 
   @Test
+  @DisplayName("登录不查「和邮箱、用户名相近」：这条规则加上之前设的旧密码（就是自己的邮箱、或包含用户名）照常登录")
+  void should_not_apply_similarity_rule_on_login() {
+    when(passwordHashing.matches(any(), any())).thenReturn(true);
+
+    AuthenticatedUser sameAsEmail =
+        handler.handle(command("chen.yu@example.com", "chen.yu@example.com", null, null));
+    AuthenticatedUser containsUsername =
+        handler.handle(command("chen.yu@example.com", "chen-yu-2024", null, null));
+
+    assertThat(sameAsEmail.sessionToken()).isEqualTo("patra_user_x");
+    assertThat(containsUsername.sessionToken()).isEqualTo("patra_user_x");
+    verify(loginThrottle, never()).recordFailure(any());
+  }
+
+  @Test
   @DisplayName("超过登录长度上限的密码：不查库、不做哈希，按失败结算，返回 401")
   void should_reject_overlong_password_without_hashing() {
     String overlong = "x".repeat(PasswordPolicy.MAX_LOGIN_LENGTH + 1);

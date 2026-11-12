@@ -10,6 +10,7 @@ import dev.patra.identity.domain.account.model.vo.EmailAddress;
 import dev.patra.identity.domain.account.model.vo.PasswordHash;
 import dev.patra.identity.domain.account.model.vo.PlainPassword;
 import dev.patra.identity.domain.account.model.vo.RequestOrigin;
+import dev.patra.identity.domain.account.model.vo.UserIdentifiers;
 import dev.patra.identity.domain.account.model.vo.mail.PasswordChangedMail;
 import dev.patra.identity.domain.account.policy.PasswordPolicy;
 import dev.patra.identity.domain.account.port.hashing.PasswordHashingPort;
@@ -42,7 +43,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.support.TransactionOperations;
 
-/// 改密码：每次都输当前密码（不走再认证窗口）；新密码按注册规则且不能与当前相同；
+/// 改密码：每次都输当前密码（不走再认证窗口）；新密码按注册规则（含不能和自己的邮箱、用户名相近）且不能与当前相同；
 /// 事务里换哈希、按用户批量作废令牌、撤销其余会话并记 `PASSWORD_CHANGED`、登记「密码已修改」（与改密码同成同败，
 /// PAP-104）、最后本机换令牌（刷新 `auth_at`）。
 ///
@@ -78,21 +79,25 @@ public class ChangePasswordHandler
   @Override
   public AuthenticatedUser handle(ChangePasswordCommand command) {
     CurrentUser current = currentUserPort.require();
+    long userId = current.userId();
+    // 先读用户：新密码要和它的邮箱、用户名比较，才能和其他字段错误一起报
+    User user = users.findById(userId).orElseThrow(AuthenticationRequiredException::new);
+    user.requireActive();
+    EmailAddress email = user.getEmail().orElseThrow(AuthenticationRequiredException::new);
     List<FieldViolation> violations = new ArrayList<>();
     PlainPassword.validate(command.currentPassword(), UserFieldViolations.CURRENT_PASSWORD)
         .ifPresent(violations::add);
     passwordPolicy
-        .validate(command.newPassword(), UserFieldViolations.NEW_PASSWORD)
+        .validate(
+            command.newPassword(),
+            UserFieldViolations.NEW_PASSWORD,
+            UserIdentifiers.of(email.value(), user.getUsername().value()))
         .ifPresent(violations::add);
     if (!violations.isEmpty()) {
       throw new InvalidUserFieldsException(violations);
     }
     PlainPassword currentPassword = PlainPassword.of(command.currentPassword());
     PlainPassword newPassword = PlainPassword.of(command.newPassword());
-    long userId = current.userId();
-    User user = users.findById(userId).orElseThrow(AuthenticationRequiredException::new);
-    user.requireActive();
-    EmailAddress email = user.getEmail().orElseThrow(AuthenticationRequiredException::new);
     PasswordHash verified = passwordVerifier.verify(email, userId, currentPassword);
     if (currentPassword.normalized().equals(newPassword.normalized())) {
       throw new InvalidUserFieldsException(List.of(UserFieldViolations.newPasswordUnchanged()));

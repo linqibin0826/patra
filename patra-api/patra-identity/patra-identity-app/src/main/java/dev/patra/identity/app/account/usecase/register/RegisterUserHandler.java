@@ -14,6 +14,7 @@ import dev.patra.identity.domain.account.model.vo.EmailAddress;
 import dev.patra.identity.domain.account.model.vo.PasswordHash;
 import dev.patra.identity.domain.account.model.vo.PlainPassword;
 import dev.patra.identity.domain.account.model.vo.RequestOrigin;
+import dev.patra.identity.domain.account.model.vo.UserIdentifiers;
 import dev.patra.identity.domain.account.model.vo.Username;
 import dev.patra.identity.domain.account.model.vo.mail.EmailVerificationMail;
 import dev.patra.identity.domain.account.policy.MailLinkPolicy;
@@ -89,7 +90,10 @@ public class RegisterUserHandler implements CommandHandler<RegisterUserCommand, 
     EmailAddress.validate(command.email()).ifPresent(violations::add);
     usernamePolicy.validate(command.username()).ifPresent(violations::add);
     passwordPolicy
-        .validate(command.password(), UserFieldViolations.PASSWORD)
+        .validate(
+            command.password(),
+            UserFieldViolations.PASSWORD,
+            UserIdentifiers.of(command.email(), command.username()))
         .ifPresent(violations::add);
     violations.addAll(LoginClient.validate(command.clientType(), command.deviceId()));
     if (!violations.isEmpty()) {
