@@ -89,7 +89,7 @@ class InteractionEventsFlowIT extends InteractionFlowITSupport {
     }
   }
 
-  /// 发表：提交后送达，`messageId` 是事件 ID，字段与库里一致，纯文本按 PAP-128 转好、保留 `<@ID>`；登记行发完即删。
+  /// 发表：提交后送达，`messageId` 是事件 ID，字段与库里一致，纯文本按 PAP-128 转好、保留 `<@ID>`；登记行标完成后留在表里，按事件 ID 查得到。
   @Test
   void should_deliver_comment_published_after_commit() {
     long id = comment(A, "publication", PAPER, "@user-4002 看 [链接](https://x.org) 和 `code`", null);
@@ -119,7 +119,8 @@ class InteractionEventsFlowIT extends InteractionFlowITSupport {
                 .build());
     assertThat(event.plainText()).contains("<@" + B + ">").doesNotContain("](");
     assertThat(event.publishedAt()).isEqualTo(commentColumn(id, "created_at", Instant.class));
-    awaitRegistryEmpty();
+    awaitRegistryDrained();
+    assertThat(completedPublications(event.eventId())).isEqualTo(1);
   }
 
   /// 编辑：版本 2、新的纯文本与新增的 @。
@@ -143,7 +144,7 @@ class InteractionEventsFlowIT extends InteractionFlowITSupport {
     assertThat(event.addedMentionedUserIds()).containsExactly(B);
     assertThat(event.plainText()).isEqualTo("改成 <@" + B + ">");
     assertThat(event.subject().type()).isEqualTo("PUBLICATION");
-    awaitRegistryEmpty();
+    awaitRegistryDrained();
   }
 
   /// 删除没有回复的评论：整条去掉。
@@ -167,7 +168,7 @@ class InteractionEventsFlowIT extends InteractionFlowITSupport {
                 .authorId(A)
                 .placeholder(false)
                 .build());
-    awaitRegistryEmpty();
+    awaitRegistryDrained();
   }
 
   /// 经验删除：`subjectId` 就是经验下评论事件里的对象；评论事件带经验的所有者。
@@ -187,7 +188,7 @@ class InteractionEventsFlowIT extends InteractionFlowITSupport {
         receive(PostDeleted.ROUTING_KEY, PostDeleted.class, e -> e.postId() == post).event();
     assertThat(event.subjectId()).isEqualTo(published.subject().subjectId());
     assertThat(event.authorId()).isEqualTo(A);
-    awaitRegistryEmpty();
+    awaitRegistryDrained();
   }
 
   /// 点经验：带作者、点的人、经验的结果与正文的纯文本（经验不解析 @）。
@@ -213,27 +214,29 @@ class InteractionEventsFlowIT extends InteractionFlowITSupport {
                 .experience(ExperienceOutcome.of("MAJOR_REVISION", "IN_PROGRESS", 10, null))
                 .targetPlainText("第二轮小修后直接接收")
                 .build());
-    awaitRegistryEmpty();
+    awaitRegistryDrained();
   }
 
-  /// 取消有帮助不外送：取消之后登记表是空的（真外送了，没有队列绑定它，会被退回、留在登记表里）。
+  /// 取消有帮助不外送：取消之后登记表不多出新行（真外送了，没有队列绑定它，会被退回、作为未完成的行留在登记表里）。
   @Test
   void should_not_externalize_when_helpful_removed() {
     long id = comment(A, "publication", PAPER, "有帮助", null);
     assertThat(status(call(HttpMethod.PUT, B, "/comments/" + id + "/helpful", null)))
         .isEqualTo(200);
     receive(HelpfulMarked.ROUTING_KEY, HelpfulMarked.class, e -> e.targetId() == id);
-    awaitRegistryEmpty();
+    awaitRegistryDrained();
+    long rowsAfterMark = count("SELECT count(*) FROM public.event_publication");
 
     assertThat(status(call(HttpMethod.DELETE, B, "/comments/" + id + "/helpful", null)))
         .isEqualTo(200);
 
-    awaitRegistryEmpty();
     await()
         .during(QUIET)
         .atMost(QUIET.plusSeconds(1))
         .untilAsserted(
-            () -> assertThat(count("SELECT count(*) FROM public.event_publication")).isZero());
+            () ->
+                assertThat(count("SELECT count(*) FROM public.event_publication"))
+                    .isEqualTo(rowsAfterMark));
   }
 
   /// 同步订阅方抛异常让发表回滚（状态码随订阅方抛的异常而定，这里不关心）：评论没落库，也不登记、不外送。
@@ -291,7 +294,8 @@ class InteractionEventsFlowIT extends InteractionFlowITSupport {
                 e -> e.commentId() == commentId)
             .event();
     assertThat(event.eventId()).isEqualTo(registered);
-    awaitRegistryEmpty();
+    awaitRegistryDrained();
+    assertThat(completedPublications(registered)).isEqualTo(1);
   }
 
   /// 外送的五个领域事件经 Modulith 实际用的序列化器写进登记表、读回来与原值相等（补投时要读回再映射）。
@@ -420,12 +424,29 @@ class InteractionEventsFlowIT extends InteractionFlowITSupport {
     }
   }
 
-  /// 等登记表清空（默认完成模式 DELETE：发完即删）。
-  private void awaitRegistryEmpty() {
+  /// 等登记行全部发完：没有 `completion_date` 为空的行（完成模式 `update`，发成功的行标完成后留在表里）。
+  private void awaitRegistryDrained() {
     await()
         .atMost(WAIT)
         .untilAsserted(
-            () -> assertThat(count("SELECT count(*) FROM public.event_publication")).isZero());
+            () ->
+                assertThat(
+                        count(
+                            "SELECT count(*) FROM public.event_publication"
+                                + " WHERE completion_date IS NULL"))
+                    .isZero());
+  }
+
+  /// 已完成（状态 `COMPLETED` 且写了完成时间）、事件内容里含这个事件 ID 的登记行数。
+  ///
+  /// @param eventId 领域事件的 ID
+  /// @return 行数
+  private long completedPublications(UUID eventId) {
+    return count(
+        "SELECT count(*) FROM public.event_publication"
+            + " WHERE status = 'COMPLETED' AND completion_date IS NOT NULL"
+            + " AND strpos(serialized_event, ?) > 0",
+        eventId.toString());
   }
 
   /// 评论表里的一列。

@@ -379,7 +379,7 @@ class LoginDeviceFlowIT extends IdentityFlowITSupport {
     return response;
   }
 
-  /// 发给某个地址的新设备提醒事件正好 `expected` 个：先等登记表清空（已登记的都进了捕获队列），再数。
+  /// 发给某个地址的新设备提醒事件正好 `expected` 个：先等登记行全部发完（已登记的都进了捕获队列），再数。
   ///
   /// @param email 收件人
   /// @param expected 期望的个数

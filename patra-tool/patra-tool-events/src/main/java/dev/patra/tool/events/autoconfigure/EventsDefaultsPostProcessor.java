@@ -15,8 +15,9 @@ import org.springframework.core.env.PropertySource;
 /// 事件登记表与 RabbitMQ 收发的默认配置：以最低优先级并入 `defaultProperties`，服务 yml、Nacos、环境变量都能覆盖。
 ///
 /// 发布端：表由 Flyway 建、只登记带 `@ApplicationModuleListener` 的监听器（即 Modulith 的外送器，服务里普通的
-/// `@TransactionalEventListener` 不进登记表）、发完即删、连接上开确认与退回、broker 不可达时 5 秒内失败；关掉 RabbitMQ 健康检查：
-/// broker 停着时业务照常提交、事件留给补投，服务不该因此判成 DOWN（部署会被回滚），积压看登记表行数；
+/// `@TransactionalEventListener` 不进登记表）、发成功的行写上完成时间留在表里（能查到发过哪些事件、何时发完；暂不清理）、
+/// 连接上开确认与退回、broker 不可达时 5 秒内失败；关掉 RabbitMQ 健康检查：broker 停着时业务照常提交、事件留给补投，
+/// 服务不该因此判成 DOWN（部署会被回滚），积压看登记表里 `completion_date` 为空的行数；
 /// 消费端：容器在处理成功后才 ack（Spring 的 `AUTO`，即 RabbitMQ 的手动确认），失败按 1、2、4 秒退避重试 3 次，
 /// 之后拒绝且不回队列，进死信；prefetch 10。理由见 `docs/patra/specs/2026-10-30-event-module-design.md` 4.9。
 public final class EventsDefaultsPostProcessor implements EnvironmentPostProcessor, Ordered {
@@ -25,7 +26,7 @@ public final class EventsDefaultsPostProcessor implements EnvironmentPostProcess
   static final Map<String, Object> DEFAULTS =
       Map.ofEntries(
           entry("spring.modulith.events.jdbc.schema-initialization.enabled", "false"),
-          entry("spring.modulith.events.completion-mode", "delete"),
+          entry("spring.modulith.events.completion-mode", "update"),
           entry(
               "spring.modulith.events.registry-trigger-annotation",
               "org.springframework.modulith.events.ApplicationModuleListener"),

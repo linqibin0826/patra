@@ -44,10 +44,16 @@ import tools.jackson.databind.json.JsonMapper;
 /// 两种「没发出去」：外送还没开始进程就没了（登记行停在 `PUBLISHED`，用丢掉一切异步任务的执行器模拟），以及外送失败
 /// （broker 停着，登记行 `FAILED`）。之后都关掉整个 identity（进程里的一切都没了，只剩库），换一个全新的实例跑补投。
 /// 正在发时被杀（`PROCESSING`）的 10 分钟保护由事件模块的测试覆盖。两个实例都用真实时钟，补投的最小年龄调成 1 毫秒。
+///
+/// 登记表的完成模式是 `update`，同一个库里先跑的测试类留下的已完成行还在，所以查登记行都只看 `completion_date` 为空的。
 @DisplayName("安全邮件：重启后补投")
 class SecurityMailRestartIT {
 
   private static final JsonMapper JSON = JsonMapper.builder().build();
+  /// 未完成登记行的状态。
+  private static final String PENDING_STATUSES =
+      "SELECT status FROM event_publication WHERE completion_date IS NULL";
+
   private static final Pattern TOKEN_IN_LINK = Pattern.compile("#token=([A-Za-z0-9_-]{43})");
 
   private final HttpClient http = HttpClient.newHttpClient();
@@ -72,13 +78,13 @@ class SecurityMailRestartIT {
 
   @Test
   @Timeout(value = 3, unit = TimeUnit.MINUTES)
-  @DisplayName("登记后、外送前 identity 没了：用户与 PUBLISHED 的登记行一起落库；换新实例补投后验证邮件事件送达、事件 ID 不变、链接能用、登记行删除")
+  @DisplayName("登记后、外送前 identity 没了：用户与 PUBLISHED 的登记行一起落库；换新实例补投后验证邮件事件送达、事件 ID 不变、链接能用、登记行标完成")
   void should_deliver_mail_registered_by_an_instance_gone_before_externalizing() throws Exception {
     String email = "restart.killed@example.com";
     running = start(IdentityStalledAsyncITSpringConfig.class);
     register(email, "u-restart-killed");
     JdbcTemplate firstJdbc = running.getBean(JdbcTemplate.class);
-    assertThat(firstJdbc.queryForList("SELECT status FROM event_publication", String.class))
+    assertThat(firstJdbc.queryForList(PENDING_STATUSES, String.class))
         .as("外送任务没跑，登记行停在 PUBLISHED")
         .containsExactly("PUBLISHED");
     UUID registeredEventId = registeredEventId(firstJdbc);
@@ -90,7 +96,7 @@ class SecurityMailRestartIT {
 
   @Test
   @Timeout(value = 3, unit = TimeUnit.MINUTES)
-  @DisplayName("broker 停着时注册：用户与登记行一起落库、外送失败；关掉 identity、换新实例补投后验证邮件事件送达、事件 ID 不变、链接能用、登记行删除")
+  @DisplayName("broker 停着时注册：用户与登记行一起落库、外送失败；关掉 identity、换新实例补投后验证邮件事件送达、事件 ID 不变、链接能用、登记行标完成")
   void should_deliver_registered_mail_after_identity_restarts() throws Exception {
     String email = "restart.outbox@example.com";
     rabbitmqctl("stop_app");
@@ -101,9 +107,7 @@ class SecurityMailRestartIT {
         .atMost(Duration.ofSeconds(30))
         .untilAsserted(
             () ->
-                assertThat(
-                        firstJdbc.queryForList(
-                            "SELECT status FROM event_publication", String.class))
+                assertThat(firstJdbc.queryForList(PENDING_STATUSES, String.class))
                     .as("外送失败，登记行留着")
                     .containsExactly("FAILED"));
     UUID registeredEventId = registeredEventId(firstJdbc);
@@ -114,7 +118,7 @@ class SecurityMailRestartIT {
     assertDeliveredAfterResubmit(email, registeredEventId);
   }
 
-  /// 在新实例上补投，断言验证邮件事件送达、事件 ID 不变、链接能用、登记行删除。
+  /// 在新实例上补投，断言验证邮件事件送达、事件 ID 不变、链接能用、登记行标完成并留在表里。
   ///
   /// @param email 注册邮箱
   /// @param registeredEventId 登记行里存的事件 ID
@@ -131,7 +135,9 @@ class SecurityMailRestartIT {
         post("/auth/email/verify", Map.of("token", tokenIn(mail.verifyUrl())));
     assertThat(verified.statusCode()).as(verified.body()).isEqualTo(200);
     securityMails.awaitRegistryDrained();
-    assertThat(securityMails.registryRows()).as("送达后登记行删除").isZero();
+    assertThat(securityMails.completedRegistryRowsContaining(registeredEventId.toString()))
+        .as("送达后登记行标完成、留在表里")
+        .isEqualTo(1);
   }
 
   /// 经 HTTP 注册一个用户，断言 201。
@@ -154,14 +160,16 @@ class SecurityMailRestartIT {
     assertThat(registered.statusCode()).as(registered.body()).isEqualTo(201);
   }
 
-  /// 登记表里唯一一行存的事件 ID。
+  /// 登记表里唯一一条未完成的行存的事件 ID。
   ///
   /// @param jdbc 实例的 JDBC 模板
   /// @return 事件 ID
   private static UUID registeredEventId(JdbcTemplate jdbc) {
     return UUID.fromString(
         JSON.readTree(
-                jdbc.queryForObject("SELECT serialized_event FROM event_publication", String.class))
+                jdbc.queryForObject(
+                    "SELECT serialized_event FROM event_publication WHERE completion_date IS NULL",
+                    String.class))
             .get("eventId")
             .asString());
   }

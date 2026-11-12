@@ -53,11 +53,13 @@ class ApplicationConfigTest {
                     || name.equals("patra.identity.mail.links.base-url"));
   }
 
+  /// 以前写死 `delete`，是为了不让安全邮件里的一次性令牌链接留在登记表；#405 起改为跟随默认值，令牌原文留在已完成行里。
+  /// 服务只在 tailscale 内网暴露，当前接受这个风险；开放公网注册前要重新评估（安全邮件 spec 2.4）。
   @Test
-  @DisplayName("安全邮件事件发完即删登记行（带一次性令牌）：identity 自己写死 delete，不跟事件模块的默认值走")
-  void should_pin_event_completion_mode_to_delete() throws IOException {
-    assertThat(property("application.yml", "spring.modulith.events.completion-mode"))
-        .isEqualTo("delete");
+  @DisplayName("事件登记表的完成模式跟随事件模块的默认值（update，发成功的行留在表里），identity 不另写")
+  void should_follow_events_module_completion_mode() throws IOException {
+    assertThat(propertyNames("application.yml"))
+        .doesNotContain("spring.modulith.events.completion-mode");
   }
 
   @Test

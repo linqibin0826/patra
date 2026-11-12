@@ -27,13 +27,13 @@
 | 键 | 默认值 | 为什么 |
 |---|---|---|
 | `spring.modulith.events.jdbc.schema-initialization.enabled` | `false` | 表由 Flyway 建 |
-| `spring.modulith.events.completion-mode` | `delete` | 发完即删，表里只剩积压；identity 的安全邮件令牌不久留 |
+| `spring.modulith.events.completion-mode` | `update` | 发成功的行写上完成时间留在表里，能查发过哪些事件；积压看 `completion_date` 为空的行。已完成的行暂不清理（identity 的令牌原文也留在里面，风险见设计文档 4.7） |
 | `spring.modulith.events.registry-trigger-annotation` | `org.springframework.modulith.events.ApplicationModuleListener` | 只登记 Modulith 的外送器；服务里普通的 `@TransactionalEventListener` 不进登记表、不被补投 |
 | `spring.modulith.events.rabbitmq.enable-json` | `false` | JSON 转换器由本模块统一提供 |
 | `spring.rabbitmq.publisher-confirm-type` | `correlated` | 等确认的前提，关掉启动即失败 |
 | `spring.rabbitmq.publisher-returns` | `true` | 识别没有队列可投，关掉启动即失败 |
 | `spring.rabbitmq.connection-timeout` | `5s` | broker 不可达时尽快失败 |
-| `management.health.rabbit.enabled` | `false` | broker 停着时业务照常提交、事件留给补投，服务不该判成 DOWN（部署会被回滚）；积压看登记表行数 |
+| `management.health.rabbit.enabled` | `false` | broker 停着时业务照常提交、事件留给补投，服务不该判成 DOWN（部署会被回滚）；积压看登记表里 `completion_date` 为空的行数 |
 | `spring.rabbitmq.listener.simple.acknowledge-mode` | `auto` | 处理成功后才 ack（RabbitMQ 意义上的手动确认） |
 | `spring.rabbitmq.listener.simple.prefetch` | `10` | 少囤消息 |
 | `spring.rabbitmq.listener.simple.default-requeue-rejected` | `false` | 失败的消息进死信，不回队列打转 |
@@ -73,7 +73,7 @@
 7. 服务代码里不写 `@ApplicationModuleListener`：登记表只认带它的监听器（外送器自己带着）。普通的 `@TransactionalEventListener(AFTER_COMMIT)` 照 Spring 原来的行为走，不进登记表。
 8. xxl-job-admin 登记 `eventPublicationResubmitJob`：CRON `0 * * * * ?`，路由「第一个」，阻塞处理「丢弃后续调度」，超时 60 秒，不重试。
 
-改外送领域事件的类名或字段之前，先确认登记表是空的：反序列化不了的旧行会让每一轮补投中断在它那里。升级 Modulith 前也一样：外送器的 `listener_id` 随类名变化（2.0 → 2.1 就变过），旧行会因找不到监听器每轮被标 `FAILED`、永远发不出去。
+改外送领域事件的类名或字段之前，先确认登记表里没有未完成（`completion_date` 为空）的行：反序列化不了的旧行会让每一轮补投中断在它那里。升级 Modulith 前也一样：外送器的 `listener_id` 随类名变化（2.0 → 2.1 就变过），旧行会因找不到监听器每轮被标 `FAILED`、永远发不出去。已完成的行补投不再读，不受影响。
 
 不要用 `EventExternalizationConfiguration.headers(...)` 加消息头：Modulith 2.1.2 默认的外送路径会把它们丢掉。
 

@@ -42,7 +42,7 @@ v0.16 决策 C、F：identity 不再自己发信。`EmailDeliveryPort` 的实现
 
 | 经过的地方 | 待多久 | 对策 |
 |---|---|---|
-| identity 的 `event_publication` | 外送确认前（平时毫秒级；broker 停着时到恢复为止） | 完成模式 `DELETE`：确认即删行，不留历史（决策 F）。identity 的 yml 显式写出，不只依赖模块默认值 |
+| identity 的 `event_publication` | 一直留着（外送确认后行标完成、不删；已完成的行暂不清理） | 完成模式跟随事件模块默认的 `UPDATE`（#405）：确认后标完成、行留在表里，令牌原文随 `serialized_event` 一起留着，已完成的行暂不清理。服务只在 tailscale 内网暴露，当前接受；开放公网注册或接入真实用户前要重新评估 |
 | RabbitMQ 队列 | 通知服务消费前 | RabbitMQ 只在 tailnet 内开放（PAP-138） |
 | 日志 | — | 领域事件与集成事件的 `toString()` 都不输出收件地址和链接；适配器的日志只打 `eventId` 与邮件种类 |
 | 通知服务 | 发送时 | 发送记录不存正文（PAP-105） |
@@ -80,7 +80,6 @@ v0.16 决策 C、F：identity 不再自己发信。`EmailDeliveryPort` 的实现
 - 某个 Handler 仍在事务外调 `send`：登记行和业务不同成同败，又回到双写。
 - 补投换了 `eventId`，通知服务去不了重、Resend 幂等键失效。
 - 令牌链接或收件地址出现在日志里。
-- 登记表留着已发出的行（令牌久留）。
 - 新增第 14 种邮件时忘了映射，编译和测试都发现不了。
 
 ## 4. 设计
@@ -223,7 +222,7 @@ EventExternalizationConfiguration eventExternalizationConfiguration(SecurityMail
 - `SecurityMailEventMapper`（boot 的 `config` 包）：13 个分支的 `switch` 把领域记录映射成集成事件、给出路由键，`eventId` 原样复制。`OutgoingMail` 不做成 sealed（渲染器的单测有一个匿名实现的探针邮件，归 PAP-105），`switch` 的 `default` 抛异常；**防漏**靠测试：用 ArchUnit 扫出 domain 里全部 `OutgoingMail` 实现，逐个断言能选中、能映射、路由键对（第 6 节）。
 - 映射器注入 `MailLinkPolicy`：`securitySettingsUrl` 没有令牌，外送时现拼，门户地址改了补投也用新的；带令牌的链接只能在签发时拼（令牌原文不落库），所以在领域记录里。
 - 选择用类型：identity 只外送安全邮件。以后加别的外送事件再加选择条件。
-- `spring.modulith.events.completion-mode: delete` 在 identity 的 `application.yml` 显式写出（注释写「令牌发完即删」），不只依赖模块默认值：哪天模块默认改了，identity 不跟着变。
+- identity 的 `application.yml` 不写 `spring.modulith.events.completion-mode`，跟随事件模块默认的 `update`（#405，令牌原文留在已完成行里的风险见 2.4 的表）。
 - 服务代码里不写 `@ApplicationModuleListener`（事件模块的约束）；identity 现在没有任何 `@EventListener` / `@TransactionalEventListener`。
 
 ### 4.8 Flyway
@@ -241,7 +240,7 @@ EventExternalizationConfiguration eventExternalizationConfiguration(SecurityMail
 
 **留下**：`patra.identity.mail.zone`（公开主页加入时间的换算时区）、`token-retention`、`links`、`resend` 仍在用。compose 里 identity 块的 `mail.env` 与 `patra-infra/docker/README.md` 的相关说明由 PAP-105 挪到 notification（它只改 compose，不碰 identity 代码与 Nacos）。
 
-以后改 `*Mail` 或 `SecurityNotice` 的字段 = 改登记表里领域事件的结构，部署前要确认 identity 的 `event_publication` 是空的（事件模块 README）。本版第一次上线时表是新建的，不受影响。
+以后改 `*Mail` 或 `SecurityNotice` 的字段 = 改登记表里领域事件的结构，部署前要确认 identity 的 `event_publication` 里没有未完成（`completion_date` 为空）的行（事件模块 README）。本版第一次上线时表是新建的，不受影响。
 
 ### 4.10 构建与分包规则
 
@@ -291,7 +290,7 @@ patra-identity-boot
 | 验收（PAP-104） | 测试 |
 |---|---|
 | identity 在事件登记后、外送前被杀掉，重启后补投送达 | `SecurityMailRestartIT` 两例，都用 `SpringApplicationBuilder` 起两个独立的 identity 实例：①**外送前没了**——实例 A 的异步执行器换成丢掉一切任务的（`IdentityStalledAsyncITSpringConfig`），经 HTTP 注册后登记行停在 `PUBLISHED`；②**外送失败**——`rabbitmqctl stop_app` 后注册，登记行变 `FAILED`。两例都**关掉 A**（进程里的一切都没了，只剩库），起全新的实例 B 调 `EventPublicationResubmitter.resubmit()`：捕获队列收到验证邮件事件，`eventId` 与登记行里的相同，拿链接里的令牌在 B 上验证邮箱成功，登记表为空 |
-| 外送完成后登记行被删除 | 同上最后一步；另在流程 IT 的排空监听里，每个用例结束都要等登记表清空（所有成功外送的行都被删了才算结束），且断言 identity 环境里 `spring.modulith.events.completion-mode=delete` |
+| 外送完成后登记行标完成并留在表里 | 同上最后一步：按事件 ID 查得到 `COMPLETED` 的行；另在流程 IT 的排空监听里，每个用例结束都要等登记行全部发完（没有 `completion_date` 为空的行才算结束）；`SecurityMailOutboxIT` 断言 identity 环境里 `spring.modulith.events.completion-mode=update`、按收件地址查得到已完成的行 |
 | 换邮箱流程发出的两条事件地址正确（新地址、旧地址） | `EmailChangeFlowIT`：申请后收到发往**新地址**的 `EmailChangeConfirmMailEvent`；确认后收到发往**旧地址**的 `EmailChangedNoticeMailEvent`（`newEmailMasked` 是遮掩过的新地址、带撤销链接）与发往**新地址**的 `EmailChangedConfirmationMailEvent`，旧地址没收到「已绑定」、新地址没收到变更通知 |
 | identity 现有邮件相关流程测试改为断言发出的事件后全部通过 | 全部流程 IT 从 GreenMail 换成读捕获队列：按收件地址与事件类型取事件，令牌从事件的链接字段取；正文断言（设备、IP 与属地）改为断言 `context` 字段；纯模板措辞的断言删掉（渲染器单测仍覆盖，PAP-105 一起搬） |
 
@@ -302,8 +301,8 @@ patra-identity-boot
 - 所有起 identity 应用的 IT 上下文：`GreenMailSmtpInitializer` 换成 `RabbitMQContainerInitializer`（JVM 内单例的 `rabbitmq:4.4.0-management`）。
 - `IdentitySecurityMailITSpringConfig`：声明捕获队列 `identity-it.security-mail`（`EventQueue.named(...).bind("identity.events", "security-mail.*")`），每个起应用的上下文都导入它——否则外送时没有队列可投，登记行会留在共用的库里，拖住别的上下文。
 - `IdentitySecurityMailITFixture`：用 `RabbitTemplate.receiveAndConvert` **拉取**（不挂监听器），按收件地址与事件类型找，最多等 5 秒；`purge()` 清空捕获队列。`application-test.yml` 配 `patra.events.consumer.trusted-packages: dev.patra.identity.api.account.event`，按 `__TypeId__` 还原具体类型——顺带验证了消费端的反序列化。
-- **排空**：`IdentitySecurityMailDrainTestExecutionListener`（替代原来的邮件排空监听）在每个测试方法结束后等登记表清空（最多 10 秒）。表空 = 每条事件都已被 broker 确认收进队列，下一个用例开头 `purge()` 就能把上一个用例的事件全部清掉，不会晚到。
-- 停 broker 的用例自己负责收尾（启动 broker、补投、等表空）。
+- **排空**：`IdentitySecurityMailDrainTestExecutionListener`（替代原来的邮件排空监听）在每个测试方法结束后等登记行全部发完（最多 10 秒）。没有未完成的行 = 每条事件都已被 broker 确认收进队列，下一个用例开头 `purge()` 就能把上一个用例的事件全部清掉，不会晚到。
+- 停 broker 的用例自己负责收尾（启动 broker、补投、等登记行全部发完）。
 
 ### 6.3 其他测试
 

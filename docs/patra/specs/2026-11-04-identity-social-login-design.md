@@ -577,7 +577,7 @@ CREATE TABLE idn_user_external_identity
 - `login-method-link-code`（就地绑定的验证码）：事实是验证码、过期时间、平台名、第三方账号标识、Patra 用户名；过期不发。这是这条路唯一的凭证，所以要写明「把 GitHub 账号 octocat 绑定到你的 Patra 账号 chen-yu」，「不要把验证码告诉任何人；不是你在操作就忽略这封邮件，账号不会有变化」，防止被诱导转发。
 - 没有密码的用户申请重设时，`PasswordResetMailEvent.settingPassword` 为真，主题和正文说「设置密码」。注销两封的「用这个邮箱和密码登录」改成「重新登录」：只用第三方的人也要看得懂。
 - 验证码那封写明「不要把验证码告诉任何人；如果不是你在注册 Patra，忽略这封邮件，不会有账号被创建」。收件人还没有账号，`displayName` 用提交的用户名。
-- 验证码和现有一次性令牌链接一样，在事件里只待到 broker 确认（`completion-mode: delete`）。
+- 验证码和现有一次性令牌链接一样，随事件留在登记表的已完成行里（完成模式 `update`，#405 接受的风险，见安全邮件 spec 2.4）。
 - 路由键 `security-mail.*` 已被 `notification.security-mail` 绑定，不用改队列。
 
 ## 11. 代码放在哪

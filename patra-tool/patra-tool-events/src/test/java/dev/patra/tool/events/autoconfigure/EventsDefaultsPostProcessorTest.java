@@ -22,7 +22,7 @@ class EventsDefaultsPostProcessorTest {
     processor.postProcessEnvironment(env, new SpringApplication());
     assertThat(env.getProperty("spring.rabbitmq.publisher-confirm-type")).isEqualTo("correlated");
     assertThat(env.getProperty("spring.rabbitmq.publisher-returns")).isEqualTo("true");
-    assertThat(env.getProperty("spring.modulith.events.completion-mode")).isEqualTo("delete");
+    assertThat(env.getProperty("spring.modulith.events.completion-mode")).isEqualTo("update");
     assertThat(env.getProperty("spring.modulith.events.jdbc.schema-initialization.enabled"))
         .isEqualTo("false");
     assertThat(env.getProperty("spring.rabbitmq.listener.simple.retry.max-retries")).isEqualTo("3");
@@ -50,9 +50,9 @@ class EventsDefaultsPostProcessorTest {
   void should_keep_existing_default_properties() {
     StandardEnvironment env = new StandardEnvironment();
     DefaultPropertiesPropertySource.addOrMerge(
-        Map.of("spring.modulith.events.completion-mode", "update"), env.getPropertySources());
+        Map.of("spring.modulith.events.completion-mode", "delete"), env.getPropertySources());
     processor.postProcessEnvironment(env, new SpringApplication());
-    assertThat(env.getProperty("spring.modulith.events.completion-mode")).isEqualTo("update");
+    assertThat(env.getProperty("spring.modulith.events.completion-mode")).isEqualTo("delete");
     assertThat(env.getProperty("spring.rabbitmq.publisher-confirm-type")).isEqualTo("correlated");
   }
 }

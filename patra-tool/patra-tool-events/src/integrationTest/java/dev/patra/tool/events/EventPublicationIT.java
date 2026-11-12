@@ -43,6 +43,9 @@ class EventPublicationIT {
   private static final String EXTERNALIZER_ID =
       "org.springframework.modulith.events.support.EventExternalizerModuleListener.externalize(java.lang.Object)";
 
+  /// 外送成功后登记行的状态（完成模式 `update`：行留在表里）。
+  private static final String COMPLETED = "COMPLETED";
+
   private static final Duration WAIT = Duration.ofSeconds(10);
 
   @Autowired private EventsITOrderService orders;
@@ -65,12 +68,33 @@ class EventPublicationIT {
   }
 
   @Test
-  @DisplayName("事务提交后事件送达消费者，登记行发完即删")
+  @DisplayName("事务提交后事件送达消费者，登记行标完成、写上完成时间并留在表里")
   void should_deliver_event_after_commit() {
     orders.place(EventsITOrderPlaced.of("A-1"));
 
     await().atMost(WAIT).untilAsserted(() -> assertThat(fixture.effectCount()).isEqualTo(1));
-    await().atMost(WAIT).untilAsserted(() -> assertThat(fixture.publicationStatuses()).isEmpty());
+    await()
+        .atMost(WAIT)
+        .untilAsserted(() -> assertThat(fixture.publicationStatuses()).containsExactly(COMPLETED));
+    assertThat(fixture.completedPublicationCount()).isEqualTo(1);
+  }
+
+  /// 补投只捞未完成的行：本模块 IT 把 `min-age` 配成 0，未完成的行这时一定会被补投，返回 0 说明已完成的行被排除了；
+  /// 再等 2 秒，给误补投的消息留出到达消费者的时间。
+  @Test
+  @DisplayName("已完成的登记行不会被补投再发一次")
+  void should_not_resubmit_completed_publication() {
+    orders.place(EventsITOrderPlaced.of("A-9"));
+    await()
+        .atMost(WAIT)
+        .untilAsserted(() -> assertThat(fixture.publicationStatuses()).containsExactly(COMPLETED));
+    assertThat(resubmitter.resubmit()).isZero();
+
+    await()
+        .during(Duration.ofSeconds(2))
+        .atMost(Duration.ofSeconds(3))
+        .until(() -> listener.invocations() == 1);
+    assertThat(fixture.publicationStatuses()).containsExactly(COMPLETED);
   }
 
   @Test
@@ -107,12 +131,14 @@ class EventPublicationIT {
     assertThat(resubmitter.resubmit()).isEqualTo(1);
 
     await().atMost(WAIT).untilAsserted(() -> assertThat(fixture.effectCount()).isEqualTo(1));
-    await().atMost(WAIT).untilAsserted(() -> assertThat(fixture.publicationStatuses()).isEmpty());
+    await()
+        .atMost(WAIT)
+        .untilAsserted(() -> assertThat(fixture.publicationStatuses()).containsExactly(COMPLETED));
     assertThat(listener.invocations()).isEqualTo(1);
   }
 
   @Test
-  @DisplayName("普通的提交后监听器不进登记表：它失败也不留登记行，只有外送器的行")
+  @DisplayName("普通的提交后监听器不进登记表：它失败也不留登记行，表里只有外送器那一行")
   void should_not_register_plain_after_commit_listeners() {
     orders.place(EventsITOrderPlaced.of(EventsITAfterCommitListener.FAILING_PREFIX + "1"));
 
@@ -120,7 +146,9 @@ class EventPublicationIT {
     await()
         .atMost(WAIT)
         .untilAsserted(() -> assertThat(afterCommitListener.invocations()).isEqualTo(1));
-    await().atMost(WAIT).untilAsserted(() -> assertThat(fixture.publicationStatuses()).isEmpty());
+    await()
+        .atMost(WAIT)
+        .untilAsserted(() -> assertThat(fixture.publicationStatuses()).containsExactly(COMPLETED));
   }
 
   @Test
@@ -161,7 +189,9 @@ class EventPublicationIT {
     assertThat(resubmitter.resubmit()).isEqualTo(1);
 
     await().atMost(WAIT).untilAsserted(() -> assertThat(fixture.effectCount()).isEqualTo(1));
-    await().atMost(WAIT).untilAsserted(() -> assertThat(fixture.publicationStatuses()).isEmpty());
+    await()
+        .atMost(WAIT)
+        .untilAsserted(() -> assertThat(fixture.publicationStatuses()).containsExactly(COMPLETED));
   }
 
   @Test

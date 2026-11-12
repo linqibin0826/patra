@@ -34,11 +34,6 @@ spring:
       # 所有环境都设超时：Redis 卡住时登录几秒内返回 503，不用等 Lettuce 默认的 60 秒
       connect-timeout: 10s
       timeout: 5s
-  modulith:
-    events:
-      # 安全邮件事件带一次性令牌链接（PAP-104）：broker 确认收下即删登记行，不留历史。事件模块默认也是 delete，
-      # 这里写死，模块默认值改了 identity 也不跟着变
-      completion-mode: delete
 
 patra:
   web:
