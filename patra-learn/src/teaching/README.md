@@ -256,7 +256,7 @@
     { id: "in-tx", label: "事务中", sub: "还没提交", col: 1, desc: "业务数据和登记行都写了，但还没提交。这时崩了，两样一起消失。" },
     { id: "pending", label: "待外送", sub: "登记行在表里", col: 2, desc: "登记行已经提交，消息还没发。崩了也不怕：补投任务会找到它。" },
     { id: "sending", label: "外送中", sub: "等回执", col: 3, desc: "消息交给了 RabbitMQ，正在等回执。回执到了才算数。" },
-    { id: "deleted", label: "已删除", sub: "发成功了", col: 4, desc: "回执到了、也没被退回，登记行删掉。" },
+    { id: "completed", label: "已完成", sub: "发成功了", col: 4, desc: "回执到了、也没被退回，登记行标成完成，补投不再碰它。" },
     { id: "gone", label: "从未存在", col: 1, row: 2, dashed: true, desc: "事务回滚，登记行和业务数据一起没了。" }
   ]}
   start="in-tx"
@@ -271,7 +271,7 @@
     { from: "in-tx", event: "commit", to: "pending", label: "提交" },
     { from: "in-tx", event: "rollback", to: "gone", label: "回滚" },
     { from: "pending", event: "send", to: "sending", label: "外送" },
-    { from: "sending", event: "ack", to: "deleted", label: "ack" },
+    { from: "sending", event: "ack", to: "completed", label: "ack" },
     { from: "sending", event: "back", to: "pending", label: "被退回" }
   ]}
 />
@@ -318,7 +318,7 @@
     { caption: "陈宇回复了 E 的评论。interaction 准备把评论写进数据库。", focus: ["interaction"], tokens: [{ id: "first", label: "#7f3a", at: "interaction" }] },
     { caption: "同一个事务里：写评论，再写一行登记。提交之后两样一起生效。", focus: ["db"], links: ["interaction>db"], tokens: [{ id: "first", label: "#7f3a", at: "db" }], notes: [{ at: "db", text: "登记表 · 1 行", tone: "wait" }] },
     { caption: "提交后第一次外送：E 收到了提醒，可 RabbitMQ 的回执在路上丢了，登记行还留着。", focus: ["mq", "notify"], links: ["db>mq", "mq>notify"], tokens: [{ id: "first", label: "#7f3a", at: "notify" }], notes: [{ at: "db", text: "登记表 · 1 行", tone: "wait" }, { at: "notify", text: "E 的提醒 · 1 条", tone: "ok" }] },
-    { caption: "补投任务每分钟扫一次登记表，发现这一行，又发了一次。这次回执到了，登记行删掉。", focus: ["mq", "notify"], links: ["db>mq", "mq>notify"], tokens: [{ id: "first", label: "#7f3a", at: "notify", state: "faded" }, { id: "second", label: "#7f3a", at: "notify" }], notes: [{ at: "db", text: "登记表 · 0 行" }, { at: "notify", text: "E 的提醒 · 1 条", tone: "ok" }] },
+    { caption: "补投任务每分钟扫一次登记表，发现这一行，又发了一次。这次回执到了，登记行标成完成。", focus: ["mq", "notify"], links: ["db>mq", "mq>notify"], tokens: [{ id: "first", label: "#7f3a", at: "notify", state: "faded" }, { id: "second", label: "#7f3a", at: "notify" }], notes: [{ at: "db", text: "登记表 · 1 行 · 已完成" }, { at: "notify", text: "E 的提醒 · 1 条", tone: "ok" }] },
     { caption: "notification 记着处理过的事件 ID。第二次到的是同一个 ID，直接丢掉。E 只收到 1 条提醒。", focus: ["notify"], tokens: [{ id: "second", label: "#7f3a 重复", at: "notify", state: "dropped" }], notes: [{ at: "notify", text: "E 的提醒 · 1 条", tone: "ok" }] }
   ]}
   guesses={[
@@ -359,9 +359,9 @@
     { type: "slider", id: "interval", label: "补投间隔", min: 10, max: 300, step: 10, default: 60, unit: "秒" }
   ]}
   cases={[
-    { when: { bound: true }, results: [{ label: "生产者依次收到", value: "ack", tone: "ok" }, { label: "登记行", value: "删除", tone: "ok" }], verdict: { tone: "ok", head: "正常。", text: "有队列接，broker 回 ack，登记行删掉。" } },
+    { when: { bound: true }, results: [{ label: "生产者依次收到", value: "ack", tone: "ok" }, { label: "登记行", value: "标成完成", tone: "ok" }], verdict: { tone: "ok", head: "正常。", text: "有队列接，broker 回 ack，登记行标成完成。" } },
     { when: { mandatory: false }, results: [{ label: "生产者依次收到", value: "ack", tone: "ok" }, { label: "消息去哪了", value: "悄悄丢掉", tone: "bad" }], verdict: { tone: "bad", head: "连退回都没有。", text: "不带 mandatory，路由不到队列的消息直接丢掉，照样回 ack。" } },
-    { when: { "check-return": false }, results: [{ label: "生产者依次收到", value: [{ text: "退回 basic.return", tone: "wait" }, { text: "ack", tone: "ok" }] }, { label: "登记行", value: "删除", tone: "bad" }], verdict: { tone: "bad", head: "这就是坑。", text: "代码只看 ack，以为发成功了，登记行被删，提醒就这么没了。" } },
+    { when: { "check-return": false }, results: [{ label: "生产者依次收到", value: [{ text: "退回 basic.return", tone: "wait" }, { text: "ack", tone: "ok" }] }, { label: "登记行", value: "被标成完成", tone: "bad" }], verdict: { tone: "bad", head: "这就是坑。", text: "代码只看 ack，以为发成功了，登记行被标成完成、不再补投，提醒就这么没了。" } },
     { results: [{ label: "生产者依次收到", value: [{ text: "退回 basic.return", tone: "wait" }, { text: "ack", tone: "ok" }] }, { label: "登记行", value: "留着，每 {interval} 补投", tone: "wait" }], verdict: { tone: "ok", head: "没丢，但发不出去。", text: "先看到退回，登记行留着；可没有队列，它每 {interval} 就被重发一次。" } }
   ]}
 />
@@ -390,7 +390,7 @@
   variants={[
     { label: "先提交，再发", steps: ["写评论", "提交事务", "发提醒消息到 RabbitMQ"], results: [{ label: "PostgreSQL · 评论", value: "在", tone: "ok" }, { label: "RabbitMQ · 提醒", value: "发出了", tone: "ok" }], verdict: { tone: "ok", head: "两样都成功。", text: "只看顺利的时候，三种写法没有区别。" }, failure: { after: 2, results: [{ label: "PostgreSQL · 评论", value: "在", tone: "ok" }, { label: "RabbitMQ · 提醒", value: "没有", tone: "bad" }], verdict: { tone: "bad", head: "提醒丢了。", text: "评论好好地在，可没有任何地方记得还欠一条提醒。" } } },
     { label: "先发，再提交", steps: ["写评论", "发提醒消息到 RabbitMQ", "提交事务"], results: [{ label: "PostgreSQL · 评论", value: "在", tone: "ok" }, { label: "RabbitMQ · 提醒", value: "发出了", tone: "ok" }], verdict: { tone: "ok", head: "两样都成功。", text: "只看顺利的时候，三种写法没有区别。" }, failure: { after: 2, results: [{ label: "PostgreSQL · 评论", value: "回滚了", tone: "bad" }, { label: "RabbitMQ · 提醒", value: "发出了", tone: "ok" }], verdict: { tone: "bad", head: "提醒指向空气。", text: "E 收到「有人回复了你」，那条评论却跟着事务回滚了。" } } },
-    { label: "发件箱", steps: ["写评论，同时写一行登记（同一个事务）", "提交事务", "把登记行发到 RabbitMQ，成功后删掉"], results: [{ label: "PostgreSQL · 登记行", value: "已删除", tone: "ok" }, { label: "RabbitMQ · 提醒", value: "发出了", tone: "ok" }], verdict: { tone: "ok", head: "两样都成功。", text: "只看顺利的时候，三种写法没有区别。" }, failure: { after: 2, results: [{ label: "PostgreSQL · 登记行", value: "还在", tone: "wait" }, { label: "RabbitMQ · 提醒", value: "等补投", tone: "wait" }], verdict: { tone: "ok", head: "只是晚到一会儿。", text: "登记行和评论一起提交了；补投任务每分钟扫一次，把它再发出去。" } } }
+    { label: "发件箱", steps: ["写评论，同时写一行登记（同一个事务）", "提交事务", "把登记行发到 RabbitMQ，成功后标成完成"], results: [{ label: "PostgreSQL · 登记行", value: "已完成", tone: "ok" }, { label: "RabbitMQ · 提醒", value: "发出了", tone: "ok" }], verdict: { tone: "ok", head: "两样都成功。", text: "只看顺利的时候，三种写法没有区别。" }, failure: { after: 2, results: [{ label: "PostgreSQL · 登记行", value: "还在", tone: "wait" }, { label: "RabbitMQ · 提醒", value: "等补投", tone: "wait" }], verdict: { tone: "ok", head: "只是晚到一会儿。", text: "登记行和评论一起提交了；补投任务每分钟扫一次，把它再发出去。" } } }
   ]}
 />
 ```

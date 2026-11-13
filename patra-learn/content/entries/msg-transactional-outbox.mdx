@@ -49,7 +49,7 @@ personalEnv: false
     { id: "in-tx", label: "事务中", sub: "还没提交", col: 1, desc: "业务数据和登记行都写了，但事务还没提交。这时崩了，两样一起消失。" },
     { id: "pending", label: "待外送", sub: "登记行在表里", col: 2, desc: "事务已提交，登记行安全落库。消息还没发，但崩了也不怕：后台会找到它。" },
     { id: "failed", label: "未完成", sub: "FAILED，留着", col: 3, desc: "发送失败（broker 不可达、被拒、没有队列可投、等不到确认）。行留在表里，等补投。" },
-    { id: "deleted", label: "已删除", sub: "发成功了", col: 4, desc: "broker 确认收下，登记行被删掉。Patra 把完成模式设成「发完即删」，表里只剩积压。" },
+    { id: "completed", label: "已完成", sub: "发成功了", col: 4, desc: "broker 确认收下，登记行标成完成（`COMPLETED`，写上完成时间），留在表里，补投不再碰它。积压看的是还没完成的行。" },
     { id: "gone", label: "从未存在", col: 1, row: 2, dashed: true, desc: "事务回滚，登记行和业务数据一起没了。没有业务就没有消息。" }
   ]}
   start="in-tx"
@@ -63,7 +63,7 @@ personalEnv: false
   transitions={[
     { from: "in-tx", event: "commit", to: "pending", label: "提交" },
     { from: "in-tx", event: "rollback", to: "gone", label: "回滚" },
-    { from: "pending", event: "send-ok", to: "deleted", label: "确认" },
+    { from: "pending", event: "send-ok", to: "completed", label: "确认" },
     { from: "pending", event: "send-fail", to: "failed", label: "失败" },
     { from: "failed", event: "resubmit", to: "pending", label: "补投" }
   ]}
@@ -95,7 +95,7 @@ personalEnv: false
     { caption: "用户回复了一条评论。interaction 开事务，写评论，并调 events.publishEvent。Modulith 在同一个事务里多写了一行登记。", focus: ["interaction", "db"], links: ["interaction>db"], tokens: [{ id: "evt", label: "事件 #7f3a", at: "db" }], notes: [{ at: "db", text: "评论 1 + 登记 1（未提交）", tone: "wait" }] },
     { caption: "事务提交：评论和登记行一起落库。用户拿到“发表成功”。到这里，用户这一侧已经完成了。", focus: ["db"], tokens: [{ id: "evt", label: "事件 #7f3a", at: "db" }], notes: [{ at: "db", text: "评论 1 + 登记 1（已提交）", tone: "ok" }] },
     { caption: "提交后，后台尝试把登记行发到 RabbitMQ。这时 RabbitMQ 正好停着，发送失败，登记行标成 FAILED，留在表里。", focus: ["db", "mq"], links: ["db>mq"], tokens: [{ id: "evt", label: "事件 #7f3a", at: "db" }], notes: [{ at: "mq", text: "不可达", tone: "bad" }, { at: "db", text: "登记 1 行 · FAILED", tone: "wait" }] },
-    { caption: "RabbitMQ 恢复后，补投任务（每分钟一次）扫到这一行，重新外送。RabbitMQ 收下消息，登记行被删除。", focus: ["db", "mq"], links: ["db>mq"], tokens: [{ id: "evt", label: "事件 #7f3a", at: "mq" }], notes: [{ at: "db", text: "登记 0 行", tone: "ok" }, { at: "mq", text: "收到 1 条", tone: "ok" }] },
+    { caption: "RabbitMQ 恢复后，补投任务（每分钟一次）扫到这一行，重新外送。RabbitMQ 收下消息，登记行标成完成，留在表里。", focus: ["db", "mq"], links: ["db>mq"], tokens: [{ id: "evt", label: "事件 #7f3a", at: "mq" }], notes: [{ at: "db", text: "登记 1 行 · COMPLETED", tone: "ok" }, { at: "mq", text: "收到 1 条", tone: "ok" }] },
     { caption: "通知服务从队列取走消息，给被回复的人写一条提醒。从发表到送达，中间 RabbitMQ 停过，但没有丢任何东西。", focus: ["mq", "notify"], links: ["mq>notify"], tokens: [{ id: "evt", label: "事件 #7f3a", at: "notify" }], notes: [{ at: "notify", text: "提醒 1 条", tone: "ok" }] }
   ]}
   guesses={[

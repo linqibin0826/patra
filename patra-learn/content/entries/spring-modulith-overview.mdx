@@ -127,7 +127,7 @@ Modulith 的概念分两条线：左边一列管结构，右边两列管事件�
     { caption: "改成同步事件：评论只发布「评论已发表」，提醒订阅它。评论不再认识提醒，但两者还在同一个线程、同一个事务里。Patra v0.14 就是这样做的，当时有意要评论和提醒同成同败。", focus: ["comment", "reminder"], tokens: [{ id: "evt", label: "评论已发表", at: "reminder" }], notes: [{ at: "comment", text: "同一个事务", tone: "wait" }] },
     { caption: "改成提交后、换一条线程处理：提醒出错不再连累评论。可写提醒之前进程被重启，这个事件只在内存里，没了。", focus: ["comment", "reminder"], tokens: [{ id: "evt", label: "评论已发表", at: "reminder", state: "dropped" }], notes: [{ at: "reminder", text: "进程重启，事件丢失", tone: "bad" }] },
     { caption: "用 @ApplicationModuleListener 加事件发布登记：发布时在评论的事务里多记一行，提交后再处理，成功才划掉这一行。进程崩了，这一行还在，可以补投。", focus: ["comment", "registry", "reminder"], links: ["comment>registry", "registry>reminder"], tokens: [{ id: "evt", label: "评论已发表", at: "registry" }], notes: [{ at: "registry", text: "1 行 · 未完成", tone: "wait" }] },
-    { caption: "提醒搬进独立的通知服务（Patra v0.16）：两个服务各有各的库，同一个进程里的监听器够不着了。登记行改由外送器发到 RabbitMQ，通知服务从队列里取。", focus: ["registry", "mq", "notify"], links: ["comment>registry", "registry>mq", "mq>notify"], tokens: [{ id: "evt", label: "评论已发表", at: "notify" }], notes: [{ at: "registry", text: "确认后删除", tone: "ok" }, { at: "notify", text: "写提醒", tone: "ok" }] }
+    { caption: "提醒搬进独立的通知服务（Patra v0.16）：两个服务各有各的库，同一个进程里的监听器够不着了。登记行改由外送器发到 RabbitMQ，通知服务从队列里取。", focus: ["registry", "mq", "notify"], links: ["comment>registry", "registry>mq", "mq>notify"], tokens: [{ id: "evt", label: "评论已发表", at: "notify" }], notes: [{ at: "registry", text: "确认后标完成", tone: "ok" }, { at: "notify", text: "写提醒", tone: "ok" }] }
   ]}
   guesses={[
     { before: 3, question: "改成提交后、换一条线程写提醒。评论提交后、写提醒之前，进程被重启了。这条提醒会怎样？", options: ["重启后自动补上", "丢了，没有任何记录", "评论也跟着被撤销"], answer: "B", explain: "提交后的监听器只在内存里排着，进程一重启就没了；评论早已提交，也不会被撤销。下一步要补的就是「记录」。" },
@@ -155,7 +155,7 @@ Modulith 的概念分两条线：左边一列管结构，右边两列管事件�
 
 - 结构那一半要求包结构服从它的约定（一个模块就是一个基包）。Patra 的分包是「先按层分 Gradle 模块、层里再按子域分包」，套不上，所以只用了事件那一半。
 - 事件那一半要多建一张表，定时补投，选好发成功的行怎么清理。
-- 事件序列化后存进表里，改事件的类名或字段、升级 Modulith，都要先确认表里没有积压的旧行。
+- 事件序列化后存进表里，改事件的类名或字段、升级 Modulith，都要先确认表里没有未完成的旧行；已完成的行补投不再读，不受影响。
 - 只保证至少一次，所有收事件的一方都要能去重。
 
 </Callout>
