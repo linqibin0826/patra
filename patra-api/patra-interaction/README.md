@@ -102,7 +102,7 @@ interaction 把提醒要用的事实外送给通知服务：领域事件在业�
 - 外送五种，交换机 `interaction.events`（topic），路由键是事件类型：`comment.published`、`comment.edited`、`comment.deleted`、`post.deleted`、`helpful.marked`。没有队列绑定的事件会被退回、一直补投，所以取消有帮助不发事件：通知服务对它没有动作。
 - 契约是 `patra-interaction-api` 里的 record（`api.{子域}.event`，实现 `IntegrationEvent`，带 `ROUTING_KEY` 常量）；领域事件到集成事件的选择、路由、映射只在 boot 的 `InteractionEventsConfiguration` 与 `IntegrationEventMapper`，领域层不贴 `@Externalized`，映射只拷字段。
 - 领域事件带 `eventId`（发布处生成，补投不变，消费方据此去重）；评论事件带正文版本（`discussion.comment.version`，发表为 1、每次正文确有变化加 1，消费方据此丢弃晚到的旧编辑）与 PAP-128 的全文纯文本。事件只带算收件人与判乱序要用的事实，对象的展示信息由消费方按 `subjectId` 读时现查。
-- 上线后改外送领域事件的类名或字段，先确认 `event_publication` 是空的；新增外送事件时通知服务要先绑定它的路由键。
+- 上线后改外送领域事件的类名或字段，先确认 `event_publication` 里没有未完成（`completion_date` 为空）的行；新增外送事件时通知服务要先绑定它的路由键。
 
 ## 5. 运行
 

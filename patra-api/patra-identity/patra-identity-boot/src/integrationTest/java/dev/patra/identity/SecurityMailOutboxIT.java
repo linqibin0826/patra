@@ -17,7 +17,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.modulith.events.core.EventSerializer;
 import org.springframework.transaction.IllegalTransactionStateException;
 
-/// 安全邮件经事件模块外送（PAP-104）：只能在事务里登记、登记表与消息两头都能原样还原、送达后登记行被删。
+/// 安全邮件经事件模块外送（PAP-104）：只能在事务里登记、登记表与消息两头都能原样还原、送达后登记行标完成并留在表里。
 @DisplayName("安全邮件外送")
 class SecurityMailOutboxIT extends IdentityFlowITSupport {
 
@@ -30,10 +30,11 @@ class SecurityMailOutboxIT extends IdentityFlowITSupport {
   @DisplayName("没有事务时登记直接失败：事务外发布会被悄悄丢掉，宁可立刻报错")
   void should_reject_send_outside_transaction() {
     OutgoingMail mail = SecurityMailFixture.all().getFirst();
+    int rowsBefore = securityMails.registryRows();
 
     assertThatThrownBy(() -> emailDelivery.send(mail))
         .isInstanceOf(IllegalTransactionStateException.class);
-    assertThat(securityMails.registryRows()).isZero();
+    assertThat(securityMails.registryRows()).isEqualTo(rowsBefore);
   }
 
   @Test
@@ -62,8 +63,8 @@ class SecurityMailOutboxIT extends IdentityFlowITSupport {
   }
 
   @Test
-  @DisplayName("注册后验证邮件事件送达，登记行随即删除（完成模式 delete，一次性令牌不久留）")
-  void should_delete_registry_row_after_delivery_and_use_delete_mode() {
+  @DisplayName("注册后验证邮件事件送达，登记行标完成、写上完成时间并留在表里，内容可查（完成模式 update）")
+  void should_keep_completed_registry_row_after_delivery_and_use_update_mode() {
     String email = "flow.outbox@example.com";
     register(email, "u-flow-outbox");
 
@@ -71,8 +72,8 @@ class SecurityMailOutboxIT extends IdentityFlowITSupport {
 
     assertThat(event.verifyUrl()).contains("#token=");
     securityMails.awaitRegistryDrained();
-    assertThat(securityMails.registryRows()).isZero();
+    assertThat(securityMails.completedRegistryRowsContaining(email)).isEqualTo(1);
     assertThat(environment.getProperty("spring.modulith.events.completion-mode"))
-        .isEqualTo("delete");
+        .isEqualTo("update");
   }
 }

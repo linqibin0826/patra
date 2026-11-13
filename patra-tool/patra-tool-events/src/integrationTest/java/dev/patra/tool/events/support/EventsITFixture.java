@@ -54,6 +54,20 @@ public class EventsITFixture {
     return jdbcClient.sql("SELECT listener_id FROM event_publication").query(String.class).list();
   }
 
+  /// 已完成（状态 `COMPLETED` 且写了完成时间）的登记行数。
+  ///
+  /// @return 行数
+  public int completedPublicationCount() {
+    return jdbcClient
+        .sql(
+            """
+            SELECT count(*) FROM event_publication
+             WHERE status = 'COMPLETED' AND completion_date IS NOT NULL
+            """)
+        .query(Integer.class)
+        .single();
+  }
+
   /// 订单表行数。
   ///
   /// @return 行数

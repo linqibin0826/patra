@@ -109,7 +109,7 @@ app Handler 的事务内
                  ├─ 带 CorrelationData 发送，mandatory
                  ├─ 同步等确认（默认 5 秒）
                  └─ ack 且没被退回 → 返回；否则抛异常
-       ├─ 返回 → 登记行完成（默认 DELETE：删除这一行）
+       ├─ 返回 → 登记行完成（默认 UPDATE：写上完成时间，行留在表里）
        └─ 抛异常 → 登记行标 FAILED，留给补投
 回滚 → 登记行跟着回滚，监听器不会被调用
 ```
@@ -170,11 +170,13 @@ Modulith 的外送器 bean（`rabbitEventExternalizer`）没有 `@ConditionalOnM
 
 Modulith 的 `spring.modulith.events.completion-mode` 决定发成功的登记行怎么处理：`UPDATE`（标完成、留着）、`DELETE`（删掉）、`ARCHIVE`（挪进 `event_publication_archive`）。
 
-本模块默认 `DELETE`，服务可在自己的配置里改：
+本模块默认 `UPDATE`，服务可在自己的配置里改（#405 把原来的 `DELETE` 换掉，identity 也跟随默认值）：
 
-- identity 的安全邮件事件带一次性令牌链接，发完即删（决策 F），默认即满足；
-- 表里只剩没发出去的事件，「表不空」就等于「有积压」，排查直观；
-- 选 `UPDATE` 的服务要自己清理已完成的行（`CompletedEventPublications.deletePublicationsOlderThan`），选 `ARCHIVE` 要多建归档表（模板见 4.10）。
+- 发成功的行写上完成时间、留在表里，直接查库就能看到发过哪些事件、什么时候发完、事件内容。现阶段数据量小，能查比表里干净更重要；
+- 积压看未完成的行（`completion_date IS NULL`），不再是「表不空」。补投只捞未完成的行，已完成的不会再发一次；
+- 已完成的行暂不清理，表随事件数增长；要清理时调 `CompletedEventPublications.deletePublicationsOlderThan`；
+- identity 的安全邮件事件带一次性令牌链接（决策 F），令牌表只存哈希，原文会留在已完成行的 `serialized_event` 里：能读这张表的人可以用还没用过、没过期的链接。服务只在 tailscale 内网暴露，当前接受；开放公网注册或接入真实用户前要重新评估；
+- 选 `ARCHIVE` 要多建归档表（模板见 4.10）。
 
 ### 4.8 消费端
 
@@ -219,7 +221,7 @@ transactionOperations.executeWithoutResult(status -> {
 | 键 | 默认值 | 原因 |
 |---|---|---|
 | `spring.modulith.events.jdbc.schema-initialization.enabled` | `false` | 表由 Flyway 建（2.0.8 默认也是 false，显式写出） |
-| `spring.modulith.events.completion-mode` | `delete` | 4.7 |
+| `spring.modulith.events.completion-mode` | `update` | 4.7 |
 | `spring.modulith.events.registry-trigger-annotation` | `org.springframework.modulith.events.ApplicationModuleListener` | 4.4，只登记外送器（Modulith ≥ 2.1.2 才有，随 4.12 加） |
 | `spring.modulith.events.rabbitmq.enable-json` | `false` | 转换器由本模块统一提供（4.8） |
 | `spring.rabbitmq.publisher-confirm-type` | `correlated` | 2.2 |
@@ -400,9 +402,10 @@ patra-tool-test
 
 | 验收（PAP-137） | 测试 |
 |---|---|
-| 事务提交后事件送达消费者 | IT：事务里写一行业务数据并发布事件，消费者收到，业务效果表有 1 行，登记表为空（DELETE） |
+| 事务提交后事件送达消费者 | IT：事务里写一行业务数据并发布事件，消费者收到，业务效果表有 1 行，登记行 `COMPLETED`、写了完成时间、留在表里（UPDATE） |
+| 已完成的登记行不会被补投 | IT：送达后把登记行的发布时间往前拨过 `min-age`，跑补投返回 0，消费者只收到一次 |
 | 事务回滚时不登记、不外送 | IT：发布后抛异常回滚，登记表为空，等待后消费者没收到 |
-| broker 不可达时业务照常提交、登记行未完成；恢复后补投送达，业务只执行一次 | IT：`rabbitmqctl stop_app` 后发布，业务行在、登记行 `FAILED`；`start_app` 后跑补投，效果表 1 行，登记表为空 |
+| broker 不可达时业务照常提交、登记行未完成；恢复后补投送达，业务只执行一次 | IT：`rabbitmqctl stop_app` 后发布，业务行在、登记行 `FAILED`；`start_app` 后跑补投，效果表 1 行，登记行 `COMPLETED` |
 | 等不到 confirm 时登记行不被标为完成 | IT（真 broker 回 nack）：目标队列设 `x-max-length=0` + `x-overflow=reject-publish`，登记行留着；IT（超时）：单独上下文把 `confirm-timeout` 设成 1 纳秒，登记行留着、但消息实际到了队列，补投再发一遍后效果表仍只有 1 行（同时覆盖「至少一次 + 去重」）；单测：模拟 `RabbitTemplate`，覆盖 ack、nack、超时、退回、中断 |
 | 同一事件投递两次，业务只执行一次 | IT：用同一个 `eventId` 直接发两条，效果表 1 行，`processed_event` 1 行 |
 | 失败超过重试次数进死信队列 | IT：监听器对标记过的事件一直抛异常（测试里重试间隔调到毫秒级），消息出现在 `<队列>.dlq`，共被调用 1 + 3 次 |

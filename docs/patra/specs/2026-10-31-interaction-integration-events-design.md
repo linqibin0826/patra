@@ -216,7 +216,7 @@ EventExternalizationConfiguration eventExternalizationConfiguration() {
 - 映射写在 `IntegrationEventMapper`（boot，纯静态方法，只拷字段：值对象拆成基本类型，枚举转 `name()`），单测逐字段核对。
 - 交换机由发布方与消费方各声明一次（同名同参数是幂等的），谁先部署都行。
 - 不配消息头（`headers(...)` 在 Modulith 2.1.2 默认外送路径上会被丢掉，PAP-137 README）。
-- 完成模式用模块默认的 `DELETE`。
+- 完成模式用模块默认值（#405 起为 `UPDATE`：发成功的行标完成后留在表里）。
 - boot `build.gradle.kts`：加 `patra-tool-events`；`patra-interaction-api` 从 `testImplementation` 改为 `implementation`（映射要用）。改了构建脚本，重跑 `./gradlew dumpModuleGraph`。
 - RabbitMQ 连接与密码已由 PAP-138 写进 Nacos（`patra-common.yaml`、`patra-interaction.yaml`）和 apps compose，本 Issue 不动。
 
@@ -391,7 +391,7 @@ IT 底座：`InteractionFlowITSupport` 加 `RabbitMQContainerInitializer`，导�
 
 ## 8. 给后续 Issue 的约束
 
-- 上线后要改外送领域事件的类名或字段（包括本 Issue 新增的），先确认 interaction 的 `event_publication` 是空的（PAP-137 README）。
+- 上线后要改外送领域事件的类名或字段（包括本 Issue 新增的），先确认 interaction 的 `event_publication` 里没有未完成（`completion_date` 为空）的行（PAP-137 README）。
 - 集成事件 record 的字段只增不改名；要删字段先确认消费端不再读。
 - 要外送 `HelpfulUnmarkedEvent` 时：先有消费方绑定，再按它的需要补字段、加进外送配置。
 - PAP-143 删 `notification` 子域时：同步监听器 `CommentNotificationListener`、`PostNotificationListener` 一起删；`allowingSubscription("notification", …)` 两条随之删。（已完成；领域事件里只为旧监听器留的 `body` 也已删除，见 4.3。）
