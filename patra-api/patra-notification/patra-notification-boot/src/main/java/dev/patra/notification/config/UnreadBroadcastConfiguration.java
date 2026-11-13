@@ -12,9 +12,12 @@ import org.springframework.amqp.core.Binding;
 import org.springframework.amqp.core.BindingBuilder;
 import org.springframework.amqp.core.ExchangeBuilder;
 import org.springframework.amqp.core.FanoutExchange;
+import org.springframework.amqp.rabbit.config.SimpleRabbitListenerContainerFactory;
+import org.springframework.amqp.rabbit.connection.ConnectionFactory;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.amqp.autoconfigure.RabbitTemplateCustomizer;
+import org.springframework.boot.amqp.autoconfigure.SimpleRabbitListenerContainerFactoryConfigurer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
@@ -29,11 +32,17 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 ///   这条队列。
 /// - 发布走单独的连接：RabbitMQ 内存或磁盘告警时会阻塞发布过消息的连接。Boot 的 `RabbitTemplate` 默认和监听容器
 ///   共用一条连接，通知服务以前只收不发，这是第一次在它上面发布；共用的话信箱、安全邮件的消费会跟着停（spec 5.3）。
+/// - 广播监听用自己的容器工厂 {@value #CONTAINER_FACTORY}，配置同 Boot 的默认工厂，只是不重试：事件工具库给监听
+///   配的重试（3 次、1 秒起翻倍）遇到一条转换不了的坏广播，会把每个实例的广播消费卡住约 7 秒，期间所有推送都迟到；
+///   广播丢了能补，失败一次就丢。
 @Configuration(proxyBeanMethods = false)
 public class UnreadBroadcastConfiguration {
 
   /// 广播线程池的 bean 名。
   public static final String EXECUTOR = "unreadBroadcastExecutor";
+
+  /// 广播监听容器工厂的 bean 名。
+  public static final String CONTAINER_FACTORY = "unreadBroadcastContainerFactory";
 
   /// 本实例的身份：每个 Spring 上下文启动时随机生成一个，发送方写进消息，接收方据此跳过自己发的（spec 6.2）。
   ///
@@ -110,5 +119,21 @@ public class UnreadBroadcastConfiguration {
       InstanceId realtimeInstanceId,
       @Qualifier(EXECUTOR) Executor executor) {
     return new UnreadCountBroadcastAdapter(rabbitTemplate, realtimeInstanceId, executor);
+  }
+
+  /// 广播监听的容器工厂：先按 Boot 的默认方式配置（监听开关、确认方式、预取、`force-stop` 等都一样），再清掉重试。
+  /// 转换不了的消息由 Spring 判为无法处理、直接拒绝，临时队列没有死信，就此丢掉。
+  ///
+  /// @param configurer Boot 的默认配置
+  /// @param connectionFactory 连接工厂
+  /// @return 容器工厂
+  @Bean(CONTAINER_FACTORY)
+  public SimpleRabbitListenerContainerFactory unreadBroadcastContainerFactory(
+      SimpleRabbitListenerContainerFactoryConfigurer configurer,
+      ConnectionFactory connectionFactory) {
+    SimpleRabbitListenerContainerFactory factory = new SimpleRabbitListenerContainerFactory();
+    configurer.configure(factory, connectionFactory);
+    factory.setAdviceChain();
+    return factory;
   }
 }
