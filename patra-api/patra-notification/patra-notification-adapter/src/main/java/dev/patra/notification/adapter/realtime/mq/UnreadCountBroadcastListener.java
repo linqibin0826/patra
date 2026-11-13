@@ -25,9 +25,6 @@ public class UnreadCountBroadcastListener {
   /// 本实例的身份。
   private final InstanceId instanceId;
 
-  /// 收一条广播。
-  ///
-  /// @param broadcast 广播
   @RabbitListener(
       id = "unreadBroadcast",
       queues = "#{unreadBroadcastQueue.name}",

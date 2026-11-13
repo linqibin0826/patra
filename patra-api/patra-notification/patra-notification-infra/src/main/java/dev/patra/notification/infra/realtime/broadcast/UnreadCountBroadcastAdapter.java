@@ -14,7 +14,9 @@ import org.springframework.amqp.rabbit.core.RabbitTemplate;
 /// 发送交给一个专用的小线程池（spec 5.2，舱壁隔离）：RabbitMQ 网络不通时每次发送要等满连接超时，资源告警时发送会
 /// 一直挂着；直接在推送任务里发，会把 Boot 的异步线程池占满，本机推送跟着排队。隔开以后最多耗光这一个池。
 ///
-/// 用普通 `RabbitTemplate`，不等 broker 确认、不进事件登记表：广播丢了能补，不值得为它多等。
+/// 用普通 `RabbitTemplate`，不等 broker 确认、不进事件登记表：广播丢了能补，不值得为它多等。事件工具库给所有发送
+/// 加了 mandatory，停机或断线重连的瞬间本实例的队列可能已经删掉，这时广播被 broker 退回，Spring 只打一行日志，
+/// 不会让发送失败。
 @Slf4j
 @RequiredArgsConstructor
 public final class UnreadCountBroadcastAdapter implements UnreadCountBroadcastPort {

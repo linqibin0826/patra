@@ -10,7 +10,8 @@ import java.util.Set;
 ///
 /// 这个 record 就是 RabbitMQ 上的消息体（JSON），发送方和接收方共用。
 ///
-/// @param origin 发送实例的 {@link InstanceId} 标识；接收方据此跳过自己发的
+/// @param origin 发送实例的 {@link InstanceId#value()}。消息体是 JSON，这里存字符串而不是 `InstanceId`；接收方用
+///     {@link #sentBy} 对照自己的 ID，相同就是自己发的，跳过
 /// @param userIds 未读数变了的用户
 public record UnreadCountBroadcast(String origin, Set<Long> userIds) {
 
