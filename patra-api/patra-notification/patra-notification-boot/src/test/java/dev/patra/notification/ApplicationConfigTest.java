@@ -65,6 +65,16 @@ class ApplicationConfigTest {
     assertThat(property("spring.rabbitmq.listener.simple.force-stop")).isEqualTo("true");
   }
 
+  /// 广播另有一个线程池 bean（#406）：容器里有别的 `Executor` 时 Boot 默认不再建 `applicationTaskExecutor`，
+  /// 推送的 `@Async` 和 MVC 异步请求都靠它，所以强制建。
+  ///
+  /// @throws IOException 读取失败时
+  @Test
+  @DisplayName("强制建 Boot 的异步线程池")
+  void should_force_boot_task_executor_beside_broadcast_executor() throws IOException {
+    assertThat(property("spring.task.execution.mode")).isEqualTo("force");
+  }
+
   /// Flyway 递归扫 `db/migration`，不设 `schemas`：设了 Flyway 会自己建 schema 并把历史表挪进去。
   ///
   /// @throws IOException 读取失败时
