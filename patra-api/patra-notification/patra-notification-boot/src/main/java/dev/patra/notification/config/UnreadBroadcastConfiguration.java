@@ -5,6 +5,7 @@ import dev.patra.notification.domain.realtime.port.broadcast.UnreadCountBroadcas
 import dev.patra.notification.infra.realtime.broadcast.DiscardOldestBroadcastPolicy;
 import dev.patra.notification.infra.realtime.broadcast.UnreadCountBroadcastAdapter;
 import java.time.Clock;
+import java.util.Map;
 import java.util.concurrent.Executor;
 import org.springframework.amqp.core.AnonymousQueue;
 import org.springframework.amqp.core.Base64UrlNamingStrategy;
@@ -82,10 +83,15 @@ public class UnreadBroadcastConfiguration {
 
   /// 本实例收广播的临时队列：非持久、独占、断开即删，名字是前缀加随机串。不配死信：广播丢了不需要补。
   ///
+  /// 最多积 1000 条，满了丢最旧的：实例活着但广播消费卡住（例如读库慢）时，消息不会一直堆在 broker 内存里，把它拖进
+  /// 内存告警、连带阻塞所有服务的发布。和发送端一样，旧的广播没有价值。
+  ///
   /// @return 队列
   @Bean
   public AnonymousQueue unreadBroadcastQueue() {
-    return new AnonymousQueue(new Base64UrlNamingStrategy("notification.unread."));
+    return new AnonymousQueue(
+        new Base64UrlNamingStrategy("notification.unread."),
+        Map.of("x-max-length", 1000, "x-overflow", "drop-head"));
   }
 
   /// 把本实例的队列绑到广播交换机。

@@ -134,7 +134,7 @@ RabbitMQ 队列的一个参数 `x-single-active-consumer`。打开后，多个�
 
 ### 6.1 队列与监听
 
-- 每个实例声明一条 `AnonymousQueue`，绑到 `notification.unread.broadcast`。名字带前缀，便于在管理界面认出来，例如 `notification.unread.` 加随机串（`Base64UrlNamingStrategy`，我的判断）。
+- 每个实例声明一条 `AnonymousQueue`，绑到 `notification.unread.broadcast`。最多积 1000 条、满了丢最旧的（实施时补充）：实例活着但消费卡住时，消息不会一直堆在 broker 内存里。名字带前缀，便于在管理界面认出来，例如 `notification.unread.` 加随机串（`Base64UrlNamingStrategy`，我的判断）。
 - 监听放 `adapter.realtime.mq`：`@RabbitListener` 监听这条队列，方法参数是具体的消息类型。事件工具库的 JSON 转换器遇到具体参数类型时按参数类型反序列化，不需要改 `patra.events.consumer.trusted-packages`。
 - 收到后：`origin` 是本实例，丢弃；否则 `registry.push(userIds)`。`push` 本来就只处理本机有连接的用户，没有连接的用户不读库。
 - 处理中的异常接住、打 WARN、不往外抛（我的判断）：免得事件工具库的监听重试（3 次，1 秒起翻倍）拖住这条队列；丢一次推送可以接受。
@@ -166,10 +166,10 @@ RabbitMQ 队列的一个参数 `x-single-active-consumer`。打开后，多个�
 ### 7.3 剩下的窗口
 
 - 活跃实例崩溃：它没确认的消息退回队列，交给下一个消费者，没有重叠。
-- 活跃实例优雅停机：Spring 先取消订阅，RabbitMQ 随即提升下一个消费者。Spring AMQP 默认还会把已经预取到本地的消息（事件工具库默认预取 10 条）处理完才停，这几条会和新活跃实例收到的消息并行。
-- 处理：通知服务设 `spring.rabbitmq.listener.simple.force-stop: true`，停机时只处理完手上这一条，其余预取的退回队列。Spring AMQP 的 `setForceStop` 文档写明它适用于单活跃消费者。窗口缩到最多一条。
+- 活跃实例优雅停机（Spring AMQP 默认）：先取消订阅，RabbitMQ 随即提升下一个消费者；旧实例再把已经预取到本地的消息（事件工具库默认预取 10 条）处理完才停，这几条会和新活跃实例收到的消息并行。
+- 处理：通知服务设 `spring.rabbitmq.listener.simple.force-stop: true`。打开后 Spring 不先取消订阅，处理完手上这一条、确认之后直接关信道；信道关闭时 broker 才把预取的消息退回原位、移除这个消费者、提升下一个。交接时不并行，顺序也保住。Spring AMQP 的 `setForceStop` 文档写明它适用于单活跃消费者。
 
-结论（实施时修订）：剩下「旧实例手上那一条和新实例的第一条并行」，接受。只在真跑多台、做滚动发布时出现；mini 只有一台、CD 先停后起，不会出现。
+结论（实施时修订，整分支评审更正了机制）：剩下的窗口只有一种——单条处理超过监听容器的停机等待（默认 5 秒）时，容器打断线程、关信道，这条没确认、退回给新活跃实例，而旧线程可能还卡在数据库或提交里，两台各处理一条。接受：正常处理是毫秒级；只在真跑多台、做滚动发布时才可能出现；mini 只有一台、CD 先停后起。
 
 ## 8. 提醒邮件「单机串行」：不用改
 
@@ -279,7 +279,7 @@ RabbitMQ 队列的一个参数 `x-single-active-consumer`。打开后，多个�
 - **用 Resilience4j 的 `ThreadPoolBulkhead` 做隔离**：效果和 5.2 一样，但只为一处引一个框架不划算。主流项目里这类框架主要包在服务间的 HTTP / RPC 调用外面。
 - **全局打开虚拟线程**（`spring.threads.virtual.enabled`）：阻塞的虚拟线程几乎不占资源，8 个线程的问题本身就没了。但这是全局开关，Tomcat 请求线程和所有异步任务都会受影响，不在本 Issue 范围内。
 - **停机时等推送和广播发完**：把 Boot 异步线程池配成停机时等几秒，能关掉第 10 节最后一种情况的大部分。用户决定不加。
-- **把信箱交接窗口压到零**：给信箱监听单独配一个预取 1 的容器工厂也只能做到「最多一条」，和 `force-stop` 一样；要真正为零得让新实例等旧实例确认完，RabbitMQ 的单活跃消费者不提供。不做。
+- **把停机等待调大到超过单条处理上限**：Boot 没有对应配置项，要写 `ContainerCustomizer`；正常处理是毫秒级，只为「单条超过 5 秒」这一种情况不值得，不做。
 - **给提醒邮件加分布式锁**：数据层已经挡住重复（第 8 节），锁没有增量收益。
 - **换信箱的互斥方式**（例如给对象墓碑加可锁的行）：改动大；single active consumer 一个队列参数就解决。
 
@@ -313,15 +313,16 @@ RabbitMQ 队列的一个参数 `x-single-active-consumer`。打开后，多个�
 - CD 自动回滚后的队列处理写成人工步骤；本地验收看集成测试，不在本机连 mini 的 RabbitMQ 跑新代码。
 - 广播收发两头的异常都接住打 WARN、不重试。
 - 广播线程池 1 个线程、队列 500，写死不做配置项。
-- 信箱交接窗口（7.3）用 `force-stop` 压到最多一条，剩下的接受（实施时修订：原判断是整段接受，后来查到 Boot 有现成配置项）。
+- 信箱交接窗口（7.3）用 `force-stop` 消掉交接时的并行，只剩「单条处理超过停机等待」一种情况，接受（实施时修订：原判断是整段接受，后来查到 Boot 有现成配置项）。
 - 旧 spec 和 v0.16 release spec 不改，以本文为准。
 
 ## 17. 实施记录（2026-11-13）
 
 与上文设计的偏离，都已在对应小节改正：
 
-1. **信箱交接窗口用 `force-stop` 压到最多一条**（7.3）：原判断是整段接受、要压就得单独配容器。实施时查到 Spring AMQP 的 `setForceStop` 文档写明适用于单活跃消费者，Boot 有现成配置项 `spring.rabbitmq.listener.simple.force-stop`，一行就能做到。
+1. **信箱交接窗口用 `force-stop` 消掉并行**（7.3）：原判断是整段接受、要压就得单独配容器。实施时查到 Spring AMQP 的 `setForceStop` 文档写明适用于单活跃消费者，Boot 有现成配置项 `spring.rabbitmq.listener.simple.force-stop`，一行就能做到。最初把机制写成「压到最多一条并行」，整分支评审对照 spring-rabbit 4.1.2 源码更正为「不先取消订阅、关信道时才换人」。
 2. **广播监听用不重试的容器工厂**（6.1）：多实例集成测试里的坏消息用例发现，消息转换失败发生在监听方法之前，方法里的 try/catch 接不住；用默认工厂时，事件工具库的监听重试会把每个实例的广播消费卡住约 7 秒，期间推送全部迟到。
 3. **测试里起第二个实例要用命令行参数**：`SpringApplicationBuilder.properties()` 设的是默认属性，会被 `application.yml`（端口 6600）和测试配置（不起监听）盖掉。
+4. **广播临时队列加上限**（6.1）：整分支评审指出接收端没有上限，一个活着但消费卡住的实例会让消息一直堆在 broker 内存里。加 `x-max-length = 1000`、`x-overflow = drop-head`。
 
 验证：`./gradlew check integrationTest` 全绿；`UnreadCountBroadcastFlowIT` 的 9 个用例覆盖验收 1、2 与请求线程触发、只推一次、坏消息、监听重启、退回、两个线程池与指标、信箱单活跃消费者声明。去掉广播调用、去掉单活跃消费者开关、把线程池换成同步执行时，对应测试都会失败（实施时逐个验证过）。

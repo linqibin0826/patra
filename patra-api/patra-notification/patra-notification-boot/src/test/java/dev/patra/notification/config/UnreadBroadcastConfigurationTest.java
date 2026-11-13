@@ -52,6 +52,15 @@ class UnreadBroadcastConfigurationTest {
     assertThat(binding.getExchange()).isEqualTo("notification.unread.broadcast");
   }
 
+  /// 临时队列有上限：某个实例活着但广播消费卡住时，最多积 1000 条、满了丢最旧的，不会一直堆在 broker 内存里把它拖进
+  /// 内存告警（那会阻塞所有服务的发布）。
+  @Test
+  void should_cap_broadcast_queue_and_drop_oldest() {
+    assertThat(config.unreadBroadcastQueue().getArguments())
+        .containsEntry("x-max-length", 1000)
+        .containsEntry("x-overflow", "drop-head");
+  }
+
   /// 每个 Spring 上下文一个实例 ID：同一个 JVM 里起两个实例（集成测试）也互不相同。
   @Test
   void should_give_each_call_its_own_instance_id() {
