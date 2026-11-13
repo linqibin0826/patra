@@ -54,11 +54,21 @@ inbox 不依赖 preference：偏好只管邮件，站内提醒照常。
 
 - 接口 `GET /me/notifications/stream`（经网关 `/patra-notification/me/notifications/stream`，网关就要求登录、走推送专用连接池）：SSE，只推三个未读数。连上立刻推一次当前值（带 `retry: 3000`），之后每次未读数变化推一条 `unread-count`，数据与未读数接口同形；每 25 秒一行注释 `:ping`；没有 `Last-Event-ID`。
 - 连接表 `UnreadCountStreamRegistry`（app）管「用户 → 连接」，不认识 SSE；`SseEmitter` 在 adapter 里实现 `UnreadCountStream`。推送读数放在每个用户的锁里，并发推送时最后一条总是最新值；写不进去的连接剔除。
-- 提交后推：`UnreadCountPushListener` 订阅 inbox 的 `UnreadCountsChangedEvent`（`AFTER_COMMIT` + `@Async`，换到 Boot 的 `applicationTaskExecutor`），回滚不推；不进事件登记表。
+- 提交后推：`UnreadCountPushListener` 订阅 inbox 的 `UnreadCountsChangedEvent`（`AFTER_COMMIT` + `@Async`，换到 Boot 的 `applicationTaskExecutor`），回滚不推；不进事件登记表。推完本机连接再广播给其他实例，见下面「多实例」。
 - 寿命与超时：`SseEmitter` 的超时就是 30 分钟寿命（也是显式设的异步超时，不设是 Tomcat 默认的 30 秒），到点正常结束，浏览器 3 秒后重连、网关借机重新查会话。
 - 在站：连接建立时与每轮心跳给在线的人记一次（`PresenceGateway`，决策 H）。
 - 停机：`ContextClosedEvent` 时结束所有连接，优雅停机不用等它们。
-- 配置：`patra.notification.realtime.heartbeat-interval`（25s）、`max-connection-age`（30m），在 jar 的 `application.yml`；只有一个实例（连接在内存里）。
+- 配置：`patra.notification.realtime.heartbeat-interval`（25s）、`max-connection-age`（30m），在 jar 的 `application.yml`。
+
+#### 多实例
+
+设计：`docs/patra/specs/2026-11-13-notification-unread-broadcast-design.md`（#406）。
+
+- **广播**：推送连接只活在建立它的实例里。未读数变了，变化所在的实例先推本机连接，再把用户 ID 发到 fanout 交换机 `notification.unread.broadcast`；每个实例有一条自己的临时队列（`notification.unread.` 开头，非持久、独占、断开即删）绑在上面，收到别的实例发的就推自己手上的连接，自己发的跳过。只带用户 ID，数字现读库，丢一条下次变化或重连时补齐。
+- **隔离**：发送交给专用线程池 `unreadBroadcastExecutor`（1 个线程、排队 500，满了丢最旧的，告警每 60 秒最多一行），RabbitMQ 卡住时不占 Boot 的异步线程池；不等 broker 确认、不进事件登记表。广播监听用不重试的容器工厂，坏消息直接丢；发布走单独的 RabbitMQ 连接，资源告警阻塞发布时信箱消费不受影响。
+- **信箱只有一台在收**：`notification.inbox` 是单活跃消费者队列，每台都订阅、同一时刻只有最先订阅的那台收，靠顺序处理的前提跨实例也成立。活跃实例优雅停机时，它手上那一条可能和新活跃实例的第一条并行（`force-stop` 让它不再处理其余预取的消息），只有滚动发布时会出现。
+- **提醒邮件不用分布式锁**：XXL-Job 路由「第一个」每次只派给一台；执行器上下线时排序后的第一台会换人，两轮可能重叠，由数据层挡住——到点处理先删（认领）排队行再建投递，每日汇总靠部分唯一索引，发送靠 Resend 幂等键（投递 ID，24 小时内只送达一次）。
+- **改信箱队列参数要先停、再删、再起**：已存在的队列不能原地改参数，新版本按新参数声明会被拒绝，还在跑的旧版本也可能按旧参数重建它。CD 自动回滚到旧版本时同理，要停服务、删 `notification.inbox`、再起旧版本。队列不在的这段时间 interaction 的事件被退回、每分钟补投，不丢。
 
 「已处理事件」表（决策 D）不属于任何子域：表结构按事件模块（PAP-137），库里只建一张，inbox 与 mail 的消费者共用，谁先落地谁建。
 
@@ -73,14 +83,14 @@ inbox 不依赖 preference：偏好只管邮件，站内提醒照常。
 | 项 | 值 |
 |---|---|
 | 端口 | 6600；XXL-Job 执行器 6601（不映射到宿主机） |
-| 实例数 | 一个（release spec 第 3 节 C：SSE 连接挂在实例内存里） |
+| 实例数 | mini 上一个；可以跑多个（见「realtime」的「多实例」） |
 | 网关前缀 | `/patra-notification/**`（`/actuator/**` 经网关一律 403） |
 | 错误码前缀 | `NOTIFICATION`（如 `NOTIFICATION-0404`） |
 | 配置 | jar 里的 `application.yml` 放随代码变的默认值；库地址、RabbitMQ 密码引用与门户地址 `patra.notification.mail.links.base-url`（取 `PATRA_PORTAL_BASE_URL`）在 Nacos `patra-notification.yaml`，库账号、RabbitMQ 坐标与 xxl-job 管理端地址在 `patra-common.yaml` |
 | 密钥 | `~/.patra/secrets/nacos.env`、`rabbitmq.env`（都必需） |
 | 定时任务 | 执行器 `patra-notification`：注销清理 `deletedUserCleanupJob`（PAP-142，每天 06:30，含偏好、信箱、在站记录）；信箱保留期 `inboxRetentionJob`（PAP-143，每天 06:45，北京时间 5 个自然月）；已处理事件清理 `processedEventPurgeJob`（事件模块提供，每天 07:00，删 30 天前的去重记录）；提醒邮件 `reminderMailJob`（PAP-146，每分钟）与每日汇总建名单 `dailyDigestJob`（PAP-146，8 点那一小时每 10 分钟） |
 | 调用的服务 | identity 内部接口 `POST /_internal/users/recipients`（收件信息）与 `POST /_internal/users/summaries`（注销清理取账号状态、列表取名片），`lb://patra-identity`；interaction 内部接口 `POST /_internal/subjects/views`（对象视图）与 `POST /_internal/posts/outlines`（经验结果），`lb://patra-interaction`；都是连接 1 秒、读 2 秒 |
-| 消费的事件 | interaction 的 `interaction.events`（队列 `notification.inbox`） |
+| 消费的事件 | interaction 的 `interaction.events`（队列 `notification.inbox`，单活跃消费者）；本服务的未读数广播 `notification.unread.broadcast`（每实例一条临时队列） |
 | 上线 | `docs/patra/runbooks/v0.16-notification-go-live-runbook.md` |
 
 ## 5. 邮件渠道（mail）

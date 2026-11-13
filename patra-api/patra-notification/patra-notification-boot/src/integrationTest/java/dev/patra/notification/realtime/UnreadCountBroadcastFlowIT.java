@@ -39,9 +39,8 @@ import org.springframework.core.env.Environment;
 import org.springframework.http.HttpHeaders;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
-/// 多实例推送未读数（#406，spec `docs/patra/specs/2026-11-13-notification-unread-broadcast-design.md`）：同一个
-// JVM 里
-/// 起第二个通知服务实例 B，和测试类自己的上下文 A 共用数据库与 RabbitMQ。
+/// 多实例推送未读数（#406）：同一个 JVM 里起第二个通知服务实例 B，和测试类自己的上下文 A 共用数据库与 RabbitMQ。
+/// 设计见 `docs/patra/specs/2026-11-13-notification-unread-broadcast-design.md`。
 ///
 /// 信箱队列是单活跃消费者，最先订阅的实例在收。B 在 A 之后启动、最后订阅，永远不是信箱的消费者，所以「连接在 B」
 /// 就是「连接所在的实例没消费这条消息」。

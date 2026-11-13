@@ -1,6 +1,6 @@
 # 通知服务多实例推送未读数工程设计（#406）
 
-> 状态：设计已确认，待实施
+> 状态：已实施（2026-11-13，计划 `docs/patra/plans/2026-11-13-notification-unread-broadcast.md`）；实施中的偏离见第 17 节
 > 日期：2026-11-13
 > Issue：GitHub #406「通知服务支持多实例推送未读数：加一层广播，连接在任一实例都能收到」
 > 依据：实时推送设计 `docs/patra/specs/2026-10-31-notification-realtime-push-design.md`（第 3 节 C「只跑一个实例」、第 6 节）；信箱设计 `docs/patra/specs/2026-10-31-notification-inbox-design.md`（单消费线程）；提醒邮件设计 `docs/patra/specs/2026-10-31-notification-reminder-mail-design.md`（非目标「多实例」）
@@ -315,3 +315,13 @@ RabbitMQ 队列的一个参数 `x-single-active-consumer`。打开后，多个�
 - 广播线程池 1 个线程、队列 500，写死不做配置项。
 - 信箱交接窗口（7.3）用 `force-stop` 压到最多一条，剩下的接受（实施时修订：原判断是整段接受，后来查到 Boot 有现成配置项）。
 - 旧 spec 和 v0.16 release spec 不改，以本文为准。
+
+## 17. 实施记录（2026-11-13）
+
+与上文设计的偏离，都已在对应小节改正：
+
+1. **信箱交接窗口用 `force-stop` 压到最多一条**（7.3）：原判断是整段接受、要压就得单独配容器。实施时查到 Spring AMQP 的 `setForceStop` 文档写明适用于单活跃消费者，Boot 有现成配置项 `spring.rabbitmq.listener.simple.force-stop`，一行就能做到。
+2. **广播监听用不重试的容器工厂**（6.1）：多实例集成测试里的坏消息用例发现，消息转换失败发生在监听方法之前，方法里的 try/catch 接不住；用默认工厂时，事件工具库的监听重试会把每个实例的广播消费卡住约 7 秒，期间推送全部迟到。
+3. **测试里起第二个实例要用命令行参数**：`SpringApplicationBuilder.properties()` 设的是默认属性，会被 `application.yml`（端口 6600）和测试配置（不起监听）盖掉。
+
+验证：`./gradlew check integrationTest` 全绿；`UnreadCountBroadcastFlowIT` 的 9 个用例覆盖验收 1、2 与请求线程触发、只推一次、坏消息、监听重启、退回、两个线程池与指标、信箱单活跃消费者声明。去掉广播调用、去掉单活跃消费者开关、把线程池换成同步执行时，对应测试都会失败（实施时逐个验证过）。
