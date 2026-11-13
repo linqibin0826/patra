@@ -56,6 +56,15 @@ class ApplicationConfigTest {
     assertThat(property("patra.notification.realtime.max-connection-age")).isEqualTo("30m");
   }
 
+  /// 信箱队列是单活跃消费者（#406）：停机时只处理完手上这一条、其余预取的退回队列，交接时新旧两台最多重叠一条。
+  ///
+  /// @throws IOException 读取失败时
+  @Test
+  @DisplayName("监听容器停机时不处理完全部预取")
+  void should_force_stop_listener_containers() throws IOException {
+    assertThat(property("spring.rabbitmq.listener.simple.force-stop")).isEqualTo("true");
+  }
+
   /// Flyway 递归扫 `db/migration`，不设 `schemas`：设了 Flyway 会自己建 schema 并把历史表挪进去。
   ///
   /// @throws IOException 读取失败时

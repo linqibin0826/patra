@@ -14,6 +14,12 @@ spring:
       connection-timeout: 30000
       idle-timeout: 600000
       max-lifetime: 1800000
+  rabbitmq:
+    listener:
+      simple:
+        # 停机时只处理完手上这一条，其余预取的退回队列（默认会把预取的全部处理完）。信箱队列是单活跃消费者：
+        # 旧实例一取消订阅，RabbitMQ 就把下一个提升为活跃，旧实例手上剩得越少，新旧两台重叠处理的消息越少
+        force-stop: true
   flyway:
     enabled: true
     # 递归扫描：每个子域的脚本在 db/migration/{子域}/，整个服务一份历史（public.flyway_schema_history）。

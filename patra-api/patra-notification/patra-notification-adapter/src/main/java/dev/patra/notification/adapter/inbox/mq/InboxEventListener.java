@@ -30,8 +30,11 @@ import org.springframework.stereotype.Component;
 /// 一个队列多种事件，按消息头 `__TypeId__` 分到各个 `@RabbitHandler`（`patra.events.consumer.trusted-packages` 里写着
 /// 这些事件所在的包）。只做「集成事件 → 命令」的映射，去重与事务在处理器里。
 ///
-/// **单消费线程（`concurrency = "1"`）是正确性前提之一**：对象墓碑没有行可锁，经验删除与它下面评论事件之间的互斥靠
-/// 顺序处理（spec 7.2）；改并发之前先给对象墓碑补锁。失败按 1、2、4 秒重试三次，之后进 `notification.inbox.dlq`。
+/// **单消费线程是正确性前提之一**：对象墓碑没有行可锁，经验删除与它下面评论事件之间的互斥靠顺序处理（spec 7.2）；
+/// 改并发之前先给对象墓碑补锁。一个实例内靠 `concurrency = "1"`；跑多台时靠队列的单活跃消费者，同一时刻只有一台
+/// 在收（`InboxQueueConfiguration`，#406）。剩一个小窗口：活跃实例优雅停机时先取消订阅，RabbitMQ 随即把消息改投给
+/// 下一台，而旧实例还在处理手上那一条（`force-stop` 让它不再处理其余预取的消息），这一刻两台可能各处理一条。
+/// 失败按 1、2、4 秒重试三次，之后进 `notification.inbox.dlq`。
 @Slf4j
 @Component
 @RequiredArgsConstructor
