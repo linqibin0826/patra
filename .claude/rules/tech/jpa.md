@@ -4,15 +4,16 @@ paths: patra-api/*/*-infra/**/*.java, patra-tool/patra-tool-jpa/**/*.java
 
 # JPA 使用规范
 
+只适用于用 JPA 的服务（registry、catalog、identity）。表结构、审计列、软删除见 [database.md](database.md)。
+
 ## 基类选择
 
 | 基类 | 适用场景 |
 |------|----------|
-| **BaseJpaEntity** | 聚合根（完整审计） |
-| **SoftDeletableJpaEntity** | 需要软删除的聚合根 |
-| **ChildJpaEntity** | 有独立更新语义的子实体 |
-| **SoftDeletableChildJpaEntity** | 需要软删除的子实体 |
-| **ValueObjectJpaEntity** | 值对象表（DELETE/INSERT 模式） |
+| **BaseJpaEntity** | 主表：操作人、IP、备注、乐观锁 |
+| **ValueObjectJpaEntity** | 其他表：只有 `id`，实现 `Persistable`，新行直接插入 |
+
+两个基类都不映射 `created_at` / `updated_at`（数据库填）。查询要用时，实体自己加只读字段（`insertable = false, updatable = false`），不用 `@Generated` / `@CreationTimestamp`。
 
 ## 核心规范
 
@@ -21,11 +22,8 @@ paths: patra-api/*/*-infra/**/*.java, patra-tool/patra-tool-jpa/**/*.java
 3. **ID**：使用 `SnowflakeIdGenerator.getId()` 预分配
 4. **事务**：infra 不划定事务边界，只允许 `@Transactional(propagation = MANDATORY)` 守卫，详见 [transaction.md](transaction.md)
 5. **批量**：大批量（> 500 条）需 `flush()` + `clear()`
+6. **不经实体的写入**：只能是 Dao 上的 `@Query`，带 `@Modifying(flushAutomatically = true, clearAutomatically = true)`；写主表时显式 `SET updated_by`（批量语句不触发审计）
 
 ## 软删除
 
-使用 Hibernate `@SoftDelete(strategy = TIMESTAMP)`，直接调用 `repository.delete()` 即可。
-
-- `deleted_at` 列由 Hibernate 自动管理，不是实体字段
-- 领域模型通过状态枚举标记删除，不维护 `deletedAt`
-- 查询已删除记录需用 Native Query
+用普通字段 `deletedAt` 映射 `deleted_at`，查询方法自己带「未删除」条件（`...AndDeletedAtIsNull`）。不用 `@SoftDelete`：它会把需要读已删行的查询逼成原生 SQL；去掉它之后，JPQL 批量删除会变成物理删除，要改写成 `UPDATE … SET deleted_at`。
