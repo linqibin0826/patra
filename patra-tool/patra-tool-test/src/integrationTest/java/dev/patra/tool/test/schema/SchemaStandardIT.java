@@ -265,6 +265,75 @@ class SchemaStandardIT {
         .containsExactly(tuple("§4", "tst_note_tag"));
   }
 
+  @Test
+  @DisplayName("§6 索引名没有以 idx_ 加完整表名开头")
+  void should_reject_misnamed_index() {
+    jdbc.execute("CREATE INDEX idx_tag_note ON tst_note_tag (note_id)");
+
+    assertThat(inspect(REGISTRY).violations())
+        .extracting(SchemaViolation::section, SchemaViolation::table)
+        .containsExactly(tuple("§6", "tst_note_tag"));
+  }
+
+  @Test
+  @DisplayName("§6 唯一索引用了普通索引的前缀")
+  void should_reject_index_kind_mismatch() {
+    jdbc.execute("CREATE UNIQUE INDEX idx_tst_note_tag_pair ON tst_note_tag (note_id, tag)");
+
+    assertThat(inspect(REGISTRY).violations())
+        .extracting(SchemaViolation::section, SchemaViolation::table)
+        .containsExactly(tuple("§6", "tst_note_tag"));
+  }
+
+  @Test
+  @DisplayName("§6 检查约束没有以 ck_ 加完整表名开头")
+  void should_reject_misnamed_check_constraint() {
+    jdbc.execute(
+        "ALTER TABLE tst_note_tag ADD CONSTRAINT chk_tag_length CHECK (length(tag) < 100)");
+
+    assertThat(inspect(REGISTRY).violations())
+        .extracting(SchemaViolation::section, SchemaViolation::table)
+        .containsExactly(tuple("§6", "tst_note_tag"));
+  }
+
+  @Test
+  @DisplayName("§6 名字正好 63 字节，可能已被 PostgreSQL 截断")
+  void should_flag_name_of_exactly_63_bytes() {
+    String name = "idx_tst_note_tag_" + "a".repeat(46);
+    jdbc.execute("CREATE INDEX " + name + " ON tst_note_tag (tag)");
+
+    assertThat(inspect(REGISTRY).violations())
+        .singleElement()
+        .satisfies(
+            violation -> {
+              assertThat(violation.section()).isEqualTo("§6");
+              assertThat(violation.message()).contains("可能被截断");
+            });
+  }
+
+  @Test
+  @DisplayName("§6 表或业务列缺注释，标准列不用写")
+  void should_reject_missing_comments() {
+    jdbc.execute("COMMENT ON COLUMN tst_note_tag.tag IS NULL");
+    jdbc.execute("COMMENT ON TABLE tst_note IS NULL");
+
+    assertThat(inspect(REGISTRY).violations())
+        .extracting(SchemaViolation::section, SchemaViolation::table)
+        .containsExactlyInAnyOrder(tuple("§6", "tst_note_tag"), tuple("§6", "tst_note"));
+  }
+
+  @Test
+  @DisplayName("§7 失效的索引")
+  void should_reject_invalid_index() {
+    jdbc.execute(
+        "UPDATE pg_index SET indisvalid = false"
+            + " WHERE indexrelid = 'idx_tst_note_tag_note'::regclass");
+
+    assertThat(inspect(REGISTRY).violations())
+        .extracting(SchemaViolation::section, SchemaViolation::table)
+        .containsExactly(tuple("§7", "tst_note_tag"));
+  }
+
   private static SchemaStandardReport inspect(String registry) {
     return SchemaStandard.inspect(dataSource, registry);
   }

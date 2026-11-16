@@ -1,5 +1,6 @@
 package dev.patra.tool.test.schema;
 
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -50,6 +51,21 @@ public final class SchemaStandard {
 
   private static final Set<String> USERNAME_COLUMNS = Set.of("username", "user_name");
 
+  /// 第 3 节的标准列，意思固定，不用写注释。
+  private static final Set<String> STANDARD_COLUMNS =
+      Set.of(
+          "id",
+          "created_at",
+          "updated_at",
+          "created_by",
+          "updated_by",
+          "ip_address",
+          "record_remarks",
+          "version");
+
+  /// PostgreSQL 标识符的长度上限；超长的名字会被静默截断成正好这么长。
+  private static final int MAX_IDENTIFIER_BYTES = 63;
+
   private SchemaStandard() {}
 
   /// 检查一个库。
@@ -78,8 +94,74 @@ public final class SchemaStandard {
       violations.addAll(auditTrigger(shape));
       violations.addAll(userNameColumns(shape));
       violations.addAll(timeColumns(shape));
+      violations.addAll(names(shape));
+      violations.addAll(comments(shape));
+      violations.addAll(invalidIndexes(shape));
     }
     return new SchemaStandardReport(violations);
+  }
+
+  /// §6：索引和检查约束按 `uk_` / `idx_` / `ck_` 加完整表名加用途短语命名；任何名字不能正好 63 字节。
+  private static List<SchemaViolation> names(TableShape shape) {
+    List<SchemaViolation> violations = new ArrayList<>();
+    for (TableShape.Index index : shape.indexes()) {
+      String expected = (index.unique() ? "uk_" : "idx_") + shape.name() + "_";
+      if (!index.name().startsWith(expected) || index.name().length() == expected.length()) {
+        violations.add(
+            new SchemaViolation(
+                "§6", shape.name(), "索引 " + index.name() + " 应以 " + expected + " 开头，后接用途短语"));
+      }
+    }
+    for (TableShape.Constraint constraint : shape.constraints()) {
+      String expected = "ck_" + shape.name() + "_";
+      if (constraint.type().equals("c")
+          && (!constraint.name().startsWith(expected)
+              || constraint.name().length() == expected.length())) {
+        violations.add(
+            new SchemaViolation(
+                "§6",
+                shape.name(),
+                "检查约束 " + constraint.name() + " 应以 " + expected + " 开头，后接用途短语"));
+      }
+    }
+    List<String> identifiers = new ArrayList<>(List.of(shape.name()));
+    shape.columns().forEach(column -> identifiers.add(column.name()));
+    shape.indexes().forEach(index -> identifiers.add(index.name()));
+    shape.constraints().forEach(constraint -> identifiers.add(constraint.name()));
+    identifiers.stream()
+        .filter(name -> name.getBytes(StandardCharsets.UTF_8).length == MAX_IDENTIFIER_BYTES)
+        .forEach(
+            name ->
+                violations.add(
+                    new SchemaViolation("§6", shape.name(), name + " 正好 63 字节，可能被截断过，改短一些")));
+    return violations;
+  }
+
+  /// §6：每张表、每个业务列写注释；第 3 节的标准列不用写。
+  private static List<SchemaViolation> comments(TableShape shape) {
+    List<SchemaViolation> violations = new ArrayList<>();
+    if (isBlank(shape.comment())) {
+      violations.add(new SchemaViolation("§6", shape.name(), "表没有注释"));
+    }
+    shape.columns().stream()
+        .filter(column -> !STANDARD_COLUMNS.contains(column.name()) && isBlank(column.comment()))
+        .forEach(
+            column ->
+                violations.add(
+                    new SchemaViolation("§6", shape.name(), "列 " + column.name() + " 没有注释")));
+    return violations;
+  }
+
+  /// §7：不能留下无效索引（`CREATE INDEX CONCURRENTLY` 中途失败的产物，占空间、不能用）。
+  private static List<SchemaViolation> invalidIndexes(TableShape shape) {
+    return shape.indexes().stream()
+        .filter(index -> !index.valid())
+        .map(index -> new SchemaViolation("§7", shape.name(), "索引 " + index.name() + " 无效，要删掉重建"))
+        .toList();
+  }
+
+  private static boolean isBlank(String text) {
+    return text == null || text.isBlank();
   }
 
   /// §2：主键是 `id BIGINT`；分区表是分区键列加 `id`（PostgreSQL 要求分区表主键含分区键）。
