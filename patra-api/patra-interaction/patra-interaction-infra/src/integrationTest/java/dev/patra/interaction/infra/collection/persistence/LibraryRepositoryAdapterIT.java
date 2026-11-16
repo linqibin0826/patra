@@ -106,7 +106,7 @@ class LibraryRepositoryAdapterIT extends CollectionPersistenceITSupport {
     assertThat(aNow.itemCount()).isEqualTo(1);
     assertThat(aNow.updatedAt()).isEqualTo(T2);
     assertThat(collections.findOwned(U, b.collectionId()).orElseThrow().itemCount()).isZero();
-    assertThat(count("collection.collection_item")).isEqualTo(1L);
+    assertThat(count("itr_collection_item")).isEqualTo(1L);
     assertThat(library.findItem(U, S1)).isEmpty();
     assertThat(library.findItem(U, S2)).isPresent();
   }
@@ -123,8 +123,8 @@ class LibraryRepositoryAdapterIT extends CollectionPersistenceITSupport {
 
     txRun(() -> collections.delete(U, a.collectionId()));
 
-    assertThat(count("collection.collection")).isZero();
-    assertThat(count("collection.collection_item")).isZero();
+    assertThat(count("itr_collection")).isZero();
+    assertThat(count("itr_collection_item")).isZero();
     assertThat(library.findItem(U, S1)).isPresent();
   }
 
@@ -145,8 +145,8 @@ class LibraryRepositoryAdapterIT extends CollectionPersistenceITSupport {
 
     assertThat(deleted).isEqualTo(DeletedUserData.of(2, 1, 1));
     assertThat(library.countItems(V)).isEqualTo(2);
-    assertThat(count("collection.collection")).isEqualTo(1L);
-    assertThat(count("collection.collection_item")).isEqualTo(1L);
+    assertThat(count("itr_collection")).isEqualTo(1L);
+    assertThat(count("itr_collection_item")).isEqualTo(1L);
   }
 
   /// 用户锁：别的连接持有同一把锁时，`lockOwner` 一直等到它释放。
@@ -220,7 +220,7 @@ class LibraryRepositoryAdapterIT extends CollectionPersistenceITSupport {
     assertThat(collectors(S2)).isEqualTo(1);
     assertThat(
             jdbcTemplate.queryForObject(
-                "SELECT count(*) FROM collection.subject_stats WHERE subject_id = ?",
+                "SELECT count(*) FROM itr_library_subject_stats WHERE subject_id = ?",
                 Long.class,
                 S1.value()))
         .isEqualTo(1L);
@@ -299,10 +299,10 @@ class LibraryRepositoryAdapterIT extends CollectionPersistenceITSupport {
           library.insertItem(U, S2, T0);
         });
     jdbcTemplate.update(
-        "UPDATE collection.subject_stats SET collector_count = 1 WHERE subject_id = 11");
-    jdbcTemplate.update("DELETE FROM collection.subject_stats WHERE subject_id = 12");
+        "UPDATE itr_library_subject_stats SET collector_count = 1 WHERE subject_id = 11");
+    jdbcTemplate.update("DELETE FROM itr_library_subject_stats WHERE subject_id = 12");
     jdbcTemplate.update(
-        "INSERT INTO collection.subject_stats (subject_id, collector_count) VALUES (13, 4)");
+        "INSERT INTO itr_library_subject_stats (id, subject_id, collector_count) VALUES (1, 13, 4)");
 
     assertThat(library.findCollectorCountDrift()).containsExactlyInAnyOrder(S1, S2, S3);
 
@@ -322,10 +322,10 @@ class LibraryRepositoryAdapterIT extends CollectionPersistenceITSupport {
           library.insertItem(U, S2, T0);
         });
     jdbcTemplate.update(
-        "UPDATE collection.subject_stats SET collector_count = 5 WHERE subject_id = 11");
-    jdbcTemplate.update("DELETE FROM collection.subject_stats WHERE subject_id = 12");
+        "UPDATE itr_library_subject_stats SET collector_count = 5 WHERE subject_id = 11");
+    jdbcTemplate.update("DELETE FROM itr_library_subject_stats WHERE subject_id = 12");
     jdbcTemplate.update(
-        "INSERT INTO collection.subject_stats (subject_id, collector_count) VALUES (13, 4)");
+        "INSERT INTO itr_library_subject_stats (id, subject_id, collector_count) VALUES (1, 13, 4)");
 
     assertThat(tx(() -> library.recountCollectorCount(S1))).contains(StatsCorrection.of(5, 2));
     assertThat(tx(() -> library.recountCollectorCount(S1))).isEmpty();
@@ -337,7 +337,7 @@ class LibraryRepositoryAdapterIT extends CollectionPersistenceITSupport {
     assertThat(collectors(S3)).isZero();
     assertThat(
             jdbcTemplate.queryForObject(
-                "SELECT count(*) FROM collection.subject_stats WHERE subject_id = 13", Long.class))
+                "SELECT count(*) FROM itr_library_subject_stats WHERE subject_id = 13", Long.class))
         .isEqualTo(1L);
   }
 
@@ -416,7 +416,7 @@ class LibraryRepositoryAdapterIT extends CollectionPersistenceITSupport {
   /// @return 收藏人数
   private int collectors(SubjectId subjectId) {
     return jdbcTemplate.queryForObject(
-        "SELECT COALESCE(sum(collector_count), 0) FROM collection.subject_stats"
+        "SELECT COALESCE(sum(collector_count), 0) FROM itr_library_subject_stats"
             + " WHERE subject_id = ?",
         Integer.class,
         subjectId.value());

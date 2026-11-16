@@ -67,7 +67,7 @@ class StatsRecountFlowIT extends CollectionFlowITSupport {
   /// 再跑差异为 0。
   @Test
   void should_fix_corrupted_rows_and_report() {
-    jdbcTemplate.update("UPDATE collection.subject_stats SET collector_count = 9");
+    jdbcTemplate.update("UPDATE itr_library_subject_stats SET collector_count = 9");
     jdbcTemplate.update("DELETE FROM itr_helpful_target_stats");
     jdbcTemplate.update(
         "UPDATE itr_helpful_user_stats SET helpful_received = 0 WHERE user_id = ?", A);
@@ -83,7 +83,7 @@ class StatsRecountFlowIT extends CollectionFlowITSupport {
             CounterResult.of("discussion.thread_stats", 1),
             CounterResult.of("reaction.helpful_count", 1),
             CounterResult.of("reaction.helpful_received", 1));
-    assertThat(count("SELECT sum(collector_count) FROM collection.subject_stats")).isEqualTo(2L);
+    assertThat(count("SELECT sum(collector_count) FROM itr_library_subject_stats")).isEqualTo(2L);
     assertThat(count("SELECT sum(helpful_count) FROM itr_helpful_target_stats")).isEqualTo(1L);
     assertThat(count("SELECT helpful_received FROM itr_helpful_user_stats WHERE user_id = ?", A))
         .isEqualTo(1L);

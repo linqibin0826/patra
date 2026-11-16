@@ -50,8 +50,8 @@ abstract class CollectionPersistenceITSupport {
   @BeforeEach
   void truncateCollectionTables() {
     jdbcTemplate.update(
-        "TRUNCATE collection.library_item, collection.collection, collection.collection_item,"
-            + " collection.subject_stats");
+        "TRUNCATE itr_library_item, itr_collection, itr_collection_item,"
+            + " itr_library_subject_stats");
   }
 
   /// 在事务里执行。

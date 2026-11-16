@@ -41,11 +41,10 @@ class DeletedUserCleanupFlowIT extends InteractionFlowITSupport {
     assertThat(result.scannedUsers()).isEqualTo(3);
     assertThat(result.deletedUsers()).isEqualTo(2);
     assertThat(result.failedBatches()).isZero();
-    assertThat(count("SELECT count(*) FROM collection.library_item WHERE user_id = ?", A)).isZero();
+    assertThat(count("SELECT count(*) FROM itr_library_item WHERE user_id = ?", A)).isZero();
     assertThat(count("SELECT count(*) FROM itr_publish_quota WHERE user_id IN (?, ?)", A, B))
         .isZero();
-    assertThat(count("SELECT count(*) FROM collection.library_item WHERE user_id = ?", C))
-        .isEqualTo(1L);
+    assertThat(count("SELECT count(*) FROM itr_library_item WHERE user_id = ?", C)).isEqualTo(1L);
     identity.verify(1, postRequestedFor(urlEqualTo("/_internal/users/summaries")));
   }
 

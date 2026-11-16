@@ -171,19 +171,19 @@ class InteractionMigrationIT {
   /// 两张状态窄表按 `user_id` 哈希分 16 区（release spec 决策 B）。
   @Test
   void should_hash_partition_state_tables_by_user_into_16() {
-    for (String table : List.of("library_item", "collection_item")) {
+    for (String table : List.of("itr_library_item", "itr_collection_item")) {
       assertThat(
               jdbcTemplate.queryForObject(
                   "SELECT count(*) FROM pg_inherits i JOIN pg_class p ON p.oid = i.inhparent"
                       + " JOIN pg_namespace n ON n.oid = p.relnamespace"
-                      + " WHERE n.nspname = 'collection' AND p.relname = ?",
+                      + " WHERE n.nspname = 'public' AND p.relname = ?",
                   Integer.class,
                   table))
           .as(table)
           .isEqualTo(16);
       assertThat(
               jdbcTemplate.queryForObject(
-                  "SELECT pg_get_partkeydef(('collection.' || ?)::regclass)", String.class, table))
+                  "SELECT pg_get_partkeydef(?::regclass)", String.class, table))
           .isEqualTo("HASH (user_id)");
     }
   }
@@ -191,53 +191,51 @@ class InteractionMigrationIT {
   /// 状态窄表的主键以分区键 `user_id` 打头。
   @Test
   void should_key_state_tables_by_user_first() {
-    assertThat(primaryKeyColumns("library_item")).containsExactly("user_id", "subject_id");
-    assertThat(primaryKeyColumns("collection_item"))
-        .containsExactly("user_id", "collection_id", "subject_id");
+    assertThat(primaryKeyColumns("itr_library_item")).containsExactly("user_id", "id");
+    assertThat(primaryKeyColumns("itr_collection_item")).containsExactly("user_id", "id");
   }
 
   /// 收藏夹名称在同一用户下唯一，不同用户可以同名。
   @Test
   void should_keep_collection_names_unique_per_user() {
-    jdbcTemplate.update("DELETE FROM collection.collection");
+    jdbcTemplate.update("DELETE FROM itr_collection");
     insertCollection(1L, 10L, "组会");
     assertThatThrownBy(() -> insertCollection(2L, 10L, "组会"))
         .isInstanceOf(DataIntegrityViolationException.class);
     insertCollection(3L, 11L, "组会");
 
-    assertThat(
-            jdbcTemplate.queryForObject("SELECT count(*) FROM collection.collection", Long.class))
+    assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM itr_collection", Long.class))
         .isEqualTo(2L);
   }
 
   /// 可见性只有两种取值，篇数在 0 ~ 5000。
   @Test
   void should_enforce_collection_checks() {
-    jdbcTemplate.update("DELETE FROM collection.collection");
+    jdbcTemplate.update("DELETE FROM itr_collection");
     assertThatThrownBy(
             () ->
                 jdbcTemplate.update(
-                    "INSERT INTO collection.collection (collection_id, user_id, name, visibility)"
-                        + " VALUES (1, 10, 'a', 'SHARED')"))
+                    "INSERT INTO itr_collection (id, user_id, name, visibility, content_changed_at)"
+                        + " VALUES (1, 10, 'a', 'SHARED', now())"))
         .isInstanceOf(DataIntegrityViolationException.class);
     assertThatThrownBy(
             () ->
                 jdbcTemplate.update(
-                    "INSERT INTO collection.collection (collection_id, user_id, name, visibility,"
-                        + " item_count) VALUES (2, 10, 'b', 'PRIVATE', 5001)"))
+                    "INSERT INTO itr_collection (id, user_id, name, visibility, item_count,"
+                        + " content_changed_at) VALUES (2, 10, 'b', 'PRIVATE', 5001, now())"))
         .isInstanceOf(DataIntegrityViolationException.class);
   }
 
   /// 取主键列（按序）。
   ///
-  /// @param table collection schema 下的表名
+  /// @param table public 下的表名
   /// @return 列名
   private List<String> primaryKeyColumns(String table) {
     return jdbcTemplate.queryForList(
         "SELECT k.column_name FROM information_schema.table_constraints c"
             + " JOIN information_schema.key_column_usage k"
             + " ON k.constraint_name = c.constraint_name AND k.table_schema = c.table_schema"
-            + " WHERE c.table_schema = 'collection' AND c.table_name = ?"
+            + " WHERE c.table_schema = 'public' AND c.table_name = ?"
             + " AND c.constraint_type = 'PRIMARY KEY' ORDER BY k.ordinal_position",
         String.class,
         table);
@@ -250,8 +248,8 @@ class InteractionMigrationIT {
   /// @param name 名称
   private void insertCollection(long collectionId, long userId, String name) {
     jdbcTemplate.update(
-        "INSERT INTO collection.collection (collection_id, user_id, name, visibility)"
-            + " VALUES (?, ?, ?, 'PRIVATE')",
+        "INSERT INTO itr_collection (id, user_id, name, visibility, content_changed_at)"
+            + " VALUES (?, ?, ?, 'PRIVATE', now())",
         collectionId,
         userId,
         name);
