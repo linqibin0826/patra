@@ -186,13 +186,13 @@ class SchemaStandardIT {
   }
 
   @Test
-  @DisplayName("§3 缺审计时间触发器")
+  @DisplayName("§4 缺审计时间触发器")
   void should_reject_missing_audit_trigger() {
     jdbc.execute("DROP TRIGGER trg_tst_note_tag_audit_times ON tst_note_tag");
 
     assertThat(inspect(REGISTRY).violations())
         .extracting(SchemaViolation::section, SchemaViolation::table)
-        .containsExactly(tuple("§3", "tst_note_tag"));
+        .containsExactly(tuple("§4", "tst_note_tag"));
   }
 
   @Test

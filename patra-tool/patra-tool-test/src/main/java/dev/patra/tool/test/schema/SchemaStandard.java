@@ -253,7 +253,7 @@ public final class SchemaStandard {
     return violations;
   }
 
-  /// §3：审计时间由 `set_audit_times()` 触发器维护，插入和更新都要触发、逐行执行。
+  /// §4：审计时间由 `set_audit_times()` 触发器维护，插入和更新都要触发、逐行执行。
   private static List<SchemaViolation> auditTrigger(TableShape shape) {
     boolean present =
         shape.auditTriggers().stream()
@@ -263,7 +263,7 @@ public final class SchemaStandard {
         ? List.of()
         : List.of(
             new SchemaViolation(
-                "§3",
+                "§4",
                 shape.name(),
                 "没有挂 set_audit_times() 触发器（BEFORE INSERT OR UPDATE … FOR EACH ROW）"));
   }

@@ -124,7 +124,8 @@ assertThat(report.violations()).isEmpty();
 | §1 | 表名以 `{prefix}_` 开头，框架表除外 |
 | §2 | 主键是 `id BIGINT`；分区表是分区键列加 `id` |
 | §2 | 没有外键约束，没有 `UNIQUE` 约束（自然键用唯一索引） |
-| §3 | 每张表有 `created_at`、`updated_at`（`TIMESTAMPTZ NOT NULL`）和 `set_audit_times` 触发器；主表另有 `created_by BIGINT`、`updated_by BIGINT`、`ip_address INET`、`record_remarks JSONB` |
+| §3 | 每张表有 `created_at`、`updated_at`（`TIMESTAMPTZ NOT NULL`）；主表另有 `created_by BIGINT`、`updated_by BIGINT`、`ip_address INET`、`record_remarks JSONB` |
+| §4 | 每张表挂 `set_audit_times` 触发器（`BEFORE INSERT OR UPDATE`、逐行） |
 | §3 | 其他表不得有 `created_by`、`updated_by`、`ip_address`、`record_remarks`、`version` |
 | §3 | 不得出现 `username`、`user_name`、`*_by_name` 列（identity 两张用户名表除外） |
 | §4 | 所有时间列都是 `TIMESTAMPTZ`，没有 `TIMESTAMP WITHOUT TIME ZONE` |
