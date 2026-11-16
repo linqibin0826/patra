@@ -50,11 +50,15 @@ import dev.patra.catalog.infra.publication.persistence.dao.PublicationTypeDao;
 import dev.patra.tool.jpa.autoconfigure.JpaAuditingConfiguration;
 import dev.patra.tool.jpa.json.JsonColumnCodec;
 import jakarta.persistence.EntityManager;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import org.hibernate.SessionFactory;
 import org.hibernate.exception.ConstraintViolationException;
+import org.hibernate.stat.Statistics;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -81,7 +85,7 @@ import org.springframework.test.context.ContextConfiguration;
 ///
 /// @author linqibin
 /// @since 0.1.0
-@DataJpaTest
+@DataJpaTest(properties = "spring.jpa.properties.hibernate.generate_statistics=true")
 @ContextConfiguration(initializers = CatalogITPostgreSQLContainerInitializer.class)
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @Import({
@@ -1051,6 +1055,116 @@ class PublicationRepositoryAdapterIT {
       Long keywordId2 =
           keywordDao.findByPublicationId(pub2.getId().value()).getFirst().getKeywordId();
       assertThat(keywordId1).isEqualTo(keywordId2);
+    }
+  }
+
+  // ========== 批量语句与一级缓存 ==========
+
+  @Nested
+  @DisplayName("批量语句与一级缓存")
+  class BulkStatementTests {
+
+    /// 改成 `@Modifying(clearAutomatically = true)` 前量出的基线：插入 50 篇带全套子表的文献，
+    /// 再整组替换四种子表，一共准备的 SQL 语句数。补了自动清空之后不应变多——变多说明清空后
+    /// 又把共享的字典行（关键词、研究者）重新查了一遍，导入会变慢。
+    private static final long STATEMENTS_FOR_FIFTY = 661L;
+
+    /// 批量语句会先落库攒着的改动、再清空一级缓存，之前读到的实体随之脱管。同一事务里保存两次、
+    /// 每次后面跟一次子表整组替换，两次对主表的改动都要落库，子表留下的是第二组。
+    @Test
+    @DisplayName("同一事务里两次保存并替换子表，两次的改动都落库")
+    void should_save_publication_twice_with_replaced_children() {
+      var publication =
+          createPublication("58008101", "10.5800/twice", 1001L, 2001L, "Saved Twice", 2024);
+      repository.save(publication);
+      Long id = publication.getId().value();
+
+      publication.updateOaStatus(true, OaStatus.GOLD);
+      repository.save(publication);
+      repository.replaceDatesBatch(
+          Map.of(id, List.of(PublicationDate.of(PublicationDateType.PUBLISHED, 2024, 1, 15))));
+
+      publication.incrementCitationCount(5);
+      repository.save(publication);
+      repository.replaceDatesBatch(
+          Map.of(
+              id,
+              List.of(
+                  PublicationDate.of(PublicationDateType.RECEIVED, 2024, 3, 10),
+                  PublicationDate.of(PublicationDateType.ACCEPTED, 2024, 5, 20))));
+      entityManager.flush();
+      entityManager.clear();
+
+      var found = repository.findById(id).orElseThrow();
+      assertThat(found.getIsOa()).isTrue();
+      assertThat(found.getOaStatus()).isEqualTo(OaStatus.GOLD);
+      assertThat(found.getCitationCount()).isEqualTo(5);
+      assertThat(dateDao.findByPublicationId(id))
+          .extracting(date -> date.getDateType())
+          .containsExactlyInAnyOrder(
+              PublicationDateType.RECEIVED.getCode(), PublicationDateType.ACCEPTED.getCode());
+    }
+
+    @Test
+    @DisplayName("批量保存 50 篇文献准备的语句数不超过基线")
+    void should_not_increase_statements_when_saving_batch() {
+      List<PublicationCompleteData> data = new ArrayList<>();
+      for (int i = 0; i < 50; i++) {
+        data.add(completeDataForStatementCount(i));
+      }
+      Statistics statistics =
+          entityManager.getEntityManagerFactory().unwrap(SessionFactory.class).getStatistics();
+      statistics.clear();
+
+      repository.insertAllWithAssociations(data);
+      Map<Long, List<PublicationIdentifier>> identifiers = new HashMap<>();
+      Map<Long, PublicationAbstract> abstracts = new HashMap<>();
+      Map<Long, List<PublicationDate>> dates = new HashMap<>();
+      Map<Long, PublicationMetadata> metadata = new HashMap<>();
+      for (PublicationCompleteData item : data) {
+        Long id = item.getPublicationId();
+        identifiers.put(
+            id, List.of(PublicationIdentifier.forPmid(item.publication().getPmid(), "PUBMED")));
+        abstracts.put(id, PublicationAbstract.ofPlainText("Replaced abstract " + id));
+        dates.put(id, List.of(PublicationDate.of(PublicationDateType.RECEIVED, 2024, 3, 10)));
+        metadata.put(id, PublicationMetadata.ofImport(ProvenanceCode.PUBMED, "replaced-batch"));
+      }
+      repository.replaceIdentifiersBatch(identifiers);
+      repository.replaceAbstractsBatch(abstracts);
+      repository.replaceDatesBatch(dates);
+      repository.replaceMetadataBatch(metadata);
+      entityManager.flush();
+
+      assertThat(statistics.getPrepareStatementCount()).isLessThanOrEqualTo(STATEMENTS_FOR_FIFTY);
+    }
+
+    /// 一篇带全套子表的文献；关键词、研究者在 50 篇之间共用，同真实导入一样会命中已有字典行。
+    private PublicationCompleteData completeDataForStatementCount(int index) {
+      String pmid = String.valueOf(59000000 + index);
+      return PublicationCompleteData.builder()
+          .publication(
+              createPublication(
+                  pmid, "10.5900/" + index, 1001L, 2001L, "Batch Publication " + index, 2024))
+          .metadata(PublicationMetadata.ofImport(ProvenanceCode.PUBMED, "statement-count"))
+          .meshHeadings(
+              List.of(
+                  PublicationMeshHeading.of(
+                      "D000001", true, 1, List.of(MeshQualifier.ofMinor("Q000001", 1)))))
+          .keywords(List.of(PublicationKeyword.ofAuthor("machine learning", 1)))
+          .publicationTypes(
+              List.of(PublicationTypeInfo.of("D016428", "Journal Article", "PUBMED", 1)))
+          .supplMeshList(List.of(PublicationSupplMesh.of("C000001", 1)))
+          .dates(List.of(PublicationDate.of(PublicationDateType.PUBLISHED, 2024, 1, 15)))
+          .investigators(
+              List.of(
+                  PublicationInvestigator.builder()
+                      .lastName("Garcia")
+                      .foreName("Maria")
+                      .initials("M")
+                      .orcid("0000-0002-1825-0097")
+                      .dedupKey("dedup-garcia-maria-0097")
+                      .build()))
+          .build();
     }
   }
 

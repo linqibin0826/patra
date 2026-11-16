@@ -8,6 +8,7 @@ import com.tngtech.archunit.core.importer.ImportOption;
 import com.tngtech.archunit.lang.ArchRule;
 import com.tngtech.archunit.lang.EvaluationResult;
 import dev.patra.tool.test.archunit.HexagonalArchitectureRules;
+import dev.patra.tool.test.archunit.PersistenceTechnologyRules;
 import dev.patra.tool.test.archunit.SubdomainArchitectureRules;
 import dev.patra.tool.test.archunit.TestingRules;
 import java.util.List;
@@ -281,6 +282,24 @@ class CatalogArchitectureTest {
     void e2eTestsShouldResideInBootModule() {
       TestingRules.e2eTestsShouldResideInBootModule().check(classes);
     }
+  }
+
+  /// 写侧技术规则（库表规范第 8 节）：catalog 用 JPA 写库，汇总所有违规一次报出。
+  ///
+  /// `PgAdvisoryRunLockAdapter` 豁免 JDBC：它只执行 PostgreSQL advisory lock，不改数据。
+  @Test
+  @DisplayName("写侧技术规则")
+  void persistenceTechnologyRulesShouldHold() {
+    List<String> violations =
+        PersistenceTechnologyRules.jpaService(
+                "dev.patra.catalog",
+                Set.of("dev.patra.catalog.infra.kernel.lock.PgAdvisoryRunLockAdapter"))
+            .stream()
+            .map(rule -> rule.evaluate(classes))
+            .filter(EvaluationResult::hasViolation)
+            .map(result -> result.getFailureReport().toString())
+            .toList();
+    assertThat(violations).isEmpty();
   }
 
   /// 六边形规则全部执行，汇总所有违规一次报出。

@@ -42,7 +42,7 @@ public interface AuthorOrcidDao extends JpaRepository<AuthorOrcidEntity, Long> {
   /// 根据作者 ID 删除所有 ORCID。
   ///
   /// @param authorId 作者 ID
-  @Modifying
+  @Modifying(flushAutomatically = true, clearAutomatically = true)
   @Query("DELETE FROM AuthorOrcidEntity o WHERE o.author.id = :authorId")
   void deleteByAuthorId(@Param("authorId") Long authorId);
 

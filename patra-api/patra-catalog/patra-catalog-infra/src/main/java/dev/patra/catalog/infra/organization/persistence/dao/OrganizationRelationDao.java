@@ -53,7 +53,7 @@ public interface OrganizationRelationDao extends JpaRepository<OrganizationRelat
   /// @param relatedRorId 关联机构的 ROR ID
   /// @param relatedOrgId 关联机构的内部 ID
   /// @return 更新的记录数
-  @Modifying
+  @Modifying(flushAutomatically = true, clearAutomatically = true)
   @Query(
       "UPDATE OrganizationRelationEntity r SET r.relatedOrganizationId = :relatedOrgId WHERE r.relatedRorId = :relatedRorId")
   int linkByRorId(

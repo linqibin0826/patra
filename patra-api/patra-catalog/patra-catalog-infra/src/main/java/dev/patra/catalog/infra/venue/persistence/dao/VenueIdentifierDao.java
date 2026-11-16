@@ -79,14 +79,15 @@ public interface VenueIdentifierDao extends JpaRepository<VenueIdentifierEntity,
   ///
   /// @param venueId 载体 ID
   /// @return 删除的记录数
-  @Modifying
-  int deleteByVenueId(Long venueId);
+  @Modifying(flushAutomatically = true, clearAutomatically = true)
+  @Query("DELETE FROM VenueIdentifierEntity e WHERE e.venueId = :venueId")
+  int deleteByVenueId(@Param("venueId") Long venueId);
 
   /// 根据载体 ID 列表批量删除标识符。
   ///
   /// @param venueIds 载体 ID 列表
   /// @return 删除的记录数
-  @Modifying
+  @Modifying(flushAutomatically = true, clearAutomatically = true)
   @Query("DELETE FROM VenueIdentifierEntity e WHERE e.venueId IN :venueIds")
   int deleteByVenueIdIn(@Param("venueIds") Collection<Long> venueIds);
 }

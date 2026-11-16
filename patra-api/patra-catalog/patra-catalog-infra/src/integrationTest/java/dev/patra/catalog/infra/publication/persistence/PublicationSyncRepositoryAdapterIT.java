@@ -195,6 +195,8 @@ class PublicationSyncRepositoryAdapterIT {
     long id = original.getId().value();
     adapter.softDeleteByPmids(
         List.of("91000002"), SourcePosition.ofFileName("pubmed26n1350.xml.gz"), false, SYNCED_AT);
+    jdbc.update(
+        "UPDATE cat_publication SET last_synced_at = '2026-01-02T03:04:05Z' WHERE id = ?", id);
     flushAndClear();
 
     PublicationAggregate revised = aggregate("91000002", "10.9100/b", "New");
@@ -208,6 +210,13 @@ class PublicationSyncRepositoryAdapterIT {
                 "SELECT deleted_at IS NULL FROM cat_publication WHERE id = ?", Boolean.class, id))
         .isTrue();
     assertThat(string("SELECT title FROM cat_publication WHERE id = ?", id)).isEqualTo("New");
+    // 不在 refreshSyncedAt 里：保留原同步时间
+    assertThat(
+            jdbc.queryForObject(
+                "SELECT last_synced_at FROM cat_publication WHERE id = ?",
+                OffsetDateTime.class,
+                id))
+        .isEqualTo(OffsetDateTime.parse("2026-01-02T03:04:05Z"));
   }
 
   @Test

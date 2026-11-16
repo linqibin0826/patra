@@ -118,7 +118,34 @@ public interface VenueInstanceDao extends JpaRepository<VenueInstanceEntity, Lon
   ///
   /// @param venueId 载体 ID
   /// @return 删除的记录数
-  @Modifying
+  @Modifying(flushAutomatically = true, clearAutomatically = true)
   @Query("DELETE FROM VenueInstanceEntity e WHERE e.venueId = :venueId")
   int deleteByVenueId(@Param("venueId") Long venueId);
+
+  /// 插入期刊期次，同一（期刊、卷、期、版次、会议名、年份）已存在时什么也不做。
+  ///
+  /// 并发导入会同时建同一期次，用 `ON CONFLICT DO NOTHING` 让后到的一方不报错，再按返回行数判断是否插入。
+  ///
+  /// @return 插入的行数：1 表示新建，0 表示已存在
+  @Modifying(flushAutomatically = true, clearAutomatically = true)
+  @Query(
+      value =
+          """
+          INSERT INTO cat_venue_instance
+              (id, venue_id, volume, issue, publication_year, publication_month, publication_day,
+               created_by, updated_by)
+          VALUES (:id, :venueId, :volume, :issue, :year, :month, :day, :actorId, :actorId)
+          ON CONFLICT (venue_id, volume, issue, edition, conference_name, publication_year)
+          DO NOTHING
+          """,
+      nativeQuery = true)
+  int insertJournalInstanceIfAbsent(
+      @Param("id") long id,
+      @Param("venueId") long venueId,
+      @Param("volume") String volume,
+      @Param("issue") String issue,
+      @Param("year") Integer year,
+      @Param("month") Integer month,
+      @Param("day") Integer day,
+      @Param("actorId") Long actorId);
 }

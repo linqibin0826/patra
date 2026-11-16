@@ -38,7 +38,7 @@ public interface AuthorNameVariantDao extends JpaRepository<AuthorNameVariantEnt
   /// 根据作者 ID 删除所有名字变体。
   ///
   /// @param authorId 作者 ID
-  @Modifying
+  @Modifying(flushAutomatically = true, clearAutomatically = true)
   @Query("DELETE FROM AuthorNameVariantEntity v WHERE v.author.id = :authorId")
   void deleteByAuthorId(@Param("authorId") Long authorId);
 

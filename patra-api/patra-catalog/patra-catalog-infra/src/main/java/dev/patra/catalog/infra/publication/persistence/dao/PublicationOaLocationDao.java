@@ -55,14 +55,15 @@ public interface PublicationOaLocationDao extends JpaRepository<PublicationOaLoc
   ///
   /// @param publicationId 文献 ID
   /// @return 删除的记录数
-  @Modifying
-  int deleteByPublicationId(Long publicationId);
+  @Modifying(flushAutomatically = true, clearAutomatically = true)
+  @Query("DELETE FROM PublicationOaLocationEntity e WHERE e.publicationId = :publicationId")
+  int deleteByPublicationId(@Param("publicationId") Long publicationId);
 
   /// 根据文献 ID 列表批量删除 OA 位置。
   ///
   /// @param publicationIds 文献 ID 列表
   /// @return 删除的记录数
-  @Modifying
+  @Modifying(flushAutomatically = true, clearAutomatically = true)
   @Query("DELETE FROM PublicationOaLocationEntity e WHERE e.publicationId IN :publicationIds")
   int deleteByPublicationIdIn(@Param("publicationIds") Collection<Long> publicationIds);
 
@@ -71,7 +72,7 @@ public interface PublicationOaLocationDao extends JpaRepository<PublicationOaLoc
   /// @param publicationId 文献 ID
   /// @param locationType 位置类型的存储代码，如 `pubmed_central`
   /// @return 删除行数
-  @Modifying
+  @Modifying(flushAutomatically = true, clearAutomatically = true)
   @Query(
       "DELETE FROM PublicationOaLocationEntity e"
           + " WHERE e.publicationId = :publicationId AND e.locationType = :locationType")

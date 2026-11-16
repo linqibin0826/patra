@@ -6,7 +6,6 @@ import dev.patra.catalog.domain.fulltext.port.repository.PublicationFullTextRepo
 import dev.patra.catalog.infra.fulltext.persistence.dao.PublicationFullTextDao;
 import dev.patra.catalog.infra.fulltext.persistence.entity.PublicationFullTextEntity;
 import dev.patra.tool.jpa.id.SnowflakeIdGenerator;
-import jakarta.persistence.EntityManager;
 import java.util.ArrayList;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
@@ -25,7 +24,6 @@ import tools.jackson.databind.json.JsonMapper;
 public class PublicationFullTextRepositoryAdapter implements PublicationFullTextRepository {
 
   private final PublicationFullTextDao dao;
-  private final EntityManager entityManager;
   private final JsonMapper jsonMapper;
 
   /// 按文献 ID 查全文记录。
@@ -120,12 +118,6 @@ public class PublicationFullTextRepositoryAdapter implements PublicationFullText
   /// @param value 是否有全文
   @Override
   public void setHasFullText(long publicationId, boolean value) {
-    entityManager
-        .createQuery(
-            "UPDATE PublicationMetadataEntity m SET m.hasFullText = :value"
-                + " WHERE m.publicationId = :id")
-        .setParameter("value", value)
-        .setParameter("id", publicationId)
-        .executeUpdate();
+    dao.updateHasFullText(publicationId, value);
   }
 }

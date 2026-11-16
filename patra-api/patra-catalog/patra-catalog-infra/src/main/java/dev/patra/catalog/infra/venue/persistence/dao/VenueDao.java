@@ -78,8 +78,11 @@ public interface VenueDao extends JpaRepository<VenueEntity, Long> {
   ///
   /// @param id 载体 ID
   /// @param key 封面对象键（非空）
+  /// @param actorId 操作人
   /// @return 受影响行数
-  @Modifying
-  @Query("UPDATE VenueEntity v SET v.imageObjectKey = :key WHERE v.id = :id")
-  int updateImageObjectKey(@Param("id") Long id, @Param("key") String key);
+  @Modifying(flushAutomatically = true, clearAutomatically = true)
+  @Query(
+      "UPDATE VenueEntity v SET v.imageObjectKey = :key, v.updatedBy = :actorId WHERE v.id = :id")
+  int updateImageObjectKey(
+      @Param("id") Long id, @Param("key") String key, @Param("actorId") Long actorId);
 }

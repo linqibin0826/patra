@@ -16,6 +16,7 @@ import java.util.Map;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.AuditorAware;
 import org.springframework.stereotype.Repository;
 
 /// 载体实例聚合根仓储实现（JPA 版本）。
@@ -46,6 +47,7 @@ public class VenueInstanceRepositoryAdapter implements VenueInstanceRepository {
   private final VenueInstanceDao jpaRepository;
   private final VenueInstanceJpaMapper jpaConverter;
   private final EntityManager entityManager;
+  private final AuditorAware<Long> auditor;
 
   @Override
   public Optional<VenueInstanceAggregate> findById(Long id) {
@@ -112,23 +114,15 @@ public class VenueInstanceRepositoryAdapter implements VenueInstanceRepository {
   public boolean insertJournalInstanceIfAbsent(VenueInstanceAggregate instance) {
     long id = SnowflakeIdGenerator.getId();
     int inserted =
-        entityManager
-            .createNativeQuery(
-                """
-                INSERT INTO cat_venue_instance
-                    (id, venue_id, volume, issue, publication_year, publication_month, publication_day)
-                VALUES (:id, :venueId, :volume, :issue, :year, :month, :day)
-                ON CONFLICT (venue_id, volume, issue, edition, conference_name, publication_year)
-                DO NOTHING
-                """)
-            .setParameter("id", id)
-            .setParameter("venueId", instance.getVenueId().value())
-            .setParameter("volume", instance.getVolume())
-            .setParameter("issue", instance.getIssue())
-            .setParameter("year", instance.getPublicationYear())
-            .setParameter("month", instance.getPublicationMonth())
-            .setParameter("day", instance.getPublicationDay())
-            .executeUpdate();
+        jpaRepository.insertJournalInstanceIfAbsent(
+            id,
+            instance.getVenueId().value(),
+            instance.getVolume(),
+            instance.getIssue(),
+            instance.getPublicationYear(),
+            instance.getPublicationMonth(),
+            instance.getPublicationDay(),
+            auditor.getCurrentAuditor().orElse(null));
     if (inserted == 0) {
       return false;
     }

@@ -32,7 +32,7 @@ public interface PublicationMeshQualifierDao
   /// 根据标引 ID 删除所有限定词。
   ///
   /// @param headingId 文献 MeSH 标引 ID
-  @Modifying
+  @Modifying(flushAutomatically = true, clearAutomatically = true)
   @Query(
       "DELETE FROM PublicationMeshQualifierEntity e WHERE e.publicationMeshHeadingId = :headingId")
   void deleteByPublicationMeshHeadingId(@Param("headingId") Long headingId);
@@ -40,7 +40,7 @@ public interface PublicationMeshQualifierDao
   /// 根据标引 ID 列表批量删除限定词。
   ///
   /// @param headingIds 文献 MeSH 标引 ID 列表
-  @Modifying
+  @Modifying(flushAutomatically = true, clearAutomatically = true)
   @Query(
       "DELETE FROM PublicationMeshQualifierEntity e WHERE e.publicationMeshHeadingId IN :headingIds")
   void deleteByPublicationMeshHeadingIdIn(@Param("headingIds") List<Long> headingIds);
@@ -51,7 +51,7 @@ public interface PublicationMeshQualifierDao
   ///
   /// @param publicationIds 文献 ID
   /// @return 删除行数
-  @Modifying
+  @Modifying(flushAutomatically = true, clearAutomatically = true)
   @Query(
       value =
           "DELETE FROM cat_publication_mesh_qualifier q USING cat_publication_mesh_heading h"

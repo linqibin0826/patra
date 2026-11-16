@@ -45,7 +45,7 @@ public interface PublicationInvestigatorDao
   /// 用于批量导入时的高效删除，比循环单条删除性能更好。
   ///
   /// @param publicationIds 出版物 ID 集合
-  @Modifying
+  @Modifying(flushAutomatically = true, clearAutomatically = true)
   @Query("DELETE FROM PublicationInvestigatorEntity e WHERE e.publicationId IN :publicationIds")
   void deleteByPublicationIdIn(@Param("publicationIds") Collection<Long> publicationIds);
 }

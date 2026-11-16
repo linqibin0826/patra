@@ -84,6 +84,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.AuditorAware;
 import org.springframework.stereotype.Repository;
 
 /// 文献聚合根仓储实现（JPA 版本）。
@@ -152,6 +153,7 @@ public class PublicationRepositoryAdapter implements PublicationRepository {
   private final PublicationAuthorDao publicationAuthorDao;
   private final PublicationAuthorAffiliationDao publicationAuthorAffiliationDao;
   private final AuthorOrcidReadPort authorOrcidReadPort;
+  private final AuditorAware<Long> auditor;
 
   @Override
   public Optional<PublicationAggregate> findById(Long id) {
@@ -1297,7 +1299,7 @@ public class PublicationRepositoryAdapter implements PublicationRepository {
     oaLocationDao.save(entity);
     entityManager.flush();
 
-    jpaRepository.markOpenAccess(publicationId);
+    jpaRepository.markOpenAccess(publicationId, auditor.getCurrentAuditor().orElse(null));
   }
 
   @Override

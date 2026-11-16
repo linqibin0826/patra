@@ -41,4 +41,17 @@ public interface PublicationFullTextDao extends JpaRepository<PublicationFullTex
       @Param("publicationId") long publicationId,
       @Param("body") String body,
       @Param("version") int version);
+
+  /// 更新文献 metadata 的 `has_full_text`；没有 metadata 行时什么也不改。
+  ///
+  /// metadata 归文献子域，这里按实体名写 JPQL，不依赖它的类。
+  ///
+  /// @param publicationId 文献 ID
+  /// @param value 是否有全文
+  /// @return 更新的行数
+  @Modifying(flushAutomatically = true, clearAutomatically = true)
+  @Query(
+      "UPDATE PublicationMetadataEntity m SET m.hasFullText = :value"
+          + " WHERE m.publicationId = :publicationId")
+  int updateHasFullText(@Param("publicationId") long publicationId, @Param("value") boolean value);
 }

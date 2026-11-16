@@ -142,10 +142,11 @@ public interface PublicationDao extends JpaRepository<PublicationEntity, Long> {
   /// 把文献标为开放获取（只会置为 `true`），并清掉持久化上下文里的旧值。
   ///
   /// @param id 文献 ID
+  /// @param actorId 操作人
   /// @return 更新行数
-  @Modifying(clearAutomatically = true)
-  @Query("UPDATE PublicationEntity p SET p.isOa = true WHERE p.id = :id")
-  int markOpenAccess(@Param("id") Long id);
+  @Modifying(flushAutomatically = true, clearAutomatically = true)
+  @Query("UPDATE PublicationEntity p SET p.isOa = true, p.updatedBy = :actorId WHERE p.id = :id")
+  int markOpenAccess(@Param("id") Long id, @Param("actorId") Long actorId);
 
   /// 按 PMID 写一行原文缓存，已有则整行覆盖（位置、原文、解析时间）；`id` 只在新插入时用上。
   ///
