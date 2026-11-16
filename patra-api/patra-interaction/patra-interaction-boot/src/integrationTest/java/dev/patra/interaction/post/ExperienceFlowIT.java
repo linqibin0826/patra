@@ -193,7 +193,7 @@ class ExperienceFlowIT extends InteractionFlowITSupport {
 
       assertThat(List.of(first.get(), second.get())).containsExactlyInAnyOrder(201, 409);
     }
-    assertThat(count("SELECT count(*) FROM post.post WHERE author_user_id = ?", A)).isEqualTo(1);
+    assertThat(count("SELECT count(*) FROM itr_post WHERE author_user_id = ?", A)).isEqualTo(1);
   }
 
   /// 资格与频率：未登录 401；邮箱未验证 409；同一天第 11 条 429；被封禁后不能编辑、仍能删除。
@@ -590,7 +590,7 @@ class ExperienceFlowIT extends InteractionFlowITSupport {
   /// @param id 经验 ID
   private void backdate(String id) {
     jdbcTemplate.update(
-        "UPDATE post.post SET created_at = created_at - INTERVAL '10 minutes' WHERE post_id = ?",
+        "UPDATE itr_post SET published_at = published_at - INTERVAL '10 minutes' WHERE id = ?",
         Long.parseLong(id));
   }
 

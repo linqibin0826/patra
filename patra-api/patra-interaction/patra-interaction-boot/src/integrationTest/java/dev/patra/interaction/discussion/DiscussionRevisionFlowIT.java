@@ -43,8 +43,8 @@ class DiscussionRevisionFlowIT extends DiscussionFlowITSupport {
   void should_record_each_edit_after_five_minutes() {
     long id = comment(A, PAPER, "初稿", null);
     jdbcTemplate.update(
-        "UPDATE discussion.comment SET created_at = created_at - interval '6 minutes'"
-            + " WHERE comment_id = ?",
+        "UPDATE itr_comment SET published_at = published_at - interval '6 minutes'"
+            + " WHERE id = ?",
         id);
     Instant created = createdAt(id);
 
@@ -60,6 +60,20 @@ class DiscussionRevisionFlowIT extends DiscussionFlowITSupport {
     assertThat(times.get(0)).isAfter(times.get(1));
     assertThat(times.get(1)).isAfter(times.get(2));
     assertThat(times.get(2)).isEqualTo(created);
+  }
+
+  /// 免修订编辑的宽限期按发布时间算，不看 `updated_at`：回拨发布时间时触发器把 `updated_at` 刷成现在，
+  /// 这次编辑仍然超过了宽限期、要记修订。
+  @Test
+  void should_keep_edit_grace_by_published_at() {
+    long id = comment(A, PAPER, "初稿", null);
+    jdbcTemplate.update(
+        "UPDATE itr_comment SET published_at = published_at - interval '6 minutes' WHERE id = ?",
+        id);
+
+    JsonNode edited = json(edit(A, id, "第二稿"));
+
+    assertThat(edited.get("edited").asBoolean()).isTrue();
   }
 
   /// 有回复的评论删除后变占位：修改历史 404。
@@ -115,9 +129,7 @@ class DiscussionRevisionFlowIT extends DiscussionFlowITSupport {
   private Instant createdAt(long id) {
     return jdbcTemplate
         .queryForObject(
-            "SELECT created_at FROM discussion.comment WHERE comment_id = ?",
-            OffsetDateTime.class,
-            id)
+            "SELECT published_at FROM itr_comment WHERE id = ?", OffsetDateTime.class, id)
         .toInstant();
   }
 }

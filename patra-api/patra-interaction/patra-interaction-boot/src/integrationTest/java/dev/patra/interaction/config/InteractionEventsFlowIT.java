@@ -118,7 +118,7 @@ class InteractionEventsFlowIT extends InteractionFlowITSupport {
                 .plainText(plainText.toPlainText(stored, Set.of(B)).value())
                 .build());
     assertThat(event.plainText()).contains("<@" + B + ">").doesNotContain("](");
-    assertThat(event.publishedAt()).isEqualTo(commentColumn(id, "created_at", Instant.class));
+    assertThat(event.publishedAt()).isEqualTo(commentColumn(id, "published_at", Instant.class));
     awaitRegistryDrained();
     assertThat(completedPublications(event.eventId())).isEqualTo(1);
   }
@@ -139,7 +139,7 @@ class InteractionEventsFlowIT extends InteractionFlowITSupport {
         receive(CommentEdited.ROUTING_KEY, CommentEdited.class, e -> e.commentId() == id).event();
 
     assertThat(event.version()).isEqualTo(2);
-    assertThat(commentColumn(id, "version", Integer.class)).isEqualTo(2);
+    assertThat(commentColumn(id, "body_version", Integer.class)).isEqualTo(2);
     assertThat(event.mentionedUserIds()).containsExactly(B);
     assertThat(event.addedMentionedUserIds()).containsExactly(B);
     assertThat(event.plainText()).isEqualTo("改成 <@" + B + ">");
@@ -251,7 +251,7 @@ class InteractionEventsFlowIT extends InteractionFlowITSupport {
             JSON.writeValueAsString(Map.of("body", body)));
 
     assertThat(status(result)).isNotEqualTo(201);
-    assertThat(count("SELECT count(*) FROM discussion.comment")).isZero();
+    assertThat(count("SELECT count(*) FROM itr_comment")).isZero();
     assertThat(count("SELECT count(*) FROM public.event_publication")).isZero();
     assertNoMessage(
         CommentPublished.ROUTING_KEY,
@@ -458,7 +458,7 @@ class InteractionEventsFlowIT extends InteractionFlowITSupport {
   /// @return 值
   private <T> T commentColumn(long id, String column, Class<T> type) {
     return jdbcTemplate.queryForObject(
-        "SELECT " + column + " FROM discussion.comment WHERE comment_id = ?", type, id);
+        "SELECT " + column + " FROM itr_comment WHERE id = ?", type, id);
   }
 
   /// 发一条评论（不受每日频率限制）。

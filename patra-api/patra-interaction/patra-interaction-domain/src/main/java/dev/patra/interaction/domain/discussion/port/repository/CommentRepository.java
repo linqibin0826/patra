@@ -9,8 +9,8 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
-/// 评论的写端（`discussion.comment`、`discussion.comment_revision`）与随评论同事务维护的楼统计、对象统计
-/// （`discussion.thread_stats`、`discussion.subject_stats`）。写方法不开事务，由 app 层的事务包住。
+/// 评论的写端（`itr_comment`、`itr_comment_revision`）与随评论同事务维护的楼统计、对象统计
+/// （`itr_comment_thread_stats`、`itr_comment_subject_stats`）。写方法不开事务，由 app 层的事务包住。
 public interface CommentRepository {
 
   /// 拿一楼的事务级 advisory lock `discussion.thread:{rootId}`：同一楼的回复与删除在锁上排队。
@@ -63,7 +63,8 @@ public interface CommentRepository {
   ///
   /// @param commentId 评论
   /// @param now 删除时刻
-  void markDeleted(long commentId, Instant now);
+  /// @param actorUserId 操作人（删除的人）
+  void markDeleted(long commentId, Instant now, Long actorUserId);
 
   /// 整条删除（修改历史随外键级联删除）。
   ///

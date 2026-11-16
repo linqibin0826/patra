@@ -56,7 +56,7 @@ public class PostRepositoryAdapter implements PostRepository {
   /// @return 帖子
   @Override
   public Optional<PostAggregate> find(PostId id) {
-    return jdbc.sql("SELECT " + PostRows.COLUMNS + PostRows.FROM + " WHERE p.post_id = :id")
+    return jdbc.sql("SELECT " + PostRows.COLUMNS + PostRows.FROM + " WHERE p.id = :id")
         .param("id", id.value())
         .query(rows.postMapper())
         .optional();
@@ -72,15 +72,15 @@ public class PostRepositoryAdapter implements PostRepository {
   public Optional<PostId> findActiveBySubmission(
       long authorId, SubjectId journal, LocalDate submittedOn) {
     return jdbc.sql(
-            "SELECT p.post_id"
+            "SELECT p.id"
                 + PostRows.FROM
                 + " WHERE p.author_user_id = :author AND p.subject_id = :journal"
                 + " AND p.status = 'ACTIVE' AND e.submitted_on = :submittedOn"
-                + " ORDER BY p.post_id LIMIT 1")
+                + " ORDER BY p.id LIMIT 1")
         .param("author", authorId)
         .param("journal", journal.value())
         .param("submittedOn", submittedOn)
-        .query((rs, rowNum) -> PostId.of(rs.getLong("post_id")))
+        .query((rs, rowNum) -> PostId.of(rs.getLong("id")))
         .optional();
   }
 
@@ -91,9 +91,10 @@ public class PostRepositoryAdapter implements PostRepository {
   public void insert(PostAggregate post) {
     jdbc.sql(
             """
-            INSERT INTO post.post (post_id, post_type, subject_id, author_user_id, anonymous, body,
-                                   status, created_at, revised_at)
-            VALUES (:id, :type, :subjectId, :author, :anonymous, :body, :status, :createdAt, :revisedAt)
+            INSERT INTO itr_post (id, post_type, subject_id, author_user_id, anonymous, body,
+                                  status, published_at, revised_at, created_by, updated_by)
+            VALUES (:id, :type, :subjectId, :author, :anonymous, :body, :status, :createdAt, :revisedAt,
+                    :author, :author)
             """)
         .param("id", post.postId().value())
         .param("type", post.type().name())
@@ -107,11 +108,11 @@ public class PostRepositoryAdapter implements PostRepository {
         .update();
     jdbc.sql(
             """
-            INSERT INTO post.submission_experience
-                   (post_id, submitted_on, first_decision_on, first_decision, final_outcome,
+            INSERT INTO itr_post_submission_experience
+                   (id, post_id, submitted_on, first_decision_on, first_decision, final_outcome,
                     final_decision_on, article_type, review_rounds, review_quality,
                     editor_communication, apc_paid, previously_rejected)
-            VALUES (:id, :submittedOn, :firstDecisionOn, :firstDecision, :finalOutcome,
+            VALUES (:rowId, :id, :submittedOn, :firstDecisionOn, :firstDecision, :finalOutcome,
                     :finalDecisionOn, :articleType, :reviewRounds, :reviewQuality,
                     :editorCommunication, :apcPaid, :previouslyRejected)
             """)
@@ -121,21 +122,22 @@ public class PostRepositoryAdapter implements PostRepository {
 
   /// 写回内容。
   ///
+  /// 只有作者能编辑（调用方已校验），操作人就是作者；`updated_at` 由触发器维护。
+  ///
   /// @param post 编辑后的帖子
-  /// @param now 编辑时刻
   @Override
-  public void update(PostAggregate post, Instant now) {
+  public void update(PostAggregate post) {
     jdbc.sql(
-            "UPDATE post.post SET body = :body, revised_at = :revisedAt, updated_at = :now"
-                + " WHERE post_id = :id")
+            "UPDATE itr_post SET body = :body, revised_at = :revisedAt, updated_by = :author"
+                + " WHERE id = :id")
         .param("body", bodyValue(post.body()))
         .param("revisedAt", PostRows.utc(post.revisedAt()))
-        .param("now", PostRows.utc(now))
+        .param("author", post.authorId())
         .param("id", post.postId().value())
         .update();
     jdbc.sql(
             """
-            UPDATE post.submission_experience
+            UPDATE itr_post_submission_experience
                SET submitted_on = :submittedOn, first_decision_on = :firstDecisionOn,
                    first_decision = :firstDecision, final_outcome = :finalOutcome,
                    final_decision_on = :finalDecisionOn, article_type = :articleType,
@@ -156,11 +158,13 @@ public class PostRepositoryAdapter implements PostRepository {
   public void insertRevision(PostId id, PostRevision revision) {
     jdbc.sql(
             """
-            INSERT INTO post.revision (post_id, revision_no, body, fields, written_at, replaced_at)
-            SELECT :id, COALESCE(MAX(revision_no), 0) + 1, :body, CAST(:fields AS jsonb),
+            INSERT INTO itr_post_revision
+                   (id, post_id, revision_no, body, fields, written_at, replaced_at)
+            SELECT :rowId, :id, COALESCE(MAX(revision_no), 0) + 1, :body, CAST(:fields AS jsonb),
                    :writtenAt, :replacedAt
-              FROM post.revision WHERE post_id = :id
+              FROM itr_post_revision WHERE post_id = :id
             """)
+        .param("rowId", SnowflakeIdGenerator.getId())
         .param("id", id.value())
         .param("body", bodyValue(revision.body()))
         .param("fields", rows.writeFields(revision.fields()))
@@ -173,12 +177,14 @@ public class PostRepositoryAdapter implements PostRepository {
   ///
   /// @param id 帖子 ID
   /// @param now 删除时刻
+  /// @param actorUserId 操作人
   @Override
-  public void markDeleted(PostId id, Instant now) {
+  public void markDeleted(PostId id, Instant now, Long actorUserId) {
     jdbc.sql(
-            "UPDATE post.post SET status = 'DELETED', deleted_at = :now, updated_at = :now"
-                + " WHERE post_id = :id AND status = 'ACTIVE'")
+            "UPDATE itr_post SET status = 'DELETED', deleted_at = :now, updated_by = :actorUserId"
+                + " WHERE id = :id AND status = 'ACTIVE'")
         .param("now", PostRows.utc(now))
+        .param("actorUserId", actorUserId)
         .param("id", id.value())
         .update();
   }
@@ -190,6 +196,7 @@ public class PostRepositoryAdapter implements PostRepository {
   /// @return 参数
   private static MapSqlParameterSource fieldParams(PostId id, ExperienceFields f) {
     return new MapSqlParameterSource()
+        .addValue("rowId", SnowflakeIdGenerator.getId())
         .addValue("id", id.value())
         .addValue("submittedOn", f.submittedOn())
         .addValue("firstDecisionOn", f.firstDecisionOn())

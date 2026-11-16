@@ -50,8 +50,8 @@ abstract class PostPersistenceITSupport {
   @BeforeEach
   void truncatePostTables() {
     jdbcTemplate.update(
-        "TRUNCATE post.revision, post.submission_experience, post.post, itr_helpful_target_stats,"
-            + " itr_helpful, discussion.subject_stats, itr_subject");
+        "TRUNCATE itr_post_revision, itr_post_submission_experience, itr_post, itr_helpful_target_stats,"
+            + " itr_helpful, itr_comment_subject_stats, itr_subject");
   }
 
   /// 只有必填项的字段：给定投稿日期，首轮同日起 10 天后大修，进行中，原创研究。
@@ -102,6 +102,6 @@ abstract class PostPersistenceITSupport {
   /// @param id 帖子
   /// @param at 删除时刻
   protected void delete(PostId id, Instant at) {
-    transactions.executeWithoutResult(s -> posts.markDeleted(id, at));
+    transactions.executeWithoutResult(s -> posts.markDeleted(id, at, null));
   }
 }

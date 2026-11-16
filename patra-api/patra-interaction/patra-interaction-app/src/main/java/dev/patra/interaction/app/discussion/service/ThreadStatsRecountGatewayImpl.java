@@ -18,10 +18,10 @@ public class ThreadStatsRecountGatewayImpl implements StatsRecountGateway<Long> 
 
   /// 计数名。
   ///
-  /// @return `discussion.thread_stats`
+  /// @return `itr_comment_thread_stats`
   @Override
   public String counter() {
-    return "discussion.thread_stats";
+    return "itr_comment_thread_stats";
   }
 
   /// 楼统计与明细不一致的楼。

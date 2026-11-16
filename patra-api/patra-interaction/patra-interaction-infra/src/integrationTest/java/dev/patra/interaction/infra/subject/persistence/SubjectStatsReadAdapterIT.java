@@ -26,7 +26,7 @@ class SubjectStatsReadAdapterIT extends SubjectRegistryITSupport {
   /// 每例从空的统计表开始。
   @BeforeEach
   void truncateStats() {
-    jdbcTemplate.update("TRUNCATE itr_library_subject_stats, discussion.subject_stats");
+    jdbcTemplate.update("TRUNCATE itr_library_subject_stats, itr_comment_subject_stats");
   }
 
   /// 有统计行的（含 0）返回，没有的省略。
@@ -48,7 +48,8 @@ class SubjectStatsReadAdapterIT extends SubjectRegistryITSupport {
     jdbcTemplate.update(
         "INSERT INTO itr_library_subject_stats (id, subject_id, collector_count) VALUES (1, 11, 3)");
     jdbcTemplate.update(
-        "INSERT INTO discussion.subject_stats (subject_id, comment_count) VALUES (11, 5), (14, 2)");
+        "INSERT INTO itr_comment_subject_stats (id, subject_id, comment_count)"
+            + " VALUES (1, 11, 5), (2, 14, 2)");
 
     Map<SubjectId, SubjectStats> result = stats.findStats(List.of(S1, S4, S9));
 

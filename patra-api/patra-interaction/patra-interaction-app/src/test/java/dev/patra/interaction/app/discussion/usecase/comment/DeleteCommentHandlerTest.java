@@ -82,7 +82,7 @@ class DeleteCommentHandlerTest {
 
     assertThat(handler.handle(DeleteCommentCommand.of(60L)))
         .isEqualTo(DeleteResult.of(true, List.of()));
-    verify(comments).markDeleted(60L, T0);
+    verify(comments).markDeleted(60L, T0, ACTOR);
     verify(comments, never()).delete(anyLong());
     assertThat(published())
         .usingRecursiveComparison()
@@ -154,7 +154,7 @@ class DeleteCommentHandlerTest {
 
     assertThat(handler.handle(DeleteCommentCommand.of(60L)))
         .isEqualTo(DeleteResult.of(true, List.of()));
-    verify(comments, never()).markDeleted(anyLong(), any());
+    verify(comments, never()).markDeleted(anyLong(), any(), any());
     verify(comments, times(0)).delete(anyLong());
     verify(publisher, never()).publishEvent(any(Object.class));
   }
@@ -167,7 +167,7 @@ class DeleteCommentHandlerTest {
     handler.handle(DeleteCommentCommand.of(60L));
 
     InOrder order = inOrder(comments, publisher);
-    order.verify(comments).markDeleted(60L, T0);
+    order.verify(comments).markDeleted(60L, T0, ACTOR);
     order.verify(comments).removeReply(40L);
     order.verify(comments).decrementCommentCount(PUB_ID);
     order.verify(publisher).publishEvent(any(Object.class));
@@ -182,7 +182,7 @@ class DeleteCommentHandlerTest {
     handler.handle(DeleteCommentCommand.of(40L));
 
     InOrder order = inOrder(comments, publisher);
-    order.verify(comments).markDeleted(40L, T0);
+    order.verify(comments).markDeleted(40L, T0, ACTOR);
     order.verify(comments).decrementCommentCount(PUB_ID);
     order.verify(publisher).publishEvent(any(Object.class));
     verify(comments, never()).removeReply(anyLong());

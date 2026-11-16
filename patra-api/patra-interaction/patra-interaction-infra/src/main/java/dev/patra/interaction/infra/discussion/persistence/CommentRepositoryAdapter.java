@@ -25,7 +25,7 @@ public class CommentRepositoryAdapter implements CommentRepository {
   private static final String THREAD_LOCK_PREFIX = "discussion.thread:";
 
   private static final String SELECT_COMMENT =
-      "SELECT " + CommentRows.AGGREGATE_COLUMNS + " FROM discussion.comment WHERE comment_id = :id";
+      "SELECT " + CommentRows.AGGREGATE_COLUMNS + " FROM itr_comment WHERE id = :id";
 
   private final JdbcClient jdbc;
 
@@ -76,7 +76,7 @@ public class CommentRepositoryAdapter implements CommentRepository {
   /// @return 有时为 `true`
   @Override
   public boolean hasReplies(long commentId) {
-    return jdbc.sql("SELECT EXISTS (SELECT 1 FROM discussion.comment WHERE parent_id = :id)")
+    return jdbc.sql("SELECT EXISTS (SELECT 1 FROM itr_comment WHERE parent_comment_id = :id)")
         .param("id", commentId)
         .query(Boolean.class)
         .single();
@@ -95,11 +95,11 @@ public class CommentRepositoryAdapter implements CommentRepository {
     }
     jdbc.sql(
             """
-            INSERT INTO discussion.comment
-                   (comment_id, subject_id, root_id, parent_id, author_id, state, body,
-                    mentioned_user_ids, created_at)
+            INSERT INTO itr_comment
+                   (id, subject_id, root_comment_id, parent_comment_id, author_user_id, state, body,
+                    mentioned_user_ids, published_at, created_by, updated_by)
             VALUES (:id, :subjectId, :rootId, :parentId, :authorId, 'ACTIVE', :body,
-                    CAST(:mentioned AS bigint[]), :createdAt)
+                    CAST(:mentioned AS bigint[]), :createdAt, :authorId, :authorId)
             """)
         .param("id", id)
         .param("subjectId", comment.subjectId().value())
@@ -120,15 +120,16 @@ public class CommentRepositoryAdapter implements CommentRepository {
   public void updateBody(CommentAggregate comment) {
     jdbc.sql(
             """
-            UPDATE discussion.comment
+            UPDATE itr_comment
                SET body = :body, mentioned_user_ids = CAST(:mentioned AS bigint[]),
-                   revised_at = :revisedAt, version = :version
-             WHERE comment_id = :id
+                   revised_at = :revisedAt, body_version = :version, updated_by = :authorId
+             WHERE id = :id
             """)
         .param("body", comment.getBody())
         .param("mentioned", CommentRows.idArray(comment.getMentionedUserIds()))
         .param("revisedAt", CommentRows.utc(comment.getRevisedAt()))
         .param("version", comment.getVersion())
+        .param("authorId", comment.getAuthorId())
         .param("id", comment.getCommentId())
         .update();
   }
@@ -141,10 +142,11 @@ public class CommentRepositoryAdapter implements CommentRepository {
   public void appendRevision(long commentId, RevisionRecord revision) {
     jdbc.sql(
             """
-            INSERT INTO discussion.comment_revision (comment_id, revision_no, body, version_at)
-            SELECT :id, COALESCE(max(revision_no), 0) + 1, :body, :at
-              FROM discussion.comment_revision WHERE comment_id = :id
+            INSERT INTO itr_comment_revision (id, comment_id, revision_no, body, version_at)
+            SELECT :rowId, :id, COALESCE(max(revision_no), 0) + 1, :body, :at
+              FROM itr_comment_revision WHERE comment_id = :id
             """)
+        .param("rowId", SnowflakeIdGenerator.getId())
         .param("id", commentId)
         .param("body", revision.body())
         .param("at", CommentRows.utc(revision.at()))
@@ -155,30 +157,34 @@ public class CommentRepositoryAdapter implements CommentRepository {
   ///
   /// @param commentId 评论
   /// @param now 删除时刻
+  /// @param actorUserId 操作人
   @Override
-  public void markDeleted(long commentId, Instant now) {
+  public void markDeleted(long commentId, Instant now, Long actorUserId) {
     jdbc.sql(
             """
-            UPDATE discussion.comment
-               SET state = 'DELETED', body = NULL, mentioned_user_ids = '{}', deleted_at = :now
-             WHERE comment_id = :id
+            UPDATE itr_comment
+               SET state = 'DELETED', body = NULL, mentioned_user_ids = '{}', deleted_at = :now,
+                   updated_by = :actorUserId
+             WHERE id = :id
             """)
         .param("now", CommentRows.utc(now))
+        .param("actorUserId", actorUserId)
         .param("id", commentId)
         .update();
-    jdbc.sql("DELETE FROM discussion.comment_revision WHERE comment_id = :id")
+    jdbc.sql("DELETE FROM itr_comment_revision WHERE comment_id = :id")
         .param("id", commentId)
         .update();
   }
 
-  /// 整条删除。
+  /// 整条删除，先删它的修改历史（没有外键级联，在同一事务里显式删）。
   ///
   /// @param commentId 评论
   @Override
   public void delete(long commentId) {
-    jdbc.sql("DELETE FROM discussion.comment WHERE comment_id = :id")
+    jdbc.sql("DELETE FROM itr_comment_revision WHERE comment_id = :id")
         .param("id", commentId)
         .update();
+    jdbc.sql("DELETE FROM itr_comment WHERE id = :id").param("id", commentId).update();
   }
 
   /// 楼里多了一条回复。
@@ -189,13 +195,14 @@ public class CommentRepositoryAdapter implements CommentRepository {
   public void recordReply(long rootId, Instant createdAt) {
     jdbc.sql(
             """
-            INSERT INTO discussion.thread_stats (root_id, reply_count, last_reply_at)
-            VALUES (:rootId, 1, :at)
-            ON CONFLICT (root_id) DO UPDATE
-               SET reply_count = discussion.thread_stats.reply_count + 1,
-                   last_reply_at = GREATEST(discussion.thread_stats.last_reply_at,
+            INSERT INTO itr_comment_thread_stats (id, root_comment_id, reply_count, last_reply_at)
+            VALUES (:rowId, :rootId, 1, :at)
+            ON CONFLICT (root_comment_id) DO UPDATE
+               SET reply_count = itr_comment_thread_stats.reply_count + 1,
+                   last_reply_at = GREATEST(itr_comment_thread_stats.last_reply_at,
                                             EXCLUDED.last_reply_at)
             """)
+        .param("rowId", SnowflakeIdGenerator.getId())
         .param("rootId", rootId)
         .param("at", CommentRows.utc(createdAt))
         .update();
@@ -207,18 +214,18 @@ public class CommentRepositoryAdapter implements CommentRepository {
   @Override
   @Transactional(propagation = Propagation.MANDATORY)
   public void removeReply(long rootId) {
-    jdbc.sql("SELECT 1 FROM discussion.thread_stats WHERE root_id = :rootId FOR UPDATE")
+    jdbc.sql("SELECT 1 FROM itr_comment_thread_stats WHERE root_comment_id = :rootId FOR UPDATE")
         .param("rootId", rootId)
         .query((rs, rowNum) -> 1)
         .list();
     jdbc.sql(
             """
-            UPDATE discussion.thread_stats
+            UPDATE itr_comment_thread_stats
                SET reply_count = reply_count - 1,
-                   last_reply_at = (SELECT max(created_at) FROM discussion.comment
-                                     WHERE root_id = :rootId AND parent_id IS NOT NULL
+                   last_reply_at = (SELECT max(published_at) FROM itr_comment
+                                     WHERE root_comment_id = :rootId AND parent_comment_id IS NOT NULL
                                        AND state = 'ACTIVE')
-             WHERE root_id = :rootId
+             WHERE root_comment_id = :rootId
             """)
         .param("rootId", rootId)
         .update();
@@ -229,7 +236,7 @@ public class CommentRepositoryAdapter implements CommentRepository {
   /// @param rootId 根评论
   @Override
   public void dropThreadStats(long rootId) {
-    jdbc.sql("DELETE FROM discussion.thread_stats WHERE root_id = :rootId")
+    jdbc.sql("DELETE FROM itr_comment_thread_stats WHERE root_comment_id = :rootId")
         .param("rootId", rootId)
         .update();
   }
@@ -241,11 +248,12 @@ public class CommentRepositoryAdapter implements CommentRepository {
   public void incrementCommentCount(SubjectId subjectId) {
     jdbc.sql(
             """
-            INSERT INTO discussion.subject_stats (subject_id, comment_count)
-            VALUES (:subjectId, 1)
+            INSERT INTO itr_comment_subject_stats (id, subject_id, comment_count)
+            VALUES (:rowId, :subjectId, 1)
             ON CONFLICT (subject_id) DO UPDATE
-               SET comment_count = discussion.subject_stats.comment_count + 1
+               SET comment_count = itr_comment_subject_stats.comment_count + 1
             """)
+        .param("rowId", SnowflakeIdGenerator.getId())
         .param("subjectId", subjectId.value())
         .update();
   }
@@ -256,7 +264,7 @@ public class CommentRepositoryAdapter implements CommentRepository {
   @Override
   public void decrementCommentCount(SubjectId subjectId) {
     jdbc.sql(
-            "UPDATE discussion.subject_stats SET comment_count = comment_count - 1"
+            "UPDATE itr_comment_subject_stats SET comment_count = comment_count - 1"
                 + " WHERE subject_id = :subjectId")
         .param("subjectId", subjectId.value())
         .update();
@@ -278,18 +286,18 @@ public class CommentRepositoryAdapter implements CommentRepository {
   public List<Long> findThreadStatsDrift() {
     return jdbc.sql(
             """
-            SELECT COALESCE(d.root_id, s.root_id) AS root_id
-              FROM (SELECT root_id,
+            SELECT COALESCE(d.root_comment_id, s.root_comment_id) AS root_comment_id
+              FROM (SELECT root_comment_id,
                            count(*) FILTER (WHERE state = 'ACTIVE') AS n,
-                           max(created_at) FILTER (WHERE state = 'ACTIVE') AS last_at
-                      FROM discussion.comment
-                     WHERE parent_id IS NOT NULL
-                     GROUP BY root_id) d
-              FULL JOIN discussion.thread_stats s ON s.root_id = d.root_id
+                           max(published_at) FILTER (WHERE state = 'ACTIVE') AS last_at
+                      FROM itr_comment
+                     WHERE parent_comment_id IS NOT NULL
+                     GROUP BY root_comment_id) d
+              FULL JOIN itr_comment_thread_stats s ON s.root_comment_id = d.root_comment_id
              WHERE COALESCE(d.n, 0) <> COALESCE(s.reply_count, 0)
                 OR d.last_at IS DISTINCT FROM s.last_reply_at
-                OR (s.root_id IS NOT NULL
-                    AND NOT EXISTS (SELECT 1 FROM discussion.comment c WHERE c.comment_id = s.root_id))
+                OR (s.root_comment_id IS NOT NULL
+                    AND NOT EXISTS (SELECT 1 FROM itr_comment c WHERE c.id = s.root_comment_id))
             """)
         .query(Long.class)
         .list();
@@ -305,8 +313,8 @@ public class CommentRepositoryAdapter implements CommentRepository {
   public Optional<StatsCorrection> recountThreadStats(long rootId) {
     Optional<ThreadCounts> current =
         jdbc.sql(
-                "SELECT reply_count, last_reply_at FROM discussion.thread_stats"
-                    + " WHERE root_id = :rootId")
+                "SELECT reply_count, last_reply_at FROM itr_comment_thread_stats"
+                    + " WHERE root_comment_id = :rootId")
             .param("rootId", rootId)
             .query(
                 (rs, rowNum) ->
@@ -315,7 +323,7 @@ public class CommentRepositoryAdapter implements CommentRepository {
             .optional();
     int before = current.map(ThreadCounts::replies).orElse(0);
     boolean rootExists =
-        jdbc.sql("SELECT EXISTS (SELECT 1 FROM discussion.comment WHERE comment_id = :rootId)")
+        jdbc.sql("SELECT EXISTS (SELECT 1 FROM itr_comment WHERE id = :rootId)")
             .param("rootId", rootId)
             .query(Boolean.class)
             .single();
@@ -329,8 +337,8 @@ public class CommentRepositoryAdapter implements CommentRepository {
     ThreadCounts truth =
         jdbc.sql(
                 """
-                SELECT count(*) AS n, max(created_at) AS last_at FROM discussion.comment
-                 WHERE root_id = :rootId AND parent_id IS NOT NULL AND state = 'ACTIVE'
+                SELECT count(*) AS n, max(published_at) AS last_at FROM itr_comment
+                 WHERE root_comment_id = :rootId AND parent_comment_id IS NOT NULL AND state = 'ACTIVE'
                 """)
             .param("rootId", rootId)
             .query(
@@ -342,11 +350,12 @@ public class CommentRepositoryAdapter implements CommentRepository {
     }
     jdbc.sql(
             """
-            INSERT INTO discussion.thread_stats (root_id, reply_count, last_reply_at)
-            VALUES (:rootId, :n, :lastAt)
-            ON CONFLICT (root_id) DO UPDATE
+            INSERT INTO itr_comment_thread_stats (id, root_comment_id, reply_count, last_reply_at)
+            VALUES (:rowId, :rootId, :n, :lastAt)
+            ON CONFLICT (root_comment_id) DO UPDATE
                SET reply_count = EXCLUDED.reply_count, last_reply_at = EXCLUDED.last_reply_at
             """)
+        .param("rowId", SnowflakeIdGenerator.getId())
         .param("rootId", rootId)
         .param("n", truth.replies())
         .param("lastAt", CommentRows.utc(truth.lastReplyAt()))
@@ -363,8 +372,8 @@ public class CommentRepositoryAdapter implements CommentRepository {
             """
             SELECT COALESCE(d.subject_id, s.subject_id) AS subject_id
               FROM (SELECT subject_id, count(*) FILTER (WHERE state = 'ACTIVE') AS n
-                      FROM discussion.comment GROUP BY subject_id) d
-              FULL JOIN discussion.subject_stats s ON s.subject_id = d.subject_id
+                      FROM itr_comment GROUP BY subject_id) d
+              FULL JOIN itr_comment_subject_stats s ON s.subject_id = d.subject_id
              WHERE COALESCE(d.n, 0) <> COALESCE(s.comment_count, 0)
             """)
         .query((rs, rowNum) -> SubjectId.of(rs.getLong("subject_id")))
@@ -380,27 +389,27 @@ public class CommentRepositoryAdapter implements CommentRepository {
   @Transactional(propagation = Propagation.MANDATORY)
   public Optional<StatsCorrection> recountCommentCount(SubjectId subjectId) {
     jdbc.sql(
-            "INSERT INTO discussion.subject_stats (subject_id, comment_count) VALUES (:id, 0)"
-                + " ON CONFLICT (subject_id) DO NOTHING")
+            "INSERT INTO itr_comment_subject_stats (id, subject_id, comment_count)"
+                + " VALUES (:rowId, :id, 0) ON CONFLICT (subject_id) DO NOTHING")
+        .param("rowId", SnowflakeIdGenerator.getId())
         .param("id", subjectId.value())
         .update();
     int before =
         jdbc.sql(
-                "SELECT comment_count FROM discussion.subject_stats WHERE subject_id = :id"
+                "SELECT comment_count FROM itr_comment_subject_stats WHERE subject_id = :id"
                     + " FOR UPDATE")
             .param("id", subjectId.value())
             .query(Integer.class)
             .single();
     int after =
-        jdbc.sql(
-                "SELECT count(*) FROM discussion.comment WHERE subject_id = :id AND state = 'ACTIVE'")
+        jdbc.sql("SELECT count(*) FROM itr_comment WHERE subject_id = :id AND state = 'ACTIVE'")
             .param("id", subjectId.value())
             .query(Integer.class)
             .single();
     if (before == after) {
       return Optional.empty();
     }
-    jdbc.sql("UPDATE discussion.subject_stats SET comment_count = :n WHERE subject_id = :id")
+    jdbc.sql("UPDATE itr_comment_subject_stats SET comment_count = :n WHERE subject_id = :id")
         .param("n", after)
         .param("id", subjectId.value())
         .update();

@@ -131,7 +131,7 @@ class EditExperienceHandlerTest {
     ExperienceDetailView detail = handler.handle(command());
 
     verify(posts).lockAuthor(U);
-    verify(posts).update(any(), any());
+    verify(posts).update(any());
     verify(posts, never()).insertRevision(any(), any());
     assertThat(detail.experience().edited()).isFalse();
   }
@@ -161,7 +161,7 @@ class EditExperienceHandlerTest {
 
     handler.handle(EditExperienceCommand.of(POST_ID.value(), input().body("正文").build()));
 
-    verify(posts, never()).update(any(), any());
+    verify(posts, never()).update(any());
     verify(posts, never()).insertRevision(any(), any());
     verify(gateway, never()).updateLocal(any(), anyLong(), any(), any(), any());
   }
@@ -181,12 +181,12 @@ class EditExperienceHandlerTest {
         .isInstanceOfSatisfying(
             DuplicateSubmissionException.class,
             ex -> assertThat(ex.existingPostId()).isEqualTo(PostId.of(77L)));
-    verify(posts, never()).update(any(), any());
+    verify(posts, never()).update(any());
 
     when(posts.findActiveBySubmission(U, JOURNAL, LocalDate.parse("2026-03-02")))
         .thenReturn(Optional.of(POST_ID));
     handler.handle(command());
-    verify(posts).update(any(), any());
+    verify(posts).update(any());
   }
 
   /// 投稿月份变了：登记快照换成新月份（期刊全称与缩写不变）；月份没变不刷新。
@@ -266,7 +266,7 @@ class EditExperienceHandlerTest {
     when(posts.find(POST_ID)).thenReturn(Optional.of(post), Optional.of(deleted(post)));
 
     assertThatThrownBy(() -> handler.handle(command())).isInstanceOf(PostNotFoundException.class);
-    verify(posts, never()).update(any(), any());
+    verify(posts, never()).update(any());
   }
 
   /// 改正文的命令（字段同原样，正文换了）。

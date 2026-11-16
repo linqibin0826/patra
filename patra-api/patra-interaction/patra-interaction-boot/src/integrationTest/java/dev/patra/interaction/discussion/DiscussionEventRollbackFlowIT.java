@@ -58,7 +58,7 @@ class DiscussionEventRollbackFlowIT extends DiscussionFlowITSupport {
         post(A, "publication", PAPER, DiscussionEventRecorder.FAIL_MARKER, null);
 
     assertThat(status(result)).isNotEqualTo(201);
-    assertThat(count("SELECT count(*) FROM discussion.comment")).isZero();
+    assertThat(count("SELECT count(*) FROM itr_comment")).isZero();
     assertThat(count("SELECT count(*) FROM itr_publish_quota WHERE user_id = ?", A)).isZero();
   }
 
@@ -159,9 +159,7 @@ class DiscussionEventRollbackFlowIT extends DiscussionFlowITSupport {
   private Instant createdAt(long id) {
     return jdbcTemplate
         .queryForObject(
-            "SELECT created_at FROM discussion.comment WHERE comment_id = ?",
-            OffsetDateTime.class,
-            id)
+            "SELECT published_at FROM itr_comment WHERE id = ?", OffsetDateTime.class, id)
         .toInstant();
   }
 }

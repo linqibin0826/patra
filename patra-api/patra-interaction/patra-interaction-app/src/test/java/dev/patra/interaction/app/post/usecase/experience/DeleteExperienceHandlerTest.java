@@ -61,7 +61,7 @@ class DeleteExperienceHandlerTest {
         .thenReturn(Map.of("500", POST_SUBJECT));
     when(subjects.findByIds(List.of(POST_SUBJECT)))
         .thenReturn(Map.of(POST_SUBJECT, postView(U, true)));
-    doAnswer(invocation -> events.add("delete")).when(posts).markDeleted(any(), any());
+    doAnswer(invocation -> events.add("delete")).when(posts).markDeleted(any(), any(), any());
     doAnswer(invocation -> events.add("unavailable"))
         .when(gateway)
         .updateLocal(any(), anyLong(), any(), any(), any());
@@ -92,7 +92,7 @@ class DeleteExperienceHandlerTest {
             "publish",
             RecordingTransactions.END);
     verify(posts).lockAuthor(U);
-    verify(posts).markDeleted(POST_ID, NOW);
+    verify(posts).markDeleted(POST_ID, NOW, U);
     verify(gateway)
         .updateLocal(
             SubjectType.POST,
@@ -151,7 +151,7 @@ class DeleteExperienceHandlerTest {
 
     handler.handle(DeleteExperienceCommand.of(POST_ID.value()));
 
-    verify(posts, never()).markDeleted(any(), any());
+    verify(posts, never()).markDeleted(any(), any(), any());
     verify(gateway, never()).updateLocal(any(), anyLong(), any(), any(), any());
     verifyNoInteractions(publisher);
   }
@@ -166,7 +166,7 @@ class DeleteExperienceHandlerTest {
 
     handler.handle(DeleteExperienceCommand.of(POST_ID.value()));
 
-    verify(posts, never()).markDeleted(any(), any());
+    verify(posts, never()).markDeleted(any(), any(), any());
     verifyNoInteractions(publisher);
   }
 
@@ -187,7 +187,7 @@ class DeleteExperienceHandlerTest {
 
     assertThatThrownBy(() -> handler.handle(DeleteExperienceCommand.of(POST_ID.value())))
         .isInstanceOf(PostForbiddenException.class);
-    verify(posts, never()).markDeleted(any(), any());
+    verify(posts, never()).markDeleted(any(), any(), any());
     verifyNoInteractions(publisher);
   }
 

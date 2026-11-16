@@ -193,7 +193,8 @@ class PostReadAdapterIT extends PostPersistenceITSupport {
     PostAggregate p2 = publish(V, J1, false, fields("2026-03-02"), null, T0);
     helpful(p1, 2);
     registered(31L, p1);
-    jdbcTemplate.update("INSERT INTO discussion.subject_stats VALUES (31, 4)");
+    jdbcTemplate.update(
+        "INSERT INTO itr_comment_subject_stats (id, subject_id, comment_count) VALUES (1, 31, 4)");
     jdbcTemplate.update(
         "INSERT INTO itr_helpful (id, user_id, target_type, target_id, credited_user_id)"
             + " VALUES ((SELECT COALESCE(max(id), 0) + 1 FROM itr_helpful), 7, 'POST', ?, ?)",

@@ -285,13 +285,9 @@ class HelpfulFlowIT extends InteractionFlowITSupport {
     assertThat(status(call(HttpMethod.DELETE, A, "/comments/" + comment, null))).isNotEqualTo(200);
     assertThat(status(call(HttpMethod.DELETE, A, "/posts/" + post, null))).isNotEqualTo(204);
 
-    assertThat(
-            count(
-                "SELECT count(*) FROM discussion.comment WHERE comment_id = ? AND state = 'ACTIVE'",
-                comment))
+    assertThat(count("SELECT count(*) FROM itr_comment WHERE id = ? AND state = 'ACTIVE'", comment))
         .isEqualTo(1L);
-    assertThat(
-            count("SELECT count(*) FROM post.post WHERE post_id = ? AND status = 'ACTIVE'", post))
+    assertThat(count("SELECT count(*) FROM itr_post WHERE id = ? AND status = 'ACTIVE'", post))
         .isEqualTo(1L);
     assertThat(rows("COMMENT", comment)).isEqualTo(1L);
     assertThat(targetCount("COMMENT", comment)).isEqualTo(1L);
@@ -321,10 +317,7 @@ class HelpfulFlowIT extends InteractionFlowITSupport {
     }
 
     assertThat(status(result)).as(result.getResponseBody()).isEqualTo(500);
-    assertThat(
-            count(
-                "SELECT count(*) FROM discussion.comment WHERE comment_id = ? AND state = 'ACTIVE'",
-                comment))
+    assertThat(count("SELECT count(*) FROM itr_comment WHERE id = ? AND state = 'ACTIVE'", comment))
         .isEqualTo(1L);
     assertThat(rows("COMMENT", comment)).isEqualTo(1L);
     assertThat(targetCount("COMMENT", comment)).isEqualTo(1L);

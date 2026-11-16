@@ -86,7 +86,8 @@ class DiscussionStatsFlowIT extends DiscussionFlowITSupport {
     JsonNode page = get(null, THREADS);
     assertThat(page.get("items")).isEmpty();
     assertThat(page.get("total").asInt()).isZero();
-    assertThat(count("SELECT count(*) FROM discussion.thread_stats WHERE root_id = ?", root))
+    assertThat(
+            count("SELECT count(*) FROM itr_comment_thread_stats WHERE root_comment_id = ?", root))
         .isZero();
   }
 
