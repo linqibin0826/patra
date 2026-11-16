@@ -310,8 +310,6 @@ class VerifyEmailHandlerTest {
         .deviceClass(DeviceClass.UNKNOWN)
         .expiresAt(NOW.plus(Duration.ofDays(180)))
         .version(0L)
-        .createdAt(NOW)
-        .updatedAt(NOW)
         .build();
   }
 }

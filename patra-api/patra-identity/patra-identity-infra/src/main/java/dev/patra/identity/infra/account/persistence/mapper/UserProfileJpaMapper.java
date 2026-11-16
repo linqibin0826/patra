@@ -41,8 +41,6 @@ public interface UserProfileJpaMapper {
     return UserProfileEntity.builder()
         .id(profile.getId())
         .version(profile.getVersion())
-        .createdAt(profile.getCreatedAt())
-        .updatedAt(profile.getUpdatedAt())
         .userId(profile.getUserId())
         .displayName(profile.getDisplayName().map(DisplayName::value).orElse(null))
         .bio(profile.getBio().map(Bio::value).orElse(null))
@@ -138,8 +136,6 @@ public interface UserProfileJpaMapper {
                 ? null
                 : Avatar.parse(entity.getUserId(), entity.getAvatarObjectKey()))
         .version(entity.getVersion())
-        .createdAt(entity.getCreatedAt())
-        .updatedAt(entity.getUpdatedAt())
         .build();
   }
 

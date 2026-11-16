@@ -43,7 +43,7 @@ CREATE TABLE sys_dict_type
     updated_by         BIGINT         NULL,
     updated_by_name    VARCHAR(100)   NULL,
     version            BIGINT         NOT NULL DEFAULT 0,
-    ip_address         bytea          NULL,
+    ip_address         INET           NULL,
     deleted_at         timestamptz(6) NULL     DEFAULT NULL,
 
     PRIMARY KEY (id),
@@ -112,7 +112,7 @@ CREATE TABLE sys_dict_item
     updated_by      BIGINT         NULL,
     updated_by_name VARCHAR(100)   NULL,
     version         BIGINT         NOT NULL DEFAULT 0,
-    ip_address      bytea          NULL,
+    ip_address      INET           NULL,
     deleted_at      timestamptz(6) NULL     DEFAULT NULL,
 
     PRIMARY KEY (id),
@@ -212,7 +212,7 @@ CREATE TABLE sys_reference_standard
     updated_by      BIGINT         NULL,
     updated_by_name VARCHAR(100)   NULL,
     version         BIGINT         NOT NULL DEFAULT 0,
-    ip_address      bytea          NULL,
+    ip_address      INET           NULL,
 
     PRIMARY KEY (id),
     CONSTRAINT uk_ref_standard__type_code UNIQUE (dict_type_code, standard_code),

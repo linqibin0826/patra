@@ -14,7 +14,7 @@ CREATE TABLE idn_user_external_identity
     last_login_at   timestamptz(6)  NULL,
     record_remarks  jsonb           NULL,
     version         BIGINT          NOT NULL DEFAULT 0,
-    ip_address      bytea           NULL,
+    ip_address      INET            NULL,
     created_at      timestamptz(6)  NOT NULL DEFAULT CURRENT_TIMESTAMP,
     created_by      BIGINT          NULL,
     created_by_name VARCHAR(100)    NULL,

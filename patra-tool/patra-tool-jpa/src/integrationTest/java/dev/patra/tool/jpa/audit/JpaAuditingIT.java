@@ -23,8 +23,8 @@ class JpaAuditingIT {
   @Autowired private JpaITAuditedNoteDao noteDao;
 
   @Test
-  @DisplayName("没有操作人提供者时，操作人两列为空，时间两列照常填充")
-  void should_leave_auditor_columns_empty_and_fill_timestamps_when_no_provider() {
+  @DisplayName("没有操作人提供者时，操作人两列为空")
+  void should_leave_auditor_columns_empty_when_no_provider() {
     JpaITAuditedNoteEntity note = new JpaITAuditedNoteEntity();
     note.setId(SnowflakeIdGenerator.getId());
     note.setContent("no provider");
@@ -34,7 +34,5 @@ class JpaAuditingIT {
     JpaITAuditedNoteEntity saved = noteDao.findById(note.getId()).orElseThrow();
     assertThat(saved.getCreatedBy()).isNull();
     assertThat(saved.getUpdatedBy()).isNull();
-    assertThat(saved.getCreatedAt()).isNotNull();
-    assertThat(saved.getUpdatedAt()).isNotNull();
   }
 }

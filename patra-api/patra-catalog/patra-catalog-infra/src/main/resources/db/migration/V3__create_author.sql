@@ -23,7 +23,7 @@ CREATE TABLE cat_author (
     ext_data        JSONB           NULL,
     record_remarks  JSONB           NULL,
     version         BIGINT          NOT NULL DEFAULT 0,
-    ip_address      BYTEA           NULL,
+    ip_address      INET            NULL,
     created_at      TIMESTAMPTZ(6)  NOT NULL DEFAULT now(),
     created_by      BIGINT          NULL,
     created_by_name VARCHAR(100)    NULL,

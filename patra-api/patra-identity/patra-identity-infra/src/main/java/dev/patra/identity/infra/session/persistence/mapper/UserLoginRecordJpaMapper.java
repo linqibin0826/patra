@@ -29,9 +29,7 @@ public interface UserLoginRecordJpaMapper {
       target = "endReason",
       expression = "java(login.getEndReason() == null ? null : login.getEndReason().name())")
   @Mapping(target = "createdBy", ignore = true)
-  @Mapping(target = "createdByName", ignore = true)
   @Mapping(target = "updatedBy", ignore = true)
-  @Mapping(target = "updatedByName", ignore = true)
   @Mapping(target = "recordRemarks", ignore = true)
   @Mapping(target = "ipAddress", ignore = true)
   UserLoginRecordEntity toEntity(UserLoginRecord login);
@@ -59,8 +57,6 @@ public interface UserLoginRecordJpaMapper {
         .endReason(
             entity.getEndReason() == null ? null : LoginEndReason.valueOf(entity.getEndReason()))
         .version(entity.getVersion())
-        .createdAt(entity.getCreatedAt())
-        .updatedAt(entity.getUpdatedAt())
         .build();
   }
 }

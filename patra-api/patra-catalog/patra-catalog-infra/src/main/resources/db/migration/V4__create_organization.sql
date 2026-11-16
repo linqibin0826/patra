@@ -30,7 +30,7 @@ CREATE TABLE cat_organization (
     updated_by      BIGINT          NULL,
     updated_by_name VARCHAR(100)    NULL,
     version         BIGINT          NOT NULL DEFAULT 0,
-    ip_address      BYTEA           NULL,
+    ip_address      INET            NULL,
     deleted_at      TIMESTAMPTZ(6)  NULL,
 
     PRIMARY KEY (id),
@@ -164,7 +164,7 @@ CREATE TABLE cat_investigator (
     updated_by          BIGINT          NULL,
     updated_by_name     VARCHAR(100)    NULL,
     version             BIGINT          NOT NULL DEFAULT 0,
-    ip_address          BYTEA           NULL,
+    ip_address          INET            NULL,
 
     PRIMARY KEY (id)
 );
@@ -199,7 +199,7 @@ CREATE TABLE cat_publication_investigator (
     updated_by      BIGINT          NULL,
     updated_by_name VARCHAR(100)    NULL,
     version         BIGINT          NOT NULL DEFAULT 0,
-    ip_address      BYTEA           NULL,
+    ip_address      INET            NULL,
 
     PRIMARY KEY (id),
 
@@ -240,7 +240,7 @@ CREATE TABLE cat_publication_personal_name_subject (
     updated_by      BIGINT          NULL,
     updated_by_name VARCHAR(100)    NULL,
     version         BIGINT          NOT NULL DEFAULT 0,
-    ip_address      BYTEA           NULL,
+    ip_address      INET            NULL,
 
     PRIMARY KEY (id)
 );

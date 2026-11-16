@@ -37,12 +37,8 @@ public abstract class VenueInstanceJpaMapper {
       source = "instanceMetadataJson",
       qualifiedByName = "stringToJsonNode")
   @Mapping(target = "version", ignore = true)
-  @Mapping(target = "createdAt", ignore = true)
   @Mapping(target = "createdBy", ignore = true)
-  @Mapping(target = "createdByName", ignore = true)
-  @Mapping(target = "updatedAt", ignore = true)
   @Mapping(target = "updatedBy", ignore = true)
-  @Mapping(target = "updatedByName", ignore = true)
   @Mapping(target = "ipAddress", ignore = true)
   @Mapping(target = "recordRemarks", ignore = true)
   public abstract VenueInstanceEntity toEntity(VenueInstanceAggregate aggregate);

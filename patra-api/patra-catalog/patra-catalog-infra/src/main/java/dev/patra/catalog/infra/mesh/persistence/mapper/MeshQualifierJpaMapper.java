@@ -35,12 +35,8 @@ public interface MeshQualifierJpaMapper {
   @Mapping(target = "ui", source = "qualifierUi", qualifiedByName = "meshUiToString")
   @Mapping(target = "treeNumbers", source = "treeNumbers", qualifiedByName = "copyTreeNumbers")
   @Mapping(target = "version", ignore = true)
-  @Mapping(target = "createdAt", ignore = true)
   @Mapping(target = "createdBy", ignore = true)
-  @Mapping(target = "createdByName", ignore = true)
-  @Mapping(target = "updatedAt", ignore = true)
   @Mapping(target = "updatedBy", ignore = true)
-  @Mapping(target = "updatedByName", ignore = true)
   @Mapping(target = "ipAddress", ignore = true)
   @Mapping(target = "recordRemarks", ignore = true)
   MeshQualifierEntity toEntity(MeshQualifierAggregate aggregate);

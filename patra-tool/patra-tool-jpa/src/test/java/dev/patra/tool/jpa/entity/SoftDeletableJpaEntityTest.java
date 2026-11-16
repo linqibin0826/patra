@@ -2,8 +2,6 @@ package dev.patra.tool.jpa.entity;
 
 import static org.assertj.core.api.Assertions.*;
 
-import java.time.Duration;
-import java.time.Instant;
 import org.hibernate.annotations.SoftDelete;
 import org.hibernate.annotations.SoftDeleteType;
 import org.junit.jupiter.api.BeforeEach;
@@ -64,20 +62,14 @@ class SoftDeletableJpaEntityTest {
     @DisplayName("应该继承 BaseJpaEntity 的审计字段")
     void shouldInheritAuditFieldsFromBaseJpaEntity() {
       // Given
-      Instant createdAt = Instant.now().minus(Duration.ofDays(1));
-      Instant updatedAt = Instant.now();
       Long createdBy = 100L;
       Long updatedBy = 200L;
 
       // When
-      entity.setCreatedAt(createdAt);
-      entity.setUpdatedAt(updatedAt);
       entity.setCreatedBy(createdBy);
       entity.setUpdatedBy(updatedBy);
 
       // Then
-      assertThat(entity.getCreatedAt()).isEqualTo(createdAt);
-      assertThat(entity.getUpdatedAt()).isEqualTo(updatedAt);
       assertThat(entity.getCreatedBy()).isEqualTo(createdBy);
       assertThat(entity.getUpdatedBy()).isEqualTo(updatedBy);
     }
@@ -156,20 +148,13 @@ class SoftDeletableJpaEntityTest {
       // Given
       Long expectedId = 123L;
       Long expectedVersion = 1L;
-      Instant expectedCreatedAt = Instant.now();
 
       // When
-      TestEntity builtEntity =
-          TestEntity.builder()
-              .id(expectedId)
-              .version(expectedVersion)
-              .createdAt(expectedCreatedAt)
-              .build();
+      TestEntity builtEntity = TestEntity.builder().id(expectedId).version(expectedVersion).build();
 
       // Then
       assertThat(builtEntity.getId()).isEqualTo(expectedId);
       assertThat(builtEntity.getVersion()).isEqualTo(expectedVersion);
-      assertThat(builtEntity.getCreatedAt()).isEqualTo(expectedCreatedAt);
     }
   }
 

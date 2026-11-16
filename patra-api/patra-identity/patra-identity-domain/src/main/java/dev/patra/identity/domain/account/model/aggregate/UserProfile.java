@@ -12,7 +12,6 @@ import dev.patra.identity.domain.account.model.vo.profile.PrivacySettings;
 import dev.patra.identity.domain.account.model.vo.profile.ProfileContent;
 import dev.patra.identity.domain.account.model.vo.profile.ProfileLink;
 import dev.patra.identity.domain.account.model.vo.profile.ResearchInterest;
-import java.time.Instant;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
@@ -68,8 +67,6 @@ public final class UserProfile {
   private Avatar avatar;
 
   private final Long version;
-  private final Instant createdAt;
-  private final Instant updatedAt;
 
   /// 全参构造，守不变式。从库里恢复走 `restore()` 构建器；`privacy` 为空取默认，列表为空取空列表。
   ///
@@ -86,8 +83,6 @@ public final class UserProfile {
   /// @param privacy 隐私设置
   /// @param avatar 头像，没上传时为 `null`
   /// @param version 乐观锁版本
-  /// @param createdAt 创建时间
-  /// @param updatedAt 更新时间
   @Builder(builderMethodName = "restore")
   private UserProfile(
       Long id,
@@ -102,9 +97,7 @@ public final class UserProfile {
       List<ResearchInterest> researchInterests,
       PrivacySettings privacy,
       Avatar avatar,
-      Long version,
-      Instant createdAt,
-      Instant updatedAt) {
+      Long version) {
     this.id = id;
     this.userId = Objects.requireNonNull(userId, "userId 不能为 null");
     this.privacy = privacy != null ? privacy : PrivacySettings.defaults();
@@ -113,8 +106,6 @@ public final class UserProfile {
       requireOwn(avatar);
     }
     this.version = version;
-    this.createdAt = createdAt;
-    this.updatedAt = updatedAt;
     apply(
         ProfileContent.builder()
             .displayName(displayName)

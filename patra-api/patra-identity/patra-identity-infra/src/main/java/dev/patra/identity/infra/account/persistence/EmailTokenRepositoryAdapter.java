@@ -46,7 +46,7 @@ public class EmailTokenRepositoryAdapter implements EmailTokenRepository {
        WHERE token_hash = :hash AND purpose = :purpose
          AND consumed_at IS NULL AND revoked_at IS NULL AND expires_at > :now
       RETURNING id, user_id, purpose, email, token_hash, expires_at, consumed_at, revoked_at,
-                requested_ip, version, created_at, updated_at
+                requested_ip, version
       """;
 
   private final EmailTokenDao dao;
@@ -182,8 +182,6 @@ public class EmailTokenRepositoryAdapter implements EmailTokenRepository {
         .revokedAt(instant(rs, "revoked_at"))
         .requestedIp(rs.getString("requested_ip"))
         .version(rs.getLong("version"))
-        .createdAt(instant(rs, "created_at"))
-        .updatedAt(instant(rs, "updated_at"))
         .build();
   }
 

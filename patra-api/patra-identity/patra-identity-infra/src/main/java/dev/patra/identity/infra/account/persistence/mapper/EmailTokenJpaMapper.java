@@ -19,9 +19,7 @@ public interface EmailTokenJpaMapper {
   @Mapping(target = "email", expression = "java(token.getEmail().value())")
   @Mapping(target = "requestedIp", expression = "java(token.getRequestedIp().orElse(null))")
   @Mapping(target = "createdBy", ignore = true)
-  @Mapping(target = "createdByName", ignore = true)
   @Mapping(target = "updatedBy", ignore = true)
-  @Mapping(target = "updatedByName", ignore = true)
   @Mapping(target = "recordRemarks", ignore = true)
   @Mapping(target = "ipAddress", ignore = true)
   EmailTokenEntity toEntity(EmailToken token);
@@ -45,8 +43,6 @@ public interface EmailTokenJpaMapper {
         .revokedAt(entity.getRevokedAt())
         .requestedIp(entity.getRequestedIp())
         .version(entity.getVersion())
-        .createdAt(entity.getCreatedAt())
-        .updatedAt(entity.getUpdatedAt())
         .build();
   }
 }
