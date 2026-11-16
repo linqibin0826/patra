@@ -21,7 +21,7 @@ public interface UserProfileLinkDao extends JpaRepository<UserProfileLinkEntity,
   ///
   /// @param userId 用户 ID
   /// @return 删掉的行数
-  @Modifying
+  @Modifying(flushAutomatically = true, clearAutomatically = true)
   @Query("delete from UserProfileLinkEntity e where e.userId = :userId")
   int deleteAllByUserId(@Param("userId") Long userId);
 }

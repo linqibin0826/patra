@@ -15,6 +15,7 @@ import dev.patra.identity.infra.session.persistence.mapper.UserLoginRecordJpaMap
 import dev.patra.tool.core.error.field.FieldViolation;
 import dev.patra.tool.jpa.autoconfigure.JpaAuditingConfiguration;
 import dev.patra.tool.jpa.autoconfigure.PatraHibernatePropertiesCustomizer;
+import jakarta.persistence.EntityManager;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
@@ -62,6 +63,7 @@ class UserRepositoryAdapterIT {
   @Autowired private UserRepositoryAdapter repository;
   @Autowired private PlatformTransactionManager transactionManager;
   @Autowired private JdbcTemplate jdbcTemplate;
+  @Autowired private EntityManager entityManager;
 
   /// 锁用户行在事务外调用时被拒绝（`MANDATORY`）。
   @Test
@@ -170,6 +172,30 @@ class UserRepositoryAdapterIT {
     User reloaded = repository.findById(saved.getId()).orElseThrow();
     assertThat(reloaded.getStatus()).isEqualTo(UserStatus.BANNED);
     assertThat(reloaded.getBannedAt()).isEqualTo(now);
+  }
+
+  /// 备注只在库里直接写；仓储由聚合重建实体再保存时不能把它清空（库表规范验证场景 4）。
+  @Test
+  @DisplayName("库里写的备注在保存用户后还在")
+  void should_keep_record_remarks_when_user_saved() {
+    User saved =
+        repository.save(
+            User.register(
+                EmailAddress.of("remarks.user@example.com"), Username.of("u-remarks-user")));
+    entityManager.flush();
+    jdbcTemplate.update(
+        "UPDATE idn_user SET record_remarks = '{\"note\":\"人工核对\"}' WHERE id = ?", saved.getId());
+
+    saved.ban(Instant.parse("2026-10-06T08:00:00Z"));
+    repository.save(saved);
+    entityManager.flush();
+
+    assertThat(
+            jdbcTemplate.queryForMap(
+                "SELECT status, record_remarks ->> 'note' AS note FROM idn_user WHERE id = ?",
+                saved.getId()))
+        .containsEntry("status", "BANNED")
+        .containsEntry("note", "人工核对");
   }
 
   @Test

@@ -27,7 +27,7 @@ public interface UserPasswordCredentialDao
   ///
   /// @param userId 用户 ID
   /// @return 删了几行
-  @Modifying
+  @Modifying(flushAutomatically = true, clearAutomatically = true)
   @Query("delete from UserPasswordCredentialEntity c where c.userId = :userId")
   int deleteByUserId(@Param("userId") Long userId);
 }

@@ -13,6 +13,7 @@ import dev.patra.identity.domain.session.exception.UserModifiedConcurrentlyExcep
 import dev.patra.identity.infra.account.persistence.mapper.UserJpaMapper;
 import dev.patra.identity.infra.config.IdentityITPostgreSQLContainerInitializer;
 import dev.patra.identity.infra.session.persistence.mapper.UserLoginRecordJpaMapper;
+import dev.patra.tool.jpa.audit.CurrentAuditorProvider;
 import dev.patra.tool.jpa.autoconfigure.JpaAuditingConfiguration;
 import dev.patra.tool.jpa.autoconfigure.PatraHibernatePropertiesCustomizer;
 import java.security.SecureRandom;
@@ -28,14 +29,19 @@ import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.boot.flyway.autoconfigure.FlywayAutoConfiguration;
 import org.springframework.boot.jackson.autoconfigure.JacksonAutoConfiguration;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.transaction.IllegalTransactionStateException;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 /// EmailTokenRepositoryAdapter 集成测试：只存哈希、条件消费只成功一次、按用途 / 按用户作废、分批清理、
 /// 部分唯一索引与改邮箱撤销令牌的豁免。
@@ -57,9 +63,13 @@ class EmailTokenRepositoryAdapterIT {
   private static final Instant NOW = Instant.parse("2026-10-21T08:00:00Z");
   private static final SecureRandom RANDOM = new SecureRandom();
 
+  /// 测试上下文里的当前操作人。
+  private static final long AUDITOR_ID = 42L;
+
   @Autowired private UserRepositoryAdapter users;
   @Autowired private EmailTokenRepositoryAdapter tokens;
   @Autowired private JdbcTemplate jdbcTemplate;
+  @Autowired private PlatformTransactionManager transactionManager;
 
   private long userId;
   private EmailAddress email;
@@ -126,7 +136,7 @@ class EmailTokenRepositoryAdapterIT {
             });
     assertThat(tokens.consume(secret.hash(), EmailTokenPurpose.EMAIL_VERIFY, NOW.plusSeconds(61)))
         .isEmpty();
-    // 消费绕过了 JPA，同一事务里按哈希再查会拿到一级缓存里的旧实例，所以用 SQL 核对库里的值
+    // 用 SQL 核对库里的值
     assertThat(
             jdbcTemplate.queryForObject(
                 "select consumed_at is not null from idn_email_token where id = ?",
@@ -350,6 +360,61 @@ class EmailTokenRepositoryAdapterIT {
     assertThat(revokedAt(first.getId())).isNull();
     assertThat(revokedAt(second.getId())).isNull();
     assertThat(revokedAt(third.getId())).isNotNull();
+  }
+
+  /// 批量作废不经实体审计，操作人由适配器从同一个 `AuditorAware` 取来写进 `updated_by`。
+  @Test
+  @DisplayName("作废令牌时记录操作人")
+  void should_record_actor_when_revoking() {
+    EmailToken token =
+        tokens.save(issued(EmailTokenPurpose.EMAIL_VERIFY, EmailTokenSecret.generate(RANDOM), NOW));
+    jdbcTemplate.update("update idn_email_token set updated_by = null where id = ?", token.getId());
+
+    tokens.revokeActive(userId, EmailTokenPurpose.EMAIL_VERIFY, NOW.plusSeconds(5));
+
+    assertThat(
+            jdbcTemplate.queryForObject(
+                "select updated_by from idn_email_token where id = ?", Long.class, token.getId()))
+        .isEqualTo(AUDITOR_ID);
+  }
+
+  /// 事务 A 先按哈希读过令牌（实体进了 A 的一级缓存），事务 B 消费并提交；A 再消费时要以库里的最新状态为准。
+  @Test
+  @Transactional(propagation = Propagation.NOT_SUPPORTED)
+  @DisplayName("先读过令牌的事务，在别的事务消费之后再消费，返回空")
+  void should_not_consume_token_preloaded_before_another_consumer() {
+    TransactionTemplate outer = new TransactionTemplate(transactionManager);
+    TransactionTemplate inner = new TransactionTemplate(transactionManager);
+    inner.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+    EmailTokenSecret secret = EmailTokenSecret.generate(RANDOM);
+    inner.executeWithoutResult(
+        status -> tokens.save(issued(EmailTokenPurpose.EMAIL_VERIFY, secret, NOW)));
+
+    Optional<EmailToken> second =
+        outer.execute(
+            status -> {
+              assertThat(tokens.findByTokenHash(secret.hash())).isPresent();
+              Optional<EmailToken> first =
+                  inner.execute(
+                      s ->
+                          tokens.consume(
+                              secret.hash(), EmailTokenPurpose.EMAIL_VERIFY, NOW.plusSeconds(1)));
+              assertThat(first).isPresent();
+              return tokens.consume(
+                  secret.hash(), EmailTokenPurpose.EMAIL_VERIFY, NOW.plusSeconds(2));
+            });
+
+    assertThat(second).isEmpty();
+  }
+
+  /// 提供一个固定的当前操作人。
+  @TestConfiguration
+  static class FixedAuditorConfig {
+
+    @Bean
+    CurrentAuditorProvider fixedAuditorProvider() {
+      return () -> Optional.of(AUDITOR_ID);
+    }
   }
 
   /// 给当前用户签发一枚令牌，不保存。

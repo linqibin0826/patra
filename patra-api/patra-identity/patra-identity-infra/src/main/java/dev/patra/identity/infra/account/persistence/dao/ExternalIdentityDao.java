@@ -46,14 +46,15 @@ public interface ExternalIdentityDao extends JpaRepository<ExternalIdentityEntit
   /// @param subject 主体
   /// @param accountLabel 账号标识
   /// @param linkedAt 绑定时间
+  /// @param actorId 操作人，系统写入时为空
   /// @return 写入了几行
-  @Modifying
+  @Modifying(flushAutomatically = true, clearAutomatically = true)
   @Query(
       value =
           """
           INSERT INTO idn_user_external_identity
-              (id, user_id, provider, subject, account_label, linked_at)
-          VALUES (:id, :userId, :provider, :subject, :accountLabel, :linkedAt)
+              (id, user_id, provider, subject, account_label, linked_at, created_by, updated_by)
+          VALUES (:id, :userId, :provider, :subject, :accountLabel, :linkedAt, :actorId, :actorId)
           ON CONFLICT DO NOTHING
           """,
       nativeQuery = true)
@@ -63,14 +64,15 @@ public interface ExternalIdentityDao extends JpaRepository<ExternalIdentityEntit
       @Param("provider") String provider,
       @Param("subject") String subject,
       @Param("accountLabel") String accountLabel,
-      @Param("linkedAt") Instant linkedAt);
+      @Param("linkedAt") Instant linkedAt,
+      @Param("actorId") Long actorId);
 
   /// 按用户和平台删。批量语句：不用先查再 remove。
   ///
   /// @param userId 用户 ID
   /// @param provider 平台
   /// @return 删了几行
-  @Modifying
+  @Modifying(flushAutomatically = true, clearAutomatically = true)
   @Query("delete from ExternalIdentityEntity e where e.userId = :userId and e.provider = :provider")
   int deleteByUserIdAndProvider(@Param("userId") Long userId, @Param("provider") String provider);
 
@@ -78,7 +80,7 @@ public interface ExternalIdentityDao extends JpaRepository<ExternalIdentityEntit
   ///
   /// @param userId 用户 ID
   /// @return 删了几行
-  @Modifying
+  @Modifying(flushAutomatically = true, clearAutomatically = true)
   @Query("delete from ExternalIdentityEntity e where e.userId = :userId")
   int deleteAllByUserId(@Param("userId") Long userId);
 }

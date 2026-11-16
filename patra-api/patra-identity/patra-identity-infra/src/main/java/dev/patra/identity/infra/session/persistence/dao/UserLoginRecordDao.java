@@ -40,7 +40,7 @@ public interface UserLoginRecordDao extends JpaRepository<UserLoginRecordEntity,
   /// @param cutoff 截止时间
   /// @param batchSize 一批最多几行
   /// @return 删了几行
-  @Modifying
+  @Modifying(flushAutomatically = true, clearAutomatically = true)
   @Query(
       value =
           "DELETE FROM idn_user_login_record WHERE id IN (SELECT id FROM idn_user_login_record"
