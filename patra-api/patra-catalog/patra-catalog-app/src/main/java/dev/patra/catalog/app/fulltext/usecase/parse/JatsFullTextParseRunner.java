@@ -17,6 +17,7 @@ import org.springframework.stereotype.Component;
 /// 全文解析：keyset 分批取候选，从对象存储读 XML 解析，处理到没有候选为止。全程不访问 PMC。
 ///
 /// 读存储出错不算解析失败：不写记录、保持原状态，下次运行再试；解析器抛出的异常记 `PARSE_FAILED`。
+/// 解析期间被抓取任务重抓的，Persister 丢弃结果，只计处理篇数。
 ///
 /// @author linqibin
 /// @since 0.11.0
@@ -75,15 +76,16 @@ public class JatsFullTextParseRunner {
         return stats.plusFailed();
       }
       log.warn("全文解析失败：publicationId={}，{}", c.publicationId(), e.toString());
-      persister.recordParseFailure(c, e, clock.instant());
-      return stats.plusFailed();
+      return persister.recordParseFailure(c, e, clock.instant())
+          ? stats.plusFailed()
+          : stats.plusSkipped();
     }
     if (result.noBody()) {
-      persister.recordNoBody(c, clock.instant());
-      return stats.plusNoBody();
+      return persister.recordNoBody(c, clock.instant()) ? stats.plusNoBody() : stats.plusSkipped();
     }
-    persister.recordParsed(c, result.body(), clock.instant());
-    return stats.plusParsed();
+    return persister.recordParsed(c, result.body(), clock.instant())
+        ? stats.plusParsed()
+        : stats.plusSkipped();
   }
 
   /// 异常链上是否有 IOException（解析中途读流出错会被 SAX 包装成解析异常）。

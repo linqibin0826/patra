@@ -22,6 +22,9 @@ import org.springframework.transaction.annotation.Transactional;
 ///
 /// 次数只在同一状态连续出现时累加，换状态从 1 起算，抓取成功清零。
 ///
+/// 解析任务（另一把运行锁）可能同时写同一篇：每个事务先锁住已有的全文记录，与解析的持久化事务排队，
+/// 免得按旧版本写回撞乐观锁——撞了的话，已上传的对象就白传了。
+///
 /// @author linqibin
 /// @since 0.11.0
 @Component
@@ -49,6 +52,7 @@ public class PmcFullTextFetchPersister {
       Long pdfSize,
       List<FullTextMedia> media,
       Instant fetchedAt) {
+    fullTextRepository.lockByPublicationId(c.publicationId());
     String prefix = FullTextObjectStoragePort.objectPrefix(c.pmcid(), selected.versionPrefix());
     PublicationFullText fullText =
         PublicationFullText.builder()
@@ -79,6 +83,7 @@ public class PmcFullTextFetchPersister {
   /// @param reason 原因
   @Transactional(propagation = Propagation.REQUIRES_NEW, rollbackFor = Exception.class)
   public void recordUnavailable(FetchCandidate c, FullTextUnavailableReason reason) {
+    fullTextRepository.lockByPublicationId(c.publicationId());
     int attempts = nextAttemptCount(c, FullTextStatus.UNAVAILABLE);
     fullTextRepository.save(
         PublicationFullText.builder()
@@ -106,7 +111,7 @@ public class PmcFullTextFetchPersister {
   public void recordFailure(FetchCandidate c, Exception error) {
     String message = truncate(error.getClass().getSimpleName() + ": " + error.getMessage());
     Optional<PublicationFullText> current =
-        fullTextRepository.findByPublicationId(c.publicationId());
+        fullTextRepository.lockByPublicationId(c.publicationId());
     if (current.isPresent() && current.get().objectPrefix() != null) {
       int attempts = current.get().lastError() != null ? current.get().attemptCount() + 1 : 1;
       fullTextRepository.save(

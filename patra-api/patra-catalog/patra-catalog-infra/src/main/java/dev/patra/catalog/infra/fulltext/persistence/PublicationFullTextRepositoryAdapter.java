@@ -6,16 +6,21 @@ import dev.patra.catalog.domain.fulltext.port.repository.PublicationFullTextRepo
 import dev.patra.catalog.infra.fulltext.persistence.dao.PublicationFullTextDao;
 import dev.patra.catalog.infra.fulltext.persistence.entity.PublicationFullTextEntity;
 import dev.patra.tool.jpa.id.SnowflakeIdGenerator;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.LockModeType;
 import java.util.ArrayList;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.databind.json.JsonMapper;
 
 /// `PublicationFullTextRepository` 的 JPA 实现。
 ///
-/// `save` 先按 `publication_id` 取托管实体再改；并发写同一篇由任务互斥锁与
-/// `uk_publication_fulltext_publication` 兜底，撞唯一约束时异常交给调用方按失败处理。
+/// `save` 先按 `publication_id` 取托管实体再改。抓取与解析可以同时写同一篇：持久化事务先用
+/// [#lockByPublicationId] 锁行，乐观锁版本号兜底；两边同时新建同一篇时由
+/// `uk_cat_publication_fulltext_publication` 拦下，异常交给调用方按失败处理。
 ///
 /// @author linqibin
 /// @since 0.11.0
@@ -24,6 +29,7 @@ import tools.jackson.databind.json.JsonMapper;
 public class PublicationFullTextRepositoryAdapter implements PublicationFullTextRepository {
 
   private final PublicationFullTextDao dao;
+  private final EntityManager entityManager;
   private final JsonMapper jsonMapper;
 
   /// 按文献 ID 查全文记录。
@@ -34,6 +40,22 @@ public class PublicationFullTextRepositoryAdapter implements PublicationFullText
   public Optional<PublicationFullText> findByPublicationId(long publicationId) {
     return dao.findByPublicationId(publicationId)
         .map(PublicationFullTextRepositoryAdapter::toDomain);
+  }
+
+  /// 先按普通查询取实体，再带 `PESSIMISTIC_WRITE` 刷新：带锁的查询不会刷新一级缓存里已有的实体，
+  /// 拿到的可能是别的事务提交前读到的旧值。
+  ///
+  /// @param publicationId 文献 ID
+  /// @return 当前全文记录
+  @Override
+  @Transactional(propagation = Propagation.MANDATORY)
+  public Optional<PublicationFullText> lockByPublicationId(long publicationId) {
+    return dao.findByPublicationId(publicationId)
+        .map(
+            entity -> {
+              entityManager.refresh(entity, LockModeType.PESSIMISTIC_WRITE);
+              return toDomain(entity);
+            });
   }
 
   /// 按 `publication_id` upsert。

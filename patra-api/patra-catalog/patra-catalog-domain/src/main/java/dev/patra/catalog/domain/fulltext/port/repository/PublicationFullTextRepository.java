@@ -16,6 +16,15 @@ public interface PublicationFullTextRepository {
   /// @return 全文记录
   Optional<PublicationFullText> findByPublicationId(long publicationId);
 
+  /// 锁住这篇的全文记录并读出当前值（`SELECT … FOR UPDATE`），须在调用方的事务里调用。
+  ///
+  /// 抓取与解析两条流水线可以同时改同一篇。持久化事务先调它：别的事务正在改这行时等它提交，
+  /// 拿到的是提交后的值，据此判断要写的结果还成不成立。
+  ///
+  /// @param publicationId 文献 ID
+  /// @return 当前全文记录；还没有记录时为空（不加锁）
+  Optional<PublicationFullText> lockByPublicationId(long publicationId);
+
   /// 按 `publication_id` upsert：有行则更新全部列，没有则插入。
   ///
   /// @param fullText 全文记录

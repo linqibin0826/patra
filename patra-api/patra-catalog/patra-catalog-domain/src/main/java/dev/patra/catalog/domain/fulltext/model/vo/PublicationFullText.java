@@ -2,9 +2,11 @@ package dev.patra.catalog.domain.fulltext.model.vo;
 
 import dev.patra.catalog.domain.fulltext.event.PmcFullTextFetchedEvent;
 import dev.patra.catalog.domain.fulltext.model.enums.FullTextUnavailableReason;
+import dev.patra.catalog.domain.fulltext.model.read.ParseCandidate;
 import dev.patra.catalog.domain.kernel.model.enums.FullTextStatus;
 import java.time.Instant;
 import java.util.List;
+import java.util.Objects;
 import lombok.Builder;
 
 /// 一篇文献的全文记录（`cat_publication_fulltext` 一行）。
@@ -64,5 +66,31 @@ public record PublicationFullText(
   /// @return 事件
   public PmcFullTextFetchedEvent fetchedEvent() {
     return new PmcFullTextFetchedEvent(publicationId, pmcid, licenseCode, manuscript);
+  }
+
+  /// 是否仍是这条解析候选：状态还在等解析，而且还是候选那份 XML（同一对象前缀与版本）。
+  ///
+  /// 解析在事务外读对象存储，期间抓取任务可能已重抓、换了版本或状态。持久化事务锁住行后用它判断
+  /// 解析结果还能不能写；不成立时丢弃结果，新内容留给下一轮。状态条件与解析候选查询一致：
+  /// 待解析，或解析成功 / 失败 / 无正文但解析器版本落后。
+  ///
+  /// @param candidate 解析时用的候选
+  /// @param currentParserVersion 当前解析器版本
+  /// @return 解析结果仍可写入时为 true
+  public boolean stillAwaitsParsing(ParseCandidate candidate, int currentParserVersion) {
+    boolean sameXml =
+        Objects.equals(objectPrefix, candidate.objectPrefix())
+            && Objects.equals(pmcVersion, candidate.pmcVersion());
+    boolean parsedByOlderParser = parserVersion != null && parserVersion < currentParserVersion;
+    boolean awaiting =
+        switch (status) {
+          case FETCHED -> true;
+          case PARSED, PARSE_FAILED -> parsedByOlderParser;
+          case UNAVAILABLE ->
+              unavailableReason == FullTextUnavailableReason.NO_BODY && parsedByOlderParser;
+          case FETCH_FAILED -> false;
+          case null -> false;
+        };
+    return sameXml && awaiting;
   }
 }
