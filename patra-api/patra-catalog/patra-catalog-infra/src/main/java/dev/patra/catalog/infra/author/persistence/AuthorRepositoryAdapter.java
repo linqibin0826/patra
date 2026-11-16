@@ -29,7 +29,7 @@ import org.springframework.stereotype.Repository;
 ///
 /// - 管理作者聚合根的持久化，包括子实体（名字变体、ORCID）
 /// - 处理业务键（normalizedKey）和 ORCID 的唯一性查询
-/// - 支持软删除
+/// - 查询都排除已删除的作者
 ///
 /// **JPA 批量写入说明**：
 ///
@@ -103,7 +103,7 @@ public class AuthorRepositoryAdapter implements AuthorRepository {
       List<Long> ids = existingAuthors.stream().map(a -> a.getId().value()).toList();
 
       // 批量加载 managed entities
-      List<AuthorEntity> loadedEntities = authorDao.findAllById(ids);
+      List<AuthorEntity> loadedEntities = authorDao.findByIdInAndDeletedAtIsNull(ids);
       Map<Long, AuthorEntity> entityMap =
           loadedEntities.stream()
               .collect(java.util.stream.Collectors.toMap(AuthorEntity::getId, e -> e));
@@ -164,32 +164,24 @@ public class AuthorRepositoryAdapter implements AuthorRepository {
     if (id == null) {
       return Optional.empty();
     }
-    return authorDao.findById(id.value()).map(mapper::toAggregate);
-  }
-
-  @Override
-  public void deleteById(AuthorId id) {
-    if (id == null) {
-      return;
-    }
-
-    authorDao.deleteById(id.value());
-    log.debug("作者软删除完成，ID：{}", id.value());
+    return authorDao.findByIdAndDeletedAtIsNull(id.value()).map(mapper::toAggregate);
   }
 
   @Override
   public List<AuthorAggregate> findByNormalizedKey(String normalizedKey) {
-    return authorDao.findByNormalizedKey(normalizedKey).stream().map(mapper::toAggregate).toList();
+    return authorDao.findByNormalizedKeyAndDeletedAtIsNull(normalizedKey).stream()
+        .map(mapper::toAggregate)
+        .toList();
   }
 
   @Override
   public boolean existsByNormalizedKey(String normalizedKey) {
-    return authorDao.existsByNormalizedKey(normalizedKey);
+    return authorDao.existsByNormalizedKeyAndDeletedAtIsNull(normalizedKey);
   }
 
   @Override
   public List<AuthorAggregate> findByNormalizedKeys(List<String> normalizedKeys) {
-    return authorDao.findByNormalizedKeyIn(normalizedKeys).stream()
+    return authorDao.findByNormalizedKeyInAndDeletedAtIsNull(normalizedKeys).stream()
         .map(mapper::toAggregate)
         .toList();
   }

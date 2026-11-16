@@ -69,7 +69,8 @@ public class DefaultFunderLookupAdapter implements FunderLookupPort {
     String normalizedName = funderName.trim();
 
     // 通过显示名称精确匹配（暂不支持模糊匹配，以保证数据准确性）
-    Optional<OrganizationEntity> orgOpt = organizationDao.findByDisplayName(normalizedName);
+    Optional<OrganizationEntity> orgOpt =
+        organizationDao.findByDisplayNameAndDeletedAtIsNull(normalizedName);
     if (orgOpt.isPresent()) {
       log.debug("通过名称匹配到机构：name={}, orgId={}", normalizedName, orgOpt.get().getId());
       return Optional.of(orgOpt.get().getId());
@@ -97,6 +98,6 @@ public class DefaultFunderLookupAdapter implements FunderLookupPort {
   /// @return 机构 ID
   private Optional<Long> findByRorId(String rorId) {
     // 优先查主表的 ror_id 字段
-    return organizationDao.findByRorId(rorId).map(OrganizationEntity::getId);
+    return organizationDao.findByRorIdAndDeletedAtIsNull(rorId).map(OrganizationEntity::getId);
   }
 }

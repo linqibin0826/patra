@@ -162,6 +162,40 @@ class PublicationRepositoryAdapterIT {
         null);
   }
 
+  /// 去掉 `@SoftDelete` 之后，「未删除」条件要每个查询自己带：已删的文献按 ID、PMID、DOI、期刊都查不到。
+  @Test
+  @DisplayName("已删除的文献按 ID、PMID、DOI、期刊都查不到")
+  void should_not_find_soft_deleted_publication() {
+    var publication =
+        createPublication("58008001", "10.5800/deleted", 1001L, 2001L, "Deleted Publication", 2024);
+    repository.save(publication);
+    Long id = publication.getId().value();
+    markDeleted(id);
+
+    assertThat(repository.findById(id)).isEmpty();
+    assertThat(repository.findByPmid("58008001")).isEmpty();
+    assertThat(repository.findByDoi("10.5800/deleted")).isEmpty();
+    assertThat(repository.findByPmidOrDoi("58008001", null)).isEmpty();
+    assertThat(repository.existsByPmid("58008001")).isFalse();
+    assertThat(repository.existsByDoi("10.5800/deleted")).isFalse();
+    assertThat(repository.findByVenueId(1001L))
+        .extracting(found -> found.getId().value())
+        .doesNotContain(id);
+    assertThat(repository.findByVenueInstanceId(2001L))
+        .extracting(found -> found.getId().value())
+        .doesNotContain(id);
+  }
+
+  /// 直接在库里标删（生产上由同步任务的批量语句标删）。
+  private void markDeleted(Long id) {
+    entityManager.flush();
+    entityManager
+        .createNativeQuery("UPDATE cat_publication SET deleted_at = now() WHERE id = :id")
+        .setParameter("id", id)
+        .executeUpdate();
+    entityManager.clear();
+  }
+
   @Nested
   @DisplayName("findById 测试")
   class FindByIdTests {
@@ -413,9 +447,7 @@ class PublicationRepositoryAdapterIT {
       var publication =
           createPublication("59999999", "10.5999/deleted", 1001L, 2001L, "Soft Deleted", 2024);
       repository.save(publication);
-      repository.deleteById(publication.getId().value());
-      entityManager.flush();
-      entityManager.clear();
+      markDeleted(publication.getId().value());
 
       // When
       var keys = repository.findExistingKeys(Set.of("59999999"), Set.of("10.5999/deleted"));
@@ -599,103 +631,6 @@ class PublicationRepositoryAdapterIT {
 
       // Then
       assertThat(jpaRepository.count()).isEqualTo(0);
-    }
-  }
-
-  @Nested
-  @DisplayName("deleteById 测试")
-  class DeleteByIdTests {
-
-    @Test
-    @DisplayName("存在的 ID - 应该删除并返回 true")
-    void deleteById_exists_shouldDeleteAndReturnTrue() {
-      // Given
-      var publication =
-          createPublication("30303030", "10.3030/delete", 1001L, 2001L, "Delete Test", 2024);
-      repository.save(publication);
-      assertThat(jpaRepository.count()).isEqualTo(1);
-
-      // When
-      boolean deleted = repository.deleteById(publication.getId().value());
-
-      // Then
-      assertThat(deleted).isTrue();
-      assertThat(jpaRepository.count()).isEqualTo(0);
-    }
-
-    @Test
-    @DisplayName("不存在的 ID - 应该返回 false")
-    void deleteById_notExists_shouldReturnFalse() {
-      // When
-      boolean deleted = repository.deleteById(999999L);
-
-      // Then
-      assertThat(deleted).isFalse();
-    }
-
-    @Test
-    @DisplayName("null ID - 应该返回 false")
-    void deleteById_null_shouldReturnFalse() {
-      // When
-      boolean deleted = repository.deleteById(null);
-
-      // Then
-      assertThat(deleted).isFalse();
-    }
-  }
-
-  @Nested
-  @DisplayName("deleteByVenueId/deleteByVenueInstanceId 测试")
-  class DeleteByVenueTests {
-
-    @Test
-    @DisplayName("根据载体 ID 删除 - 应该删除所有关联文献")
-    void deleteByVenueId_shouldDeleteAllRelated() {
-      // Given
-      repository.save(
-          createPublication("40404041", "10.4040/a", 1001L, 2001L, "Publication A", 2024));
-      repository.save(
-          createPublication("40404042", "10.4040/b", 1001L, 2002L, "Publication B", 2024));
-      repository.save(
-          createPublication("40404043", "10.4040/c", 1002L, 2003L, "Publication C", 2024));
-      assertThat(jpaRepository.count()).isEqualTo(3);
-
-      // When
-      int deleted = repository.deleteByVenueId(1001L);
-
-      // Then
-      assertThat(deleted).isEqualTo(2);
-      assertThat(jpaRepository.count()).isEqualTo(1);
-    }
-
-    @Test
-    @DisplayName("根据载体实例 ID 删除 - 应该删除所有关联文献")
-    void deleteByVenueInstanceId_shouldDeleteAllRelated() {
-      // Given
-      repository.save(
-          createPublication("50505051", "10.5050/a", 1001L, 2001L, "Publication A", 2024));
-      repository.save(
-          createPublication("50505052", "10.5050/b", 1001L, 2001L, "Publication B", 2024));
-      repository.save(
-          createPublication("50505053", "10.5050/c", 1001L, 2002L, "Publication C", 2024));
-      assertThat(jpaRepository.count()).isEqualTo(3);
-
-      // When
-      int deleted = repository.deleteByVenueInstanceId(2001L);
-
-      // Then
-      assertThat(deleted).isEqualTo(2);
-      assertThat(jpaRepository.count()).isEqualTo(1);
-    }
-
-    @Test
-    @DisplayName("null venueId - 应该返回 0")
-    void deleteByVenueId_null_shouldReturnZero() {
-      // When
-      int deleted = repository.deleteByVenueId(null);
-
-      // Then
-      assertThat(deleted).isEqualTo(0);
     }
   }
 

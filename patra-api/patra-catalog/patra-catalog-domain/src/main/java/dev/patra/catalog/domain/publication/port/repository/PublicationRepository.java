@@ -152,24 +152,6 @@ public interface PublicationRepository {
   /// @param aggregates 文献聚合根列表
   void updateBatch(List<PublicationAggregate> aggregates);
 
-  /// 根据 ID 删除文献。
-  ///
-  /// @param id 文献 ID
-  /// @return true 如果删除成功
-  boolean deleteById(Long id);
-
-  /// 根据载体实例 ID 删除所有关联文献。
-  ///
-  /// @param venueInstanceId 载体实例 ID
-  /// @return 删除的记录数
-  int deleteByVenueInstanceId(Long venueInstanceId);
-
-  /// 根据载体 ID 删除所有关联文献。
-  ///
-  /// @param venueId 载体 ID
-  /// @return 删除的记录数
-  int deleteByVenueId(Long venueId);
-
   // ========== 标识符管理（聚合边界内，独立表） ==========
 
   /// 批量替换标识符（删除旧数据后插入新数据）。

@@ -82,7 +82,8 @@ class CachingFunderLookupDecoratorTest {
       when(externalIdDao.findByIdTypeAndPreferredValue("FUNDREF", ROR_ID))
           .thenReturn(Optional.empty());
       when(organizationEntity.getId()).thenReturn(ORG_ID);
-      when(organizationDao.findByRorId(ROR_ID)).thenReturn(Optional.of(organizationEntity));
+      when(organizationDao.findByRorIdAndDeletedAtIsNull(ROR_ID))
+          .thenReturn(Optional.of(organizationEntity));
 
       // when - 第一次调用
       Optional<Long> result1 = decorator.findByIdentifier(ROR_ID);
@@ -94,7 +95,7 @@ class CachingFunderLookupDecoratorTest {
       assertThat(result1).contains(ORG_ID);
       assertThat(result2).contains(ORG_ID);
       // 数据库只应该被查询一次
-      verify(organizationDao, times(1)).findByRorId(ROR_ID);
+      verify(organizationDao, times(1)).findByRorIdAndDeletedAtIsNull(ROR_ID);
     }
 
     @Test
@@ -103,7 +104,7 @@ class CachingFunderLookupDecoratorTest {
       // given
       when(externalIdDao.findByIdTypeAndPreferredValue("FUNDREF", "unknown"))
           .thenReturn(Optional.empty());
-      when(organizationDao.findByRorId("unknown")).thenReturn(Optional.empty());
+      when(organizationDao.findByRorIdAndDeletedAtIsNull("unknown")).thenReturn(Optional.empty());
 
       // when - 第一次调用
       Optional<Long> result1 = decorator.findByIdentifier("unknown");
@@ -116,7 +117,7 @@ class CachingFunderLookupDecoratorTest {
       assertThat(result2).isEmpty();
       // 数据库只应该被查询一次
       verify(externalIdDao, times(1)).findByIdTypeAndPreferredValue("FUNDREF", "unknown");
-      verify(organizationDao, times(1)).findByRorId("unknown");
+      verify(organizationDao, times(1)).findByRorIdAndDeletedAtIsNull("unknown");
     }
 
     @Test
@@ -140,7 +141,7 @@ class CachingFunderLookupDecoratorTest {
     void should_cache_funder_name() {
       // given
       when(organizationEntity.getId()).thenReturn(ORG_ID);
-      when(organizationDao.findByDisplayName(FUNDER_NAME))
+      when(organizationDao.findByDisplayNameAndDeletedAtIsNull(FUNDER_NAME))
           .thenReturn(Optional.of(organizationEntity));
 
       // when - 第一次调用
@@ -153,14 +154,15 @@ class CachingFunderLookupDecoratorTest {
       assertThat(result1).contains(ORG_ID);
       assertThat(result2).contains(ORG_ID);
       // 数据库只应该被查询一次
-      verify(organizationDao, times(1)).findByDisplayName(FUNDER_NAME);
+      verify(organizationDao, times(1)).findByDisplayNameAndDeletedAtIsNull(FUNDER_NAME);
     }
 
     @Test
     @DisplayName("未找到的名称应该被加入 Negative Cache")
     void should_cache_not_found_names() {
       // given
-      when(organizationDao.findByDisplayName("Unknown")).thenReturn(Optional.empty());
+      when(organizationDao.findByDisplayNameAndDeletedAtIsNull("Unknown"))
+          .thenReturn(Optional.empty());
 
       // when - 第一次调用
       Optional<Long> result1 = decorator.findByName("Unknown");
@@ -172,7 +174,7 @@ class CachingFunderLookupDecoratorTest {
       assertThat(result1).isEmpty();
       assertThat(result2).isEmpty();
       // 数据库只应该被查询一次
-      verify(organizationDao, times(1)).findByDisplayName("Unknown");
+      verify(organizationDao, times(1)).findByDisplayNameAndDeletedAtIsNull("Unknown");
     }
 
     @Test
@@ -183,7 +185,7 @@ class CachingFunderLookupDecoratorTest {
 
       // then
       assertThat(result).isEmpty();
-      verify(organizationDao, never()).findByDisplayName(anyString());
+      verify(organizationDao, never()).findByDisplayNameAndDeletedAtIsNull(anyString());
     }
   }
 
@@ -236,7 +238,7 @@ class CachingFunderLookupDecoratorTest {
 
       when(externalIdDao.findByIdTypeAndPreferredValue("FUNDREF", "notfound"))
           .thenReturn(Optional.empty());
-      when(organizationDao.findByRorId("notfound")).thenReturn(Optional.empty());
+      when(organizationDao.findByRorIdAndDeletedAtIsNull("notfound")).thenReturn(Optional.empty());
       decorator.findByIdentifier("notfound");
 
       // when

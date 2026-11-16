@@ -1,6 +1,6 @@
 package dev.patra.catalog.infra.publication.persistence.entity;
 
-import dev.patra.tool.jpa.entity.SoftDeletableJpaEntity;
+import dev.patra.tool.jpa.entity.BaseJpaEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
@@ -18,7 +18,7 @@ import tools.jackson.databind.JsonNode;
 ///
 /// **设计说明**：
 ///
-/// - 继承 `BaseJpaEntity` 获得审计、乐观锁、软删除功能
+/// - 继承 `BaseJpaEntity` 获得审计与乐观锁；删除用 `deletedAt` 列标记
 /// - 嵌入式值对象展开：`LanguageInfo` 直接映射为字段，`pmid`/`doi` 为扁平字段
 /// - `language_base` 是数据库生成列，设为只读
 /// - 枚举类型（ProvenanceCode、PublicationStatus 等）存储为 String
@@ -32,7 +32,7 @@ import tools.jackson.databind.JsonNode;
 @EqualsAndHashCode(callSuper = true)
 @Entity
 @Table(name = "cat_publication")
-public class PublicationEntity extends SoftDeletableJpaEntity {
+public class PublicationEntity extends BaseJpaEntity {
 
   // ========== 数据来源追踪 ==========
 
@@ -162,4 +162,8 @@ public class PublicationEntity extends SoftDeletableJpaEntity {
   @JdbcTypeCode(SqlTypes.JSON)
   @Column(name = "ext_data", columnDefinition = "JSON")
   private JsonNode extData;
+
+  /// 删除时间，空表示未删除；查询方法自己带「未删除」条件（库表规范第 5 节）。
+  @Column(name = "deleted_at")
+  private Instant deletedAt;
 }

@@ -18,8 +18,7 @@ public interface SysDictTypeDao extends JpaRepository<SysDictTypeEntity, Long> {
 
   /// 通过类型代码查询字典类型。
   ///
-  /// 由于实体继承自 SoftDeletableJpaEntity（使用 Hibernate @SoftDelete），
-  /// 框架会自动添加 `deleted_at IS NULL` 过滤条件，无需手动指定。
+  /// 方法名里的 `AndDeletedAtIsNull` 排除已删除的行：删除用 `deleted_at` 列标记，查询要自己带条件。
   ///
   /// @param typeCode 类型代码
   /// @return 可选的字典类型实体

@@ -80,6 +80,23 @@ class VenueRepositoryAdapterIT {
 
   // ========== hasAnyData() 测试 ==========
 
+  /// 去掉 `@SoftDelete` 之后，「未删除」条件要每个查询自己带：已删的期刊按 ISSN-L、NLM 号都查不到。
+  @Test
+  @DisplayName("已删除的期刊按 ISSN-L、NLM 号都查不到")
+  void should_not_find_soft_deleted_venue() {
+    repository.insertAll(
+        List.of(VenueAggregate.fromPubMed("Deleted Journal", "9900001", "9900-0001")));
+    em.flush();
+    em.getEntityManager()
+        .createNativeQuery("UPDATE cat_venue SET deleted_at = now() WHERE nlm_id = '9900001'")
+        .executeUpdate();
+    em.clear();
+
+    assertThat(repository.findByIssnLs(List.of("9900-0001"))).isEmpty();
+    assertThat(repository.findByNlmIds(List.of("9900001"))).isEmpty();
+    assertThat(repository.findSoftDeletedNlmIds(List.of("9900001"))).containsExactly("9900001");
+  }
+
   @Nested
   @DisplayName("hasAnyData() 测试")
   class HasAnyDataTests {

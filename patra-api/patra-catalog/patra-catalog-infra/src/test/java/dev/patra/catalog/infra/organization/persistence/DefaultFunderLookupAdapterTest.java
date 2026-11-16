@@ -88,7 +88,7 @@ class DefaultFunderLookupAdapterTest {
       assertThat(result).isPresent();
       assertThat(result.get()).isEqualTo(ORG_ID);
       // FundRef 匹配成功后不应该查询 ROR
-      verify(organizationDao, never()).findByRorId(anyString());
+      verify(organizationDao, never()).findByRorIdAndDeletedAtIsNull(anyString());
     }
 
     @Test
@@ -98,7 +98,8 @@ class DefaultFunderLookupAdapterTest {
       when(externalIdDao.findByIdTypeAndPreferredValue("FUNDREF", ROR_ID))
           .thenReturn(Optional.empty());
       when(organizationEntity.getId()).thenReturn(ORG_ID);
-      when(organizationDao.findByRorId(ROR_ID)).thenReturn(Optional.of(organizationEntity));
+      when(organizationDao.findByRorIdAndDeletedAtIsNull(ROR_ID))
+          .thenReturn(Optional.of(organizationEntity));
 
       // when
       Optional<Long> result = adapter.findByIdentifier(ROR_ID);
@@ -114,7 +115,7 @@ class DefaultFunderLookupAdapterTest {
       // given
       when(externalIdDao.findByIdTypeAndPreferredValue("FUNDREF", "unknown"))
           .thenReturn(Optional.empty());
-      when(organizationDao.findByRorId("unknown")).thenReturn(Optional.empty());
+      when(organizationDao.findByRorIdAndDeletedAtIsNull("unknown")).thenReturn(Optional.empty());
 
       // when
       Optional<Long> result = adapter.findByIdentifier("unknown");
@@ -152,7 +153,7 @@ class DefaultFunderLookupAdapterTest {
 
       // then
       assertThat(result).isEmpty();
-      verify(organizationDao, never()).findByDisplayName(anyString());
+      verify(organizationDao, never()).findByDisplayNameAndDeletedAtIsNull(anyString());
     }
 
     @Test
@@ -163,7 +164,7 @@ class DefaultFunderLookupAdapterTest {
 
       // then
       assertThat(result).isEmpty();
-      verify(organizationDao, never()).findByDisplayName(anyString());
+      verify(organizationDao, never()).findByDisplayNameAndDeletedAtIsNull(anyString());
     }
 
     @Test
@@ -171,7 +172,7 @@ class DefaultFunderLookupAdapterTest {
     void should_return_org_id_when_name_matches() {
       // given
       when(organizationEntity.getId()).thenReturn(ORG_ID);
-      when(organizationDao.findByDisplayName(FUNDER_NAME))
+      when(organizationDao.findByDisplayNameAndDeletedAtIsNull(FUNDER_NAME))
           .thenReturn(Optional.of(organizationEntity));
 
       // when
@@ -186,7 +187,8 @@ class DefaultFunderLookupAdapterTest {
     @DisplayName("名称不匹配时应该返回 empty")
     void should_return_empty_when_name_not_found() {
       // given
-      when(organizationDao.findByDisplayName("Unknown Funder")).thenReturn(Optional.empty());
+      when(organizationDao.findByDisplayNameAndDeletedAtIsNull("Unknown Funder"))
+          .thenReturn(Optional.empty());
 
       // when
       Optional<Long> result = adapter.findByName("Unknown Funder");
@@ -200,7 +202,7 @@ class DefaultFunderLookupAdapterTest {
     void should_trim_name() {
       // given
       when(organizationEntity.getId()).thenReturn(ORG_ID);
-      when(organizationDao.findByDisplayName(FUNDER_NAME))
+      when(organizationDao.findByDisplayNameAndDeletedAtIsNull(FUNDER_NAME))
           .thenReturn(Optional.of(organizationEntity));
 
       // when
@@ -231,7 +233,7 @@ class DefaultFunderLookupAdapterTest {
       assertThat(result).isPresent();
       assertThat(result.get()).isEqualTo(ORG_ID);
       // 标识符匹配成功后不应该查询名称
-      verify(organizationDao, never()).findByDisplayName(anyString());
+      verify(organizationDao, never()).findByDisplayNameAndDeletedAtIsNull(anyString());
     }
 
     @Test
@@ -240,9 +242,9 @@ class DefaultFunderLookupAdapterTest {
       // given
       when(externalIdDao.findByIdTypeAndPreferredValue("FUNDREF", FUNDREF_ID))
           .thenReturn(Optional.empty());
-      when(organizationDao.findByRorId(FUNDREF_ID)).thenReturn(Optional.empty());
+      when(organizationDao.findByRorIdAndDeletedAtIsNull(FUNDREF_ID)).thenReturn(Optional.empty());
       when(organizationEntity.getId()).thenReturn(ORG_ID);
-      when(organizationDao.findByDisplayName(FUNDER_NAME))
+      when(organizationDao.findByDisplayNameAndDeletedAtIsNull(FUNDER_NAME))
           .thenReturn(Optional.of(organizationEntity));
 
       // when
@@ -259,8 +261,9 @@ class DefaultFunderLookupAdapterTest {
       // given
       when(externalIdDao.findByIdTypeAndPreferredValue("FUNDREF", FUNDREF_ID))
           .thenReturn(Optional.empty());
-      when(organizationDao.findByRorId(FUNDREF_ID)).thenReturn(Optional.empty());
-      when(organizationDao.findByDisplayName(FUNDER_NAME)).thenReturn(Optional.empty());
+      when(organizationDao.findByRorIdAndDeletedAtIsNull(FUNDREF_ID)).thenReturn(Optional.empty());
+      when(organizationDao.findByDisplayNameAndDeletedAtIsNull(FUNDER_NAME))
+          .thenReturn(Optional.empty());
 
       // when
       Optional<Long> result = adapter.findByPriority(FUNDREF_ID, FUNDER_NAME);
@@ -274,7 +277,7 @@ class DefaultFunderLookupAdapterTest {
     void should_try_name_when_identifier_is_null() {
       // given
       when(organizationEntity.getId()).thenReturn(ORG_ID);
-      when(organizationDao.findByDisplayName(FUNDER_NAME))
+      when(organizationDao.findByDisplayNameAndDeletedAtIsNull(FUNDER_NAME))
           .thenReturn(Optional.of(organizationEntity));
 
       // when
@@ -292,14 +295,14 @@ class DefaultFunderLookupAdapterTest {
       // given
       when(externalIdDao.findByIdTypeAndPreferredValue("FUNDREF", FUNDREF_ID))
           .thenReturn(Optional.empty());
-      when(organizationDao.findByRorId(FUNDREF_ID)).thenReturn(Optional.empty());
+      when(organizationDao.findByRorIdAndDeletedAtIsNull(FUNDREF_ID)).thenReturn(Optional.empty());
 
       // when
       Optional<Long> result = adapter.findByPriority(FUNDREF_ID, null);
 
       // then
       assertThat(result).isEmpty();
-      verify(organizationDao, never()).findByDisplayName(anyString());
+      verify(organizationDao, never()).findByDisplayNameAndDeletedAtIsNull(anyString());
     }
   }
 }

@@ -75,19 +75,23 @@ public class OrganizationRepositoryAdapter implements OrganizationRepository {
 
   @Override
   public boolean existsByRorId(RorId rorId) {
-    return organizationDao.existsByRorId(rorId.getId());
+    return organizationDao.existsByRorIdAndDeletedAtIsNull(rorId.getId());
   }
 
   // ========== 基本查询 ==========
 
   @Override
   public Optional<OrganizationAggregate> findById(OrganizationId id) {
-    return organizationDao.findById(id.value()).map(this::toAggregateWithChildren);
+    return organizationDao
+        .findByIdAndDeletedAtIsNull(id.value())
+        .map(this::toAggregateWithChildren);
   }
 
   @Override
   public Optional<OrganizationAggregate> findByRorId(RorId rorId) {
-    return organizationDao.findByRorId(rorId.getId()).map(this::toAggregateWithChildren);
+    return organizationDao
+        .findByRorIdAndDeletedAtIsNull(rorId.getId())
+        .map(this::toAggregateWithChildren);
   }
 
   @Override
@@ -97,7 +101,8 @@ public class OrganizationRepositoryAdapter implements OrganizationRepository {
     }
 
     List<String> rorIdStrings = rorIds.stream().map(RorId::getId).toList();
-    List<OrganizationEntity> entities = organizationDao.findByRorIdIn(rorIdStrings);
+    List<OrganizationEntity> entities =
+        organizationDao.findByRorIdInAndDeletedAtIsNull(rorIdStrings);
 
     if (entities.isEmpty()) {
       return Map.of();
@@ -136,7 +141,7 @@ public class OrganizationRepositoryAdapter implements OrganizationRepository {
       return Map.of();
     }
 
-    List<OrganizationEntity> entities = organizationDao.findByRorIdIn(rorIds);
+    List<OrganizationEntity> entities = organizationDao.findByRorIdInAndDeletedAtIsNull(rorIds);
     return entities.stream()
         .collect(Collectors.toMap(OrganizationEntity::getRorId, OrganizationEntity::getId));
   }
@@ -244,7 +249,8 @@ public class OrganizationRepositoryAdapter implements OrganizationRepository {
 
       // 主表更新：先查询已存在的实体，然后更新字段
       // 这样可以正确处理乐观锁（version 字段），避免 StaleObjectStateException
-      OrganizationEntity existingEntity = organizationDao.findById(orgId).orElse(null);
+      OrganizationEntity existingEntity =
+          organizationDao.findByIdAndDeletedAtIsNull(orgId).orElse(null);
       if (existingEntity != null) {
         mapper.updateEntity(existingEntity, aggregate);
         organizationDao.save(existingEntity);
@@ -283,7 +289,7 @@ public class OrganizationRepositoryAdapter implements OrganizationRepository {
 
   @Override
   public long count() {
-    return organizationDao.count();
+    return organizationDao.countByDeletedAtIsNull();
   }
 
   @Override

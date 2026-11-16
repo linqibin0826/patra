@@ -188,7 +188,7 @@ public class FullTextCandidateReadAdapter implements FullTextCandidateReadPort {
     };
   }
 
-  /// 一批解析候选（JPQL 取实体，`media` 由 JSONB 映射；`@SoftDelete` 自动排除已删除的文献）。
+  /// 一批解析候选（JPQL 取实体，`media` 由 JSONB 映射；排除已删除的文献）。
   ///
   /// @param parserVersion 当前解析器版本
   /// @param lastPublicationId keyset 游标
@@ -202,7 +202,7 @@ public class FullTextCandidateReadAdapter implements FullTextCandidateReadPort {
             """
             SELECT f FROM PublicationFullTextEntity f
             WHERE f.publicationId > :lastId
-              AND EXISTS (SELECT 1 FROM PublicationEntity p WHERE p.id = f.publicationId)
+              AND EXISTS (SELECT 1 FROM PublicationEntity p WHERE p.id = f.publicationId AND p.deletedAt IS NULL)
               AND (f.status = :fetched
                    OR (f.status IN (:parsed, :parseFailed) AND f.parserVersion < :version)
                    OR (f.status = :unavailable AND f.unavailableReason = :noBody

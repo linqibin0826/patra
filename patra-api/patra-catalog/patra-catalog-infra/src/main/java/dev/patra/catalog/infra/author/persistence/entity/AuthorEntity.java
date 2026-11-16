@@ -1,6 +1,6 @@
 package dev.patra.catalog.infra.author.persistence.entity;
 
-import dev.patra.tool.jpa.entity.SoftDeletableJpaEntity;
+import dev.patra.tool.jpa.entity.BaseJpaEntity;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -24,7 +24,7 @@ import tools.jackson.databind.JsonNode;
 ///
 /// **设计说明**：
 ///
-/// - 继承 `SoftDeletableJpaEntity` 支持软删除
+/// - 继承 `BaseJpaEntity` 获得审计与乐观锁；删除用 `deletedAt` 列标记
 /// - 每条记录代表一个已消歧的独立作者（对齐 PubMed Computed Authors 数据源）
 /// - `normalizedKey` 是姓名规范化格式（如 "SMITH+R"），用于分组查询，**非唯一标识**
 /// - 同一 `normalizedKey` 下可能有多个不同的作者（姓名格式相似但实为不同人）
@@ -39,7 +39,7 @@ import tools.jackson.databind.JsonNode;
 @EqualsAndHashCode(callSuper = true)
 @Entity
 @Table(name = "cat_author")
-public class AuthorEntity extends SoftDeletableJpaEntity {
+public class AuthorEntity extends BaseJpaEntity {
 
   // ========== 核心属性 ==========
 
@@ -150,4 +150,8 @@ public class AuthorEntity extends SoftDeletableJpaEntity {
     orcids.remove(orcid);
     orcid.setAuthor(null);
   }
+
+  /// 删除时间，空表示未删除；查询方法自己带「未删除」条件（库表规范第 5 节）。
+  @Column(name = "deleted_at")
+  private Instant deletedAt;
 }

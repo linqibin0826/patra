@@ -13,8 +13,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 /// - 通过类型 ID 查询字典项
 /// - 通过类型 ID 和项目代码查询单个字典项
 ///
-/// 由于实体继承自 SoftDeletableJpaEntity（使用 Hibernate @SoftDelete），
-/// 框架会自动添加 `deleted_at IS NULL` 过滤条件，无需手动指定。
+/// 方法名里的 `AndDeletedAtIsNull` 排除已删除的行：删除用 `deleted_at` 列标记，查询要自己带条件。
 ///
 /// @author linqibin
 /// @since 0.1.0

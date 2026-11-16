@@ -23,51 +23,51 @@ public interface VenueDao extends JpaRepository<VenueEntity, Long> {
   /// 检查是否存在任何数据。
   ///
   /// @return 如果存在数据则返回 true
-  @Query("SELECT COUNT(v) > 0 FROM VenueEntity v")
+  @Query("SELECT COUNT(v) > 0 FROM VenueEntity v WHERE v.deletedAt IS NULL")
   boolean hasAnyData();
 
   /// 根据 ISSN-L 查找载体。
   ///
   /// @param issnL Linking ISSN
   /// @return 载体实体
-  Optional<VenueEntity> findByIssnL(String issnL);
+  Optional<VenueEntity> findByIssnLAndDeletedAtIsNull(String issnL);
 
   /// 根据 ISSN-L 列表批量查找载体。
   ///
   /// @param issnLs ISSN-L 列表
   /// @return 载体实体列表
-  List<VenueEntity> findByIssnLIn(Collection<String> issnLs);
+  List<VenueEntity> findByIssnLInAndDeletedAtIsNull(Collection<String> issnLs);
 
   /// 根据 NLM ID 查找载体。
   ///
   /// @param nlmId NLM 唯一标识符
   /// @return 载体实体
-  Optional<VenueEntity> findByNlmId(String nlmId);
+  Optional<VenueEntity> findByNlmIdAndDeletedAtIsNull(String nlmId);
 
   /// 根据 NLM ID 列表批量查找载体。
   ///
   /// @param nlmIds NLM ID 列表
   /// @return 载体实体列表
-  List<VenueEntity> findByNlmIdIn(Collection<String> nlmIds);
+  List<VenueEntity> findByNlmIdInAndDeletedAtIsNull(Collection<String> nlmIds);
 
   /// 根据 OpenAlex ID 查找载体。
   ///
   /// @param openalexId OpenAlex Source ID
   /// @return 载体实体
-  Optional<VenueEntity> findByOpenalexId(String openalexId);
+  Optional<VenueEntity> findByOpenalexIdAndDeletedAtIsNull(String openalexId);
 
   /// 批量查询已存在的 ISSN-L。
   ///
   /// @param issnLs ISSN-L 列表
   /// @return 数据库中已存在的 ISSN-L 列表
-  @Query("SELECT v.issnL FROM VenueEntity v WHERE v.issnL IN :issnLs")
+  @Query("SELECT v.issnL FROM VenueEntity v WHERE v.issnL IN :issnLs AND v.deletedAt IS NULL")
   List<String> findExistingIssnLs(@Param("issnLs") Collection<String> issnLs);
 
   /// 根据 ID 列表批量查找载体。
   ///
   /// @param ids 载体 ID 列表
   /// @return 载体实体列表
-  List<VenueEntity> findByIdIn(Collection<Long> ids);
+  List<VenueEntity> findByIdInAndDeletedAtIsNull(Collection<Long> ids);
 
   /// 仅更新 `cat_venue.image_object_key` 列。
   ///

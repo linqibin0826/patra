@@ -77,6 +77,26 @@ class OrganizationRepositoryAdapterIT {
   @Autowired private OrganizationLocationDao locationDao;
   @Autowired private EntityManager entityManager;
 
+  /// 去掉 `@SoftDelete` 之后，「未删除」条件要每个查询自己带：已删的机构按 ID、ROR ID 都查不到，也不计数。
+  @Test
+  @DisplayName("已删除的机构按 ID、ROR ID 都查不到，也不计数")
+  void should_not_find_soft_deleted_organization() {
+    long before = repository.count();
+    OrganizationAggregate saved =
+        repository.save(createOrganizationAggregate("0deleted1", "Deleted Org"));
+    entityManager.flush();
+    entityManager
+        .createNativeQuery("UPDATE cat_organization SET deleted_at = now() WHERE id = :id")
+        .setParameter("id", saved.getId().value())
+        .executeUpdate();
+    entityManager.clear();
+
+    assertThat(repository.findById(saved.getId())).isEmpty();
+    assertThat(repository.findByRorId(RorId.of("0deleted1"))).isEmpty();
+    assertThat(repository.existsByRorId(RorId.of("0deleted1"))).isFalse();
+    assertThat(repository.count()).isEqualTo(before);
+  }
+
   @Nested
   @DisplayName("hasAnyData() 测试")
   class HasAnyDataTests {
@@ -130,7 +150,11 @@ class OrganizationRepositoryAdapterIT {
       OrganizationAggregate organization = createOrganizationAggregate(rorId, "Harvard University");
       repository.insertAll(List.of(organization));
 
-      Long orgId = organizationDao.findByRorId(RorId.fromId(rorId).getId()).orElseThrow().getId();
+      Long orgId =
+          organizationDao
+              .findByRorIdAndDeletedAtIsNull(RorId.fromId(rorId).getId())
+              .orElseThrow()
+              .getId();
       OrganizationExternalIdEntity before = externalIdDao.findAllByOrganizationId(orgId).getFirst();
       Long beforeId = before.getId();
 
@@ -191,7 +215,7 @@ class OrganizationRepositoryAdapterIT {
       OrganizationAggregate organization =
           createOrganizationAggregate("0findbyid", "FindById Test");
       repository.insertAll(List.of(organization));
-      Long orgId = organizationDao.findByRorId("0findbyid").orElseThrow().getId();
+      Long orgId = organizationDao.findByRorIdAndDeletedAtIsNull("0findbyid").orElseThrow().getId();
 
       var result = repository.findById(OrganizationId.of(orgId));
 

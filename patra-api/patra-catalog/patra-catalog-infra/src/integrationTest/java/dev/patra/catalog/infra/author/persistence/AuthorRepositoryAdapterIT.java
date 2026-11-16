@@ -10,6 +10,7 @@ import dev.patra.catalog.infra.author.persistence.entity.AuthorEntity;
 import dev.patra.catalog.infra.config.CatalogITPostgreSQLContainerInitializer;
 import dev.patra.tool.jpa.autoconfigure.JpaAuditingConfiguration;
 import dev.patra.tool.jpa.json.JsonColumnCodec;
+import jakarta.persistence.EntityManager;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -66,6 +67,30 @@ class AuthorRepositoryAdapterIT {
   @Autowired private AuthorRepositoryAdapter authorRepository;
 
   @Autowired private AuthorDao jpaRepository;
+
+  @Autowired private EntityManager entityManager;
+
+  /// 去掉 `@SoftDelete` 之后，「未删除」条件要每个查询自己带：已删的作者按 ID、规范化姓名、ORCID 都查不到。
+  @Test
+  @DisplayName("已删除的作者按 ID、规范化姓名、ORCID 都查不到")
+  void should_not_find_soft_deleted_author() {
+    AuthorAggregate author = AuthorAggregate.fromPubMedComputed("Deleted+A");
+    author.addNameVariant(AuthorNameVariant.of("Deleted", "Ann", "A", "Deleted,Ann,A"));
+    author.addOrcid(Orcid.of("0000-0001-5109-3700"));
+    AuthorAggregate saved = authorRepository.save(author);
+    entityManager.flush();
+    entityManager
+        .createNativeQuery("UPDATE cat_author SET deleted_at = now() WHERE id = :id")
+        .setParameter("id", saved.getId().value())
+        .executeUpdate();
+    entityManager.clear();
+
+    assertThat(authorRepository.findById(saved.getId())).isEmpty();
+    assertThat(authorRepository.findByNormalizedKey("Deleted+A")).isEmpty();
+    assertThat(authorRepository.existsByNormalizedKey("Deleted+A")).isFalse();
+    assertThat(authorRepository.findByOrcid("0000-0001-5109-3700")).isEmpty();
+    assertThat(authorRepository.existsByOrcid("0000-0001-5109-3700")).isFalse();
+  }
 
   @Nested
   @DisplayName("save() 方法测试")

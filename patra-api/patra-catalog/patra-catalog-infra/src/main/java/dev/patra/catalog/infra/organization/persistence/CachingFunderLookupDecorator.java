@@ -125,7 +125,8 @@ public class CachingFunderLookupDecorator implements FunderLookupPort {
     }
 
     // 查询数据库
-    Optional<OrganizationEntity> orgOpt = organizationDao.findByDisplayName(normalizedName);
+    Optional<OrganizationEntity> orgOpt =
+        organizationDao.findByDisplayNameAndDeletedAtIsNull(normalizedName);
     if (orgOpt.isPresent()) {
       Long orgId = orgOpt.get().getId();
       nameCache.put(normalizedName, orgId);
@@ -182,6 +183,6 @@ public class CachingFunderLookupDecorator implements FunderLookupPort {
 
   /// 通过 ROR ID 从数据库查找。
   private Optional<Long> findByRorIdFromDb(String rorId) {
-    return organizationDao.findByRorId(rorId).map(OrganizationEntity::getId);
+    return organizationDao.findByRorIdAndDeletedAtIsNull(rorId).map(OrganizationEntity::getId);
   }
 }
