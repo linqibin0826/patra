@@ -10,8 +10,6 @@ import dev.patra.notification.domain.preference.port.repository.EmailPreferenceR
 import dev.patra.tool.core.security.CurrentUserPort;
 import dev.patra.tool.cqrs.CommandHandler;
 import java.security.SecureRandom;
-import java.time.Clock;
-import java.time.Instant;
 import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -27,7 +25,6 @@ public class ChangeEmailModeHandler
   private final EmailPreferenceRepository preferences;
   private final CurrentUserPort currentUser;
   private final TransactionOperations transactions;
-  private final Clock clock;
   private final SecureRandom random = new SecureRandom();
 
   /// 改档位。
@@ -46,7 +43,6 @@ public class ChangeEmailModeHandler
             .orElseThrow(() -> new InvalidPreferenceRequestException("档位只能是 OFF、INSTANT 或 DIGEST"));
     EmailPreference defaults =
         EmailPreference.createDefault(userId, UnsubscribeToken.generate(random));
-    Instant now = clock.instant();
     return Objects.requireNonNull(
         transactions.execute(
             status -> {

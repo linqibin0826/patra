@@ -21,9 +21,6 @@ import dev.patra.tool.core.security.ClientType;
 import dev.patra.tool.core.security.CurrentUser;
 import dev.patra.tool.core.security.CurrentUserPort;
 import dev.patra.tool.test.transaction.RecordingTransactions;
-import java.time.Clock;
-import java.time.Instant;
-import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -37,18 +34,13 @@ import org.junit.jupiter.params.provider.ValueSource;
 class ChangeEmailModeHandlerTest {
 
   private static final long ME = 7L;
-  private static final Instant NOW = Instant.parse("2026-10-31T08:00:00Z");
   private static final UnsubscribeToken SAVED = new UnsubscribeToken("S".repeat(43));
 
   private final EmailPreferenceRepository preferences = mock(EmailPreferenceRepository.class);
   private final CurrentUserPort currentUser = mock(CurrentUserPort.class);
   private final List<String> events = new ArrayList<>();
   private final ChangeEmailModeHandler handler =
-      new ChangeEmailModeHandler(
-          preferences,
-          currentUser,
-          new RecordingTransactions(events),
-          Clock.fixed(NOW, ZoneOffset.UTC));
+      new ChangeEmailModeHandler(preferences, currentUser, new RecordingTransactions(events));
 
   /// 未登录：未认证异常原样传播，不碰库。
   @Test
