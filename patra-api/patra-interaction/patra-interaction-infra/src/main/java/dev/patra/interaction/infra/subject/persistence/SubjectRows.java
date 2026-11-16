@@ -17,14 +17,14 @@ import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Component;
 import tools.jackson.databind.json.JsonMapper;
 
-/// `subject.registry` 的行映射与快照的 jsonb 编解码，两个适配器共用。
+/// `itr_subject` 的行映射与快照的 jsonb 编解码，两个适配器共用。
 @Component
 @RequiredArgsConstructor
 class SubjectRows {
 
   /// 读回聚合要的列（`snapshot` 以文本取出）。
   static final String COLUMNS =
-      "subject_id, target_type, natural_key, source_id, state, snapshot::text AS snapshot,"
+      "id, target_type, natural_key, source_id, state, snapshot::text AS snapshot,"
           + " snapshot_at, owner_user_id, owner_anonymous";
 
   private final JsonMapper jsonMapper;
@@ -44,7 +44,7 @@ class SubjectRows {
   SubjectAggregate toAggregate(ResultSet rs) throws SQLException {
     Long sourceId = rs.getObject("source_id", Long.class);
     return SubjectAggregate.builder()
-        .subjectId(SubjectId.of(rs.getLong("subject_id")))
+        .subjectId(SubjectId.of(rs.getLong("id")))
         .type(SubjectType.fromCode(rs.getShort("target_type")))
         .naturalKey(NaturalKey.parse(rs.getString("natural_key")))
         .sourceId(sourceId)

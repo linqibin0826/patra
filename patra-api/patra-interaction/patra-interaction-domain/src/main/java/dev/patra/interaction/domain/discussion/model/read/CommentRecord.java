@@ -21,7 +21,7 @@ import lombok.Builder;
 /// @param parentAuthorId 父评论的作者；根评论为 `null`
 /// @param parentState 父评论的状态；根评论为 `null`
 /// @param hasReplies 有没有直接回复
-/// @param helpfulCount 有帮助数（`reaction.target_stats`，没有统计行为 0）
+/// @param helpfulCount 有帮助数（`itr_helpful_target_stats`，没有统计行为 0）
 @Builder
 public record CommentRecord(
     long commentId,

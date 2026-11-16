@@ -65,7 +65,7 @@ class LocalSubjectFlowIT extends InteractionFlowITSupport {
     SubjectId post = register(7L);
 
     transactions.executeWithoutResult(
-        status -> gateway.updateLocal(POST, 7L, SubjectState.UNAVAILABLE, SNAPSHOT));
+        status -> gateway.updateLocal(POST, 7L, SubjectState.UNAVAILABLE, SNAPSHOT, 9L));
 
     assertThatThrownBy(() -> gateway.resolveForInteraction(POST, "7", SubjectCapability.DISCUSS))
         .isInstanceOfSatisfying(
@@ -81,9 +81,9 @@ class LocalSubjectFlowIT extends InteractionFlowITSupport {
   void should_require_callers_transaction() {
     assertThatThrownBy(() -> gateway.registerLocal(POST, 7L, OWNER, SNAPSHOT))
         .isInstanceOf(IllegalTransactionStateException.class);
-    assertThatThrownBy(() -> gateway.updateLocal(POST, 7L, SubjectState.UNAVAILABLE, SNAPSHOT))
+    assertThatThrownBy(() -> gateway.updateLocal(POST, 7L, SubjectState.UNAVAILABLE, SNAPSHOT, 9L))
         .isInstanceOf(IllegalTransactionStateException.class);
-    assertThat(count("SELECT count(*) FROM subject.registry")).isZero();
+    assertThat(count("SELECT count(*) FROM itr_subject")).isZero();
   }
 
   /// 事务外改一个已登记的帖子：直接拒绝，这一行一个字都不变。
@@ -92,7 +92,7 @@ class LocalSubjectFlowIT extends InteractionFlowITSupport {
     SubjectId post = register(7L);
     String before = rowOf(post);
 
-    assertThatThrownBy(() -> gateway.updateLocal(POST, 7L, SubjectState.UNAVAILABLE, SNAPSHOT))
+    assertThatThrownBy(() -> gateway.updateLocal(POST, 7L, SubjectState.UNAVAILABLE, SNAPSHOT, 9L))
         .isInstanceOf(IllegalTransactionStateException.class);
     assertThat(rowOf(post)).isEqualTo(before);
   }
@@ -122,9 +122,9 @@ class LocalSubjectFlowIT extends InteractionFlowITSupport {
   /// @return 文本
   private String rowOf(SubjectId subjectId) {
     return jdbcTemplate.queryForObject(
-        "SELECT concat_ws('|', subject_id, natural_key, source_id, state, snapshot::text,"
+        "SELECT concat_ws('|', id, natural_key, source_id, state, snapshot::text,"
             + " snapshot_at, owner_user_id, owner_anonymous, updated_at)"
-            + " FROM subject.registry WHERE subject_id = ?",
+            + " FROM itr_subject WHERE id = ?",
         String.class,
         subjectId.value());
   }

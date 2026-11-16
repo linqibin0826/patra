@@ -15,7 +15,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
-/// 发表守卫：资格经 identity 批量摘要回查（访客是自己），频率按 `subject.publish_quota` 在作者锁里判。
+/// 发表守卫：资格经 identity 批量摘要回查（访客是自己），频率按 `itr_publish_quota` 在作者锁里判。
 @Component
 @RequiredArgsConstructor
 public class PublishGuardGatewayImpl implements PublishGuardGateway {

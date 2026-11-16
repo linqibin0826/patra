@@ -35,7 +35,7 @@ class CollectionStatsMigrationIT {
   private static final String DATABASE = "collection_stats_migration";
 
   /// 改动前最后一条迁移的版本。
-  private static final String BEFORE = "20261029200200";
+  private static final String BEFORE = "20261027161220";
 
   @Autowired private DataSource dataSource;
 

@@ -82,7 +82,11 @@ public class EditExperienceHandler
               String month = draft.fields().submittedMonth();
               if (!month.equals(post.fields().submittedMonth())) {
                 gateway.updateLocal(
-                    SubjectType.POST, id.value(), SubjectState.ACTIVE, withMonth(id, month));
+                    SubjectType.POST,
+                    id.value(),
+                    SubjectState.ACTIVE,
+                    withMonth(id, month),
+                    userId);
               }
               return edit.after();
             });

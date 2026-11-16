@@ -27,8 +27,8 @@ import org.springframework.stereotype.Component;
 
 /// `PostReadPort` 的原生 SQL 实现。列表用键集分页：游标反查自己的排序键 `(submitted_on, created_at, post_id)`，
 /// 有无游标是两条 SQL（PG 推不出 `:after IS NULL` 里空参数的类型）。汇总一条 SQL 在 PG 里算完（spec 第 7 节），
-/// 分位数原值交给领域规则取整。公开计数按 SQL 读 `reaction.target_stats` / `reaction.helpful`（类型码 `'POST'`）
-/// 与 `discussion.subject_stats`（经 `subject.registry` 的 POST 行从经验 ID 找到它的对象 ID）。
+/// 分位数原值交给领域规则取整。公开计数按 SQL 读 `itr_helpful_target_stats` / `itr_helpful`（类型码 `'POST'`）
+/// 与 `discussion.subject_stats`（经 `itr_subject` 的 POST 行从经验 ID 找到它的对象 ID）。
 @Component
 @RequiredArgsConstructor
 public class PostReadAdapter implements PostReadPort {
@@ -75,7 +75,7 @@ public class PostReadAdapter implements PostReadPort {
 
   /// 经验的有帮助数，表别名 `hs`。
   private static final String HELPFUL_JOIN =
-      " LEFT JOIN reaction.target_stats hs ON hs.target_type = 'POST' AND hs.target_id = p.post_id";
+      " LEFT JOIN itr_helpful_target_stats hs ON hs.target_type = 'POST' AND hs.target_id = p.post_id";
 
   private final JdbcClient jdbc;
   private final PostRows rows;
@@ -165,7 +165,7 @@ public class PostReadAdapter implements PostReadPort {
     String helpful =
         viewerId == null
             ? "CAST(NULL AS boolean)"
-            : "EXISTS (SELECT 1 FROM reaction.helpful h WHERE h.user_id = :viewer"
+            : "EXISTS (SELECT 1 FROM itr_helpful h WHERE h.user_id = :viewer"
                 + " AND h.target_type = 'POST' AND h.target_id = p.post_id)";
     JdbcClient.StatementSpec spec =
         jdbc.sql(
@@ -174,9 +174,9 @@ public class PostReadAdapter implements PostReadPort {
                     + helpful
                     + " AS helpful FROM post.post p"
                     + HELPFUL_JOIN
-                    + " LEFT JOIN subject.registry r ON r.target_type = 3"
+                    + " LEFT JOIN itr_subject r ON r.target_type = 3"
                     + " AND r.source_id = p.post_id"
-                    + " LEFT JOIN discussion.subject_stats ds ON ds.subject_id = r.subject_id"
+                    + " LEFT JOIN discussion.subject_stats ds ON ds.subject_id = r.id"
                     + " WHERE p.post_id IN (:ids)")
             .param("ids", postIds.stream().map(PostId::value).toList());
     if (viewerId != null) {

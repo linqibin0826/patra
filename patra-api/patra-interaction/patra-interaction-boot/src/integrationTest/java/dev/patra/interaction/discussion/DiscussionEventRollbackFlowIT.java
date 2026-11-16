@@ -59,7 +59,7 @@ class DiscussionEventRollbackFlowIT extends DiscussionFlowITSupport {
 
     assertThat(status(result)).isNotEqualTo(201);
     assertThat(count("SELECT count(*) FROM discussion.comment")).isZero();
-    assertThat(count("SELECT count(*) FROM subject.publish_quota WHERE user_id = ?", A)).isZero();
+    assertThat(count("SELECT count(*) FROM itr_publish_quota WHERE user_id = ?", A)).isZero();
   }
 
   /// 发表、回复（@C）、编辑（新加 @D）、删除：依次收到四个事件，字段与库里一致。
@@ -123,7 +123,8 @@ class DiscussionEventRollbackFlowIT extends DiscussionFlowITSupport {
         status -> {
           SubjectSnapshot snapshot = SubjectSnapshot.of(null, "J", "2026-03", null);
           subjects.registerLocal(SubjectType.POST, GONE_POST, SubjectOwner.of(C, false), snapshot);
-          subjects.updateLocal(SubjectType.POST, GONE_POST, SubjectState.UNAVAILABLE, snapshot);
+          subjects.updateLocal(
+              SubjectType.POST, GONE_POST, SubjectState.UNAVAILABLE, snapshot, null);
         });
     EntityExchangeResult<String> gone = post(B, "post", GONE_POST, "还在吗", null);
     assertThat(status(gone)).isEqualTo(404);

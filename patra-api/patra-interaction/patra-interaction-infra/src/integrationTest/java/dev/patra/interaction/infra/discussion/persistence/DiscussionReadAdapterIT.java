@@ -279,8 +279,9 @@ class DiscussionReadAdapterIT extends DiscussionPersistenceITSupport {
   /// @param count 有帮助数
   private void helpful(long commentId, int count) {
     jdbcTemplate.update(
-        "INSERT INTO reaction.target_stats (target_type, target_id, helpful_count)"
-            + " VALUES ('COMMENT', ?, ?)",
+        "INSERT INTO itr_helpful_target_stats (id, target_type, target_id, helpful_count)"
+            + " VALUES (?, 'COMMENT', ?, ?)",
+        commentId,
         commentId,
         count);
   }
@@ -291,8 +292,8 @@ class DiscussionReadAdapterIT extends DiscussionPersistenceITSupport {
   /// @param commentId 评论
   private void marked(long userId, long commentId) {
     jdbcTemplate.update(
-        "INSERT INTO reaction.helpful (user_id, target_type, target_id, credited_user_id,"
-            + " created_at) VALUES (?, 'COMMENT', ?, NULL, now())",
+        "INSERT INTO itr_helpful (id, user_id, target_type, target_id, credited_user_id)"
+            + " VALUES ((SELECT COALESCE(max(id), 0) + 1 FROM itr_helpful), ?, 'COMMENT', ?, NULL)",
         userId,
         commentId);
   }

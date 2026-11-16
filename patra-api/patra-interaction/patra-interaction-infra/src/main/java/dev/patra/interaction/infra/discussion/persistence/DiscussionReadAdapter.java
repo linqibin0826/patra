@@ -100,7 +100,7 @@ public class DiscussionReadAdapter implements DiscussionReadPort {
     }
     return Set.copyOf(
         jdbc.sql(
-                "SELECT target_id FROM reaction.helpful WHERE user_id = :viewer"
+                "SELECT target_id FROM itr_helpful WHERE user_id = :viewer"
                     + " AND target_type = 'COMMENT' AND target_id IN (:ids)")
             .param("viewer", viewerId)
             .param("ids", List.copyOf(commentIds))

@@ -471,7 +471,7 @@ class InteractionEventsFlowIT extends InteractionFlowITSupport {
   /// @return 评论 ID
   private long comment(long user, String type, long key, String body, Long parentId) {
     jdbcTemplate.update(
-        "DELETE FROM subject.publish_quota WHERE user_id = ? AND kind = 'COMMENT'", user);
+        "DELETE FROM itr_publish_quota WHERE user_id = ? AND kind = 'COMMENT'", user);
     Map<String, Object> request = new LinkedHashMap<>();
     request.put("body", body);
     request.put("parentId", parentId == null ? null : parentId.toString());

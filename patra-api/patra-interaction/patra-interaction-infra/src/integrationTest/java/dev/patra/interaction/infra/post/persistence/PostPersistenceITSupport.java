@@ -50,8 +50,8 @@ abstract class PostPersistenceITSupport {
   @BeforeEach
   void truncatePostTables() {
     jdbcTemplate.update(
-        "TRUNCATE post.revision, post.submission_experience, post.post, reaction.target_stats,"
-            + " reaction.helpful, discussion.subject_stats, subject.registry");
+        "TRUNCATE post.revision, post.submission_experience, post.post, itr_helpful_target_stats,"
+            + " itr_helpful, discussion.subject_stats, itr_subject");
   }
 
   /// 只有必填项的字段：给定投稿日期，首轮同日起 10 天后大修，进行中，原创研究。

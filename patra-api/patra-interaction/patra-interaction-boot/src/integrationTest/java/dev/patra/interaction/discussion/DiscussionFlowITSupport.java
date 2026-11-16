@@ -37,7 +37,7 @@ abstract class DiscussionFlowITSupport extends InteractionFlowITSupport {
   /// @return 响应
   protected EntityExchangeResult<String> post(
       long user, String type, long key, String body, Long parentId) {
-    jdbcTemplate.update("DELETE FROM subject.publish_quota WHERE user_id = ?", user);
+    jdbcTemplate.update("DELETE FROM itr_publish_quota WHERE user_id = ?", user);
     Map<String, Object> request = new LinkedHashMap<>();
     request.put("body", body);
     request.put("parentId", parentId == null ? null : parentId.toString());

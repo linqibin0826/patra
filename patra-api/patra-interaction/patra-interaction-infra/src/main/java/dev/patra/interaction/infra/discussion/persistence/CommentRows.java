@@ -50,7 +50,7 @@ final class CommentRows {
              COALESCE(hs.helpful_count, 0) AS helpful_count
         FROM discussion.comment c
         LEFT JOIN discussion.comment p ON p.comment_id = c.parent_id
-        LEFT JOIN reaction.target_stats hs
+        LEFT JOIN itr_helpful_target_stats hs
                ON hs.target_type = 'COMMENT' AND hs.target_id = c.comment_id
       """;
 

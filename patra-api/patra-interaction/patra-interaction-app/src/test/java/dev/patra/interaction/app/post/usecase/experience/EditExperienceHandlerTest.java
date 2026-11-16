@@ -163,7 +163,7 @@ class EditExperienceHandlerTest {
 
     verify(posts, never()).update(any(), any());
     verify(posts, never()).insertRevision(any(), any());
-    verify(gateway, never()).updateLocal(any(), anyLong(), any(), any());
+    verify(gateway, never()).updateLocal(any(), anyLong(), any(), any(), any());
   }
 
   /// 改成自己另一条经验的投稿日期：409；查到的是自己则不算重复。
@@ -204,10 +204,11 @@ class EditExperienceHandlerTest {
             SubjectType.POST,
             POST_ID.value(),
             SubjectState.ACTIVE,
-            SubjectSnapshot.of(null, "Journal of X", "2026-04", "J X"));
+            SubjectSnapshot.of(null, "Journal of X", "2026-04", "J X"),
+            U);
 
     handler.handle(command());
-    verify(gateway).updateLocal(any(), anyLong(), any(), any());
+    verify(gateway).updateLocal(any(), anyLong(), any(), any(), any());
   }
 
   /// 月份变没变按锁内重读的内容判：别的标签页刚把它改到 4 月，这次改回 3 月，登记快照要跟着回到 3 月；快照也在锁内读。
@@ -240,7 +241,8 @@ class EditExperienceHandlerTest {
             SubjectType.POST,
             POST_ID.value(),
             SubjectState.ACTIVE,
-            SubjectSnapshot.of(null, "Journal of X", "2026-03", "J X"));
+            SubjectSnapshot.of(null, "Journal of X", "2026-03", "J X"),
+            U);
     assertThat(events.indexOf("lock")).isLessThan(events.indexOf("snapshot"));
   }
 

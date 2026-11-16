@@ -61,7 +61,7 @@ public class DeleteExperienceHandler implements CommandHandler<DeleteExperienceC
                     SubjectSnapshot snapshot = registry.snapshotOf(id);
                     posts.markDeleted(id, now);
                     gateway.updateLocal(
-                        SubjectType.POST, id.value(), SubjectState.UNAVAILABLE, snapshot);
+                        SubjectType.POST, id.value(), SubjectState.UNAVAILABLE, snapshot, userId);
                     events.publishEvent(event);
                   });
         });

@@ -5,7 +5,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Component;
 
-/// `HelpfulReadPort` 的原生 SQL 实现：读 `reaction.user_stats`。
+/// `HelpfulReadPort` 的原生 SQL 实现：读 `itr_helpful_user_stats`。
 @Component
 @RequiredArgsConstructor
 public class HelpfulReadAdapter implements HelpfulReadPort {
@@ -18,7 +18,7 @@ public class HelpfulReadAdapter implements HelpfulReadPort {
   /// @return 获赞
   @Override
   public long helpfulReceived(long userId) {
-    return jdbc.sql("SELECT helpful_received FROM reaction.user_stats WHERE user_id = :userId")
+    return jdbc.sql("SELECT helpful_received FROM itr_helpful_user_stats WHERE user_id = :userId")
         .param("userId", userId)
         .query(Long.class)
         .optional()

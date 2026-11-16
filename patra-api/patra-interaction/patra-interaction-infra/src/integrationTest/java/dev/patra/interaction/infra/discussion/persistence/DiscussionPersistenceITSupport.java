@@ -36,7 +36,7 @@ abstract class DiscussionPersistenceITSupport {
   void truncateDiscussionTables() {
     jdbcTemplate.update(
         "TRUNCATE discussion.comment_revision, discussion.comment, discussion.thread_stats,"
-            + " discussion.subject_stats, reaction.target_stats, reaction.helpful");
+            + " discussion.subject_stats, itr_helpful_target_stats, itr_helpful");
   }
 
   /// 不经仓储直接插一行（约束测试用）。

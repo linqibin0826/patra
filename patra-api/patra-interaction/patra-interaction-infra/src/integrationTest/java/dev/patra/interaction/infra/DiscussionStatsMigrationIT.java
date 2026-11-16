@@ -37,7 +37,7 @@ class DiscussionStatsMigrationIT {
   private static final String DATABASE = "discussion_stats_migration";
 
   /// 改动前最后一条迁移的版本。
-  private static final String BEFORE = "20261029200200";
+  private static final String BEFORE = "20261027161220";
 
   private static final Instant T0 = Instant.parse("2026-10-27T01:00:00Z");
 

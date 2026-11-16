@@ -127,7 +127,7 @@ class SubjectRepositoryAdapterIT extends SubjectRegistryITSupport {
     try (Connection holder = dataSource.getConnection()) {
       try (PreparedStatement lock =
           holder.prepareStatement("SELECT pg_advisory_lock(hashtextextended(?, 0))")) {
-        lock.setString(1, "subject.registry:1:pmid:1");
+        lock.setString(1, "itr_subject:1:pmid:1");
         lock.execute();
       }
       try (ExecutorService pool = Executors.newSingleThreadExecutor()) {
@@ -138,7 +138,7 @@ class SubjectRepositoryAdapterIT extends SubjectRegistryITSupport {
 
         try (PreparedStatement unlock =
             holder.prepareStatement("SELECT pg_advisory_unlock(hashtextextended(?, 0))")) {
-          unlock.setString(1, "subject.registry:1:pmid:1");
+          unlock.setString(1, "itr_subject:1:pmid:1");
           unlock.execute();
         }
         assertThat(upsert.get().getSourceId()).isEqualTo(100L);
@@ -170,7 +170,7 @@ class SubjectRepositoryAdapterIT extends SubjectRegistryITSupport {
           .isEqualTo(anchor);
       assertThat(
               jdbcTemplate.queryForObject(
-                  "SELECT natural_key FROM subject.registry"
+                  "SELECT natural_key FROM itr_subject"
                       + " WHERE source_id = ? AND target_type = 2",
                   String.class,
                   journalId))
@@ -207,7 +207,7 @@ class SubjectRepositoryAdapterIT extends SubjectRegistryITSupport {
         transactions.execute(
             s ->
                 repository.updateLocal(
-                    SubjectType.POST, 7L, SubjectState.UNAVAILABLE, edited, later));
+                    SubjectType.POST, 7L, SubjectState.UNAVAILABLE, edited, later, 9L));
 
     SubjectAggregate reloaded = repository.findBySourceId(SubjectType.POST, 7L).orElseThrow();
     assertThat(updated).isTrue();
@@ -216,6 +216,34 @@ class SubjectRepositoryAdapterIT extends SubjectRegistryITSupport {
     assertThat(reloaded.getSnapshot()).isEqualTo(edited);
     assertThat(reloaded.getSnapshotAt()).isEqualTo(later);
     assertThat(reloaded.getOwner()).isEqualTo(SubjectOwner.of(9L, false));
+  }
+
+  /// 本地对象由作者发布：登记行的 `created_by` 是作者，匿名只影响展示。
+  @Test
+  void should_record_author_when_inserting_local_subject() {
+    SubjectAggregate saved = insertPost(7L, SubjectOwner.of(9L, true));
+
+    assertThat(auditColumn("created_by", saved)).isEqualTo(9L);
+    assertThat(auditColumn("updated_by", saved)).isEqualTo(9L);
+  }
+
+  /// 改本地对象记下这次的操作人，`created_by` 不变。
+  @Test
+  void should_record_actor_when_updating_local_subject() {
+    SubjectAggregate saved = insertPost(7L, SubjectOwner.of(9L, false));
+
+    transactions.execute(
+        s ->
+            repository.updateLocal(
+                SubjectType.POST,
+                7L,
+                SubjectState.UNAVAILABLE,
+                SubjectSnapshot.of(null, "The Lancet", "2026-03", "Lancet"),
+                NOW.plusSeconds(60),
+                42L));
+
+    assertThat(auditColumn("updated_by", saved)).isEqualTo(42L);
+    assertThat(auditColumn("created_by", saved)).isEqualTo(9L);
   }
 
   /// 没登记过的本地对象：返回 false，什么都不写。
@@ -229,7 +257,8 @@ class SubjectRepositoryAdapterIT extends SubjectRegistryITSupport {
                     8L,
                     SubjectState.UNAVAILABLE,
                     SubjectSnapshot.of(null, null, null, null),
-                    NOW));
+                    NOW,
+                    9L));
 
     assertThat(updated).isFalse();
     assertThat(rowCount()).isZero();
@@ -243,7 +272,7 @@ class SubjectRepositoryAdapterIT extends SubjectRegistryITSupport {
     assertThat(saved.getOwner()).isNull();
     assertThat(
             jdbcTemplate.queryForObject(
-                "SELECT count(*) FROM subject.registry"
+                "SELECT count(*) FROM itr_subject"
                     + " WHERE owner_user_id IS NULL AND owner_anonymous IS NULL",
                 Long.class))
         .isEqualTo(1L);
@@ -308,7 +337,7 @@ class SubjectRepositoryAdapterIT extends SubjectRegistryITSupport {
     SubjectAggregate a = upsert(active(100L, "1"));
     OffsetDateTime before =
         jdbcTemplate.queryForObject(
-            "SELECT updated_at FROM subject.registry WHERE subject_id = ?",
+            "SELECT updated_at FROM itr_subject WHERE id = ?",
             OffsetDateTime.class,
             a.getSubjectId().value());
 
@@ -316,10 +345,22 @@ class SubjectRepositoryAdapterIT extends SubjectRegistryITSupport {
 
     assertThat(
             jdbcTemplate.queryForObject(
-                "SELECT updated_at FROM subject.registry WHERE subject_id = ?",
+                "SELECT updated_at FROM itr_subject WHERE id = ?",
                 OffsetDateTime.class,
                 a.getSubjectId().value()))
         .isAfter(before);
+  }
+
+  /// 读登记行的审计列。
+  ///
+  /// @param column `created_by` 或 `updated_by`
+  /// @param subject 聚合
+  /// @return 列值
+  private Long auditColumn(String column, SubjectAggregate subject) {
+    return jdbcTemplate.queryForObject(
+        "SELECT " + column + " FROM itr_subject WHERE id = ?",
+        Long.class,
+        subject.getSubjectId().value());
   }
 
   /// 在事务里 upsert。

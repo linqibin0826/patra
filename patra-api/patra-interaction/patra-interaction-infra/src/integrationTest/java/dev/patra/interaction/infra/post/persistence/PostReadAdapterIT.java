@@ -195,8 +195,8 @@ class PostReadAdapterIT extends PostPersistenceITSupport {
     registered(31L, p1);
     jdbcTemplate.update("INSERT INTO discussion.subject_stats VALUES (31, 4)");
     jdbcTemplate.update(
-        "INSERT INTO reaction.helpful (user_id, target_type, target_id, credited_user_id,"
-            + " created_at) VALUES (7, 'POST', ?, ?, now())",
+        "INSERT INTO itr_helpful (id, user_id, target_type, target_id, credited_user_id)"
+            + " VALUES ((SELECT COALESCE(max(id), 0) + 1 FROM itr_helpful), 7, 'POST', ?, ?)",
         p1.postId().value(),
         U);
 
@@ -259,8 +259,9 @@ class PostReadAdapterIT extends PostPersistenceITSupport {
   /// @param count 有帮助数
   private void helpful(PostAggregate post, int count) {
     jdbcTemplate.update(
-        "INSERT INTO reaction.target_stats (target_type, target_id, helpful_count)"
-            + " VALUES ('POST', ?, ?)",
+        "INSERT INTO itr_helpful_target_stats (id, target_type, target_id, helpful_count)"
+            + " VALUES (?, 'POST', ?, ?)",
+        post.postId().value(),
         post.postId().value(),
         count);
   }
@@ -272,7 +273,7 @@ class PostReadAdapterIT extends PostPersistenceITSupport {
   private void registered(long subjectId, PostAggregate post) {
     long id = post.postId().value();
     jdbcTemplate.update(
-        "INSERT INTO subject.registry (subject_id, target_type, natural_key, source_id, state,"
+        "INSERT INTO itr_subject (id, target_type, natural_key, source_id, state,"
             + " snapshot, snapshot_at, owner_user_id, owner_anonymous)"
             + " VALUES (?, 3, ?, ?, 'ACTIVE', '{}', now(), ?, false)",
         subjectId,

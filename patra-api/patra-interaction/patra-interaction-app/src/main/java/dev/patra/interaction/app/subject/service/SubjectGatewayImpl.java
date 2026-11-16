@@ -96,14 +96,19 @@ public class SubjectGatewayImpl implements SubjectGateway {
   /// @param localId 所属子域里的 ID
   /// @param state 新状态
   /// @param snapshot 新快照
+  /// @param actorUserId 操作人
   @Override
   @Transactional(propagation = Propagation.MANDATORY)
   public void updateLocal(
-      SubjectType type, long localId, SubjectState state, SubjectSnapshot snapshot) {
+      SubjectType type,
+      long localId,
+      SubjectState state,
+      SubjectSnapshot snapshot,
+      Long actorUserId) {
     requireLocal(type);
     Objects.requireNonNull(state, "state 不能为 null");
     Objects.requireNonNull(snapshot, "snapshot 不能为 null");
-    if (!repository.updateLocal(type, localId, state, snapshot, clock.instant())) {
+    if (!repository.updateLocal(type, localId, state, snapshot, clock.instant(), actorUserId)) {
       throw new IllegalStateException("本地对象没有登记：" + type + ":" + localId);
     }
   }

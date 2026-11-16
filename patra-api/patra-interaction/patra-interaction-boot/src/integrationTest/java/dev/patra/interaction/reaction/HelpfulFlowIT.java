@@ -120,7 +120,7 @@ class HelpfulFlowIT extends InteractionFlowITSupport {
     assertThat(rows("COMMENT", comment)).isEqualTo(1L);
     assertThat(
             count(
-                "SELECT day_count FROM subject.publish_quota WHERE user_id = ? AND kind = 'HELPFUL'",
+                "SELECT day_count FROM itr_publish_quota WHERE user_id = ? AND kind = 'HELPFUL'",
                 B))
         .isEqualTo(1L);
     assertThat(received(A)).isEqualTo(1L);
@@ -147,7 +147,7 @@ class HelpfulFlowIT extends InteractionFlowITSupport {
     assertThat(traits(own)).contains("SELF_HELPFUL");
     assertThat(status(ownAnonymous)).isEqualTo(403);
     assertThat(traits(ownAnonymous)).contains("SELF_HELPFUL");
-    assertThat(count("SELECT count(*) FROM reaction.helpful")).isZero();
+    assertThat(count("SELECT count(*) FROM itr_helpful")).isZero();
   }
 
   /// AC：邮箱未验证、冷静期账号被拒（409）；未登录 401。
@@ -164,7 +164,7 @@ class HelpfulFlowIT extends InteractionFlowITSupport {
     assertThat(status(cooling)).isEqualTo(409);
     assertThat(traits(cooling)).contains("ACCOUNT_RESTRICTED");
     assertThat(status(call(HttpMethod.PUT, null, path, null))).isEqualTo(401);
-    assertThat(count("SELECT count(*) FROM reaction.helpful")).isZero();
+    assertThat(count("SELECT count(*) FROM itr_helpful")).isZero();
   }
 
   /// AC：今天已经点了 300 次，第 301 次 429、带 `Retry-After`，不落明细。
@@ -172,8 +172,8 @@ class HelpfulFlowIT extends InteractionFlowITSupport {
   void should_reject_three_hundred_first_mark() {
     long comment = comment(A, "publication", PAPER, "根", null);
     jdbcTemplate.update(
-        "INSERT INTO subject.publish_quota (user_id, kind, quota_day, day_count, last_published_at)"
-            + " VALUES (?, 'HELPFUL', ?, 300, now())",
+        "INSERT INTO itr_publish_quota (id, user_id, kind, quota_day, day_count, last_published_at)"
+            + " VALUES ((SELECT COALESCE(max(id), 0) + 1 FROM itr_publish_quota), ?, 'HELPFUL', ?, 300, now())",
         B,
         today);
 
@@ -255,7 +255,7 @@ class HelpfulFlowIT extends InteractionFlowITSupport {
       assertThat(rows("COMMENT", removed)).isZero();
       assertThat(
               count(
-                  "SELECT count(*) FROM reaction.target_stats WHERE target_type = 'COMMENT'"
+                  "SELECT count(*) FROM itr_helpful_target_stats WHERE target_type = 'COMMENT'"
                       + " AND target_id = ?",
                   removed))
           .isZero();
@@ -307,17 +307,17 @@ class HelpfulFlowIT extends InteractionFlowITSupport {
     long comment = comment(A, "publication", PAPER, "根", null);
     call(HttpMethod.PUT, B, "/comments/" + comment + "/helpful", null);
     jdbcTemplate.execute(
-        "CREATE FUNCTION reaction.it_refuse_delete() RETURNS trigger AS $$"
+        "CREATE FUNCTION it_refuse_delete() RETURNS trigger AS $$"
             + " BEGIN RAISE EXCEPTION 'refused by test'; END; $$ LANGUAGE plpgsql");
     jdbcTemplate.execute(
-        "CREATE TRIGGER it_refuse_delete BEFORE DELETE ON reaction.helpful"
-            + " FOR EACH ROW EXECUTE FUNCTION reaction.it_refuse_delete()");
+        "CREATE TRIGGER it_refuse_delete BEFORE DELETE ON itr_helpful"
+            + " FOR EACH ROW EXECUTE FUNCTION it_refuse_delete()");
     EntityExchangeResult<String> result;
     try {
       result = call(HttpMethod.DELETE, A, "/comments/" + comment, null);
     } finally {
-      jdbcTemplate.execute("DROP TRIGGER it_refuse_delete ON reaction.helpful");
-      jdbcTemplate.execute("DROP FUNCTION reaction.it_refuse_delete()");
+      jdbcTemplate.execute("DROP TRIGGER it_refuse_delete ON itr_helpful");
+      jdbcTemplate.execute("DROP FUNCTION it_refuse_delete()");
     }
 
     assertThat(status(result)).as(result.getResponseBody()).isEqualTo(500);
@@ -339,13 +339,13 @@ class HelpfulFlowIT extends InteractionFlowITSupport {
     long comment = comment(A, "publication", PAPER, "根", null);
     call(HttpMethod.PUT, C, "/comments/" + comment + "/helpful", null);
     jdbcTemplate.execute(
-        "CREATE FUNCTION reaction.it_pause_commit() RETURNS trigger AS $$ BEGIN"
+        "CREATE FUNCTION it_pause_commit() RETURNS trigger AS $$ BEGIN"
             + " PERFORM pg_advisory_xact_lock(hashtextextended('it.pause', 0)); RETURN NULL;"
             + " END; $$ LANGUAGE plpgsql");
     jdbcTemplate.execute(
-        "CREATE CONSTRAINT TRIGGER it_pause_commit AFTER DELETE ON reaction.helpful"
+        "CREATE CONSTRAINT TRIGGER it_pause_commit AFTER DELETE ON itr_helpful"
             + " DEFERRABLE INITIALLY DEFERRED FOR EACH ROW"
-            + " EXECUTE FUNCTION reaction.it_pause_commit()");
+            + " EXECUTE FUNCTION it_pause_commit()");
     // 连接最后声明、最先关闭：断言失败时先放开测试手里的锁，停住的删除事务才能结束，线程池才关得掉
     try (ExecutorService pool = Executors.newFixedThreadPool(2);
         HttpClient client = HttpClient.newHttpClient();
@@ -364,8 +364,8 @@ class HelpfulFlowIT extends InteractionFlowITSupport {
       assertThat(delete.get(30, TimeUnit.SECONDS).statusCode()).isEqualTo(200);
       assertThat(mark.get(30, TimeUnit.SECONDS).statusCode()).isEqualTo(404);
     } finally {
-      jdbcTemplate.execute("DROP TRIGGER it_pause_commit ON reaction.helpful");
-      jdbcTemplate.execute("DROP FUNCTION reaction.it_pause_commit()");
+      jdbcTemplate.execute("DROP TRIGGER it_pause_commit ON itr_helpful");
+      jdbcTemplate.execute("DROP FUNCTION it_pause_commit()");
     }
 
     assertThat(rows("COMMENT", comment)).isZero();
@@ -431,7 +431,7 @@ class HelpfulFlowIT extends InteractionFlowITSupport {
   /// @return 评论 ID
   private long comment(long user, String type, long key, String body, Long parentId) {
     jdbcTemplate.update(
-        "DELETE FROM subject.publish_quota WHERE user_id = ? AND kind = 'COMMENT'", user);
+        "DELETE FROM itr_publish_quota WHERE user_id = ? AND kind = 'COMMENT'", user);
     Map<String, Object> request = new LinkedHashMap<>();
     request.put("body", body);
     request.put("parentId", parentId == null ? null : parentId.toString());
@@ -497,7 +497,7 @@ class HelpfulFlowIT extends InteractionFlowITSupport {
   /// @return 条数
   private long rows(String type, long id) {
     return count(
-        "SELECT count(*) FROM reaction.helpful WHERE target_type = ? AND target_id = ?", type, id);
+        "SELECT count(*) FROM itr_helpful WHERE target_type = ? AND target_id = ?", type, id);
   }
 
   /// 目标的有帮助数（没有统计行为 0）。
@@ -507,7 +507,7 @@ class HelpfulFlowIT extends InteractionFlowITSupport {
   /// @return 计数
   private long targetCount(String type, long id) {
     return count(
-        "SELECT COALESCE(sum(helpful_count), 0) FROM reaction.target_stats"
+        "SELECT COALESCE(sum(helpful_count), 0) FROM itr_helpful_target_stats"
             + " WHERE target_type = ? AND target_id = ?",
         type,
         id);
@@ -519,7 +519,7 @@ class HelpfulFlowIT extends InteractionFlowITSupport {
   /// @return 获赞
   private long received(long userId) {
     return count(
-        "SELECT COALESCE(sum(helpful_received), 0) FROM reaction.user_stats WHERE user_id = ?",
+        "SELECT COALESCE(sum(helpful_received), 0) FROM itr_helpful_user_stats WHERE user_id = ?",
         userId);
   }
 

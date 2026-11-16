@@ -138,7 +138,7 @@ class DiscussionStatsFlowIT extends DiscussionFlowITSupport {
     assertThat(signedIn.get("root").get("helpfulCount").asLong())
         .isEqualTo(
             count(
-                "SELECT count(*) FROM reaction.helpful WHERE target_type = 'COMMENT'"
+                "SELECT count(*) FROM itr_helpful WHERE target_type = 'COMMENT'"
                     + " AND target_id = ?",
                 root));
     mark(B, reply);
