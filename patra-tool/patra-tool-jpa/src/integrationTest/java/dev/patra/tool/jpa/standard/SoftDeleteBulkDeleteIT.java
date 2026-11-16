@@ -17,9 +17,9 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 /// 库表规范推断 4：去掉 `@SoftDelete` 之后，JPQL 批量删除会从「标记删除」变成真删除。
 ///
-/// catalog 现在有两条 JPQL 批量删除语句作用在 `@SoftDelete` 实体上。规范禁用这个注解后，
-/// 如果这两条语句原样保留，就会把行物理删掉。这里先确认现状确实是「标记删除」，
-/// 再确认去掉注解后确实是真删除，所以落地时要先把它们改写成 `UPDATE … SET deleted_at`。
+/// catalog 原先有两条 JPQL 批量删除语句作用在 `@SoftDelete` 实体上。规范禁用这个注解后，
+/// 如果这两条语句原样保留，就会把行物理删掉。这里确认映射注解时是「标记删除」、去掉注解后是真删除，
+/// 所以那两条语句改写成了 `UPDATE … SET deleted_at`；保留这个测试，演示这个注解为什么被禁用。
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
 @ContextConfiguration(initializers = PostgreSQLContainerInitializer.class)
 @DisplayName("库表规范推断 4：JPQL 批量删除与 @SoftDelete")

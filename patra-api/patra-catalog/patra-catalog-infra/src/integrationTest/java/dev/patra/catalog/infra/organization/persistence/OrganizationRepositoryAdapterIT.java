@@ -77,7 +77,7 @@ class OrganizationRepositoryAdapterIT {
   @Autowired private OrganizationLocationDao locationDao;
   @Autowired private EntityManager entityManager;
 
-  /// 去掉 `@SoftDelete` 之后，「未删除」条件要每个查询自己带：已删的机构按 ID、ROR ID 都查不到，也不计数。
+  /// 删除用 `deleted_at` 列标记，「未删除」条件要每个查询自己带：已删的机构按 ID、ROR ID 都查不到，也不计数。
   @Test
   @DisplayName("已删除的机构按 ID、ROR ID 都查不到，也不计数")
   void should_not_find_soft_deleted_organization() {

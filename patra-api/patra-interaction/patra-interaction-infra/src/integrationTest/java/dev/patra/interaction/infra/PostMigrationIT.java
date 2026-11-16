@@ -37,7 +37,7 @@ class PostMigrationIT {
     jdbcTemplate.update("TRUNCATE itr_post_revision, itr_post_submission_experience, itr_post");
   }
 
-  /// 三张表都在 post schema 里。
+  /// 三张表都在 public 里，以 `itr_post` 为前缀。
   @Test
   void should_create_post_tables() {
     assertThat(
@@ -64,7 +64,7 @@ class PostMigrationIT {
         .isEqualTo(1L);
   }
 
-  /// 扩展表：三个枚举、轮数与评分范围、日期先后、进行中不填最终日期、外键。
+  /// 扩展表：三个枚举、轮数与评分范围、日期先后、进行中不填最终日期。
   @Test
   void should_enforce_experience_checks() {
     insertPost(1L, "SUBMISSION_EXPERIENCE", "ACTIVE", null);
@@ -109,7 +109,7 @@ class PostMigrationIT {
         .isEqualTo(1L);
   }
 
-  /// 修改历史：版本号从 1 起，外键到基表。
+  /// 修改历史：版本号从 1 起。
   @Test
   void should_enforce_revision_checks() {
     insertPost(1L, "SUBMISSION_EXPERIENCE", "ACTIVE", null);

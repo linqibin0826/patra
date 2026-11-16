@@ -25,8 +25,8 @@ import org.mapstruct.Mapper;
 
 /// UserProfile 与资料表、链接表、关注领域表三种实体的转换。
 ///
-/// 聚合的取值几乎都是 `Optional` 与值对象，逐字段手写比让 MapStruct 生成更直白；`id`、`version`、
-/// `createdAt`、`updatedAt` 原样带上，更新时才能做乐观锁检查。操作人字段由 JPA 审计管理。机构拆成两列：
+/// 聚合的取值几乎都是 `Optional` 与值对象，逐字段手写比让 MapStruct 生成更直白；`id`、`version`
+/// 原样带上，更新时才能做乐观锁检查。操作人字段由 JPA 审计管理。机构拆成两列：
 /// `Registered` → `(rorId, 快照)`，`FreeText` → `(null, 名称)`；读回时 `rorId` 非空即 `Registered`。
 /// 子表行的 `position` 就是列表下标。
 @Mapper(componentModel = "spring")

@@ -26,7 +26,7 @@ public interface SysDictTypeDao extends JpaRepository<SysDictTypeEntity, Long> {
 
   /// 查询所有激活的字典类型，按类型代码排序。
   ///
-  /// 由于实体使用 Hibernate @SoftDelete，已删除记录会自动被过滤。
+  /// 方法名里的 `DeletedAtIsNull` 排除已删除的行：删除用 `deleted_at` 列标记，查询要自己带条件。
   ///
   /// @return 字典类型列表
   List<SysDictTypeEntity> findAllByDeletedAtIsNullOrderByTypeCodeAsc();

@@ -22,7 +22,7 @@ import org.springframework.dao.DuplicateKeyException;
 import org.springframework.transaction.IllegalTransactionStateException;
 import org.springframework.transaction.support.TransactionTemplate;
 
-/// 有帮助合并条目的存储（PAP-144 spec 7.1）：信箱行加列、附表记点过的人、合并唯一约束与形状约束、级联删除。
+/// 有帮助合并条目的存储（PAP-144 spec 7.1）：信箱行加列、附表记点过的人、合并唯一约束与形状约束、随信箱行一并删除。
 class HelpfulNotificationRepositoryAdapterIT extends InboxPersistenceITSupport {
 
   private static final long AUTHOR = 101L;
@@ -136,7 +136,7 @@ class HelpfulNotificationRepositoryAdapterIT extends InboxPersistenceITSupport {
         .hasMessageContaining("ck_ntf_notification_post_text");
   }
 
-  /// 信箱行被 PAP-143 的四种删除删掉时，附表随之清空（级联外键）。
+  /// 信箱行被 PAP-143 的四种删除删掉时，附表随之清空（删除语句用可写 CTE 一并删，不靠外键）。
   @Test
   void deleting_parent_rows_removes_actors() {
     insert(HelpfulNotification.open(AUTHOR, COMMENT, OWNER, mark(C, 0), null));

@@ -35,7 +35,7 @@ import org.springframework.stereotype.Repository;
 ///
 /// - 使用 Spring Data JPA 的 `saveAll()` 进行批量保存
 /// - ID 由 `SnowflakeIdGenerator` 雪花算法生成
-/// - 审计字段由 JPA Auditing 自动填充
+/// - 操作人由 JPA Auditing 自动填充，`created_at` / `updated_at` 由数据库填
 /// - 子实体通过 CascadeType.ALL 级联保存
 ///
 /// @author linqibin

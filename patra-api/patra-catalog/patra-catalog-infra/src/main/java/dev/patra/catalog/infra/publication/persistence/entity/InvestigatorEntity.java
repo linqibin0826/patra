@@ -17,7 +17,7 @@ import tools.jackson.databind.JsonNode;
 ///
 /// **设计说明**：
 ///
-/// - 继承 `BaseJpaEntity` 支持完整审计（独立实体）
+/// - 继承 `BaseJpaEntity` 获得操作人审计与乐观锁（独立实体）
 /// - 存储研究者信息（非作者的研究人员，如临床试验 PI）
 /// - 支持通过 ORCID 或 dedupKey 进行去重匹配
 ///

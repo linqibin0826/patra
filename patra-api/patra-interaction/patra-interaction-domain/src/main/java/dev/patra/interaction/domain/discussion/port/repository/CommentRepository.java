@@ -30,7 +30,7 @@ public interface CommentRepository {
   /// @return 评论；不存在为空
   Optional<CommentAggregate> findForUpdate(long commentId);
 
-  /// 按 ID 取并锁行（`FOR NO KEY UPDATE`，编辑用：不挡往它下面插回复时外键要的锁）。
+  /// 按 ID 取并锁行（`FOR NO KEY UPDATE`，编辑用）。
   ///
   /// @param commentId 评论
   /// @return 评论；不存在为空
@@ -66,7 +66,7 @@ public interface CommentRepository {
   /// @param actorUserId 操作人（删除的人）
   void markDeleted(long commentId, Instant now, Long actorUserId);
 
-  /// 整条删除（修改历史随外键级联删除）。
+  /// 整条删除（修改历史没有外键级联，同一事务里一并删）。
   ///
   /// @param commentId 评论
   void delete(long commentId);

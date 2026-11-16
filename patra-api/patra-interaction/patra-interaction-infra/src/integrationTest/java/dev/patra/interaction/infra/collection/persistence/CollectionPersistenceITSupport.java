@@ -80,7 +80,7 @@ abstract class CollectionPersistenceITSupport {
 
   /// 表行数。
   ///
-  /// @param table 带 schema 的表名
+  /// @param table 表名（`itr_` 前缀）
   /// @return 行数
   protected long count(String table) {
     return jdbcTemplate.queryForObject("SELECT count(*) FROM " + table, Long.class);

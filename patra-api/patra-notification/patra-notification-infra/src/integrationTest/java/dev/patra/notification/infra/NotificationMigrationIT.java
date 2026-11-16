@@ -11,7 +11,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.ContextConfiguration;
 
-/// Flyway 迁移：整个服务一份历史，在 public；每个子域随自己的第一张表建 schema，schema 名就是子域名。
+/// Flyway 迁移：整个服务一份历史，在 public；所有表也在 public，按 `ntf_` 前缀区分，不建子域 schema。
 @SpringBootTest(classes = NotificationITBootstrap.class)
 @ContextConfiguration(initializers = NotificationITPostgreSQLContainerInitializer.class)
 @ActiveProfiles("test")
@@ -20,7 +20,7 @@ class NotificationMigrationIT {
 
   @Autowired private JdbcTemplate jdbcTemplate;
 
-  /// Flyway 历史表只有一张，在 public：防止有人设 `spring.flyway.schemas` 把历史挪进某个子域的 schema。
+  /// Flyway 历史表只有一张，在 public：防止有人设 `spring.flyway.schemas` 把历史挪进别的 schema。
   @Test
   void should_keep_a_single_flyway_history_in_public() {
     assertThat(

@@ -6,7 +6,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Component;
 
-/// `CoReadingReadPort` 的原生 SQL 实现：按主键 `(publication_id, position)` 取前几行。
+/// `CoReadingReadPort` 的原生 SQL 实现：按唯一索引 `(publication_id, position)` 取前几行。
 @Component
 @RequiredArgsConstructor
 public class CoReadingReadAdapter implements CoReadingReadPort {

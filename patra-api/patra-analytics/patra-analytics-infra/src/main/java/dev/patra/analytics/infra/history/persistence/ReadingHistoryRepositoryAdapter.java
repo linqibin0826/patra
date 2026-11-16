@@ -19,7 +19,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
-/// `ReadingHistoryRepository` 的原生 SQL 实现（`history` schema）。写方法与限时要求调用方的事务。
+/// `ReadingHistoryRepository` 的原生 SQL 实现（阅读历史的三张 `anl_` 表）。写方法与限时要求调用方的事务。
 @Component
 @RequiredArgsConstructor
 public class ReadingHistoryRepositoryAdapter implements ReadingHistoryRepository {

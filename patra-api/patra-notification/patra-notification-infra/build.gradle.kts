@@ -2,7 +2,7 @@
  * Patra Notification Infrastructure
  *
  * 基础设施层 - 持久化与 Flyway 迁移，按子域分包（kernel、inbox、preference、mail、realtime）；
- * 每个子域一个 schema，迁移脚本在 db/migration/{子域}/，整个服务一份 Flyway 历史
+ * 所有表在 public、按 ntf_ 前缀，迁移脚本在 db/migration/{子域}/，整个服务一份 Flyway 历史
  */
 
 plugins {

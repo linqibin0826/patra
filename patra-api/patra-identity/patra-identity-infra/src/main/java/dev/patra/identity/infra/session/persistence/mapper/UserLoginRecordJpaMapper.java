@@ -11,7 +11,7 @@ import org.mapstruct.Mapping;
 
 /// UserLoginRecord 与 UserLoginRecordEntity 的转换。
 ///
-/// `id`、`version`、`createdAt`、`updatedAt` 同名映射：更新时带上版本才能做乐观锁检查。
+/// `id`、`version` 和各业务时间列同名映射：更新时带上版本才能做乐观锁检查。
 /// 操作人字段由 JPA 审计管理。
 @Mapper(componentModel = "spring")
 public interface UserLoginRecordJpaMapper {

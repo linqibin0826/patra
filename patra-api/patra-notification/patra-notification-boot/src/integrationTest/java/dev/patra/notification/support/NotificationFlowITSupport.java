@@ -36,7 +36,7 @@ import tools.jackson.databind.json.JsonMapper;
 /// 经 Spring Cloud LoadBalancer + SimpleDiscoveryClient 走 `lb://` 这条真实的路。
 /// 写法同 interaction 的 `InteractionFlowITSupport`。
 ///
-/// 子类共用同一个 Spring 上下文。每例前清空全部子域 schema 里的表（从 `pg_tables` 现查，新子域的表自动纳入）。
+/// 子类共用同一个 Spring 上下文。每例前清空 public 里全部 `ntf_` 前缀的表（从 `pg_tables` 现查，新子域的表自动纳入）。
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ContextConfiguration(
     initializers = {

@@ -323,7 +323,7 @@ public class LibraryRepositoryAdapter implements LibraryRepository {
 
   /// 按用户删一张表的行。
   ///
-  /// @param table 带 schema 的表名（常量）
+  /// @param table 表名（常量，`itr_` 前缀）
   /// @param userId 用户
   /// @return 行数
   private int deleteByUser(String table, long userId) {

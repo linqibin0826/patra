@@ -20,7 +20,8 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 /// `HelpfulNotificationRepository` 的原生 SQL 实现：合并条目是 `ntf_notification` 的一行（`category = HELPFUL`），
-/// 点过的人在附表 `ntf_notification_helpful_actor`（级联外键随信箱行删除）。每条语句都带 `recipient_user_id`，只扫一个分区。
+/// 点过的人在附表 `ntf_notification_helpful_actor`（不建外键，随信箱行由仓储在同一条语句里一并删）。每条语句都带
+// `recipient_user_id`，只扫一个分区。
 /// 三个方法都要求调用方的事务（`MANDATORY`）：加锁读要在事务里才有意义，写入与写回各是两条语句（信箱行 + 附表），
 /// 事务外调用会留下没有附表行的条目。
 @Component

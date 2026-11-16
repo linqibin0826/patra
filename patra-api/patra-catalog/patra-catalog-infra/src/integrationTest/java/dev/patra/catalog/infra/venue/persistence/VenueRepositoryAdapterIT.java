@@ -80,7 +80,7 @@ class VenueRepositoryAdapterIT {
 
   // ========== hasAnyData() 测试 ==========
 
-  /// 去掉 `@SoftDelete` 之后，「未删除」条件要每个查询自己带：已删的期刊按 ISSN-L、NLM 号都查不到。
+  /// 删除用 `deleted_at` 列标记，「未删除」条件要每个查询自己带：已删的期刊按 ISSN-L、NLM 号都查不到。
   @Test
   @DisplayName("已删除的期刊按 ISSN-L、NLM 号都查不到")
   void should_not_find_soft_deleted_venue() {

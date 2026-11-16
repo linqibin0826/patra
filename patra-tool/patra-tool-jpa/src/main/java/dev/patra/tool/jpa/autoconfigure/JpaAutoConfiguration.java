@@ -22,7 +22,7 @@ import tools.jackson.databind.json.JsonMapper;
 ///
 /// - 配置 Hibernate 7.1 批量写入优化
 /// - 注册 JPA 异常映射贡献器
-/// - 导入审计配置（自动填充 createdAt/updatedAt/createdBy/updatedBy）
+/// - 导入审计配置（自动填充 createdBy/updatedBy 操作人）
 ///
 /// **扫描机制**：
 ///

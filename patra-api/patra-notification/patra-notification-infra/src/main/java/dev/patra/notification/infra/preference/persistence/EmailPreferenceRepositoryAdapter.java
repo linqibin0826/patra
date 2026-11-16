@@ -15,7 +15,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
-/// `EmailPreferenceRepository` 的原生 SQL 实现（`preference` schema）。写方法不开事务，由 app 层的事务包住。
+/// `EmailPreferenceRepository` 的原生 SQL 实现（表 `ntf_email_preference`）。写方法不开事务，由 app 层的事务包住。
 @Component
 @RequiredArgsConstructor
 public class EmailPreferenceRepositoryAdapter implements EmailPreferenceRepository {

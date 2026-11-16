@@ -2,7 +2,7 @@
  * Patra Interaction Infrastructure
  *
  * 基础设施层 - 持久化与 Flyway 迁移，按子域分包（subject、collection、discussion、post、reaction）；
- * 每个子域一个 schema，迁移脚本在 db/migration/{子域}/，整个服务一份 Flyway 历史
+ * 所有表都在 public、以 itr_ 为前缀，迁移脚本在 db/migration/{子域}/，整个服务一份 Flyway 历史
  */
 
 plugins {

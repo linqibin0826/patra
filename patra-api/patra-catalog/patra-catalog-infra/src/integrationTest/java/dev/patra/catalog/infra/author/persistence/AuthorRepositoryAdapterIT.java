@@ -70,7 +70,7 @@ class AuthorRepositoryAdapterIT {
 
   @Autowired private EntityManager entityManager;
 
-  /// 去掉 `@SoftDelete` 之后，「未删除」条件要每个查询自己带：已删的作者按 ID、规范化姓名、ORCID 都查不到。
+  /// 删除用 `deleted_at` 列标记，「未删除」条件要每个查询自己带：已删的作者按 ID、规范化姓名、ORCID 都查不到。
   @Test
   @DisplayName("已删除的作者按 ID、规范化姓名、ORCID 都查不到")
   void should_not_find_soft_deleted_author() {

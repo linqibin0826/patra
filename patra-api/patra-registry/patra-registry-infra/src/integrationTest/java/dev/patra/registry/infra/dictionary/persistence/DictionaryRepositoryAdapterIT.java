@@ -222,7 +222,7 @@ class DictionaryRepositoryAdapterIT {
       assertThat(result.get("United States").itemCode()).isEqualTo("US");
     }
 
-    // 注：软删除测试已移除 - SysDictItemAliasEntity 现在继承 BaseJpaEntity，使用物理删除
+    // 注：SysDictItemAliasEntity 没有 deletedAt 字段，删除即物理删除，所以没有软删除测试
 
     @Test
     @DisplayName("类型不匹配的别名应被过滤")

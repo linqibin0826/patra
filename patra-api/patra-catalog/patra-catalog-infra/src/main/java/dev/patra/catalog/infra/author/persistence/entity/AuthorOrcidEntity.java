@@ -21,7 +21,7 @@ import lombok.experimental.SuperBuilder;
 ///
 /// - 存储作者的 ORCID 标识符
 /// - 支持一对多关系（少数作者有多个 ORCID）
-/// - 继承 `BaseJpaEntity` 获取完整审计字段
+/// - 继承 `ValueObjectJpaEntity`，只有 `id`，没有审计字段与乐观锁
 ///
 /// @author linqibin
 /// @since 0.1.0

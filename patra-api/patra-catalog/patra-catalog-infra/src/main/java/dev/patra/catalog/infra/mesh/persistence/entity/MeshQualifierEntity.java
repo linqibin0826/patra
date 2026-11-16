@@ -33,7 +33,7 @@ import org.hibernate.type.SqlTypes;
 /// **Hibernate 7.1 特性**：
 ///
 /// - 使用 `@JdbcTypeCode(SqlTypes.JSON)` 直接映射 `List<String>` 到 PG jsonb 类型
-/// - 继承 `BaseJpaEntity` 获得软删除、审计、乐观锁功能
+/// - 继承 `BaseJpaEntity` 获得操作人审计、乐观锁功能（没有 `deleted_at`，删除即物理删除）
 ///
 /// @author linqibin
 /// @since 0.1.0

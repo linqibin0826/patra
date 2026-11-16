@@ -9,7 +9,8 @@ import lombok.Setter;
 import org.hibernate.annotations.SoftDelete;
 import org.hibernate.annotations.SoftDeleteType;
 
-/// 集成测试专用实体：映射了 Hibernate `@SoftDelete`，和现在 catalog 的文献、期刊同一种写法。
+/// 集成测试专用实体：映射了 Hibernate `@SoftDelete`（项目已禁用，catalog 的文献、期刊以前用它），
+/// `SoftDeleteBulkDeleteIT` 用它演示禁用的原因。
 @Getter
 @Setter
 @Entity
