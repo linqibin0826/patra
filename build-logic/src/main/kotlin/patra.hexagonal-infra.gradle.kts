@@ -32,5 +32,5 @@ dependencies {
 // ==================== R5：声明的 project 依赖必须被使用 ====================
 registerDeclaredDependencyCheck(exempt = emptySet())
 
-// ==================== R6：Flyway 脚本里的用户名列只许在 identity 的两张表 ====================
-registerMigrationColumnCheck()
+// ==================== R6：Flyway 脚本检查（不建 schema、不建外键、用户名列只在 identity） ====================
+registerMigrationScriptCheck()

@@ -1,8 +1,10 @@
-/// R6：Flyway 迁移脚本里用户名列只许出现在 identity 的两张表。
-object MigrationColumnRules {
+/// R6：逐条检查 Flyway 迁移脚本里的语句，拦下库表规范（`.claude/rules/tech/database.md`）禁止、
+/// 又等不到结构检查集成测试才发现的写法：identity 两张表以外的用户名列、`CREATE SCHEMA`、外键。
+/// 注释、字符串、`$$` 函数体里的内容不是语句，不检查。
+object MigrationScriptRules {
 
-    /// 一处违规：`line` 是列定义所在行（从 1 数），`table` / `column` 已折成小写。
-    data class Violation(val line: Int, val table: String, val column: String)
+    /// 一处违规：`line` 是违规词所在行（从 1 数），`message` 说明违反了什么、规范在哪一节。
+    data class Violation(val line: Int, val message: String)
 
     private val FORBIDDEN_COLUMNS = setOf("username", "user_name")
     private val ALLOWED_TABLES = setOf("idn_user", "idn_user_former_username")
@@ -16,10 +18,27 @@ object MigrationColumnRules {
     fun violations(sql: String): List<Violation> {
         val found = mutableListOf<Violation>()
         for (statement in split(tokenize(sql))) {
-            if (statement.first().text == "create") checkCreateTable(statement, found)
+            if (statement.first().text == "create") {
+                checkCreateSchema(statement, found)
+                checkCreateTable(statement, found)
+            }
             if (statement.first().text == "alter") checkAlterTable(statement, found)
         }
         return found
+    }
+
+    /// 业务表都在 `public`（第 1 节）。
+    private fun checkCreateSchema(statement: List<Token>, found: MutableList<Violation>) {
+        if (statement.getOrNull(1)?.text == "schema") {
+            found += Violation(statement.first().line, "建了 schema：业务表都放 public，禁止 CREATE SCHEMA（database.md 第 1 节）")
+        }
+    }
+
+    /// 建表或改表语句里出现 `REFERENCES` 就是外键：列上的 `REFERENCES t (id)` 与 `FOREIGN KEY (...) REFERENCES` 都算（第 2 节）。
+    private fun checkForeignKeys(table: String, statement: List<Token>, found: MutableList<Violation>) {
+        statement.filter { it.text == "references" }.forEach {
+            found += Violation(it.line, "表 $table 建了外键（REFERENCES）：不建外键，引用关系由应用保证（database.md 第 2 节）")
+        }
     }
 
     /// `CREATE TABLE name (...)`：括号里深度为 1 的每个条目的首个词就是列名（约束条目的首个词是关键字，不会命中）。
@@ -28,6 +47,7 @@ object MigrationColumnRules {
         if (statement.getOrNull(i)?.text != "table") return
         i = skip(statement, i + 1, "if", "not", "exists")
         val (table, afterName) = readQualifiedName(statement, i)
+        checkForeignKeys(table, statement, found)
         i = afterName
         if (statement.getOrNull(i)?.text != "(") return
         i++
@@ -55,6 +75,7 @@ object MigrationColumnRules {
         i = skip(statement, i + 1, "if", "exists")
         if (statement.getOrNull(i)?.text == "only") i++
         val (table, afterName) = readQualifiedName(statement, i)
+        checkForeignKeys(table, statement, found)
         i = afterName
         while (i < statement.size) {
             when (statement[i++].text) {
@@ -73,8 +94,15 @@ object MigrationColumnRules {
         }
     }
 
+    /// 用户名只存 identity 的两张表（第 3 节；原因见 `.claude/rules/project-info.md`「用户名只存 identity」）。
     private fun check(table: String, column: Token, found: MutableList<Violation>) {
-        if (column.text in FORBIDDEN_COLUMNS && table !in ALLOWED_TABLES) found += Violation(column.line, table, column.text)
+        if (column.text in FORBIDDEN_COLUMNS && table !in ALLOWED_TABLES) {
+            found += Violation(
+                column.line,
+                "表 $table 定义了列 ${column.text}：用户名只存 identity 的 idn_user / idn_user_former_username，" +
+                    "其他表引用用户存 user_id（database.md 第 3 节）",
+            )
+        }
     }
 
     /// 若从 `start` 起依次就是这些词，返回跳过它们后的下标；否则原样返回。
