@@ -47,14 +47,18 @@ class NotificationArchitectureTest {
   private static final List<String> SUBDOMAINS =
       List.of(FOUNDATION, "inbox", "preference", "mail", "realtime");
 
-  /// 子域边界规则，三条依赖边：realtime → inbox（PAP-145）；mail → inbox、mail → preference（PAP-146）。
+  /// 子域边界规则，四条依赖边：realtime → inbox（PAP-145）；mail → inbox、mail → preference（PAP-146）；
+  /// preference → inbox（PAP-205）：订阅提醒生成事件，为收件人预建偏好行。
   private static final SubdomainArchitectureRules subdomainRules =
       new SubdomainArchitectureRules("dev.patra.notification", FOUNDATION, Set.copyOf(SUBDOMAINS))
           // 实时推送订阅未读数变化、按用户读当前未读数（PAP-145）
           .allowingDependency("realtime", "inbox")
           // 提醒邮件：同事务入队、到点复查已读、每日汇总取未读；查邮件档位与退订令牌（PAP-146）
           .allowingDependency("mail", "inbox")
-          .allowingDependency("mail", "preference");
+          .allowingDependency("mail", "preference")
+          // 写提醒时为会收到邮件的收件人预建默认偏好行，发信时读端口只读（PAP-205）；事件的载荷
+          // CreatedNotification 在 inbox 的 model.read，只经事件包的订阅边放不过，所以声明依赖边
+          .allowingDependency("preference", "inbox");
 
   /// 导入 notification 全部模块的主代码。
   @BeforeAll

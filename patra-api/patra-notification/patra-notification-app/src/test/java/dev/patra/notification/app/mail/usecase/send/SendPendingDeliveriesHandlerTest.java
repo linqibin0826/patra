@@ -62,7 +62,7 @@ class SendPendingDeliveriesHandlerTest {
     order.verify(deliveries).update(delivery);
     order.verify(mail).deliver(sent.capture());
     OutgoingMail outgoing = sent.getValue();
-    assertThat(outgoing.deliveryId()).isEqualTo(delivery.getDeliveryId());
+    assertThat(outgoing.idempotencyKey()).isEqualTo(delivery.getDeliveryId().toString());
     assertThat(outgoing.to()).isEqualTo("chen@example.com");
     assertThat(outgoing.template()).isEqualTo("notification-batch");
     assertThat(outgoing.subject()).isEqualTo("3 条新回复：王立");
@@ -198,7 +198,9 @@ class SendPendingDeliveriesHandlerTest {
 
     ArgumentCaptor<OutgoingMail> sent = ArgumentCaptor.captor();
     verify(mail, times(2)).deliver(sent.capture());
-    assertThat(sent.getAllValues()).extracting(OutgoingMail::deliveryId).containsOnly(firstId);
+    assertThat(sent.getAllValues())
+        .extracting(OutgoingMail::idempotencyKey)
+        .containsOnly(firstId.toString());
   }
 
   /// 调用过发信端口、满 24 小时仍失败：过期。
@@ -317,7 +319,7 @@ class SendPendingDeliveriesHandlerTest {
   private static MailDeliveryFailedException failure(MailDeliveryFailure failure) {
     return new MailDeliveryFailedException(
         OutgoingMail.builder()
-            .deliveryId(UUID.randomUUID())
+            .idempotencyKey(UUID.randomUUID().toString())
             .to("x@example.com")
             .template("notification-single")
             .subject("s")

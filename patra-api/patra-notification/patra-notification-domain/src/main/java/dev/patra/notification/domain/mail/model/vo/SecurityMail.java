@@ -53,7 +53,7 @@ public record SecurityMail(
       model.put("linkExpiresAt", linkExpiresAt);
     }
     return OutgoingMail.builder()
-        .deliveryId(eventId)
+        .idempotencyKey(eventId.toString())
         .to(to)
         .template(kind.template())
         .subject(kind.subjectFor(facts))

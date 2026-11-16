@@ -86,7 +86,7 @@ class OutgoingMailTest {
   /// @return 构建器
   private static OutgoingMail.OutgoingMailBuilder builder() {
     return OutgoingMail.builder()
-        .deliveryId(DELIVERY_ID)
+        .idempotencyKey(DELIVERY_ID.toString())
         .to("chen.yu@example.com")
         .template("password-reset")
         .subject("重设你的 Patra 密码")

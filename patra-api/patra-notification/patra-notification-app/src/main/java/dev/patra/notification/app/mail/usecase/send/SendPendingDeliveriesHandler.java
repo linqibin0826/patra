@@ -133,7 +133,7 @@ public class SendPendingDeliveriesHandler
     try {
       mail.deliver(
           OutgoingMail.builder()
-              .deliveryId(delivery.getDeliveryId())
+              .idempotencyKey(delivery.getDeliveryId().toString())
               .to(ready.to())
               .template(template(content))
               .subject(content.subject())
