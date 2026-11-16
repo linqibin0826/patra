@@ -56,5 +56,5 @@ paths: patra-api/**/db/migration/**/*.sql, patra-api/*/*-infra/**/*.java, patra-
 ## 8. 写侧技术（按服务）
 
 - **JPA 服务**（registry、catalog、identity）：聚合经实体存取，写侧不用 `JdbcClient` / `JdbcTemplate`。不经实体的写入只能是 Dao 上的 `@Query`，并带 `@Modifying(flushAutomatically = true, clearAutomatically = true)`：原生语句不会触发 Hibernate 自动落库。
-- **SQL 服务**（interaction、notification、analytics）：不得出现 JPA 实体；写入用 `JdbcClient`，只在 `infra..persistence..`。主表的 INSERT 写 `created_by`，UPDATE 写 `updated_by`。
+- **SQL 服务**（interaction、notification、analytics）：不得出现 JPA 实体；写入用 `JdbcClient`，只在 `infra..persistence..`。主表的 INSERT 写 `created_by`，UPDATE 写 `updated_by`；系统写入（消息消费、定时任务）写空，不留上一个用户的 ID。
 - 读适配器（实现 `port.read` 端口的类）读法不限，不得写库。

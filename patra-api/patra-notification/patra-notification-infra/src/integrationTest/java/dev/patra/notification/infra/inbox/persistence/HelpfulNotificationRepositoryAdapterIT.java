@@ -87,6 +87,18 @@ class HelpfulNotificationRepositoryAdapterIT extends InboxPersistenceITSupport {
         .containsEntry("occurred", true);
   }
 
+  /// 收件人标已读会把自己记成最后修改人；之后消费事件并入新的人是系统写入，最后修改人要清空，不能留着收件人。
+  @Test
+  void system_merge_clears_last_modifier_left_by_recipient() {
+    long id = insert(HelpfulNotification.open(AUTHOR, COMMENT, OWNER, mark(C, 3), null));
+    inTransaction(() -> notifications.markRead(AUTHOR, id, NOW));
+    assertThat(lastModifier()).isEqualTo(AUTHOR);
+
+    absorbAndUpdate(COMMENT, mark(D, 5));
+
+    assertThat(lastModifier()).isNull();
+  }
+
   /// 不同的天、不同的内容各是一行，按合并键各自命中。
   @Test
   void different_days_and_targets_are_separate_rows() {
@@ -247,6 +259,13 @@ class HelpfulNotificationRepositoryAdapterIT extends InboxPersistenceITSupport {
         Timestamp.from(at),
         day,
         Timestamp.from(at));
+  }
+
+  /// 唯一一行信箱的最后修改人。
+  ///
+  /// @return 用户 ID，系统写入为空
+  private Long lastModifier() {
+    return jdbcTemplate.queryForObject("SELECT updated_by FROM ntf_notification", Long.class);
   }
 
   /// 附表行数。

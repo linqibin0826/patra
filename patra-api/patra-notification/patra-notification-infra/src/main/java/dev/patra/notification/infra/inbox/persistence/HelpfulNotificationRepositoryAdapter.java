@@ -20,8 +20,8 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 /// `HelpfulNotificationRepository` 的原生 SQL 实现：合并条目是 `ntf_notification` 的一行（`category = HELPFUL`），
-/// 点过的人在附表 `ntf_notification_helpful_actor`（不建外键，随信箱行由仓储在同一条语句里一并删）。每条语句都带
-// `recipient_user_id`，只扫一个分区。
+/// 点过的人在附表 `ntf_notification_helpful_actor`（不建外键，随信箱行由仓储在同一条语句里一并删）。
+/// 每条语句都带 `recipient_user_id`，只扫一个分区。
 /// 三个方法都要求调用方的事务（`MANDATORY`）：加锁读要在事务里才有意义，写入与写回各是两条语句（信箱行 + 附表），
 /// 事务外调用会留下没有附表行的条目。
 @Component
@@ -121,7 +121,7 @@ public class HelpfulNotificationRepositoryAdapter implements HelpfulNotification
     return id;
   }
 
-  /// 写回并入一次点击后的条目。
+  /// 写回并入一次点击后的条目。由消费事件触发，是系统写入：最后修改人置空，不留收件人标已读时记下的 ID。
   ///
   /// @param notification 条目
   /// @param mark 刚并入的点击
@@ -135,7 +135,7 @@ public class HelpfulNotificationRepositoryAdapter implements HelpfulNotification
     jdbc.sql(
             "UPDATE ntf_notification SET actor_user_id = :actorId, actor_anonymous = :actorAnonymous,"
                 + " occurred_at = :occurredAt, read_at = :readAt, post_plain_text = :text,"
-                + " post_plain_text_at = :textAt"
+                + " post_plain_text_at = :textAt, updated_by = NULL"
                 + " WHERE recipient_user_id = :recipientId AND id = :id")
         .param("actorId", notification.getLatestActorId())
         .param("actorAnonymous", notification.isLatestActorAnonymous())
