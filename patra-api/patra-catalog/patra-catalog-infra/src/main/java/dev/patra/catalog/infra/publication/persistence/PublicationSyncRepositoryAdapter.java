@@ -10,6 +10,7 @@ import dev.patra.catalog.infra.publication.persistence.dao.PublicationAbstractDa
 import dev.patra.catalog.infra.publication.persistence.dao.PublicationAlternativeAbstractDao;
 import dev.patra.catalog.infra.publication.persistence.dao.PublicationAuthorAffiliationDao;
 import dev.patra.catalog.infra.publication.persistence.dao.PublicationAuthorDao;
+import dev.patra.catalog.infra.publication.persistence.dao.PublicationDao;
 import dev.patra.catalog.infra.publication.persistence.dao.PublicationDateDao;
 import dev.patra.catalog.infra.publication.persistence.dao.PublicationFundingDao;
 import dev.patra.catalog.infra.publication.persistence.dao.PublicationIdentifierDao;
@@ -66,6 +67,7 @@ public class PublicationSyncRepositoryAdapter implements PublicationSyncReposito
   private static final String PUBMED_SOURCE = "PubMed";
 
   private final EntityManager entityManager;
+  private final PublicationDao publicationDao;
   private final PublicationJpaMapper jpaConverter;
   private final PublicationRepositoryAdapter publicationRepositoryAdapter;
   private final PublicationMetadataDao metadataDao;
@@ -185,20 +187,13 @@ public class PublicationSyncRepositoryAdapter implements PublicationSyncReposito
   @Override
   public void upsertSources(List<PublicationSourceRow> rows) {
     for (PublicationSourceRow row : rows) {
-      entityManager
-          .createNativeQuery(
-              "INSERT INTO cat_publication_source"
-                  + " (pmid, source_file, source_rank, raw_xml, parsed_at)"
-                  + " VALUES (:pmid, :file, :rank, :raw, :parsedAt)"
-                  + " ON CONFLICT (pmid) DO UPDATE SET source_file = EXCLUDED.source_file,"
-                  + " source_rank = EXCLUDED.source_rank, raw_xml = EXCLUDED.raw_xml,"
-                  + " parsed_at = EXCLUDED.parsed_at")
-          .setParameter("pmid", row.pmid())
-          .setParameter("file", row.sourceFile())
-          .setParameter("rank", row.sourceRank())
-          .setParameter("raw", row.rawXml())
-          .setParameter("parsedAt", row.parsedAt() == null ? null : Timestamp.from(row.parsedAt()))
-          .executeUpdate();
+      publicationDao.upsertSource(
+          SnowflakeIdGenerator.getId(),
+          row.pmid(),
+          row.sourceFile(),
+          row.sourceRank(),
+          row.rawXml(),
+          row.parsedAt() == null ? null : Timestamp.from(row.parsedAt()));
     }
   }
 
@@ -229,23 +224,15 @@ public class PublicationSyncRepositoryAdapter implements PublicationSyncReposito
               .setParameter("pmids", batch)
               .setParameter("rank", position.rank())
               .executeUpdate();
-      String candidates =
-          writeTombstones
-              ? "SELECT x FROM unnest(CAST(:pmids AS text[])) AS x"
-              : "SELECT p.pmid FROM cat_publication p WHERE p.pmid = ANY(CAST(:pmids AS text[]))";
-      entityManager
-          .createNativeQuery(
-              "INSERT INTO cat_publication_source (pmid, source_file, source_rank)"
-                  + " SELECT c.pmid, :file, :rank FROM ("
-                  + candidates
-                  + ") AS c(pmid)"
-                  + " ON CONFLICT (pmid) DO UPDATE SET source_file = EXCLUDED.source_file,"
-                  + " source_rank = EXCLUDED.source_rank"
-                  + " WHERE cat_publication_source.source_rank <= EXCLUDED.source_rank")
-          .setParameter("pmids", batch.toArray(String[]::new))
-          .setParameter("file", position.fileName())
-          .setParameter("rank", position.rank())
-          .executeUpdate();
+      // 墓碑候选：要写墓碑时是整个删除列表，否则只取库里已有的 PMID；新行各带一个雪花 ID
+      List<String> candidates =
+          writeTombstones ? batch : publicationDao.findExistingPmids(batch.toArray(String[]::new));
+      if (!candidates.isEmpty()) {
+        Long[] ids =
+            candidates.stream().map(pmid -> SnowflakeIdGenerator.getId()).toArray(Long[]::new);
+        publicationDao.upsertTombstones(
+            ids, candidates.toArray(String[]::new), position.fileName(), position.rank());
+      }
     }
     return total;
   }

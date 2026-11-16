@@ -6,9 +6,7 @@ import dev.patra.tool.jpa.entity.ValueObjectJpaEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
-import jakarta.persistence.Index;
 import jakarta.persistence.Table;
-import jakarta.persistence.UniqueConstraint;
 import java.time.Instant;
 import lombok.Getter;
 import lombok.Setter;
@@ -35,19 +33,7 @@ import lombok.Setter;
 @Getter
 @Setter
 @Entity
-@Table(
-    name = "cat_venue_cas_warning",
-    uniqueConstraints = {
-      @UniqueConstraint(
-          name = "uk_venue_year_edition",
-          columnNames = {"venue_id", "published_year", "edition_label"})
-    },
-    indexes = {
-      @Index(name = "idx_venue_id", columnList = "venue_id"),
-      @Index(name = "idx_in_warning", columnList = "in_warning_list"),
-      @Index(name = "idx_warning_level", columnList = "warning_level"),
-      @Index(name = "idx_published_year", columnList = "published_year")
-    })
+@Table(name = "cat_venue_cas_warning")
 public class CasWarningEntity extends ValueObjectJpaEntity {
 
   /// 关联期刊 ID（逻辑外键 → cat_venue.id）

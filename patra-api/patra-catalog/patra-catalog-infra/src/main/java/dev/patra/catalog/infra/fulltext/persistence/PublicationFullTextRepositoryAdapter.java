@@ -100,26 +100,18 @@ public class PublicationFullTextRepositoryAdapter implements PublicationFullText
         .build();
   }
 
-  /// 正文表没有实体：用 native `INSERT … ON CONFLICT (publication_id) DO UPDATE` 写入，
-  /// 正文以注入的 `JsonMapper` 序列化。
+  /// 写正文：正文表没有实体，经 Dao 上的原生 upsert 写入，正文以注入的 `JsonMapper` 序列化。
   ///
   /// @param publicationId 文献 ID
   /// @param body 正文
   /// @param parserVersion 解析器版本
   @Override
   public void saveBody(long publicationId, FullTextBody body, int parserVersion) {
-    entityManager
-        .createNativeQuery(
-            """
-            INSERT INTO cat_publication_fulltext_body (publication_id, body, parser_version)
-            VALUES (:id, CAST(:body AS jsonb), :version)
-            ON CONFLICT (publication_id) DO UPDATE
-               SET body = EXCLUDED.body, parser_version = EXCLUDED.parser_version, updated_at = now()
-            """)
-        .setParameter("id", publicationId)
-        .setParameter("body", jsonMapper.writeValueAsString(body))
-        .setParameter("version", parserVersion)
-        .executeUpdate();
+    dao.upsertBody(
+        SnowflakeIdGenerator.getId(),
+        publicationId,
+        jsonMapper.writeValueAsString(body),
+        parserVersion);
   }
 
   /// 更新 `has_full_text`；没有 metadata 行时什么也不做。

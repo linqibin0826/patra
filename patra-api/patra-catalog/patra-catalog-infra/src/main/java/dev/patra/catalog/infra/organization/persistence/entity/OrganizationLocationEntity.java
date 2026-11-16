@@ -3,9 +3,7 @@ package dev.patra.catalog.infra.organization.persistence.entity;
 import dev.patra.tool.jpa.entity.ValueObjectJpaEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.Index;
 import jakarta.persistence.Table;
-import jakarta.persistence.UniqueConstraint;
 import java.math.BigDecimal;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -36,23 +34,12 @@ import lombok.experimental.SuperBuilder;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(
-    name = "cat_organization_location",
-    uniqueConstraints = {
-      @UniqueConstraint(
-          name = "uk_org_location",
-          columnNames = {"org_id", "geonames_id"})
-    },
-    indexes = {
-      @Index(name = "idx_org_loc_org_id", columnList = "org_id"),
-      @Index(name = "idx_org_loc_country", columnList = "country_code"),
-      @Index(name = "idx_org_loc_geonames", columnList = "geonames_id")
-    })
+@Table(name = "cat_organization_location")
 public class OrganizationLocationEntity extends ValueObjectJpaEntity {
 
   /// 所属机构 ID（逻辑外键）。
-  @Column(name = "org_id", nullable = false)
-  private Long orgId;
+  @Column(name = "organization_id", nullable = false)
+  private Long organizationId;
 
   /// GeoNames 地理位置 ID。
   ///

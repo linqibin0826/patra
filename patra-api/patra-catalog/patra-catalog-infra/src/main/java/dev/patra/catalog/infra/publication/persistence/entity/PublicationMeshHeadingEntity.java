@@ -3,9 +3,7 @@ package dev.patra.catalog.infra.publication.persistence.entity;
 import dev.patra.tool.jpa.entity.ValueObjectJpaEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.Index;
 import jakarta.persistence.Table;
-import jakarta.persistence.UniqueConstraint;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -27,13 +25,6 @@ import lombok.experimental.SuperBuilder;
 /// MeSH（Medical Subject Headings）是 NLM 创建的受控词表，用于标引医学文献。
 /// 每篇文献可能有多个 MeSH 标引，每个标引包含一个主题词和可选的限定词列表。
 ///
-/// **索引设计**：
-///
-/// - `uk_pub_descriptor`：出版物 ID + 主题词 UI 唯一索引
-/// - `idx_publication`：出版物索引（查询某篇文献的所有 MeSH 标引）
-/// - `idx_descriptor_ui`：主题词 UI 索引（查询某个主题词关联的所有文献）
-/// - `idx_major_topic`：主要主题索引（筛选主要主题的标引）
-///
 /// @author linqibin
 /// @since 0.1.0
 @Data
@@ -42,18 +33,7 @@ import lombok.experimental.SuperBuilder;
 @AllArgsConstructor
 @EqualsAndHashCode(callSuper = true)
 @Entity
-@Table(
-    name = "cat_publication_mesh_heading",
-    uniqueConstraints = {
-      @UniqueConstraint(
-          name = "uk_pub_descriptor",
-          columnNames = {"publication_id", "descriptor_ui"})
-    },
-    indexes = {
-      @Index(name = "idx_publication", columnList = "publication_id"),
-      @Index(name = "idx_descriptor_ui", columnList = "descriptor_ui"),
-      @Index(name = "idx_major_topic", columnList = "is_major_topic")
-    })
+@Table(name = "cat_publication_mesh_heading")
 public class PublicationMeshHeadingEntity extends ValueObjectJpaEntity {
 
   // ========== 关联信息 ==========

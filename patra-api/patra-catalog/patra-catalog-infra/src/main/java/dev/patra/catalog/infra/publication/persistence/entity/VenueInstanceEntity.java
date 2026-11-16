@@ -3,7 +3,6 @@ package dev.patra.catalog.infra.publication.persistence.entity;
 import dev.patra.tool.jpa.entity.BaseJpaEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.Index;
 import jakarta.persistence.Table;
 import java.time.LocalDate;
 import lombok.AllArgsConstructor;
@@ -24,12 +23,6 @@ import tools.jackson.databind.JsonNode;
 /// - 支持三种实例类型：期刊（volume/issue）、书籍（edition）、会议（conference*）
 /// - 使用 Hibernate 7.1 的 `@JdbcTypeCode(SqlTypes.JSON)` 处理 JSON 字段
 ///
-/// **索引设计**：
-///
-/// - `idx_venue_id`：载体 ID 索引
-/// - `idx_venue_volume_issue`：期刊实例复合索引
-/// - `idx_publication_year`：出版年份索引
-///
 /// @author linqibin
 /// @since 0.1.0
 @Data
@@ -38,13 +31,7 @@ import tools.jackson.databind.JsonNode;
 @AllArgsConstructor
 @EqualsAndHashCode(callSuper = true)
 @Entity
-@Table(
-    name = "cat_venue_instance",
-    indexes = {
-      @Index(name = "idx_venue_id", columnList = "venue_id"),
-      @Index(name = "idx_venue_volume_issue", columnList = "venue_id, volume, issue"),
-      @Index(name = "idx_publication_year", columnList = "publication_year")
-    })
+@Table(name = "cat_venue_instance")
 public class VenueInstanceEntity extends BaseJpaEntity {
 
   // ========== 关联引用 ==========

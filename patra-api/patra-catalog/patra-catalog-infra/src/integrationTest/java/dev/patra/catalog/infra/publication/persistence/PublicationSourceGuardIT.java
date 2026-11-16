@@ -214,8 +214,8 @@ class PublicationSourceGuardIT {
     assertThat(text)
         .doesNotContain("Full Join")
         .doesNotContain("Seq Scan")
-        .contains("uk_pmid")
-        .contains("cat_publication_source_pkey");
+        .contains("uk_cat_publication_pmid")
+        .contains("uk_cat_publication_source_pmid");
   }
 
   @Test

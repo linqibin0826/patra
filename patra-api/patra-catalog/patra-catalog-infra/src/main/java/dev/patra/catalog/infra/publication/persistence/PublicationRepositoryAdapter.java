@@ -187,8 +187,9 @@ public class PublicationRepositoryAdapter implements PublicationRepository {
 
     List<Long> pubAuthorIds = authorEntities.stream().map(PublicationAuthorEntity::getId).toList();
     Map<Long, List<PublicationAuthorAffiliationEntity>> affiliationsByPubAuthorId =
-        publicationAuthorAffiliationDao.findAllByPubAuthorIdIn(pubAuthorIds).stream()
-            .collect(Collectors.groupingBy(PublicationAuthorAffiliationEntity::getPubAuthorId));
+        publicationAuthorAffiliationDao.findAllByPublicationAuthorIdIn(pubAuthorIds).stream()
+            .collect(
+                Collectors.groupingBy(PublicationAuthorAffiliationEntity::getPublicationAuthorId));
 
     aggregate.attachAuthors(
         authorEntities.stream()
@@ -1044,7 +1045,7 @@ public class PublicationRepositoryAdapter implements PublicationRepository {
           affiliationRows.add(
               PublicationAuthorAffiliationEntity.builder()
                   .id(SnowflakeIdGenerator.getId())
-                  .pubAuthorId(authorEntity.getId())
+                  .publicationAuthorId(authorEntity.getId())
                   .publicationId(publicationId)
                   .affiliationOrder(affiliation.order())
                   .affiliationString(affiliation.affiliationString())

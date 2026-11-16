@@ -145,7 +145,7 @@ public class CachingFunderLookupDecorator implements FunderLookupPort {
     List<OrganizationExternalIdEntity> fundRefIds = externalIdDao.findAllByIdType(ID_TYPE_FUNDREF);
 
     for (OrganizationExternalIdEntity entity : fundRefIds) {
-      fundRefIdCache.put(entity.getPreferredValue(), entity.getOrgId());
+      fundRefIdCache.put(entity.getPreferredValue(), entity.getOrganizationId());
     }
 
     log.info("FunderLookup FundRef 缓存预热完成，加载 {} 条映射", fundRefIdCache.size());
@@ -177,7 +177,7 @@ public class CachingFunderLookupDecorator implements FunderLookupPort {
   private Optional<Long> findByFundRefIdFromDb(String fundRefId) {
     return externalIdDao
         .findByIdTypeAndPreferredValue(ID_TYPE_FUNDREF, fundRefId)
-        .map(OrganizationExternalIdEntity::getOrgId);
+        .map(OrganizationExternalIdEntity::getOrganizationId);
   }
 
   /// 通过 ROR ID 从数据库查找。

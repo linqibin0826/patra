@@ -3,7 +3,6 @@ package dev.patra.catalog.infra.publication.persistence.entity;
 import dev.patra.tool.jpa.entity.BaseJpaEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.Index;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -29,12 +28,6 @@ import tools.jackson.databind.JsonNode;
 // "")))
 /// 3. **无匹配时创建新记录**
 ///
-/// **索引设计**：
-///
-/// - `idx_orcid`：ORCID 索引，支持按 ORCID 查询研究者
-/// - `idx_dedup_key`：去重键索引，支持研究者去重和合并
-/// - `idx_email`：邮箱索引，支持按邮箱查询研究者
-///
 /// @author linqibin
 /// @since 0.1.0
 @Data
@@ -43,13 +36,7 @@ import tools.jackson.databind.JsonNode;
 @AllArgsConstructor
 @EqualsAndHashCode(callSuper = true)
 @Entity
-@Table(
-    name = "cat_investigator",
-    indexes = {
-      @Index(name = "idx_orcid", columnList = "orcid"),
-      @Index(name = "idx_dedup_key", columnList = "dedup_key"),
-      @Index(name = "idx_email", columnList = "email")
-    })
+@Table(name = "cat_investigator")
 public class InvestigatorEntity extends BaseJpaEntity {
 
   // ========== 姓名信息 ==========

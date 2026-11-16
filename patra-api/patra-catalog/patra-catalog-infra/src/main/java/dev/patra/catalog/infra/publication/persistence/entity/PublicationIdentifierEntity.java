@@ -6,7 +6,6 @@ import dev.patra.tool.jpa.entity.ValueObjectJpaEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
-import jakarta.persistence.Index;
 import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
@@ -22,22 +21,12 @@ import lombok.Setter;
 /// - `value` 标识符值
 /// - `source` 标识符来源（PubMed/Crossref/Manual）
 ///
-/// **索引说明**：
-///
-/// - 复合索引 `idx_pub_type`: (publication_id, type) 支持查询某文献的某类型标识符
-/// - 复合索引 `idx_type_value`: (type, value) 支持按标识符反查文献
-///
 /// @author linqibin
 /// @since 0.1.0
 @Getter
 @Setter
 @Entity
-@Table(
-    name = "cat_publication_identifier",
-    indexes = {
-      @Index(name = "idx_pub_type", columnList = "publication_id, type"),
-      @Index(name = "idx_type_value", columnList = "type, identifier_value")
-    })
+@Table(name = "cat_publication_identifier")
 public class PublicationIdentifierEntity extends ValueObjectJpaEntity {
 
   /// 文献 ID（外键：cat_publication.id）

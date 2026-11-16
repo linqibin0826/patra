@@ -3,7 +3,6 @@ package dev.patra.catalog.infra.publication.persistence.entity;
 import dev.patra.tool.jpa.entity.ValueObjectJpaEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.Index;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -28,12 +27,6 @@ import tools.jackson.databind.JsonNode;
 /// - 历史类文献：涉及历史人物的研究
 /// - 纪念类文献：纪念某位学者或研究者的文章
 ///
-/// **索引设计**：
-///
-/// - `idx_publication`：出版物索引，支持查询某文献的主题人物
-/// - `idx_subject_type`：主题类型索引，支持按类型筛选
-/// - `idx_last_name`：姓氏索引，支持按姓氏查询历史人物
-///
 /// @author linqibin
 /// @since 0.1.0
 @Data
@@ -42,13 +35,7 @@ import tools.jackson.databind.JsonNode;
 @AllArgsConstructor
 @EqualsAndHashCode(callSuper = true)
 @Entity
-@Table(
-    name = "cat_publication_personal_name_subject",
-    indexes = {
-      @Index(name = "idx_publication", columnList = "publication_id"),
-      @Index(name = "idx_subject_type", columnList = "subject_type"),
-      @Index(name = "idx_last_name", columnList = "last_name")
-    })
+@Table(name = "cat_publication_personal_name_subject")
 public class PublicationPersonalNameSubjectEntity extends ValueObjectJpaEntity {
 
   // ========== 关联信息 ==========

@@ -110,8 +110,7 @@ class AuthorOrcidDaoIT {
       jdbc.update("UPDATE cat_author SET deleted_at = NOW() WHERE id = ?", authorId);
     }
     jdbc.update(
-        "INSERT INTO cat_author_orcid (id, author_id, orcid, is_primary, version, "
-            + "created_at, updated_at) VALUES (?, ?, ?, true, 0, NOW(), NOW())",
+        "INSERT INTO cat_author_orcid (id, author_id, orcid, is_primary) VALUES (?, ?, ?, true)",
         ++idSeq,
         authorId,
         orcid);

@@ -3,9 +3,7 @@ package dev.patra.catalog.infra.venue.persistence.entity;
 import dev.patra.tool.jpa.entity.ValueObjectJpaEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.Index;
 import jakarta.persistence.Table;
-import jakarta.persistence.UniqueConstraint;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -20,28 +18,12 @@ import lombok.Setter;
 /// - `identifier_value` 标识符值
 /// - `is_primary` 是否首选标识符（同类型中只能有一个 primary）
 ///
-/// **索引说明**：
-///
-/// - 唯一索引 `uk_venue_type_value`: (venue_id, identifier_type, identifier_value) 防止重复
-/// - 复合索引 `idx_type_value`: (identifier_type, identifier_value) 支持按标识符反查载体
-/// - 普通索引 `idx_venue_id`: venue_id 支持查询载体的所有标识符
-///
 /// @author linqibin
 /// @since 0.1.0
 @Getter
 @Setter
 @Entity
-@Table(
-    name = "cat_venue_identifier",
-    uniqueConstraints = {
-      @UniqueConstraint(
-          name = "uk_venue_type_value",
-          columnNames = {"venue_id", "identifier_type", "identifier_value"})
-    },
-    indexes = {
-      @Index(name = "idx_venue_id", columnList = "venue_id"),
-      @Index(name = "idx_type_value", columnList = "identifier_type, identifier_value")
-    })
+@Table(name = "cat_venue_identifier")
 public class VenueIdentifierEntity extends ValueObjectJpaEntity {
 
   /// 载体 ID（外键：cat_venue.id）

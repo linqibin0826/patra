@@ -3,9 +3,7 @@ package dev.patra.catalog.infra.publication.persistence.entity;
 import dev.patra.tool.jpa.entity.ValueObjectJpaEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.Index;
 import jakarta.persistence.Table;
-import jakarta.persistence.UniqueConstraint;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -24,13 +22,6 @@ import tools.jackson.databind.JsonNode;
 /// - 管理文献与研究者的多对多关系
 /// - 记录研究者在文献中的角色和顺序信息
 ///
-/// **索引设计**：
-///
-/// - `uk_pub_investigator`：出版物 ID + 研究者 ID 唯一索引
-/// - `idx_publication`：出版物索引，支持查询某文献的所有研究者
-/// - `idx_investigator`：研究者索引，支持查询某研究者的所有文献
-/// - `idx_role`：角色索引，支持按角色筛选（如查询 PI 的所有文献）
-///
 /// @author linqibin
 /// @since 0.1.0
 @Data
@@ -39,18 +30,7 @@ import tools.jackson.databind.JsonNode;
 @AllArgsConstructor
 @EqualsAndHashCode(callSuper = true)
 @Entity
-@Table(
-    name = "cat_publication_investigator",
-    uniqueConstraints = {
-      @UniqueConstraint(
-          name = "uk_pub_investigator",
-          columnNames = {"publication_id", "investigator_id"})
-    },
-    indexes = {
-      @Index(name = "idx_publication", columnList = "publication_id"),
-      @Index(name = "idx_investigator", columnList = "investigator_id"),
-      @Index(name = "idx_role", columnList = "role")
-    })
+@Table(name = "cat_publication_investigator")
 public class PublicationInvestigatorEntity extends ValueObjectJpaEntity {
 
   // ========== 关联信息 ==========

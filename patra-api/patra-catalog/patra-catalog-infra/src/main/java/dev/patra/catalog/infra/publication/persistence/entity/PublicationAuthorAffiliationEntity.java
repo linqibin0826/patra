@@ -7,9 +7,7 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
-import jakarta.persistence.Index;
 import jakarta.persistence.Table;
-import jakarta.persistence.UniqueConstraint;
 import java.math.BigDecimal;
 import java.time.Instant;
 import lombok.AllArgsConstructor;
@@ -29,16 +27,6 @@ import lombok.experimental.SuperBuilder;
 /// - 存储机构标识符（ROR/Ringgold/GRID）用于后续消歧
 /// - 消歧结果延迟填充，支持批量处理
 ///
-/// **索引设计**：
-///
-/// - `uk_pub_author_order`：作者-文献关联 + 机构顺序唯一索引
-/// - `idx_pub_author`：作者-文献关联索引
-/// - `idx_publication`：出版物索引
-/// - `idx_organization`：机构索引
-/// - `idx_ror_id`：ROR ID 索引（加速消歧）
-/// - `idx_ringgold_id`：Ringgold ID 索引（加速消歧）
-/// - `idx_disambiguation_status`：消歧状态索引（批量处理）
-///
 /// @author linqibin
 /// @since 0.1.0
 @Data
@@ -47,28 +35,14 @@ import lombok.experimental.SuperBuilder;
 @AllArgsConstructor
 @EqualsAndHashCode(callSuper = true)
 @Entity
-@Table(
-    name = "cat_publication_author_affiliation",
-    uniqueConstraints = {
-      @UniqueConstraint(
-          name = "uk_pub_author_order",
-          columnNames = {"pub_author_id", "affiliation_order"})
-    },
-    indexes = {
-      @Index(name = "idx_pub_author", columnList = "pub_author_id"),
-      @Index(name = "idx_publication", columnList = "publication_id"),
-      @Index(name = "idx_organization", columnList = "organization_id"),
-      @Index(name = "idx_ror_id", columnList = "ror_id"),
-      @Index(name = "idx_ringgold_id", columnList = "ringgold_id"),
-      @Index(name = "idx_disambiguation_status", columnList = "disambiguation_status")
-    })
+@Table(name = "cat_publication_author_affiliation")
 public class PublicationAuthorAffiliationEntity extends ValueObjectJpaEntity {
 
   // ========== 关联信息（冗余 publication_id 避免 JOIN） ==========
 
   /// 文献-作者关联 ID（外键：cat_publication_author.id）。
-  @Column(name = "pub_author_id", nullable = false)
-  private Long pubAuthorId;
+  @Column(name = "publication_author_id", nullable = false)
+  private Long publicationAuthorId;
 
   /// 出版物 ID（冗余，避免 JOIN）。
   @Column(name = "publication_id", nullable = false)

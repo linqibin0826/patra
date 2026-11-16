@@ -58,7 +58,7 @@ class CachingFunderLookupDecoratorTest {
     @DisplayName("FundRef ID 应该被缓存")
     void should_cache_fundref_id() {
       // given
-      when(externalIdEntity.getOrgId()).thenReturn(ORG_ID);
+      when(externalIdEntity.getOrganizationId()).thenReturn(ORG_ID);
       when(externalIdDao.findByIdTypeAndPreferredValue("FUNDREF", FUNDREF_ID))
           .thenReturn(Optional.of(externalIdEntity));
 
@@ -196,11 +196,14 @@ class CachingFunderLookupDecoratorTest {
     void should_load_all_fundref_mappings() {
       // given
       OrganizationExternalIdEntity entity1 =
-          OrganizationExternalIdEntity.builder().preferredValue(FUNDREF_ID).orgId(ORG_ID).build();
+          OrganizationExternalIdEntity.builder()
+              .preferredValue(FUNDREF_ID)
+              .organizationId(ORG_ID)
+              .build();
       OrganizationExternalIdEntity entity2 =
           OrganizationExternalIdEntity.builder()
               .preferredValue("100000001")
-              .orgId(ORG_ID_2)
+              .organizationId(ORG_ID_2)
               .build();
       when(externalIdDao.findAllByIdType("FUNDREF")).thenReturn(List.of(entity1, entity2));
 
@@ -226,7 +229,7 @@ class CachingFunderLookupDecoratorTest {
     @DisplayName("应该返回缓存统计信息")
     void should_return_cache_stats() {
       // given - 添加一些缓存数据
-      when(externalIdEntity.getOrgId()).thenReturn(ORG_ID);
+      when(externalIdEntity.getOrganizationId()).thenReturn(ORG_ID);
       when(externalIdDao.findByIdTypeAndPreferredValue("FUNDREF", FUNDREF_ID))
           .thenReturn(Optional.of(externalIdEntity));
       decorator.findByIdentifier(FUNDREF_ID);
@@ -254,7 +257,7 @@ class CachingFunderLookupDecoratorTest {
     @DisplayName("清空后应该重新查询数据库")
     void should_query_db_after_clear() {
       // given - 先缓存
-      when(externalIdEntity.getOrgId()).thenReturn(ORG_ID);
+      when(externalIdEntity.getOrganizationId()).thenReturn(ORG_ID);
       when(externalIdDao.findByIdTypeAndPreferredValue("FUNDREF", FUNDREF_ID))
           .thenReturn(Optional.of(externalIdEntity));
       decorator.findByIdentifier(FUNDREF_ID);

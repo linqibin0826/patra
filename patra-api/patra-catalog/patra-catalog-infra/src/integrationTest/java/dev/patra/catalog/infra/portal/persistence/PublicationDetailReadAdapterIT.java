@@ -411,7 +411,7 @@ class PublicationDetailReadAdapterIT {
   private void saveAffiliation(Long pubAuthorId, Long pubId, int order, String affiliationString) {
     PublicationAuthorAffiliationEntity aff = new PublicationAuthorAffiliationEntity();
     aff.setId(SnowflakeIdGenerator.getId());
-    aff.setPubAuthorId(pubAuthorId);
+    aff.setPublicationAuthorId(pubAuthorId);
     aff.setPublicationId(pubId);
     aff.setAffiliationOrder(order);
     aff.setAffiliationString(affiliationString);

@@ -146,7 +146,7 @@ public abstract class OrganizationJpaMapper {
     }
     OrganizationNameEntity entity = new OrganizationNameEntity();
     entity.setId(name.id());
-    entity.setOrgId(orgId);
+    entity.setOrganizationId(orgId);
     entity.setValue(name.value());
     entity.setLang(name.lang());
     if (name.types() != null && !name.types().isEmpty()) {
@@ -201,7 +201,7 @@ public abstract class OrganizationJpaMapper {
     }
     OrganizationExternalIdEntity entity = new OrganizationExternalIdEntity();
     entity.setId(externalId.id());
-    entity.setOrgId(orgId);
+    entity.setOrganizationId(orgId);
     entity.setIdType(externalId.type().getCode());
     entity.setAllValues(new ArrayList<>(externalId.allValues()));
     entity.setPreferredValue(externalId.preferred());
@@ -249,11 +249,11 @@ public abstract class OrganizationJpaMapper {
     }
     OrganizationRelationEntity entity = new OrganizationRelationEntity();
     entity.setId(relation.id());
-    entity.setOrgId(orgId);
+    entity.setOrganizationId(orgId);
     entity.setRelationType(relation.type().getCode());
     entity.setRelatedRorId(relation.relatedRorId().getId());
     entity.setRelatedLabel(relation.relatedLabel());
-    entity.setRelatedOrgId(relation.relatedOrgId());
+    entity.setRelatedOrganizationId(relation.relatedOrgId());
     return entity;
   }
 
@@ -270,7 +270,7 @@ public abstract class OrganizationJpaMapper {
         OrganizationRelationType.fromCode(entity.getRelationType()),
         RorId.fromId(entity.getRelatedRorId()),
         entity.getRelatedLabel(),
-        entity.getRelatedOrgId());
+        entity.getRelatedOrganizationId());
   }
 
   /// 为聚合根添加关系。
@@ -299,7 +299,7 @@ public abstract class OrganizationJpaMapper {
     }
     OrganizationLocationEntity entity = new OrganizationLocationEntity();
     entity.setId(location.id());
-    entity.setOrgId(orgId);
+    entity.setOrganizationId(orgId);
     entity.setGeonamesId(location.geonamesId());
     entity.setContinentCode(location.continentCode());
     entity.setContinentName(location.continentName());

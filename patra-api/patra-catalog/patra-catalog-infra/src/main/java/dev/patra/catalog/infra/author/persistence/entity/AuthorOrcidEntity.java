@@ -4,11 +4,9 @@ import dev.patra.tool.jpa.entity.ValueObjectJpaEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
-import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
-import jakarta.persistence.UniqueConstraint;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -25,11 +23,6 @@ import lombok.experimental.SuperBuilder;
 /// - 支持一对多关系（少数作者有多个 ORCID）
 /// - 继承 `BaseJpaEntity` 获取完整审计字段
 ///
-/// **索引设计**：
-///
-/// - `uk_orcid`：ORCID 全局唯一索引
-/// - `idx_author_id`：作者索引
-///
 /// @author linqibin
 /// @since 0.1.0
 @Data
@@ -38,14 +31,7 @@ import lombok.experimental.SuperBuilder;
 @AllArgsConstructor
 @EqualsAndHashCode(callSuper = true)
 @Entity
-@Table(
-    name = "cat_author_orcid",
-    uniqueConstraints = {
-      @UniqueConstraint(
-          name = "uk_orcid",
-          columnNames = {"orcid"})
-    },
-    indexes = {@Index(name = "idx_author_id", columnList = "author_id")})
+@Table(name = "cat_author_orcid")
 public class AuthorOrcidEntity extends ValueObjectJpaEntity {
 
   // ========== 关联信息 ==========

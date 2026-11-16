@@ -3,9 +3,7 @@ package dev.patra.catalog.infra.venue.persistence.entity;
 import dev.patra.tool.jpa.entity.ValueObjectJpaEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.Index;
 import jakarta.persistence.Table;
-import jakarta.persistence.UniqueConstraint;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -21,13 +19,6 @@ import lombok.Setter;
 /// - `cited_by_count` 该年被引用次数
 /// - `oa_works_count` 该年 OA 作品数量（可选）
 ///
-/// **索引说明**：
-///
-/// - 唯一索引 `uk_venue_year`: (venue_id, year) 保证每年只有一条记录
-/// - 普通索引 `idx_year`: year 支持按年份统计
-/// - 普通索引 `idx_works_count`: works_count 支持排序
-/// - 普通索引 `idx_cited_by_count`: cited_by_count 支持排序
-///
 /// **数据来源**：
 ///
 /// 通过数据源 enrichment 方式填充（如 OpenAlex API 按需补充），每年一条记录。
@@ -37,19 +28,7 @@ import lombok.Setter;
 @Getter
 @Setter
 @Entity
-@Table(
-    name = "cat_venue_publication_stats",
-    uniqueConstraints = {
-      @UniqueConstraint(
-          name = "uk_venue_year",
-          columnNames = {"venue_id", "year"})
-    },
-    indexes = {
-      @Index(name = "idx_venue_id", columnList = "venue_id"),
-      @Index(name = "idx_year", columnList = "year"),
-      @Index(name = "idx_works_count", columnList = "works_count"),
-      @Index(name = "idx_cited_by_count", columnList = "cited_by_count")
-    })
+@Table(name = "cat_venue_publication_stats")
 public class VenuePublicationStatsEntity extends ValueObjectJpaEntity {
 
   /// 载体 ID（外键：cat_venue.id）

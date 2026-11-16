@@ -3,9 +3,7 @@ package dev.patra.catalog.infra.venue.persistence.entity;
 import dev.patra.tool.jpa.entity.ValueObjectJpaEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.Index;
 import jakarta.persistence.Table;
-import jakarta.persistence.UniqueConstraint;
 import java.math.BigDecimal;
 import java.time.Instant;
 import lombok.Getter;
@@ -25,18 +23,7 @@ import lombok.Setter;
 @Getter
 @Setter
 @Entity
-@Table(
-    name = "cat_venue_scopus_rating",
-    uniqueConstraints = {
-      @UniqueConstraint(
-          name = "uk_venue_year",
-          columnNames = {"venue_id", "year"})
-    },
-    indexes = {
-      @Index(name = "idx_venue_id", columnList = "venue_id"),
-      @Index(name = "idx_cite_score", columnList = "cite_score"),
-      @Index(name = "idx_quartile", columnList = "quartile")
-    })
+@Table(name = "cat_venue_scopus_rating")
 public class ScopusRatingEntity extends ValueObjectJpaEntity {
 
   /// 关联期刊 ID（逻辑外键 → cat_venue.id）

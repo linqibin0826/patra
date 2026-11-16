@@ -5,9 +5,7 @@ import dev.patra.catalog.domain.organization.model.vo.OrganizationLink;
 import dev.patra.tool.jpa.entity.SoftDeletableJpaEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.Index;
 import jakarta.persistence.Table;
-import jakarta.persistence.UniqueConstraint;
 import java.util.List;
 import java.util.Set;
 import lombok.AllArgsConstructor;
@@ -46,14 +44,7 @@ import org.hibernate.type.SqlTypes;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(
-    name = "cat_organization",
-    uniqueConstraints = {@UniqueConstraint(name = "uk_ror_id", columnNames = "ror_id")},
-    indexes = {
-      @Index(name = "idx_org_display_name", columnList = "display_name"),
-      @Index(name = "idx_org_status", columnList = "status"),
-      @Index(name = "idx_org_dedup_key", columnList = "dedup_key")
-    })
+@Table(name = "cat_organization")
 public class OrganizationEntity extends SoftDeletableJpaEntity {
 
   // ========================================

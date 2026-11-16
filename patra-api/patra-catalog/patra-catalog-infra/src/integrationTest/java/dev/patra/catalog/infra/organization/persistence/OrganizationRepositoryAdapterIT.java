@@ -131,7 +131,7 @@ class OrganizationRepositoryAdapterIT {
       repository.insertAll(List.of(organization));
 
       Long orgId = organizationDao.findByRorId(RorId.fromId(rorId).getId()).orElseThrow().getId();
-      OrganizationExternalIdEntity before = externalIdDao.findAllByOrgId(orgId).getFirst();
+      OrganizationExternalIdEntity before = externalIdDao.findAllByOrganizationId(orgId).getFirst();
       Long beforeId = before.getId();
 
       // 清除 Session 缓存，避免 NonUniqueObjectException
@@ -141,7 +141,7 @@ class OrganizationRepositoryAdapterIT {
       loaded.addExternalId(ExternalId.create(ExternalIdType.GRID, "grid.updated.1"));
       repository.updateBatch(List.of(loaded));
 
-      List<OrganizationExternalIdEntity> updated = externalIdDao.findAllByOrgId(orgId);
+      List<OrganizationExternalIdEntity> updated = externalIdDao.findAllByOrganizationId(orgId);
       assertThat(updated).hasSize(1);
       assertThat(updated.getFirst().getId()).isEqualTo(beforeId);
       assertThat(updated.getFirst().getPreferredValue()).isEqualTo("grid.updated.1");

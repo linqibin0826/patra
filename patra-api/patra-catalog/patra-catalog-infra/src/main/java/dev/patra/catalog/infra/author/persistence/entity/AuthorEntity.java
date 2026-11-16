@@ -5,7 +5,6 @@ import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
-import jakarta.persistence.Index;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import java.time.Instant;
@@ -31,13 +30,6 @@ import tools.jackson.databind.JsonNode;
 /// - 同一 `normalizedKey` 下可能有多个不同的作者（姓名格式相似但实为不同人）
 /// - 关联名字变体（`AuthorNameVariantEntity`）和 ORCID（`AuthorOrcidEntity`）子表
 ///
-/// **索引设计**：
-///
-/// - `idx_normalized_key`：姓名规范化格式索引（非唯一，用于分组查询）
-/// - `idx_status`：状态索引
-/// - `idx_provenance`：数据来源索引
-/// - `idx_display_name`：展示名称前缀索引
-///
 /// @author linqibin
 /// @since 0.1.0
 @Data
@@ -46,14 +38,7 @@ import tools.jackson.databind.JsonNode;
 @AllArgsConstructor
 @EqualsAndHashCode(callSuper = true)
 @Entity
-@Table(
-    name = "cat_author",
-    indexes = {
-      @Index(name = "idx_normalized_key", columnList = "normalized_key"),
-      @Index(name = "idx_status", columnList = "status"),
-      @Index(name = "idx_provenance", columnList = "provenance_code"),
-      @Index(name = "idx_display_name", columnList = "display_name")
-    })
+@Table(name = "cat_author")
 public class AuthorEntity extends SoftDeletableJpaEntity {
 
   // ========== 核心属性 ==========

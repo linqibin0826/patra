@@ -3,7 +3,6 @@ package dev.patra.catalog.infra.publication.persistence.entity;
 import dev.patra.tool.jpa.entity.SoftDeletableJpaEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.Index;
 import jakarta.persistence.Table;
 import java.time.Instant;
 import lombok.AllArgsConstructor;
@@ -24,15 +23,6 @@ import tools.jackson.databind.JsonNode;
 /// - `language_base` 是数据库生成列，设为只读
 /// - 枚举类型（ProvenanceCode、PublicationStatus 等）存储为 String
 ///
-/// **索引设计**：
-///
-/// - `uk_pmid`：PMID 唯一索引
-/// - `uk_doi`：DOI 唯一索引
-/// - `idx_venue_id`：载体 ID 索引
-/// - `idx_venue_instance_id`：载体实例 ID 索引
-/// - `idx_publication_year`：出版年份索引
-/// - `idx_language_base`：基础语种索引（用于按语系查询）
-///
 /// @author linqibin
 /// @since 0.1.0
 @Data
@@ -41,16 +31,7 @@ import tools.jackson.databind.JsonNode;
 @AllArgsConstructor
 @EqualsAndHashCode(callSuper = true)
 @Entity
-@Table(
-    name = "cat_publication",
-    indexes = {
-      @Index(name = "uk_pmid", columnList = "pmid", unique = true),
-      @Index(name = "uk_doi", columnList = "doi", unique = true),
-      @Index(name = "idx_venue_id", columnList = "venue_id"),
-      @Index(name = "idx_venue_instance_id", columnList = "venue_instance_id"),
-      @Index(name = "idx_publication_year", columnList = "publication_year"),
-      @Index(name = "idx_language_base", columnList = "language_base")
-    })
+@Table(name = "cat_publication")
 public class PublicationEntity extends SoftDeletableJpaEntity {
 
   // ========== 数据来源追踪 ==========

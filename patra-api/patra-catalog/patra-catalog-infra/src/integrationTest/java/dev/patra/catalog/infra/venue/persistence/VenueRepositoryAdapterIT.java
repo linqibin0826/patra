@@ -555,7 +555,7 @@ class VenueRepositoryAdapterIT {
   class NlmUniquenessTests {
 
     @Test
-    @DisplayName("主 NLM 与已有期刊相同的期刊被 uk_venue_nlm_id 拒绝")
+    @DisplayName("主 NLM 与已有期刊相同的期刊被 uk_cat_venue_nlm 拒绝")
     void should_reject_second_venue_with_same_primary_nlm() {
       repository.insertAll(List.of(VenueAggregate.fromPubMed("Journal A", "0404401", "1111-1111")));
       em.flush();
@@ -567,11 +567,11 @@ class VenueRepositoryAdapterIT {
                 em.flush();
               })
           .isInstanceOfAny(PersistenceException.class, DataIntegrityViolationException.class)
-          .hasStackTraceContaining("uk_venue_nlm_id");
+          .hasStackTraceContaining("uk_cat_venue_nlm");
     }
 
     @Test
-    @DisplayName("把别的期刊已有的 NLM 加成副 NLM 被 uk_venue_identifier_nlm 拒绝")
+    @DisplayName("把别的期刊已有的 NLM 加成副 NLM 被 uk_cat_venue_identifier_nlm 拒绝")
     void should_reject_nlm_identifier_already_owned_by_another_venue() {
       repository.insertAll(
           List.of(
@@ -588,7 +588,7 @@ class VenueRepositoryAdapterIT {
                 em.flush();
               })
           .isInstanceOfAny(PersistenceException.class, DataIntegrityViolationException.class)
-          .hasStackTraceContaining("uk_venue_identifier_nlm");
+          .hasStackTraceContaining("uk_cat_venue_identifier_nlm");
     }
 
     @Test

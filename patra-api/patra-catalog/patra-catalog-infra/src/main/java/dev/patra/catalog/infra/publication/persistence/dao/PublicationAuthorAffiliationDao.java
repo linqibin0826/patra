@@ -30,23 +30,24 @@ public interface PublicationAuthorAffiliationDao
   ///
   /// @param pubAuthorId 文献-作者关联 ID
   /// @return 机构归属实体列表
-  List<PublicationAuthorAffiliationEntity> findAllByPubAuthorId(Long pubAuthorId);
+  List<PublicationAuthorAffiliationEntity> findAllByPublicationAuthorId(Long pubAuthorId);
 
   /// 按文献-作者关联 ID 列表批量查询机构归属。
   ///
   /// @param pubAuthorIds 文献-作者关联 ID 列表
   /// @return 机构归属实体列表
-  List<PublicationAuthorAffiliationEntity> findAllByPubAuthorIdIn(Collection<Long> pubAuthorIds);
+  List<PublicationAuthorAffiliationEntity> findAllByPublicationAuthorIdIn(
+      Collection<Long> pubAuthorIds);
 
   /// 按文献-作者关联 ID 删除所有机构归属。
   ///
   /// @param pubAuthorId 文献-作者关联 ID
-  void deleteAllByPubAuthorId(Long pubAuthorId);
+  void deleteAllByPublicationAuthorId(Long pubAuthorId);
 
   /// 按文献-作者关联 ID 列表批量删除机构归属。
   ///
   /// @param pubAuthorIds 文献-作者关联 ID 列表
-  void deleteAllByPubAuthorIdIn(Collection<Long> pubAuthorIds);
+  void deleteAllByPublicationAuthorIdIn(Collection<Long> pubAuthorIds);
 
   // ========== 按出版物查询（冗余字段加速） ==========
 

@@ -3,9 +3,7 @@ package dev.patra.catalog.infra.publication.persistence.entity;
 import dev.patra.tool.jpa.entity.ValueObjectJpaEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.Index;
 import jakarta.persistence.Table;
-import jakarta.persistence.UniqueConstraint;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -27,13 +25,6 @@ import lombok.experimental.SuperBuilder;
 /// MeSH 限定词（Qualifier）用于进一步细化主题词的含义。
 /// 例如："Diabetes Mellitus"[主题词] + "drug therapy"[限定词] = "糖尿病药物治疗"
 ///
-/// **索引设计**：
-///
-/// - `uk_heading_qualifier`：标引 ID + 限定词 UI 唯一索引
-/// - `idx_heading`：标引索引（查询某个标引的所有限定词）
-/// - `idx_qualifier_ui`：限定词 UI 索引（查询某个限定词的使用情况）
-/// - `idx_major_topic`：主要主题索引
-///
 /// @author linqibin
 /// @since 0.1.0
 @Data
@@ -42,18 +33,7 @@ import lombok.experimental.SuperBuilder;
 @AllArgsConstructor
 @EqualsAndHashCode(callSuper = true)
 @Entity
-@Table(
-    name = "cat_publication_mesh_qualifier",
-    uniqueConstraints = {
-      @UniqueConstraint(
-          name = "uk_heading_qualifier",
-          columnNames = {"publication_mesh_heading_id", "qualifier_ui"})
-    },
-    indexes = {
-      @Index(name = "idx_heading", columnList = "publication_mesh_heading_id"),
-      @Index(name = "idx_qualifier_ui", columnList = "qualifier_ui"),
-      @Index(name = "idx_major_topic", columnList = "is_major_topic")
-    })
+@Table(name = "cat_publication_mesh_qualifier")
 public class PublicationMeshQualifierEntity extends ValueObjectJpaEntity {
 
   // ========== 关联信息 ==========

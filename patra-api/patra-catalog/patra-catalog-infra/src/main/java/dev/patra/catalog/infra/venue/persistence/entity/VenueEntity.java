@@ -7,9 +7,7 @@ import dev.patra.catalog.domain.venue.model.vo.Society;
 import dev.patra.tool.jpa.entity.SoftDeletableJpaEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.Index;
 import jakarta.persistence.Table;
-import jakarta.persistence.UniqueConstraint;
 import java.time.Instant;
 import java.util.List;
 import lombok.Getter;
@@ -50,17 +48,7 @@ import org.hibernate.type.SqlTypes;
 @Getter
 @Setter
 @Entity
-@Table(
-    name = "cat_venue",
-    uniqueConstraints = @UniqueConstraint(name = "uk_venue_nlm_id", columnNames = "nlm_id"),
-    indexes = {
-      @Index(name = "idx_venue_type", columnList = "venue_type"),
-      @Index(name = "idx_title", columnList = "title"),
-      @Index(name = "idx_provenance", columnList = "provenance_code"),
-      @Index(name = "idx_issn_l", columnList = "issn_l"),
-      @Index(name = "idx_openalex_id", columnList = "openalex_id"),
-      @Index(name = "idx_cited_by_count", columnList = "cited_by_count")
-    })
+@Table(name = "cat_venue")
 public class VenueEntity extends SoftDeletableJpaEntity {
 
   // ========================================

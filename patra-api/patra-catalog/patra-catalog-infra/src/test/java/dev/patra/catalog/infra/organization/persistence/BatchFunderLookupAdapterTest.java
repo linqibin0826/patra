@@ -63,7 +63,10 @@ class BatchFunderLookupAdapterTest {
     void should_delegate_to_caching_decorator() {
       // given - 预热缓存时加载的数据
       OrganizationExternalIdEntity entity =
-          OrganizationExternalIdEntity.builder().preferredValue(FUNDREF_ID).orgId(ORG_ID).build();
+          OrganizationExternalIdEntity.builder()
+              .preferredValue(FUNDREF_ID)
+              .organizationId(ORG_ID)
+              .build();
       when(externalIdDao.findAllByIdType("FUNDREF")).thenReturn(List.of(entity));
 
       // 重新创建 adapter 以加载新的缓存数据

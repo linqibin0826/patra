@@ -3,7 +3,6 @@ package dev.patra.catalog.infra.mesh.persistence.entity;
 import dev.patra.tool.jpa.entity.BaseJpaEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.Index;
 import jakarta.persistence.Table;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -44,12 +43,7 @@ import org.hibernate.type.SqlTypes;
 @AllArgsConstructor
 @EqualsAndHashCode(callSuper = true)
 @Entity
-@Table(
-    name = "cat_mesh_qualifier",
-    indexes = {
-      @Index(name = "uk_qualifier_ui", columnList = "ui", unique = true),
-      @Index(name = "idx_name", columnList = "name")
-    })
+@Table(name = "cat_mesh_qualifier")
 public class MeshQualifierEntity extends BaseJpaEntity {
 
   /// 限定词唯一标识符（格式：Q000001-Q999999）。

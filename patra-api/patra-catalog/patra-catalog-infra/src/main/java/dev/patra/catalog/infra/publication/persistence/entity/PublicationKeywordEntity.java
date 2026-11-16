@@ -3,7 +3,6 @@ package dev.patra.catalog.infra.publication.persistence.entity;
 import dev.patra.tool.jpa.entity.ValueObjectJpaEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.Index;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -28,12 +27,6 @@ import lombok.experimental.SuperBuilder;
 /// - 检索：可直接通过 `cat_keyword` 表搜索
 /// - 统计：支持热门关键词排行
 ///
-/// **索引设计**：
-///
-/// - `idx_pub_keyword`：文献+关键词复合索引
-/// - `idx_keyword_pub`：关键词+文献复合索引（反向查询）
-/// - `idx_major`：关键词+主/副标记复合索引
-///
 /// @author linqibin
 /// @since 0.1.0
 @Data
@@ -42,13 +35,7 @@ import lombok.experimental.SuperBuilder;
 @AllArgsConstructor
 @EqualsAndHashCode(callSuper = true)
 @Entity
-@Table(
-    name = "cat_publication_keyword",
-    indexes = {
-      @Index(name = "idx_pub_keyword", columnList = "publication_id, keyword_id"),
-      @Index(name = "idx_keyword_pub", columnList = "keyword_id, publication_id"),
-      @Index(name = "idx_major", columnList = "keyword_id, is_major")
-    })
+@Table(name = "cat_publication_keyword")
 public class PublicationKeywordEntity extends ValueObjectJpaEntity {
 
   // ========== 关联信息 ==========

@@ -77,7 +77,7 @@ class DefaultFunderLookupAdapterTest {
     @DisplayName("通过 FundRef ID 应该返回机构 ID")
     void should_return_org_id_when_fundref_id_matches() {
       // given
-      when(externalIdEntity.getOrgId()).thenReturn(ORG_ID);
+      when(externalIdEntity.getOrganizationId()).thenReturn(ORG_ID);
       when(externalIdDao.findByIdTypeAndPreferredValue("FUNDREF", FUNDREF_ID))
           .thenReturn(Optional.of(externalIdEntity));
 
@@ -127,7 +127,7 @@ class DefaultFunderLookupAdapterTest {
     @DisplayName("应该对标识符进行 trim 处理")
     void should_trim_identifier() {
       // given
-      when(externalIdEntity.getOrgId()).thenReturn(ORG_ID);
+      when(externalIdEntity.getOrganizationId()).thenReturn(ORG_ID);
       when(externalIdDao.findByIdTypeAndPreferredValue("FUNDREF", FUNDREF_ID))
           .thenReturn(Optional.of(externalIdEntity));
 
@@ -220,7 +220,7 @@ class DefaultFunderLookupAdapterTest {
     @DisplayName("标识符匹配时应该优先返回")
     void should_return_by_identifier_first() {
       // given
-      when(externalIdEntity.getOrgId()).thenReturn(ORG_ID);
+      when(externalIdEntity.getOrganizationId()).thenReturn(ORG_ID);
       when(externalIdDao.findByIdTypeAndPreferredValue("FUNDREF", FUNDREF_ID))
           .thenReturn(Optional.of(externalIdEntity));
 

@@ -1,0 +1,192 @@
+# catalog 库里的每一张表。档位：main 主表（带全套审计列）/ other 其他表。
+# 新建表必须在这里登记，否则结构检查（CatalogSchemaStandardIT）失败。规则见 .claude/rules/tech/database.md。
+prefix: cat
+tables:
+  # publication
+  cat_publication:
+    tier: main
+    note: 文献出版物
+  cat_publication_identifier:
+    tier: other
+    note: 文献标识符；建表时带全套审计列但实体从没写过，归其他表
+  cat_publication_abstract:
+    tier: other
+    note: 文献摘要；建表时带全套审计列但实体从没写过，归其他表
+  cat_publication_date:
+    tier: other
+    note: 文献日期；建表时带全套审计列但实体从没写过，归其他表
+  cat_publication_metadata:
+    tier: other
+    note: 文献元数据；建表时带全套审计列但实体从没写过，归其他表
+  cat_publication_alternative_abstract:
+    tier: other
+    note: 文献翻译摘要；建表时带全套审计列但实体从没写过，归其他表
+  cat_publication_oa_location:
+    tier: other
+    note: 文献开放获取位置；建表时带全套审计列但实体从没写过，归其他表
+  cat_publication_reference:
+    tier: other
+    note: 文献的参考文献列表；目前没有代码读写；建表时带全套审计列但实体从没写过，归其他表
+  cat_publication_type:
+    tier: other
+    note: 文献出版类型关联
+  cat_publication_external_reference:
+    tier: other
+    note: 文献在外部数据库里的条目（基因库、试验注册等）；目前没有代码读写；建表时带全套审计列但实体从没写过，归其他表
+  cat_publication_related_item:
+    tier: other
+    note: 与本文献有关联的其他文献（勘误、撤稿声明、评论等）；目前没有代码读写；建表时带全套审计列但实体从没写过，归其他表
+  cat_publication_supplemental_object:
+    tier: other
+    note: 文献的补充材料（数据集、附件等）；目前没有代码读写；建表时带全套审计列但实体从没写过，归其他表
+  cat_publication_history:
+    tier: other
+    note: 文献的出版历史事件（投稿、接收、上线等）；目前没有代码读写；建表时带全套审计列但实体从没写过，归其他表
+  cat_publication_author:
+    tier: other
+    note: 文献-作者关联
+  cat_publication_author_affiliation:
+    tier: other
+    note: 作者-机构归属
+  cat_investigator:
+    tier: main
+    note: 研究者
+  cat_publication_investigator:
+    tier: other
+    note: 文献-研究者关联；建表时带全套审计列但实体从没写过，归其他表
+  cat_publication_personal_name_subject:
+    tier: other
+    note: 人物主题；建表时带全套审计列但实体从没写过，归其他表
+  cat_publication_mesh_heading:
+    tier: other
+    note: 文献-MeSH 主题标引关联
+  cat_publication_mesh_qualifier:
+    tier: other
+    note: 文献-MeSH 限定词关联
+  cat_publication_suppl_mesh:
+    tier: other
+    note: 文献-补充 MeSH 概念关联
+  cat_keyword:
+    tier: main
+    note: 关键词
+  cat_publication_keyword:
+    tier: other
+    note: 文献关键词关联
+  cat_publication_funding:
+    tier: other
+    note: 文献资助信息关联
+  cat_pubmed_file:
+    tier: other
+    note: PubMed 文件（baseline 与 updatefiles）处理进度；建表时带全套审计列但实体从没写过，归其他表
+  cat_publication_source:
+    tier: other
+    note: 每篇文献最后一次写入（或软删）它的 PubMed 文件位置，以及该文件里这篇的原文；后出现的文件取代先出现的（NLM 规则）
+  cat_venue_instance:
+    tier: main
+    note: 载体实例
+  # venue
+  cat_venue:
+    tier: main
+    note: 出版载体
+  cat_venue_identifier:
+    tier: other
+    note: 载体标识符
+  cat_venue_publication_stats:
+    tier: other
+    note: 载体年度发文统计
+  cat_venue_mesh:
+    tier: other
+    note: 载体 MeSH 主题词
+  cat_venue_relation:
+    tier: other
+    note: 载体关联关系
+  cat_venue_indexing_history:
+    tier: other
+    note: 载体索引历史
+  cat_venue_jcr_rating:
+    tier: other
+    note: JCR 期刊评级
+  cat_venue_cas_rating:
+    tier: other
+    note: CAS 中科院分区
+  cat_venue_scopus_rating:
+    tier: other
+    note: Scopus 期刊指标
+  cat_venue_cas_warning:
+    tier: other
+    note: CAS 中科院期刊预警名单
+  # author
+  cat_author:
+    tier: main
+    note: 作者
+  cat_author_name_variant:
+    tier: other
+    note: 作者名字变体
+  cat_author_orcid:
+    tier: other
+    note: 作者 ORCID
+  # organization
+  cat_organization:
+    tier: main
+    note: 机构
+  cat_organization_name:
+    tier: other
+    note: 机构名称
+  cat_organization_external_id:
+    tier: other
+    note: 机构外部标识符
+  cat_organization_relation:
+    tier: other
+    note: 机构关系
+  cat_organization_location:
+    tier: other
+    note: 机构地理位置
+  cat_organization_alias:
+    tier: other
+    note: Patra 自维护的机构别名，补 ROR 缺的中文名与简称，只参与建议匹配与中文名取值
+  # mesh
+  cat_mesh_descriptor:
+    tier: main
+    note: MeSH 主题词
+  cat_mesh_qualifier:
+    tier: main
+    note: MeSH 限定词
+  cat_mesh_tree_number:
+    tier: other
+    note: MeSH 树形编号
+  cat_mesh_entry_term:
+    tier: other
+    note: MeSH 入口术语
+  cat_mesh_concept:
+    tier: other
+    note: MeSH 概念
+  cat_mesh_concept_relation:
+    tier: other
+    note: MeSH 概念关系
+  cat_mesh_entry_combination:
+    tier: other
+    note: MeSH 组合条目
+  cat_mesh_scr:
+    tier: main
+    note: MeSH SCR（补充概念记录）
+  cat_mesh_scr_heading_mapped_to:
+    tier: other
+    note: SCR 映射关系
+  cat_mesh_scr_source:
+    tier: other
+    note: SCR 来源
+  cat_mesh_scr_indexing_info:
+    tier: other
+    note: SCR 索引信息
+  cat_mesh_scr_pharmacological_action:
+    tier: other
+    note: SCR 药理作用
+  # fulltext
+  cat_publication_fulltext:
+    tier: main
+    note: 全文记录；实体原先继承值对象基类，但有自己的抓取解析状态、会被反复更新，升为主表
+  cat_publication_fulltext_body:
+    tier: other
+    note: 解析后的正文，一篇文献一行；只按文献整篇读，不在 JSON 里查询
+framework:
+  - flyway_schema_history

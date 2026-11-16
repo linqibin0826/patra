@@ -19,23 +19,23 @@ public interface OrganizationExternalIdDao
   ///
   /// @param orgId 机构 ID
   /// @return 外部标识符实体列表
-  List<OrganizationExternalIdEntity> findAllByOrgId(Long orgId);
+  List<OrganizationExternalIdEntity> findAllByOrganizationId(Long orgId);
 
   /// 按机构 ID 列表批量查询外部标识符。
   ///
   /// @param orgIds 机构 ID 列表
   /// @return 外部标识符实体列表
-  List<OrganizationExternalIdEntity> findAllByOrgIdIn(Collection<Long> orgIds);
+  List<OrganizationExternalIdEntity> findAllByOrganizationIdIn(Collection<Long> orgIds);
 
   /// 按机构 ID 删除所有外部标识符。
   ///
   /// @param orgId 机构 ID
-  void deleteAllByOrgId(Long orgId);
+  void deleteAllByOrganizationId(Long orgId);
 
   /// 按机构 ID 列表批量删除外部标识符。
   ///
   /// @param orgIds 机构 ID 列表
-  void deleteAllByOrgIdIn(Collection<Long> orgIds);
+  void deleteAllByOrganizationIdIn(Collection<Long> orgIds);
 
   /// 按标识符类型和首选值查询。
   ///

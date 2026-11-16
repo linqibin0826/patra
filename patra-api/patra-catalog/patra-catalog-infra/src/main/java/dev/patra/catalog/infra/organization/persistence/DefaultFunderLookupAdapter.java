@@ -86,7 +86,7 @@ public class DefaultFunderLookupAdapter implements FunderLookupPort {
   private Optional<Long> findByFundRefId(String fundRefId) {
     return externalIdDao
         .findByIdTypeAndPreferredValue(ID_TYPE_FUNDREF, fundRefId)
-        .map(OrganizationExternalIdEntity::getOrgId);
+        .map(OrganizationExternalIdEntity::getOrganizationId);
   }
 
   /// 通过 ROR ID 查找机构。

@@ -17,21 +17,21 @@ public interface OrganizationLocationDao extends JpaRepository<OrganizationLocat
   ///
   /// @param orgId 机构 ID
   /// @return 地理位置实体列表
-  List<OrganizationLocationEntity> findAllByOrgId(Long orgId);
+  List<OrganizationLocationEntity> findAllByOrganizationId(Long orgId);
 
   /// 按机构 ID 列表批量查询地理位置。
   ///
   /// @param orgIds 机构 ID 列表
   /// @return 地理位置实体列表
-  List<OrganizationLocationEntity> findAllByOrgIdIn(Collection<Long> orgIds);
+  List<OrganizationLocationEntity> findAllByOrganizationIdIn(Collection<Long> orgIds);
 
   /// 按机构 ID 删除所有地理位置。
   ///
   /// @param orgId 机构 ID
-  void deleteAllByOrgId(Long orgId);
+  void deleteAllByOrganizationId(Long orgId);
 
   /// 按机构 ID 列表批量删除地理位置。
   ///
   /// @param orgIds 机构 ID 列表
-  void deleteAllByOrgIdIn(Collection<Long> orgIds);
+  void deleteAllByOrganizationIdIn(Collection<Long> orgIds);
 }

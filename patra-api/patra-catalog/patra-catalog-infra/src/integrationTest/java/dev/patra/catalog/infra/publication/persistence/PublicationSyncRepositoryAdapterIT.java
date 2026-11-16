@@ -113,8 +113,9 @@ class PublicationSyncRepositoryAdapterIT {
         id + 3,
         id);
     jdbc.update(
-        "INSERT INTO cat_publication_fulltext_body (publication_id, body, parser_version)"
-            + " VALUES (?, '{}'::jsonb, 1)",
+        "INSERT INTO cat_publication_fulltext_body (id, publication_id, body, parser_version)"
+            + " VALUES (?, ?, '{}'::jsonb, 1)",
+        id + 4,
         id);
     flushAndClear();
     int publicationRows = count("SELECT count(*) FROM cat_publication");
@@ -297,7 +298,7 @@ class PublicationSyncRepositoryAdapterIT {
   }
 
   @Test
-  @DisplayName("覆盖时撞 uk_doi 抛 DataIntegrityViolationException（作业的跳过策略认得）")
+  @DisplayName("覆盖时撞 uk_cat_publication_doi 抛 DataIntegrityViolationException（作业的跳过策略认得）")
   void should_translate_unique_violation_to_data_integrity_exception() {
     PublicationAggregate a = aggregate("91000008", "10.9100/dup", "A");
     PublicationAggregate b = aggregate("91000009", "10.9100/other", "B");

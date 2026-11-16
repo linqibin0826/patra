@@ -3,9 +3,7 @@ package dev.patra.catalog.infra.mesh.persistence.entity;
 import dev.patra.tool.jpa.entity.BaseJpaEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.Index;
 import jakarta.persistence.Table;
-import jakarta.persistence.UniqueConstraint;
 import java.time.LocalDate;
 import lombok.Getter;
 import lombok.Setter;
@@ -26,28 +24,12 @@ import org.hibernate.type.SqlTypes;
 /// - `active_status` 是否有效（false=已废弃，true=有效）
 /// - `mesh_version` MeSH 版本年份（如 "2025"）
 ///
-/// **索引说明**：
-///
-/// - 唯一索引 `uk_scr_ui`: ui 支持高频精确查询
-/// - 普通索引 `idx_name`: name 前缀索引，支持按名称查询
-/// - 普通索引 `idx_scr_class`: 支持按 SCR 类别筛选
-/// - 复合索引 `idx_active_version`: 筛选某版本的有效 SCR
-/// - 复合索引 `idx_revised_version`: 支持增量更新查询
-///
 /// @author linqibin
 /// @since 0.1.0
 @Getter
 @Setter
 @Entity
-@Table(
-    name = "cat_mesh_scr",
-    uniqueConstraints = {@UniqueConstraint(name = "uk_scr_ui", columnNames = "ui")},
-    indexes = {
-      @Index(name = "idx_name", columnList = "name(100)"),
-      @Index(name = "idx_scr_class", columnList = "scr_class"),
-      @Index(name = "idx_active_version", columnList = "active_status, mesh_version"),
-      @Index(name = "idx_revised_version", columnList = "date_revised, mesh_version")
-    })
+@Table(name = "cat_mesh_scr")
 public class MeshScrEntity extends BaseJpaEntity {
 
   /// SCR 唯一标识符（格式：C000001-C999999）
