@@ -38,11 +38,11 @@ public class PublicationFundingEntity extends ValueObjectJpaEntity {
 
   // ========== 关联关系 ==========
 
-  /// 出版物 ID（外键：cat_publication.id）。
+  /// 出版物 ID（引用 cat_publication.id，不建外键）。
   @Column(name = "publication_id", nullable = false)
   private Long publicationId;
 
-  /// 资助机构 ID（外键：cat_organization.id，匹配后填充）。
+  /// 资助机构 ID（引用 cat_organization.id，不建外键；匹配后填充）。
   ///
   /// 可能为 null，表示尚未匹配到机构。
   @Column(name = "organization_id")

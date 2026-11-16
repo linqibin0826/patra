@@ -40,11 +40,11 @@ public class PublicationKeywordEntity extends ValueObjectJpaEntity {
 
   // ========== 关联信息 ==========
 
-  /// 出版物 ID（外键：cat_publication.id）。
+  /// 出版物 ID（引用 cat_publication.id，不建外键）。
   @Column(name = "publication_id", nullable = false)
   private Long publicationId;
 
-  /// 关键词 ID（外键：cat_keyword.id）。
+  /// 关键词 ID（引用 cat_keyword.id，不建外键）。
   @Column(name = "keyword_id", nullable = false)
   private Long keywordId;
 

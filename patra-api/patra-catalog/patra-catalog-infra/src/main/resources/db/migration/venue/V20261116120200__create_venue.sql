@@ -82,7 +82,7 @@ CREATE TRIGGER trg_cat_venue_identifier_audit_times
     FOR EACH ROW EXECUTE FUNCTION set_audit_times();
 
 COMMENT ON TABLE cat_venue_identifier IS '载体标识符';
-COMMENT ON COLUMN cat_venue_identifier.venue_id IS '载体 ID（外键：cat_venue.id）';
+COMMENT ON COLUMN cat_venue_identifier.venue_id IS '载体 ID（引用 cat_venue.id，不建外键）';
 COMMENT ON COLUMN cat_venue_identifier.identifier_type IS '标识符类型：OPENALEX/ISSN/ISSN_L/ISBN/NLM/MAG/FATCAT/WIKIDATA/CODEN';
 COMMENT ON COLUMN cat_venue_identifier.identifier_value IS '标识符值';
 COMMENT ON COLUMN cat_venue_identifier.is_primary IS '是否首选标识符（同类型中，0=否，1=是）';
@@ -110,7 +110,7 @@ CREATE TRIGGER trg_cat_venue_publication_stats_audit_times
     FOR EACH ROW EXECUTE FUNCTION set_audit_times();
 
 COMMENT ON TABLE cat_venue_publication_stats IS '载体年度发文统计';
-COMMENT ON COLUMN cat_venue_publication_stats.venue_id IS '载体 ID（外键：cat_venue.id）';
+COMMENT ON COLUMN cat_venue_publication_stats.venue_id IS '载体 ID（引用 cat_venue.id，不建外键）';
 COMMENT ON COLUMN cat_venue_publication_stats.year IS '统计年份（1900-2100）';
 COMMENT ON COLUMN cat_venue_publication_stats.works_count IS '该年发表作品数量';
 COMMENT ON COLUMN cat_venue_publication_stats.cited_by_count IS '该年被引用次数';
@@ -140,7 +140,7 @@ CREATE TRIGGER trg_cat_venue_mesh_audit_times
     FOR EACH ROW EXECUTE FUNCTION set_audit_times();
 
 COMMENT ON TABLE cat_venue_mesh IS '载体 MeSH 主题词';
-COMMENT ON COLUMN cat_venue_mesh.venue_id IS '载体 ID（外键：cat_venue.id）';
+COMMENT ON COLUMN cat_venue_mesh.venue_id IS '载体 ID（引用 cat_venue.id，不建外键）';
 COMMENT ON COLUMN cat_venue_mesh.descriptor_name IS 'MeSH 描述符名称';
 COMMENT ON COLUMN cat_venue_mesh.descriptor_ui IS 'MeSH 描述符唯一标识符（格式：D000001）';
 COMMENT ON COLUMN cat_venue_mesh.is_major_topic IS '是否主要主题（0=否，1=是）';
@@ -172,7 +172,7 @@ CREATE TRIGGER trg_cat_venue_relation_audit_times
     FOR EACH ROW EXECUTE FUNCTION set_audit_times();
 
 COMMENT ON TABLE cat_venue_relation IS '载体关联关系';
-COMMENT ON COLUMN cat_venue_relation.venue_id IS '载体 ID（外键：cat_venue.id）';
+COMMENT ON COLUMN cat_venue_relation.venue_id IS '载体 ID（引用 cat_venue.id，不建外键）';
 COMMENT ON COLUMN cat_venue_relation.related_venue_id IS '关联期刊 ID（如果已在系统中）';
 COMMENT ON COLUMN cat_venue_relation.related_nlm_id IS '关联期刊 NLM ID';
 COMMENT ON COLUMN cat_venue_relation.related_title IS '关联期刊标题';
@@ -209,7 +209,7 @@ CREATE TRIGGER trg_cat_venue_indexing_history_audit_times
     FOR EACH ROW EXECUTE FUNCTION set_audit_times();
 
 COMMENT ON TABLE cat_venue_indexing_history IS '载体索引历史';
-COMMENT ON COLUMN cat_venue_indexing_history.venue_id IS '载体 ID（外键：cat_venue.id）';
+COMMENT ON COLUMN cat_venue_indexing_history.venue_id IS '载体 ID（引用 cat_venue.id，不建外键）';
 COMMENT ON COLUMN cat_venue_indexing_history.indexing_source IS '索引来源：MEDLINE/PMC 等';
 COMMENT ON COLUMN cat_venue_indexing_history.currently_indexed IS '当前是否被索引（0=否，1=是）';
 COMMENT ON COLUMN cat_venue_indexing_history.indexing_treatment IS '索引处理方式：FULL/SELECTIVE';

@@ -95,7 +95,7 @@ public class PublicationAggregate extends AggregateRoot<PublicationId> {
   /// 关联的出版载体 ID（冗余优化 - 避免二级 JOIN）
   private final VenueId venueId;
 
-  /// 关联的载体实例 ID（外键：cat_venue_instance.id）
+  /// 关联的载体实例 ID（引用 cat_venue_instance.id，不建外键）
   private final VenueInstanceId venueInstanceId;
 
   // ========== 标题和语言 ==========

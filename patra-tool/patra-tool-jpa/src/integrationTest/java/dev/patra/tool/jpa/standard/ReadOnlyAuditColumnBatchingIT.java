@@ -21,7 +21,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.transaction.support.TransactionTemplate;
 
-/// 库表规范推断 2：审计时间做只读映射时，Hibernate 的批量写入仍然生效。
+/// 验证库表规范依赖的一个前提（设计文档推断 2）：审计时间做只读映射时，Hibernate 的批量写入仍然生效。
 ///
 /// 判断依据是 Hibernate 统计里「准备过几条语句」：同一种语句走批量时只准备一次再反复执行，
 /// 逐条执行时每行准备一次。对照组用 `@Generated`，读源码看到它会让批量退化成逐条执行。

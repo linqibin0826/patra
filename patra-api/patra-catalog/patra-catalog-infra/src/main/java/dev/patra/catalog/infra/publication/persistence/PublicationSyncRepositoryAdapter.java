@@ -92,6 +92,8 @@ public class PublicationSyncRepositoryAdapter implements PublicationSyncReposito
 
   /// 按 PMID 查同步目标：文献行（含已删除）与来源位置，两边任一有就返回（墓碑只有来源行）。
   ///
+  /// 墓碑：只被删除列表记过、没写过原文的来源行（只有来源位置），用来挡住比删除更早的旧文件把这篇再导回来。
+  ///
   /// @param pmids PMID
   /// @return PMID → 同步目标
   @Override

@@ -32,11 +32,11 @@ import org.hibernate.type.SqlTypes;
 @Table(name = "cat_publication_alternative_abstract")
 public class PublicationAlternativeAbstractEntity extends ValueObjectJpaEntity {
 
-  /// 文献 ID（外键：cat_publication.id）
+  /// 文献 ID（引用 cat_publication.id，不建外键）
   @Column(name = "publication_id", nullable = false)
   private Long publicationId;
 
-  /// 主摘要 ID（外键：cat_publication_abstract.id）
+  /// 主摘要 ID（引用 cat_publication_abstract.id，不建外键）
   @Column(name = "abstract_id")
   private Long abstractId;
 

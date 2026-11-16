@@ -38,11 +38,11 @@ public class PublicationAuthorEntity extends ValueObjectJpaEntity {
 
   // ========== 关联信息 ==========
 
-  /// 出版物 ID（外键：cat_publication.id）。
+  /// 出版物 ID（引用 cat_publication.id，不建外键）。
   @Column(name = "publication_id", nullable = false)
   private Long publicationId;
 
-  /// 作者 ID（外键：cat_author.id；软关联位——仅 ORCID 命中已消歧作者时填，其余为 null）。
+  /// 作者 ID（引用 cat_author.id，不建外键；软关联位——仅 ORCID 命中已消歧作者时填，其余为 null）。
   @Column(name = "author_id")
   private Long authorId;
 

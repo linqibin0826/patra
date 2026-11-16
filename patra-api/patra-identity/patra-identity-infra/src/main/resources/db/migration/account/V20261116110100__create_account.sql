@@ -329,9 +329,11 @@ CREATE TRIGGER trg_idn_email_token_audit_times
     FOR EACH ROW EXECUTE FUNCTION set_audit_times();
 
 -- ============================================================
--- Patra Identity：外部身份（第三方登录，PAP-182）
+-- 外部身份：第三方登录（Google / GitHub / ORCID）绑到账号上的对方账号（PAP-182）
+-- 只存认出对方账号的 (provider, subject)、展示名与绑定、最近登录时间；令牌、资料快照、对方给的邮箱都不存——用不上的数据不收，
+-- 要看对方资料就重新授权。永不按对方给的邮箱合并账号：否则有人能用自己的第三方账号挂到别人的邮箱上；
+-- 绑到已有账号前必须证明能收这个邮箱的信（v0.19 决策 C、D）。
 -- 设计: docs/patra/specs/2026-11-04-identity-social-login-design.md 第 9 节
--- 不存令牌、资料快照和对方给的邮箱（v0.19 决策 C）；永不按邮箱合并账号（决策 D）
 -- ============================================================
 CREATE TABLE idn_user_external_identity
 (
@@ -368,7 +370,7 @@ CREATE TRIGGER trg_idn_user_external_identity_audit_times
     FOR EACH ROW EXECUTE FUNCTION set_audit_times();
 
 -- ============================================================
--- Patra Identity — V2：@ 联想的用户名与昵称前缀索引（PAP-118）
+-- @ 联想用的用户名与昵称前缀索引（PAP-118）
 -- 设计: docs/patra/specs/2026-10-27-identity-mention-support-design.md 第 4.5 节
 -- ============================================================
 

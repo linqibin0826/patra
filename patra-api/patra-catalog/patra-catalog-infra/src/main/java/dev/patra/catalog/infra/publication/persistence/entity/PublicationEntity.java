@@ -60,7 +60,7 @@ public class PublicationEntity extends BaseJpaEntity {
   @Column(name = "venue_id")
   private Long venueId;
 
-  /// 载体实例 ID（外键：cat_venue_instance.id）
+  /// 载体实例 ID（引用 cat_venue_instance.id，不建外键）
   @Column(name = "venue_instance_id", nullable = false)
   private Long venueInstanceId;
 

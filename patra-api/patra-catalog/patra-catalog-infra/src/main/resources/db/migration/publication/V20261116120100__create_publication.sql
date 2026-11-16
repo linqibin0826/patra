@@ -64,7 +64,7 @@ COMMENT ON COLUMN cat_publication.provenance_code IS '数据来源代码（PUBME
 COMMENT ON COLUMN cat_publication.pmid IS 'PubMed ID（1-15位数字，可为 null）';
 COMMENT ON COLUMN cat_publication.doi IS 'Digital Object Identifier（最长200字符，可为 null）';
 COMMENT ON COLUMN cat_publication.venue_id IS '载体 ID（冗余优化：避免二级 JOIN）';
-COMMENT ON COLUMN cat_publication.venue_instance_id IS '载体实例 ID（外键：cat_venue_instance.id）';
+COMMENT ON COLUMN cat_publication.venue_instance_id IS '载体实例 ID（引用 cat_venue_instance.id，不建外键）';
 COMMENT ON COLUMN cat_publication.title IS '文献标题（英文或原语言）';
 COMMENT ON COLUMN cat_publication.original_title IS '原始语言标题（非英文时填充）';
 COMMENT ON COLUMN cat_publication.language_raw IS '原始语言值（外部采集）';
@@ -109,7 +109,7 @@ CREATE TRIGGER trg_cat_publication_identifier_audit_times
     FOR EACH ROW EXECUTE FUNCTION set_audit_times();
 
 COMMENT ON TABLE cat_publication_identifier IS '文献标识符';
-COMMENT ON COLUMN cat_publication_identifier.publication_id IS '文献 ID（外键：cat_publication.id）';
+COMMENT ON COLUMN cat_publication_identifier.publication_id IS '文献 ID（引用 cat_publication.id，不建外键）';
 COMMENT ON COLUMN cat_publication_identifier.type IS '标识符类型：PMID/DOI/PMC/PII/ARXIV 等';
 COMMENT ON COLUMN cat_publication_identifier.identifier_value IS '标识符值';
 COMMENT ON COLUMN cat_publication_identifier.source IS '标识符来源（PubMed/Crossref/Manual）';
@@ -134,7 +134,7 @@ CREATE TRIGGER trg_cat_publication_abstract_audit_times
     FOR EACH ROW EXECUTE FUNCTION set_audit_times();
 
 COMMENT ON TABLE cat_publication_abstract IS '文献摘要';
-COMMENT ON COLUMN cat_publication_abstract.publication_id IS '文献 ID（外键：cat_publication.id，一对一关系）';
+COMMENT ON COLUMN cat_publication_abstract.publication_id IS '文献 ID（引用 cat_publication.id，不建外键；一对一关系）';
 COMMENT ON COLUMN cat_publication_abstract.plain_text IS '纯文本摘要';
 COMMENT ON COLUMN cat_publication_abstract.structured_sections IS '结构化摘要段落（有序数组 `[{"label","text"}]`；纯文本摘要为 null）';
 COMMENT ON COLUMN cat_publication_abstract.copyright IS '版权信息';
@@ -169,8 +169,8 @@ CREATE TRIGGER trg_cat_publication_date_audit_times
     BEFORE INSERT OR UPDATE ON cat_publication_date
     FOR EACH ROW EXECUTE FUNCTION set_audit_times();
 
-COMMENT ON TABLE cat_publication_date IS '文献日期';
-COMMENT ON COLUMN cat_publication_date.publication_id IS '文献 ID（外键：cat_publication.id）';
+COMMENT ON TABLE cat_publication_date IS '文献的各类日期（收稿、接收、发表、电子版等），一篇多行，年必填、月日可空';
+COMMENT ON COLUMN cat_publication_date.publication_id IS '文献 ID（引用 cat_publication.id，不建外键）';
 COMMENT ON COLUMN cat_publication_date.date_type IS '日期类型：Received/Accepted/Published/Revised/EPub/PPub 等';
 COMMENT ON COLUMN cat_publication_date.date_value IS '日期值（仅完整日期时填充）';
 COMMENT ON COLUMN cat_publication_date.year IS '年份（必填）';
@@ -220,8 +220,8 @@ CREATE TRIGGER trg_cat_publication_metadata_audit_times
     BEFORE INSERT OR UPDATE ON cat_publication_metadata
     FOR EACH ROW EXECUTE FUNCTION set_audit_times();
 
-COMMENT ON TABLE cat_publication_metadata IS '文献元数据';
-COMMENT ON COLUMN cat_publication_metadata.publication_id IS '文献 ID（外键：cat_publication.id，一对一关系）';
+COMMENT ON TABLE cat_publication_metadata IS '文献的收录与处理信息（索引状态、数据来源、导入批次、质量与审核），一篇一行';
+COMMENT ON COLUMN cat_publication_metadata.publication_id IS '文献 ID（引用 cat_publication.id，不建外键；一对一关系）';
 COMMENT ON COLUMN cat_publication_metadata.indexing_status IS '索引状态：Pending/Indexed/MEDLINE/PubMed-not-MEDLINE 等';
 COMMENT ON COLUMN cat_publication_metadata.indexing_method IS '索引方法：Automated/Curated/In-Data-Review';
 COMMENT ON COLUMN cat_publication_metadata.indexed_date IS '索引日期';
@@ -274,8 +274,8 @@ CREATE TRIGGER trg_cat_publication_alternative_abstract_audit_times
     FOR EACH ROW EXECUTE FUNCTION set_audit_times();
 
 COMMENT ON TABLE cat_publication_alternative_abstract IS '文献翻译摘要';
-COMMENT ON COLUMN cat_publication_alternative_abstract.publication_id IS '文献 ID（外键：cat_publication.id）';
-COMMENT ON COLUMN cat_publication_alternative_abstract.abstract_id IS '主摘要 ID（外键：cat_publication_abstract.id）';
+COMMENT ON COLUMN cat_publication_alternative_abstract.publication_id IS '文献 ID（引用 cat_publication.id，不建外键）';
+COMMENT ON COLUMN cat_publication_alternative_abstract.abstract_id IS '主摘要 ID（引用 cat_publication_abstract.id，不建外键）';
 COMMENT ON COLUMN cat_publication_alternative_abstract.language_code IS '语言代码（ISO 639-1，如 "zh-CN"、"ja"）';
 COMMENT ON COLUMN cat_publication_alternative_abstract.source_type IS '摘要来源类型（如 `publisher`、`plain-language-summary`）';
 COMMENT ON COLUMN cat_publication_alternative_abstract.language_name IS '语言名称（如 "Chinese"、"Japanese"）';
@@ -327,7 +327,7 @@ CREATE TRIGGER trg_cat_publication_oa_location_audit_times
     FOR EACH ROW EXECUTE FUNCTION set_audit_times();
 
 COMMENT ON TABLE cat_publication_oa_location IS '文献开放获取位置';
-COMMENT ON COLUMN cat_publication_oa_location.publication_id IS '文献 ID（外键：cat_publication.id）';
+COMMENT ON COLUMN cat_publication_oa_location.publication_id IS '文献 ID（引用 cat_publication.id，不建外键）';
 COMMENT ON COLUMN cat_publication_oa_location.oa_status IS 'OA 状态：gold/green/hybrid/bronze/closed';
 COMMENT ON COLUMN cat_publication_oa_location.location_type IS '位置类型：publisher/repository/pubmed_central/preprint';
 COMMENT ON COLUMN cat_publication_oa_location.url IS '访问 URL';
@@ -422,8 +422,8 @@ CREATE TRIGGER trg_cat_publication_type_audit_times
     BEFORE INSERT OR UPDATE ON cat_publication_type
     FOR EACH ROW EXECUTE FUNCTION set_audit_times();
 
-COMMENT ON TABLE cat_publication_type IS '文献出版类型关联';
-COMMENT ON COLUMN cat_publication_type.publication_id IS '出版物 ID（外键：cat_publication.id）';
+COMMENT ON TABLE cat_publication_type IS '文献的发表类型（如 Journal Article、Review），一篇可有多个';
+COMMENT ON COLUMN cat_publication_type.publication_id IS '出版物 ID（引用 cat_publication.id，不建外键）';
 COMMENT ON COLUMN cat_publication_type.type_id IS '发表类型的唯一标识符（来自受控词表，可为空）';
 COMMENT ON COLUMN cat_publication_type.type_value IS '发表类型的文本描述（如 "Journal Article", "Review"）';
 COMMENT ON COLUMN cat_publication_type.vocabulary_source IS '词表来源（如 "MeSH", "Crossref"）';
@@ -641,8 +641,8 @@ CREATE TRIGGER trg_cat_publication_author_audit_times
     FOR EACH ROW EXECUTE FUNCTION set_audit_times();
 
 COMMENT ON TABLE cat_publication_author IS '文献-作者关联';
-COMMENT ON COLUMN cat_publication_author.publication_id IS '出版物 ID（外键：cat_publication.id）';
-COMMENT ON COLUMN cat_publication_author.author_id IS '作者 ID（外键：cat_author.id；软关联位——仅 ORCID 命中已消歧作者时填，其余为 null）';
+COMMENT ON COLUMN cat_publication_author.publication_id IS '出版物 ID（引用 cat_publication.id，不建外键）';
+COMMENT ON COLUMN cat_publication_author.author_id IS '作者 ID（引用 cat_author.id，不建外键；软关联位——仅 ORCID 命中已消歧作者时填，其余为 null）';
 COMMENT ON COLUMN cat_publication_author.author_order IS '作者顺序（1=第一作者，2=第二作者...）';
 COMMENT ON COLUMN cat_publication_author.display_name IS '展示名（"LastName ForeName" 或集体作者名，恒非空）';
 COMMENT ON COLUMN cat_publication_author.last_name IS '姓氏（LastName）';
@@ -689,14 +689,14 @@ CREATE TRIGGER trg_cat_publication_author_affiliation_audit_times
     FOR EACH ROW EXECUTE FUNCTION set_audit_times();
 
 COMMENT ON TABLE cat_publication_author_affiliation IS '作者-机构归属';
-COMMENT ON COLUMN cat_publication_author_affiliation.publication_author_id IS '文献-作者关联 ID（外键：cat_publication_author.id）';
+COMMENT ON COLUMN cat_publication_author_affiliation.publication_author_id IS '文献-作者关联 ID（引用 cat_publication_author.id，不建外键）';
 COMMENT ON COLUMN cat_publication_author_affiliation.publication_id IS '出版物 ID（冗余，避免 JOIN）';
 COMMENT ON COLUMN cat_publication_author_affiliation.affiliation_order IS '机构顺序（1=第一机构，2=第二机构...）';
 COMMENT ON COLUMN cat_publication_author_affiliation.affiliation_string IS '原始机构字符串（外部采集，未标准化）';
 COMMENT ON COLUMN cat_publication_author_affiliation.ror_id IS 'ROR ID（如 "03vek6s52"）';
 COMMENT ON COLUMN cat_publication_author_affiliation.ringgold_id IS 'Ringgold ID';
 COMMENT ON COLUMN cat_publication_author_affiliation.grid_id IS 'GRID ID（历史数据，已废弃）';
-COMMENT ON COLUMN cat_publication_author_affiliation.organization_id IS '关联机构 ID（外键：cat_organization.id，延迟填充）';
+COMMENT ON COLUMN cat_publication_author_affiliation.organization_id IS '关联机构 ID（引用 cat_organization.id，不建外键；延迟填充）';
 COMMENT ON COLUMN cat_publication_author_affiliation.disambiguation_status IS '消歧状态（PENDING/MATCHED/UNMATCHED/AMBIGUOUS）';
 COMMENT ON COLUMN cat_publication_author_affiliation.disambiguation_method IS '消歧方法（ROR_ID/RINGGOLD/GRID/NAME_MATCH/MANUAL）';
 COMMENT ON COLUMN cat_publication_author_affiliation.disambiguation_score IS '消歧置信度（0.0000-1.0000）';
@@ -772,8 +772,8 @@ CREATE TRIGGER trg_cat_publication_investigator_audit_times
     FOR EACH ROW EXECUTE FUNCTION set_audit_times();
 
 COMMENT ON TABLE cat_publication_investigator IS '文献-研究者关联';
-COMMENT ON COLUMN cat_publication_investigator.publication_id IS '出版物 ID（外键：cat_publication.id）';
-COMMENT ON COLUMN cat_publication_investigator.investigator_id IS '研究者 ID（外键：cat_investigator.id）';
+COMMENT ON COLUMN cat_publication_investigator.publication_id IS '出版物 ID（引用 cat_publication.id，不建外键）';
+COMMENT ON COLUMN cat_publication_investigator.investigator_id IS '研究者 ID（引用 cat_investigator.id，不建外键）';
 COMMENT ON COLUMN cat_publication_investigator.role IS '角色（如 "principal", "co-investigator", "coordinator"）';
 COMMENT ON COLUMN cat_publication_investigator.is_contact IS '是否联系人';
 COMMENT ON COLUMN cat_publication_investigator.order_num IS '顺序号（多个研究者时排序）';
@@ -807,8 +807,8 @@ CREATE TRIGGER trg_cat_publication_personal_name_subject_audit_times
     BEFORE INSERT OR UPDATE ON cat_publication_personal_name_subject
     FOR EACH ROW EXECUTE FUNCTION set_audit_times();
 
-COMMENT ON TABLE cat_publication_personal_name_subject IS '人物主题';
-COMMENT ON COLUMN cat_publication_personal_name_subject.publication_id IS '出版物 ID（外键：cat_publication.id）';
+COMMENT ON TABLE cat_publication_personal_name_subject IS '文献以某个人物为主题时的人物信息（传记、纪念文章等），一篇可有多个';
+COMMENT ON COLUMN cat_publication_personal_name_subject.publication_id IS '出版物 ID（引用 cat_publication.id，不建外键）';
 COMMENT ON COLUMN cat_publication_personal_name_subject.last_name IS '姓（Last Name/Family Name）';
 COMMENT ON COLUMN cat_publication_personal_name_subject.fore_name IS '名（First Name/Given Name）';
 COMMENT ON COLUMN cat_publication_personal_name_subject.initials IS '姓名缩写（如 "J.K."）';
@@ -843,7 +843,7 @@ CREATE TRIGGER trg_cat_publication_mesh_heading_audit_times
     FOR EACH ROW EXECUTE FUNCTION set_audit_times();
 
 COMMENT ON TABLE cat_publication_mesh_heading IS '文献-MeSH 主题标引关联';
-COMMENT ON COLUMN cat_publication_mesh_heading.publication_id IS '出版物 ID（外键：cat_publication.id）';
+COMMENT ON COLUMN cat_publication_mesh_heading.publication_id IS '出版物 ID（引用 cat_publication.id，不建外键）';
 COMMENT ON COLUMN cat_publication_mesh_heading.descriptor_ui IS 'MeSH 主题词 UI（关联键：cat_mesh_descriptor.ui）';
 COMMENT ON COLUMN cat_publication_mesh_heading.is_major_topic IS '是否为文章的主要主题';
 COMMENT ON COLUMN cat_publication_mesh_heading.heading_order IS '标引顺序（可选）';
@@ -870,7 +870,7 @@ CREATE TRIGGER trg_cat_publication_mesh_qualifier_audit_times
     FOR EACH ROW EXECUTE FUNCTION set_audit_times();
 
 COMMENT ON TABLE cat_publication_mesh_qualifier IS '文献-MeSH 限定词关联';
-COMMENT ON COLUMN cat_publication_mesh_qualifier.publication_mesh_heading_id IS '文献 MeSH 标引 ID（外键：cat_publication_mesh_heading.id）';
+COMMENT ON COLUMN cat_publication_mesh_qualifier.publication_mesh_heading_id IS '文献 MeSH 标引 ID（引用 cat_publication_mesh_heading.id，不建外键）';
 COMMENT ON COLUMN cat_publication_mesh_qualifier.qualifier_ui IS 'MeSH 限定词 UI（关联键：cat_mesh_qualifier.ui）';
 COMMENT ON COLUMN cat_publication_mesh_qualifier.is_major_topic IS '是否为文章的主要主题';
 COMMENT ON COLUMN cat_publication_mesh_qualifier.qualifier_order IS '限定词顺序（可选）';
@@ -894,7 +894,7 @@ CREATE TRIGGER trg_cat_publication_suppl_mesh_audit_times
     FOR EACH ROW EXECUTE FUNCTION set_audit_times();
 
 COMMENT ON TABLE cat_publication_suppl_mesh IS '文献-补充 MeSH 概念关联';
-COMMENT ON COLUMN cat_publication_suppl_mesh.publication_id IS '文献 ID（外键：cat_publication.id）';
+COMMENT ON COLUMN cat_publication_suppl_mesh.publication_id IS '文献 ID（引用 cat_publication.id，不建外键）';
 COMMENT ON COLUMN cat_publication_suppl_mesh.scr_ui IS 'SCR UI（关联键：cat_mesh_scr.ui）';
 COMMENT ON COLUMN cat_publication_suppl_mesh.suppl_order IS '补充概念顺序（可选）';
 
@@ -952,8 +952,8 @@ CREATE TRIGGER trg_cat_publication_keyword_audit_times
     FOR EACH ROW EXECUTE FUNCTION set_audit_times();
 
 COMMENT ON TABLE cat_publication_keyword IS '文献关键词关联';
-COMMENT ON COLUMN cat_publication_keyword.publication_id IS '出版物 ID（外键：cat_publication.id）';
-COMMENT ON COLUMN cat_publication_keyword.keyword_id IS '关键词 ID（外键：cat_keyword.id）';
+COMMENT ON COLUMN cat_publication_keyword.publication_id IS '出版物 ID（引用 cat_publication.id，不建外键）';
+COMMENT ON COLUMN cat_publication_keyword.keyword_id IS '关键词 ID（引用 cat_keyword.id，不建外键）';
 COMMENT ON COLUMN cat_publication_keyword.is_major IS '是否为主要关键词';
 COMMENT ON COLUMN cat_publication_keyword.order_num IS '顺序号（在同一文献内的排序）';
 COMMENT ON COLUMN cat_publication_keyword.keyword_set IS '关键词集（如 Author/Editor，区分不同来源）';
@@ -985,8 +985,8 @@ CREATE TRIGGER trg_cat_publication_funding_audit_times
     FOR EACH ROW EXECUTE FUNCTION set_audit_times();
 
 COMMENT ON TABLE cat_publication_funding IS '文献资助信息关联';
-COMMENT ON COLUMN cat_publication_funding.publication_id IS '出版物 ID（外键：cat_publication.id）';
-COMMENT ON COLUMN cat_publication_funding.organization_id IS '资助机构 ID（外键：cat_organization.id，匹配后填充）';
+COMMENT ON COLUMN cat_publication_funding.publication_id IS '出版物 ID（引用 cat_publication.id，不建外键）';
+COMMENT ON COLUMN cat_publication_funding.organization_id IS '资助机构 ID（引用 cat_organization.id，不建外键；匹配后填充）';
 COMMENT ON COLUMN cat_publication_funding.grant_id IS '资助项目编号/授权号';
 COMMENT ON COLUMN cat_publication_funding.funder_name_raw IS '资助机构原始名称（来自数据源）';
 COMMENT ON COLUMN cat_publication_funding.funder_acronym_raw IS '资助机构缩写原始值（如 NIH, NSF, NSFC）';
@@ -1106,8 +1106,8 @@ CREATE TRIGGER trg_cat_venue_instance_audit_times
     BEFORE INSERT OR UPDATE ON cat_venue_instance
     FOR EACH ROW EXECUTE FUNCTION set_audit_times();
 
-COMMENT ON TABLE cat_venue_instance IS '载体实例';
-COMMENT ON COLUMN cat_venue_instance.venue_id IS '载体 ID（逻辑外键：cat_venue.id）';
+COMMENT ON TABLE cat_venue_instance IS '载体（期刊、书、会议）的一个具体期次：期刊的某卷某期、书的某个版次、会议的某一届；文献经 venue_instance_id 指向它';
+COMMENT ON COLUMN cat_venue_instance.venue_id IS '载体 ID（引用 cat_venue.id，不建外键）';
 COMMENT ON COLUMN cat_venue_instance.volume IS '卷号（如 "45", "2023"，期刊专用）';
 COMMENT ON COLUMN cat_venue_instance.issue IS '期号（如 "3", "Suppl 1"，期刊专用）';
 COMMENT ON COLUMN cat_venue_instance.edition IS '版次（如 "2nd Edition"，书籍专用）';

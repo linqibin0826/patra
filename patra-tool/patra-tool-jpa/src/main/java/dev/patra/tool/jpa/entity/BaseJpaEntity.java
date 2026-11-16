@@ -31,7 +31,7 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 /// | `record_remarks` | 给数据处理和人工核对写的备注 |
 /// | `version` | 乐观锁 |
 ///
-/// `created_at` / `updated_at` 不映射：它们由数据库触发器填，应用写了也会被忽略。查询要用时，实体自己加只读字段，
+/// `created_at` / `updated_at` 不映射：它们由数据库触发器填（第 4 节），应用写了也会被忽略。查询要用时，实体自己加只读字段，
 /// 不用 `@Generated`（它会让批量插入退化成逐条执行）。
 @Data
 @SuperBuilder

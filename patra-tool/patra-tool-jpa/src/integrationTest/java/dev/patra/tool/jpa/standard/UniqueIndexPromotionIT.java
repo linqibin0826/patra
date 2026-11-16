@@ -14,9 +14,9 @@ import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ContextConfiguration;
 
-/// 库表规范推断 3：普通表以后能把自然键的唯一索引提升为主键、删掉 `id`，不用重写整张表。
+/// 验证库表规范依赖的一个前提（设计文档推断 3）：普通表以后能把自然键的唯一索引提升为主键、删掉 `id`，不用重写整张表。
 ///
-/// 规范规定每张表都有雪花 `id`、自然键另建唯一约束。定这条时的一个前提是：哪张关系表以后
+/// 规范规定每张表都有雪花 `id`、自然键另建唯一索引（不用唯一约束）。定这条时的一个前提是：哪张关系表以后
 /// 真成了写入瓶颈，可以低成本改回联合主键。这里验证这个前提。
 ///
 /// 是否重写整张表看 `pg_class.relfilenode`：重写会换一个新的数据文件，这个编号随之改变。

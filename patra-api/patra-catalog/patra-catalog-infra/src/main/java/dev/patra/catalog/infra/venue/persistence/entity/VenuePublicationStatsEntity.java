@@ -31,7 +31,7 @@ import lombok.Setter;
 @Table(name = "cat_venue_publication_stats")
 public class VenuePublicationStatsEntity extends ValueObjectJpaEntity {
 
-  /// 载体 ID（外键：cat_venue.id）
+  /// 载体 ID（引用 cat_venue.id，不建外键）
   @Column(name = "venue_id", nullable = false)
   private Long venueId;
 

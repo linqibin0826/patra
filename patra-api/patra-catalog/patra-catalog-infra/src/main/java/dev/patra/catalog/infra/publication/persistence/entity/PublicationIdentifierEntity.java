@@ -29,7 +29,7 @@ import lombok.Setter;
 @Table(name = "cat_publication_identifier")
 public class PublicationIdentifierEntity extends ValueObjectJpaEntity {
 
-  /// 文献 ID（外键：cat_publication.id）
+  /// 文献 ID（引用 cat_publication.id，不建外键）
   @Column(name = "publication_id", nullable = false)
   private Long publicationId;
 

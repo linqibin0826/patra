@@ -15,7 +15,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.transaction.support.TransactionTemplate;
 
-/// 库表规范推断 4：去掉 `@SoftDelete` 之后，JPQL 批量删除会从「标记删除」变成真删除。
+/// 验证库表规范依赖的一个前提（设计文档推断 4）：去掉 `@SoftDelete` 之后，JPQL 批量删除会从「标记删除」变成真删除。
 ///
 /// catalog 原先有两条 JPQL 批量删除语句作用在 `@SoftDelete` 实体上。规范禁用这个注解后，
 /// 如果这两条语句原样保留，就会把行物理删掉。这里确认映射注解时是「标记删除」、去掉注解后是真删除，

@@ -20,7 +20,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.transaction.support.TransactionTemplate;
 
-/// 库表规范推断 5：主键预先分配的实体，Spring Data 当成「已存在」去合并，每行先查一次；
+/// 验证库表规范依赖的一个前提（设计文档推断 5）：主键预先分配的实体，Spring Data 当成「已存在」去合并，每行先查一次；
 /// 值对象基类实现 `Persistable` 后改为直接插入。
 ///
 /// Spring Data 判断新旧的默认规则是看主键是不是空（有 version 时看 version）。雪花 ID 在保存前

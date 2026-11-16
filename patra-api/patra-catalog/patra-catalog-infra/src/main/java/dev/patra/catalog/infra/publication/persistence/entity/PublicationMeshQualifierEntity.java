@@ -38,7 +38,7 @@ public class PublicationMeshQualifierEntity extends ValueObjectJpaEntity {
 
   // ========== 关联信息 ==========
 
-  /// 文献 MeSH 标引 ID（外键：cat_publication_mesh_heading.id）。
+  /// 文献 MeSH 标引 ID（引用 cat_publication_mesh_heading.id，不建外键）。
   @Column(name = "publication_mesh_heading_id", nullable = false)
   private Long publicationMeshHeadingId;
 

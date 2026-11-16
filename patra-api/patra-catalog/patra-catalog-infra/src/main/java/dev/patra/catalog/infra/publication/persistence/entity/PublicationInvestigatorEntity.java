@@ -35,11 +35,11 @@ public class PublicationInvestigatorEntity extends ValueObjectJpaEntity {
 
   // ========== 关联信息 ==========
 
-  /// 出版物 ID（外键：cat_publication.id）。
+  /// 出版物 ID（引用 cat_publication.id，不建外键）。
   @Column(name = "publication_id", nullable = false)
   private Long publicationId;
 
-  /// 研究者 ID（外键：cat_investigator.id）。
+  /// 研究者 ID（引用 cat_investigator.id，不建外键）。
   @Column(name = "investigator_id", nullable = false)
   private Long investigatorId;
 

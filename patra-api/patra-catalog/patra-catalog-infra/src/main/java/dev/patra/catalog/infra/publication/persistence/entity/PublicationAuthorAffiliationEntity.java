@@ -40,7 +40,7 @@ public class PublicationAuthorAffiliationEntity extends ValueObjectJpaEntity {
 
   // ========== 关联信息（冗余 publication_id 避免 JOIN） ==========
 
-  /// 文献-作者关联 ID（外键：cat_publication_author.id）。
+  /// 文献-作者关联 ID（引用 cat_publication_author.id，不建外键）。
   @Column(name = "publication_author_id", nullable = false)
   private Long publicationAuthorId;
 
@@ -75,7 +75,7 @@ public class PublicationAuthorAffiliationEntity extends ValueObjectJpaEntity {
 
   // ========== 消歧结果（延迟填充） ==========
 
-  /// 关联机构 ID（外键：cat_organization.id，延迟填充）。
+  /// 关联机构 ID（引用 cat_organization.id，不建外键；延迟填充）。
   @Column(name = "organization_id")
   private Long organizationId;
 
