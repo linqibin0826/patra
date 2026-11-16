@@ -2,6 +2,7 @@ package dev.patra.notification.app.preference.listener;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -39,7 +40,7 @@ class EmailPreferenceCreationListenerTest {
                 created(4L, 9L, NotificationCategory.HELPFUL))));
 
     ArgumentCaptor<EmailPreference> inserted = ArgumentCaptor.forClass(EmailPreference.class);
-    verify(preferences, times(2)).insertIfAbsent(inserted.capture());
+    verify(preferences, times(2)).insertIfAbsent(inserted.capture(), isNull());
     assertThat(inserted.getAllValues())
         .extracting(EmailPreference::getUserId)
         .containsExactlyInAnyOrder(7L, 8L);
@@ -58,7 +59,7 @@ class EmailPreferenceCreationListenerTest {
     listener.on(
         NotificationsCreatedEvent.of(List.of(created(4L, 9L, NotificationCategory.HELPFUL))));
 
-    verify(preferences, never()).insertIfAbsent(any());
+    verify(preferences, never()).insertIfAbsent(any(), any());
   }
 
   private static CreatedNotification created(

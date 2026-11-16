@@ -50,10 +50,10 @@ public class ChangeEmailModeHandler
     return Objects.requireNonNull(
         transactions.execute(
             status -> {
-              preferences.insertIfAbsent(defaults);
+              preferences.insertIfAbsent(defaults, userId);
               EmailPreference preference = preferences.findByUserIdForUpdate(userId).orElseThrow();
               preference.change(category, mode);
-              preferences.updateModes(preference);
+              preferences.updateModes(preference, userId);
               return EmailPreferenceView.from(preference);
             }));
   }

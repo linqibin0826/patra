@@ -33,7 +33,7 @@ class EmailPreferenceRepositoryAdapterIT extends PreferencePersistenceITSupport 
     transactions.executeWithoutResult(
         s ->
             preferences.insertIfAbsent(
-                EmailPreference.createDefault(7L, new UnsubscribeToken(TOKEN_B))));
+                EmailPreference.createDefault(7L, new UnsubscribeToken(TOKEN_B)), null));
 
     EmailPreference found = preferences.findByUserId(7L).orElseThrow();
     assertThat(found.getReply()).isEqualTo(EmailMode.DIGEST);
@@ -48,7 +48,7 @@ class EmailPreferenceRepositoryAdapterIT extends PreferencePersistenceITSupport 
     transactions.executeWithoutResult(
         s ->
             preferences.insertIfAbsent(
-                EmailPreference.createDefault(7L, new UnsubscribeToken(TOKEN_A))));
+                EmailPreference.createDefault(7L, new UnsubscribeToken(TOKEN_A)), null));
 
     EmailPreference found = preferences.findByUserId(7L).orElseThrow();
     assertThat(found.getReply()).isEqualTo(EmailMode.INSTANT);
@@ -93,7 +93,7 @@ class EmailPreferenceRepositoryAdapterIT extends PreferencePersistenceITSupport 
               preferences.findByTokenForUpdate(new UnsubscribeToken(TOKEN_A)).orElseThrow();
           locked.change(NotificationCategory.REPLY, EmailMode.OFF);
           locked.change(NotificationCategory.MENTION, EmailMode.DIGEST);
-          preferences.updateModes(locked);
+          preferences.updateModes(locked, 7L);
         });
 
     EmailPreference found = preferences.findByUserId(7L).orElseThrow();
@@ -119,7 +119,7 @@ class EmailPreferenceRepositoryAdapterIT extends PreferencePersistenceITSupport 
                       firstLocked.countDown();
                       sleep(300);
                       locked.change(NotificationCategory.REPLY, EmailMode.DIGEST);
-                      preferences.updateModes(locked);
+                      preferences.updateModes(locked, 7L);
                     }));
     assertThat(firstLocked.await(5, TimeUnit.SECONDS)).isTrue();
     CompletableFuture<Void> second =
@@ -129,7 +129,7 @@ class EmailPreferenceRepositoryAdapterIT extends PreferencePersistenceITSupport 
                     s -> {
                       EmailPreference locked = preferences.findByUserIdForUpdate(7L).orElseThrow();
                       locked.change(NotificationCategory.MENTION, EmailMode.OFF);
-                      preferences.updateModes(locked);
+                      preferences.updateModes(locked, 7L);
                     }));
     CompletableFuture.allOf(first, second).get(10, TimeUnit.SECONDS);
 
@@ -176,7 +176,8 @@ class EmailPreferenceRepositoryAdapterIT extends PreferencePersistenceITSupport 
                 transactions.executeWithoutResult(
                     s ->
                         preferences.insertIfAbsent(
-                            EmailPreference.createDefault(8L, new UnsubscribeToken(TOKEN_A)))))
+                            EmailPreference.createDefault(8L, new UnsubscribeToken(TOKEN_A)),
+                            null)))
         .isInstanceOf(DataIntegrityViolationException.class)
         .hasMessageContaining("uk_ntf_email_preference_token");
   }
@@ -192,6 +193,36 @@ class EmailPreferenceRepositoryAdapterIT extends PreferencePersistenceITSupport 
             OffsetDateTime.class,
             userId)
         .toInstant();
+  }
+
+  /// 改档位的操作人是当前用户。
+  @Test
+  void should_record_actor_when_changing_modes() {
+    insertRow(7L, "INSTANT", "INSTANT", TOKEN_A);
+
+    transactions.executeWithoutResult(
+        s -> {
+          EmailPreference locked = preferences.findByUserIdForUpdate(7L).orElseThrow();
+          locked.change(NotificationCategory.REPLY, EmailMode.OFF);
+          preferences.updateModes(locked, 7L);
+        });
+
+    assertThat(updatedBy(7L)).isEqualTo(7L);
+  }
+
+  /// 邮件里的一键退订不登录，没有当前用户，操作人留空。
+  @Test
+  void should_leave_actor_empty_when_unsubscribed_anonymously() {
+    insertRow(7L, "INSTANT", "INSTANT", TOKEN_A);
+
+    transactions.executeWithoutResult(
+        s -> {
+          EmailPreference locked = preferences.findByUserIdForUpdate(7L).orElseThrow();
+          locked.change(NotificationCategory.REPLY, EmailMode.OFF);
+          preferences.updateModes(locked, null);
+        });
+
+    assertThat(updatedBy(7L)).isNull();
   }
 
   /// 偏好行的 `updated_by`。

@@ -81,15 +81,15 @@ public class EmailPreferenceRepositoryAdapter implements EmailPreferenceReposito
 
   /// `ON CONFLICT (user_id) DO NOTHING` 插入：已有行时不覆盖。令牌撞上别人的令牌时照常报唯一约束错误。
   ///
-  /// 默认行由系统预建（写提醒时或首次改档位前），操作人留空。
-  ///
   /// @param preference 要插入的偏好
+  /// @param actorUserId 操作人，可空
   @Override
-  public void insertIfAbsent(EmailPreference preference) {
+  public void insertIfAbsent(EmailPreference preference, Long actorUserId) {
     jdbc.sql(
             """
-            INSERT INTO ntf_email_preference (id, user_id, reply_mode, mention_mode, unsubscribe_token)
-            VALUES (:id, :userId, :reply, :mention, :token)
+            INSERT INTO ntf_email_preference
+                   (id, user_id, reply_mode, mention_mode, unsubscribe_token, created_by, updated_by)
+            VALUES (:id, :userId, :reply, :mention, :token, :actor, :actor)
             ON CONFLICT (user_id) DO NOTHING
             """)
         .param("id", SnowflakeIdGenerator.getId())
@@ -97,17 +97,20 @@ public class EmailPreferenceRepositoryAdapter implements EmailPreferenceReposito
         .param("reply", preference.getReply().name())
         .param("mention", preference.getMention().name())
         .param("token", preference.getUnsubscribeToken().value())
+        .param("actor", actorUserId)
         .update();
   }
 
-  /// 写回两类档位。改档位与一键退订都是用户本人（退订凭的是他的令牌），操作人就是他。
+  /// 写回两类档位。
   ///
   /// @param preference 改过的偏好
+  /// @param actorUserId 操作人，可空
   @Override
-  public void updateModes(EmailPreference preference) {
+  public void updateModes(EmailPreference preference, Long actorUserId) {
     jdbc.sql(
             "UPDATE ntf_email_preference SET reply_mode = :reply, mention_mode = :mention,"
-                + " updated_by = :userId WHERE user_id = :userId")
+                + " updated_by = :actor WHERE user_id = :userId")
+        .param("actor", actorUserId)
         .param("reply", preference.getReply().name())
         .param("mention", preference.getMention().name())
         .param("userId", preference.getUserId())

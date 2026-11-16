@@ -34,6 +34,7 @@ public class EmailPreferenceCreationListener {
         .forEach(
             recipientId ->
                 preferences.insertIfAbsent(
-                    EmailPreference.createDefault(recipientId, UnsubscribeToken.generate(random))));
+                    EmailPreference.createDefault(recipientId, UnsubscribeToken.generate(random)),
+                    null));
   }
 }

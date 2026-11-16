@@ -120,7 +120,7 @@ public class NotificationRepositoryAdapter implements NotificationRepository {
   public MarkReadOutcome markRead(long recipientId, long notificationId, Instant readAt) {
     int marked =
         jdbc.sql(
-                "UPDATE ntf_notification SET read_at = :readAt"
+                "UPDATE ntf_notification SET read_at = :readAt, updated_by = :recipientId"
                     + " WHERE recipient_user_id = :recipientId AND id = :id"
                     + " AND read_at IS NULL")
             .param("readAt", InboxRows.utc(readAt))
@@ -149,7 +149,7 @@ public class NotificationRepositoryAdapter implements NotificationRepository {
   @Override
   public int markAllRead(long recipientId, Instant readAt) {
     return jdbc.sql(
-            "UPDATE ntf_notification SET read_at = :readAt"
+            "UPDATE ntf_notification SET read_at = :readAt, updated_by = :recipientId"
                 + " WHERE recipient_user_id = :recipientId AND read_at IS NULL")
         .param("readAt", InboxRows.utc(readAt))
         .param("recipientId", recipientId)

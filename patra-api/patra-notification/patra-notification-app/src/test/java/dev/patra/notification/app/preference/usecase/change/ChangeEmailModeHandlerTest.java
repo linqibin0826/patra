@@ -96,7 +96,7 @@ class ChangeEmailModeHandlerTest {
               return null;
             })
         .when(preferences)
-        .insertIfAbsent(any());
+        .insertIfAbsent(any(), any());
     when(preferences.findByUserIdForUpdate(anyLong()))
         .thenAnswer(
             invocation -> {
@@ -104,7 +104,7 @@ class ChangeEmailModeHandlerTest {
               return Optional.of(
                   EmailPreference.restore(ME, SAVED, EmailMode.INSTANT, EmailMode.OFF));
             });
-    doAnswer(invocation -> events.add("update")).when(preferences).updateModes(any());
+    doAnswer(invocation -> events.add("update")).when(preferences).updateModes(any(), any());
 
     EmailPreferenceView view = handler.handle(ChangeEmailModeCommand.of("REPLY", "DIGEST"));
 

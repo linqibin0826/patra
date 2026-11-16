@@ -101,7 +101,7 @@ class UnsubscribeHandlerTest {
                 .mention(EmailMode.INSTANT)
                 .othersEnabled(true)
                 .build());
-    verify(preferences).updateModes(any());
+    verify(preferences).updateModes(any(), any());
   }
 
   /// 锁行与写回在同一个事务里（行锁要在事务里才持有到写回）。
@@ -119,7 +119,7 @@ class UnsubscribeHandlerTest {
                   EmailPreference.restore(
                       USER, new UnsubscribeToken(TOKEN), EmailMode.INSTANT, EmailMode.INSTANT));
             });
-    doAnswer(invocation -> events.add("update")).when(preferences).updateModes(any());
+    doAnswer(invocation -> events.add("update")).when(preferences).updateModes(any(), any());
 
     recorded.handle(UnsubscribeCommand.oneClick(TOKEN, "REPLY"));
 
@@ -137,7 +137,7 @@ class UnsubscribeHandlerTest {
     assertThat(result.turnedOff()).isEmpty();
     assertThat(result.reply()).isEqualTo(EmailMode.OFF);
     assertThat(result.othersEnabled()).isTrue();
-    verify(preferences, never()).updateModes(any());
+    verify(preferences, never()).updateModes(any(), any());
   }
 
   /// 命令进日志时看不到令牌。
