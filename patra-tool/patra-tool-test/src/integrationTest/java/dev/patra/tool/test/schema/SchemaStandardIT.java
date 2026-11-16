@@ -130,6 +130,141 @@ class SchemaStandardIT {
         .containsExactlyInAnyOrder(tuple("§1", "stray"), tuple("§1", "tst_note_tag"));
   }
 
+  @Test
+  @DisplayName("§2 主键不是 id")
+  void should_reject_primary_key_other_than_id() {
+    jdbc.execute("ALTER TABLE tst_note_tag DROP CONSTRAINT tst_note_tag_pkey");
+    jdbc.execute("ALTER TABLE tst_note_tag ADD PRIMARY KEY (note_id, tag)");
+
+    assertThat(inspect(REGISTRY).violations())
+        .extracting(SchemaViolation::section, SchemaViolation::table)
+        .containsExactly(tuple("§2", "tst_note_tag"));
+  }
+
+  @Test
+  @DisplayName("§2 分区表主键不是分区键加 id")
+  void should_reject_partitioned_primary_key_other_than_partition_key_and_id() {
+    jdbc.execute("ALTER TABLE tst_event DROP CONSTRAINT tst_event_pkey");
+    jdbc.execute("ALTER TABLE tst_event ADD PRIMARY KEY (user_id, created_at)");
+
+    assertThat(inspect(REGISTRY).violations())
+        .extracting(SchemaViolation::section, SchemaViolation::table)
+        .containsExactly(tuple("§2", "tst_event"));
+  }
+
+  @Test
+  @DisplayName("§2 外键")
+  void should_reject_foreign_key() {
+    jdbc.execute(
+        "ALTER TABLE tst_note_tag ADD CONSTRAINT fk_tst_note_tag_note"
+            + " FOREIGN KEY (note_id) REFERENCES tst_note (id)");
+
+    assertThat(inspect(REGISTRY).violations())
+        .extracting(SchemaViolation::section, SchemaViolation::table)
+        .containsExactly(tuple("§2", "tst_note_tag"));
+  }
+
+  @Test
+  @DisplayName("§2 唯一约束（自然键要建成唯一索引）")
+  void should_reject_unique_constraint() {
+    jdbc.execute(
+        "ALTER TABLE tst_note_tag ADD CONSTRAINT uk_tst_note_tag_pair UNIQUE (note_id, tag)");
+
+    assertThat(inspect(REGISTRY).violations())
+        .extracting(SchemaViolation::section, SchemaViolation::table)
+        .containsExactly(tuple("§2", "tst_note_tag"));
+  }
+
+  @Test
+  @DisplayName("§3 缺审计时间")
+  void should_reject_missing_audit_times() {
+    jdbc.execute("ALTER TABLE tst_note_tag DROP COLUMN updated_at");
+
+    assertThat(inspect(REGISTRY).violations())
+        .extracting(SchemaViolation::section, SchemaViolation::table)
+        .containsExactly(tuple("§3", "tst_note_tag"));
+  }
+
+  @Test
+  @DisplayName("§3 缺审计时间触发器")
+  void should_reject_missing_audit_trigger() {
+    jdbc.execute("DROP TRIGGER trg_tst_note_tag_audit_times ON tst_note_tag");
+
+    assertThat(inspect(REGISTRY).violations())
+        .extracting(SchemaViolation::section, SchemaViolation::table)
+        .containsExactly(tuple("§3", "tst_note_tag"));
+  }
+
+  @Test
+  @DisplayName("§3 主表缺列或列类型不对")
+  void should_reject_main_table_missing_columns() {
+    jdbc.execute("ALTER TABLE tst_note DROP COLUMN record_remarks");
+    jdbc.execute("ALTER TABLE tst_note ALTER COLUMN ip_address TYPE BYTEA USING NULL");
+
+    assertThat(inspect(REGISTRY).violations())
+        .extracting(SchemaViolation::section, SchemaViolation::table)
+        .containsExactly(tuple("§3", "tst_note"), tuple("§3", "tst_note"));
+  }
+
+  @Test
+  @DisplayName("§3 其他表带了主表才有的列")
+  void should_reject_main_columns_on_other_table() {
+    jdbc.execute(
+        "ALTER TABLE tst_note_tag ADD COLUMN created_by BIGINT, ADD COLUMN version BIGINT");
+
+    assertThat(inspect(REGISTRY).violations())
+        .extracting(SchemaViolation::section, SchemaViolation::table)
+        .containsExactly(tuple("§3", "tst_note_tag"), tuple("§3", "tst_note_tag"));
+  }
+
+  @Test
+  @DisplayName("§3 用户名列")
+  void should_reject_username_column() {
+    jdbc.execute(
+        "ALTER TABLE tst_note_tag ADD COLUMN username TEXT, ADD COLUMN created_by_name TEXT");
+    jdbc.execute("COMMENT ON COLUMN tst_note_tag.username IS '用户名'");
+    jdbc.execute("COMMENT ON COLUMN tst_note_tag.created_by_name IS '创建人名'");
+
+    assertThat(inspect(REGISTRY).violations())
+        .extracting(SchemaViolation::section, SchemaViolation::table)
+        .containsExactly(tuple("§3", "tst_note_tag"), tuple("§3", "tst_note_tag"));
+  }
+
+  @Test
+  @DisplayName("§3 identity 的用户表可以有 username 列")
+  void should_allow_username_in_identity_user_table() {
+    jdbc.execute(
+        """
+        CREATE TABLE idn_user
+        (
+            id         BIGINT      NOT NULL PRIMARY KEY,
+            username   TEXT        NOT NULL,
+            created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+            updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+        );
+        CREATE TRIGGER trg_idn_user_audit_times
+            BEFORE INSERT OR UPDATE ON idn_user
+            FOR EACH ROW EXECUTE FUNCTION set_audit_times();
+        COMMENT ON TABLE idn_user IS '用户';
+        COMMENT ON COLUMN idn_user.username IS '用户名';
+        """);
+
+    assertThat(inspect("schema/tables-identity.yml").violations())
+        .filteredOn(violation -> violation.section().equals("§3"))
+        .isEmpty();
+  }
+
+  @Test
+  @DisplayName("§4 不带时区的时间列")
+  void should_reject_timestamp_without_time_zone() {
+    jdbc.execute("ALTER TABLE tst_note_tag ADD COLUMN seen_at TIMESTAMP");
+    jdbc.execute("COMMENT ON COLUMN tst_note_tag.seen_at IS '看到的时间'");
+
+    assertThat(inspect(REGISTRY).violations())
+        .extracting(SchemaViolation::section, SchemaViolation::table)
+        .containsExactly(tuple("§4", "tst_note_tag"));
+  }
+
   private static SchemaStandardReport inspect(String registry) {
     return SchemaStandard.inspect(dataSource, registry);
   }

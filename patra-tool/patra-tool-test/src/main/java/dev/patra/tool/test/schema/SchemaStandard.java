@@ -2,6 +2,7 @@ package dev.patra.tool.test.schema;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 import javax.sql.DataSource;
@@ -32,6 +33,23 @@ public final class SchemaStandard {
       "SELECT c.relname FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace"
           + " WHERE n.nspname = 'public' AND c.relkind IN ('r', 'p') AND NOT c.relispartition";
 
+  /// 主表在 `id`、两个审计时间之外必备的四列和它们的类型。
+  private static final Map<String, String> MAIN_COLUMNS =
+      Map.of(
+          "created_by", "bigint",
+          "updated_by", "bigint",
+          "ip_address", "inet",
+          "record_remarks", "jsonb");
+
+  /// 只放主表、其他表不该有的列；`version` 只用于主表的乐观锁。
+  private static final List<String> MAIN_ONLY_COLUMNS =
+      List.of("created_by", "updated_by", "ip_address", "record_remarks", "version");
+
+  /// 用户名只存 identity 的这两张表，别处引用用户一律存 `user_id`。
+  private static final Set<String> USERNAME_TABLES = Set.of("idn_user", "idn_user_former_username");
+
+  private static final Set<String> USERNAME_COLUMNS = Set.of("username", "user_name");
+
   private SchemaStandard() {}
 
   /// 检查一个库。
@@ -48,7 +66,158 @@ public final class SchemaStandard {
     violations.addAll(extraSchemas(jdbc));
     violations.addAll(registration(registry, tables));
     violations.addAll(prefixes(registry));
+    for (String table : tables) {
+      TableRegistry.TableEntry entry = registry.tables().get(table);
+      if (entry == null) {
+        continue; // 未登记的表上面已报；框架表不查结构
+      }
+      TableShape shape = TableShape.load(jdbc, table);
+      violations.addAll(primaryKey(shape));
+      violations.addAll(relationConstraints(shape));
+      violations.addAll(auditColumns(shape, entry.tier()));
+      violations.addAll(auditTrigger(shape));
+      violations.addAll(userNameColumns(shape));
+      violations.addAll(timeColumns(shape));
+    }
     return new SchemaStandardReport(violations);
+  }
+
+  /// §2：主键是 `id BIGINT`；分区表是分区键列加 `id`（PostgreSQL 要求分区表主键含分区键）。
+  private static List<SchemaViolation> primaryKey(TableShape shape) {
+    List<String> expected = new ArrayList<>(shape.partitionKey());
+    expected.add("id");
+    List<SchemaViolation> violations = new ArrayList<>();
+    if (!shape.primaryKey().equals(expected)) {
+      String actual = shape.primaryKey().isEmpty() ? "没有主键" : "主键是 " + columns(shape.primaryKey());
+      violations.add(new SchemaViolation("§2", shape.name(), actual + "，应为 " + columns(expected)));
+    }
+    shape
+        .column("id")
+        .filter(id -> !id.type().equals("bigint"))
+        .ifPresent(
+            id ->
+                violations.add(
+                    new SchemaViolation(
+                        "§2", shape.name(), "id 的类型是 " + id.type() + "，应为 bigint（雪花 ID）")));
+    return violations;
+  }
+
+  /// §2：不建外键；自然键用唯一索引，不用唯一约束（唯一索引以后能直接提升为主键）。
+  private static List<SchemaViolation> relationConstraints(TableShape shape) {
+    List<SchemaViolation> violations = new ArrayList<>();
+    for (TableShape.Constraint constraint : shape.constraints()) {
+      if (constraint.type().equals("f")) {
+        violations.add(
+            new SchemaViolation(
+                "§2", shape.name(), "有外键 " + constraint.name() + "，引用关系由应用保证，不建外键"));
+      } else if (constraint.type().equals("u")) {
+        violations.add(
+            new SchemaViolation(
+                "§2", shape.name(), "唯一约束 " + constraint.name() + " 要改成唯一索引（CREATE UNIQUE INDEX）"));
+      }
+    }
+    return violations;
+  }
+
+  /// §3：每张表有两个审计时间；主表另有四列，其他表不能有主表才有的列。
+  private static List<SchemaViolation> auditColumns(TableShape shape, TableTier tier) {
+    List<SchemaViolation> violations = new ArrayList<>();
+    for (String name : List.of("created_at", "updated_at")) {
+      shape
+          .column(name)
+          .ifPresentOrElse(
+              column -> {
+                if (!isTimestamptz(column.type()) || !column.notNull()) {
+                  violations.add(
+                      new SchemaViolation(
+                          "§3",
+                          shape.name(),
+                          name + " 应为 TIMESTAMPTZ NOT NULL，现在是 " + column.type()));
+                }
+              },
+              () -> violations.add(new SchemaViolation("§3", shape.name(), "缺少 " + name)));
+    }
+    if (tier == TableTier.MAIN) {
+      new TreeSet<>(MAIN_COLUMNS.keySet())
+          .forEach(
+              name ->
+                  shape
+                      .column(name)
+                      .ifPresentOrElse(
+                          column -> {
+                            if (!column.type().equals(MAIN_COLUMNS.get(name))) {
+                              violations.add(
+                                  new SchemaViolation(
+                                      "§3",
+                                      shape.name(),
+                                      name
+                                          + " 的类型是 "
+                                          + column.type()
+                                          + "，应为 "
+                                          + MAIN_COLUMNS.get(name)));
+                            }
+                          },
+                          () ->
+                              violations.add(
+                                  new SchemaViolation("§3", shape.name(), "主表缺少 " + name))));
+    } else {
+      MAIN_ONLY_COLUMNS.stream()
+          .filter(name -> shape.column(name).isPresent())
+          .forEach(
+              name ->
+                  violations.add(
+                      new SchemaViolation("§3", shape.name(), "其他表不该有 " + name + "，它只放主表")));
+    }
+    return violations;
+  }
+
+  /// §3：审计时间由 `set_audit_times()` 触发器维护，插入和更新都要触发、逐行执行。
+  private static List<SchemaViolation> auditTrigger(TableShape shape) {
+    boolean present =
+        shape.auditTriggers().stream()
+            .anyMatch(
+                def -> def.contains("BEFORE INSERT OR UPDATE") && def.contains("FOR EACH ROW"));
+    return present
+        ? List.of()
+        : List.of(
+            new SchemaViolation(
+                "§3",
+                shape.name(),
+                "没有挂 set_audit_times() 触发器（BEFORE INSERT OR UPDATE … FOR EACH ROW）"));
+  }
+
+  /// §3：用户名只存 identity 的两张用户名表；任何表都不冗余操作人名字。
+  private static List<SchemaViolation> userNameColumns(TableShape shape) {
+    return shape.columns().stream()
+        .map(TableShape.Column::name)
+        .filter(
+            name ->
+                name.endsWith("_by_name")
+                    || (USERNAME_COLUMNS.contains(name) && !USERNAME_TABLES.contains(shape.name())))
+        .map(
+            name ->
+                new SchemaViolation(
+                    "§3", shape.name(), "不能有用户名列 " + name + "，引用用户存 user_id，展示时按 ID 现读"))
+        .toList();
+  }
+
+  /// §4：时间一律 `TIMESTAMPTZ`。
+  private static List<SchemaViolation> timeColumns(TableShape shape) {
+    return shape.columns().stream()
+        .filter(column -> column.type().matches("timestamp(\\(\\d\\))? without time zone"))
+        .map(
+            column ->
+                new SchemaViolation("§4", shape.name(), column.name() + " 不带时区，应为 TIMESTAMPTZ"))
+        .toList();
+  }
+
+  /// `format_type` 会带精度，如 `timestamp(6) with time zone`。
+  private static boolean isTimestamptz(String type) {
+    return type.matches("timestamp(\\(\\d\\))? with time zone");
+  }
+
+  private static String columns(List<String> names) {
+    return "(" + String.join(", ", names) + ")";
   }
 
   /// §1：除 `public` 外不许有用户建的 schema。
