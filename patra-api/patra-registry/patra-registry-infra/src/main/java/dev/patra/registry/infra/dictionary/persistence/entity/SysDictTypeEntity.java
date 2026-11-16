@@ -1,9 +1,10 @@
 package dev.patra.registry.infra.dictionary.persistence.entity;
 
-import dev.patra.tool.jpa.entity.SoftDeletableJpaEntity;
+import dev.patra.tool.jpa.entity.BaseJpaEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
+import java.time.Instant;
 import lombok.Getter;
 import lombok.Setter;
 import org.hibernate.annotations.JdbcTypeCode;
@@ -26,7 +27,7 @@ import tools.jackson.databind.JsonNode;
 @Setter
 @Entity
 @Table(name = "sys_dict_type")
-public class SysDictTypeEntity extends SoftDeletableJpaEntity {
+public class SysDictTypeEntity extends BaseJpaEntity {
 
   /// 字典类型的稳定业务键(例如，`http_method`)。预期格式为小写蛇形命名。
   @Column(name = "type_code", nullable = false, length = 64)
@@ -52,4 +53,8 @@ public class SysDictTypeEntity extends SoftDeletableJpaEntity {
   @JdbcTypeCode(SqlTypes.JSON)
   @Column(name = "reserved_json", columnDefinition = "JSON")
   private JsonNode reservedJson;
+
+  /// 删除时间，空表示未删除；查询方法自己带「未删除」条件（库表规范第 5 节）。
+  @Column(name = "deleted_at")
+  private Instant deletedAt;
 }

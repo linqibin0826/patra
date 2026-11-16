@@ -25,8 +25,8 @@ import lombok.Setter;
 public class SysDictItemAliasEntity extends ValueObjectJpaEntity {
 
   /// 此别名解析到的字典项的标识符(`sys_dict_item.id`)。
-  @Column(name = "item_id", nullable = false)
-  private Long itemId;
+  @Column(name = "dict_item_id", nullable = false)
+  private Long dictItemId;
 
   /// 来源标准标识符(例如，`iso_3166_1_alpha2`，`global`)。
   @Column(name = "source_standard", nullable = false, length = 64)

@@ -1,9 +1,10 @@
 package dev.patra.registry.infra.dictionary.persistence.entity;
 
-import dev.patra.tool.jpa.entity.SoftDeletableJpaEntity;
+import dev.patra.tool.jpa.entity.BaseJpaEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
+import java.time.Instant;
 import lombok.Getter;
 import lombok.Setter;
 import org.hibernate.annotations.JdbcTypeCode;
@@ -17,7 +18,7 @@ import tools.jackson.databind.JsonNode;
 /// 数据库级要点：
 ///
 /// - 每个类型最多可以有一个默认项(通过 `default_key` 强制)。
-/// - `item_code` 在 `type_id` 边界内必须唯一。
+/// - `item_code` 在 `dict_type_id` 边界内必须唯一。
 /// - `item_code` 预期使用大写蛇形命名(例如，`GET`，`PAGE_NUMBER`)。
 ///
 /// @author linqibin
@@ -26,11 +27,11 @@ import tools.jackson.databind.JsonNode;
 @Setter
 @Entity
 @Table(name = "sys_dict_item")
-public class SysDictItemEntity extends SoftDeletableJpaEntity {
+public class SysDictItemEntity extends BaseJpaEntity {
 
   /// 所属字典类型的标识符(`sys_dict_type.id`)。
-  @Column(name = "type_id", nullable = false)
-  private Long typeId;
+  @Column(name = "dict_type_id", nullable = false)
+  private Long dictTypeId;
 
   /// 在所属类型内稳定的项目代码。
   @Column(name = "item_code", nullable = false, length = 64)
@@ -78,4 +79,8 @@ public class SysDictItemEntity extends SoftDeletableJpaEntity {
   /// PG GENERATED ALWAYS AS (...) STORED 列，Hibernate 不应尝试插入或更新。
   @Column(name = "default_key", insertable = false, updatable = false)
   private Long defaultKey;
+
+  /// 删除时间，空表示未删除；查询方法自己带「未删除」条件（库表规范第 5 节）。
+  @Column(name = "deleted_at")
+  private Instant deletedAt;
 }

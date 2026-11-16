@@ -47,7 +47,7 @@ public class DictionaryRepositoryAdapter implements DictionaryRepository {
     if (typeCode == null || typeCode.isBlank()) {
       return Optional.empty();
     }
-    return typeDao.findByTypeCode(typeCode).map(mapper::toDomain);
+    return typeDao.findByTypeCodeAndDeletedAtIsNull(typeCode).map(mapper::toDomain);
   }
 
   /// 批量查询指定类型下的字典项。
@@ -60,7 +60,8 @@ public class DictionaryRepositoryAdapter implements DictionaryRepository {
     if (typeId == null || itemCodes == null || itemCodes.isEmpty()) {
       return Map.of();
     }
-    List<SysDictItemEntity> entities = itemDao.findByTypeIdAndItemCodeIn(typeId, itemCodes);
+    List<SysDictItemEntity> entities =
+        itemDao.findByDictTypeIdAndItemCodeInAndDeletedAtIsNull(typeId, itemCodes);
     return entities.stream()
         .map(mapper::toDomain)
         .collect(Collectors.toMap(DictionaryItem::itemCode, Function.identity(), (a, b) -> a));
@@ -90,12 +91,14 @@ public class DictionaryRepositoryAdapter implements DictionaryRepository {
     }
 
     Set<Long> itemIds =
-        aliasEntities.stream().map(SysDictItemAliasEntity::getItemId).collect(Collectors.toSet());
+        aliasEntities.stream()
+            .map(SysDictItemAliasEntity::getDictItemId)
+            .collect(Collectors.toSet());
     Map<Long, DictionaryItem> itemsById = loadItemsById(itemIds);
 
     Map<String, DictionaryItem> result = new HashMap<>();
     for (SysDictItemAliasEntity alias : aliasEntities) {
-      DictionaryItem item = itemsById.get(alias.getItemId());
+      DictionaryItem item = itemsById.get(alias.getDictItemId());
       if (item == null) {
         continue;
       }
@@ -124,7 +127,8 @@ public class DictionaryRepositoryAdapter implements DictionaryRepository {
     }
 
     List<SysDictItemEntity> items =
-        itemDao.findByTypeIdAndEnabledTrueOrderByDisplayOrderAscItemCodeAsc(typeId);
+        itemDao.findByDictTypeIdAndEnabledTrueAndDeletedAtIsNullOrderByDisplayOrderAscItemCodeAsc(
+            typeId);
     if (items.isEmpty()) {
       return List.of();
     }
@@ -134,12 +138,12 @@ public class DictionaryRepositoryAdapter implements DictionaryRepository {
     if (labelStandard != null && !labelStandard.isBlank()) {
       Set<Long> itemIds = items.stream().map(SysDictItemEntity::getId).collect(Collectors.toSet());
       List<SysDictItemAliasEntity> aliases =
-          aliasDao.findBySourceStandardAndItemIdIn(labelStandard, itemIds);
+          aliasDao.findBySourceStandardAndDictItemIdIn(labelStandard, itemIds);
       labelByItemId =
           aliases.stream()
               .collect(
                   Collectors.toMap(
-                      SysDictItemAliasEntity::getItemId,
+                      SysDictItemAliasEntity::getDictItemId,
                       SysDictItemAliasEntity::getExternalCode,
                       (a, b) -> a));
     }
@@ -164,7 +168,7 @@ public class DictionaryRepositoryAdapter implements DictionaryRepository {
     if (itemIds == null || itemIds.isEmpty()) {
       return Map.of();
     }
-    List<SysDictItemEntity> entities = itemDao.findByIdIn(itemIds);
+    List<SysDictItemEntity> entities = itemDao.findByIdInAndDeletedAtIsNull(itemIds);
     return entities.stream()
         .map(mapper::toDomain)
         .collect(Collectors.toMap(DictionaryItem::id, Function.identity(), (a, b) -> a));

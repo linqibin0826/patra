@@ -22,39 +22,44 @@ public interface SysDictItemDao extends JpaRepository<SysDictItemEntity, Long> {
 
   /// 通过类型 ID 查询所有字典项，按显示顺序和项目代码排序。
   ///
-  /// @param typeId 类型 ID
+  /// @param dictTypeId 类型 ID
   /// @return 字典项列表
-  List<SysDictItemEntity> findByTypeIdOrderByDisplayOrderAscItemCodeAsc(Long typeId);
+  List<SysDictItemEntity> findByDictTypeIdAndDeletedAtIsNullOrderByDisplayOrderAscItemCodeAsc(
+      Long dictTypeId);
 
   /// 通过类型 ID 和项目代码查询字典项。
   ///
-  /// @param typeId 类型 ID
+  /// @param dictTypeId 类型 ID
   /// @param itemCode 项目代码
   /// @return 可选的字典项实体
-  Optional<SysDictItemEntity> findByTypeIdAndItemCode(Long typeId, String itemCode);
+  Optional<SysDictItemEntity> findByDictTypeIdAndItemCodeAndDeletedAtIsNull(
+      Long dictTypeId, String itemCode);
 
   /// 批量查询类型内的字典项。
   ///
-  /// @param typeId 类型 ID
+  /// @param dictTypeId 类型 ID
   /// @param itemCodes 项目代码集合
   /// @return 匹配的字典项实体列表
-  List<SysDictItemEntity> findByTypeIdAndItemCodeIn(Long typeId, Iterable<String> itemCodes);
+  List<SysDictItemEntity> findByDictTypeIdAndItemCodeInAndDeletedAtIsNull(
+      Long dictTypeId, Iterable<String> itemCodes);
 
   /// 批量查询字典项。
   ///
   /// @param itemIds 字典项 ID 集合
   /// @return 匹配的字典项实体列表
-  List<SysDictItemEntity> findByIdIn(Iterable<Long> itemIds);
+  List<SysDictItemEntity> findByIdInAndDeletedAtIsNull(Iterable<Long> itemIds);
 
   /// 查询类型的默认字典项。
   ///
-  /// @param typeId 类型 ID
+  /// @param dictTypeId 类型 ID
   /// @return 可选的默认字典项
-  Optional<SysDictItemEntity> findByTypeIdAndIsDefaultTrue(Long typeId);
+  Optional<SysDictItemEntity> findByDictTypeIdAndIsDefaultTrueAndDeletedAtIsNull(Long dictTypeId);
 
   /// 查询指定类型下所有启用的字典项，按显示顺序和项目代码排序。
   ///
-  /// @param typeId 类型 ID
+  /// @param dictTypeId 类型 ID
   /// @return 已启用的字典项列表
-  List<SysDictItemEntity> findByTypeIdAndEnabledTrueOrderByDisplayOrderAscItemCodeAsc(Long typeId);
+  List<SysDictItemEntity>
+      findByDictTypeIdAndEnabledTrueAndDeletedAtIsNullOrderByDisplayOrderAscItemCodeAsc(
+          Long dictTypeId);
 }

@@ -23,12 +23,12 @@ public interface SysDictTypeDao extends JpaRepository<SysDictTypeEntity, Long> {
   ///
   /// @param typeCode 类型代码
   /// @return 可选的字典类型实体
-  Optional<SysDictTypeEntity> findByTypeCode(String typeCode);
+  Optional<SysDictTypeEntity> findByTypeCodeAndDeletedAtIsNull(String typeCode);
 
   /// 查询所有激活的字典类型，按类型代码排序。
   ///
   /// 由于实体使用 Hibernate @SoftDelete，已删除记录会自动被过滤。
   ///
   /// @return 字典类型列表
-  List<SysDictTypeEntity> findAllByOrderByTypeCodeAsc();
+  List<SysDictTypeEntity> findAllByDeletedAtIsNullOrderByTypeCodeAsc();
 }
