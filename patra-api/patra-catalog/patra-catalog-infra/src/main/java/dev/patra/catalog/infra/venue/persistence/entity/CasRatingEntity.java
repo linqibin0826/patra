@@ -1,6 +1,6 @@
 package dev.patra.catalog.infra.venue.persistence.entity;
 
-import dev.patra.tool.jpa.entity.ChildJpaEntity;
+import dev.patra.tool.jpa.entity.ValueObjectJpaEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Index;
@@ -18,7 +18,7 @@ import lombok.Setter;
 ///
 /// **字段说明**：
 ///
-/// - `edition` 存储 CAS 版本名称（如"升级版"、"新锐版"），与 `ChildJpaEntity.version`（乐观锁）无关
+/// - `edition` 存储 CAS 版本名称（如"升级版"、"新锐版"）
 /// - `majorQuartile` 大类分区，`minorQuartile` 小类分区，两者独立评定
 ///
 /// **数据来源**：通过 LetPub 爬取填充，由 `LetPubDataMapper` 从原始数据拆解而来。
@@ -40,7 +40,7 @@ import lombok.Setter;
       @Index(name = "idx_major_quartile", columnList = "major_quartile"),
       @Index(name = "idx_is_top_journal", columnList = "is_top_journal")
     })
-public class CasRatingEntity extends ChildJpaEntity {
+public class CasRatingEntity extends ValueObjectJpaEntity {
 
   /// 关联期刊 ID（逻辑外键 → cat_venue.id）
   @Column(name = "venue_id", nullable = false)

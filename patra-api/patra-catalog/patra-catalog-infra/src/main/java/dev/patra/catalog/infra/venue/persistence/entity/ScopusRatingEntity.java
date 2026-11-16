@@ -1,6 +1,6 @@
 package dev.patra.catalog.infra.venue.persistence.entity;
 
-import dev.patra.tool.jpa.entity.ChildJpaEntity;
+import dev.patra.tool.jpa.entity.ValueObjectJpaEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Index;
@@ -37,7 +37,7 @@ import lombok.Setter;
       @Index(name = "idx_cite_score", columnList = "cite_score"),
       @Index(name = "idx_quartile", columnList = "quartile")
     })
-public class ScopusRatingEntity extends ChildJpaEntity {
+public class ScopusRatingEntity extends ValueObjectJpaEntity {
 
   /// 关联期刊 ID（逻辑外键 → cat_venue.id）
   @Column(name = "venue_id", nullable = false)

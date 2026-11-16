@@ -1,20 +1,24 @@
 package dev.patra.tool.jpa.support;
 
-import dev.patra.tool.jpa.entity.ValueObjectJpaEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
 
-/// 集成测试专用实体：继承现有的值对象基类，主键预先分配、没有 version。
+/// 集成测试专用实体：反例。主键预先分配、没有 version，也不实现 `Persistable`。
 ///
-/// 和 catalog 的子表实体是同一种写法，用来观察 `saveAll` 是不是每行先查一次。
+/// 值对象基类改造前就是这种写法，用来和 `JpaITValueObjectEntity` 对照 `saveAll` 是不是每行先查一次。
 @Getter
 @Setter
 @Entity
 @Table(name = "jpa_it_preassigned")
-public class JpaITPreassignedEntity extends ValueObjectJpaEntity {
+public class JpaITPreassignedEntity {
+
+  @Id
+  @Column(name = "id")
+  private Long id;
 
   @Column(name = "content")
   private String content;

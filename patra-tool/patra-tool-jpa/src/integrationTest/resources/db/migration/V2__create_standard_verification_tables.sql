@@ -42,8 +42,8 @@ CREATE TABLE jpa_it_preassigned
     content TEXT   NULL
 );
 
--- 推断 5 的对照：实现 Persistable 的实体
-CREATE TABLE jpa_it_persistable
+-- 推断 5 的对照：继承值对象基类（实现 Persistable）的实体
+CREATE TABLE jpa_it_value_object
 (
     id      BIGINT NOT NULL PRIMARY KEY,
     content TEXT   NULL

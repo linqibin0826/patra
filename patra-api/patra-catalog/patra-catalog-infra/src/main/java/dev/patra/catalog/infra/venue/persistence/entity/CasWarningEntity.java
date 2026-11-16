@@ -2,7 +2,7 @@ package dev.patra.catalog.infra.venue.persistence.entity;
 
 import dev.patra.catalog.domain.venue.model.enums.CasWarningLevel;
 import dev.patra.catalog.infra.venue.persistence.converter.CasWarningLevelConverter;
-import dev.patra.tool.jpa.entity.ChildJpaEntity;
+import dev.patra.tool.jpa.entity.ValueObjectJpaEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
@@ -48,7 +48,7 @@ import lombok.Setter;
       @Index(name = "idx_warning_level", columnList = "warning_level"),
       @Index(name = "idx_published_year", columnList = "published_year")
     })
-public class CasWarningEntity extends ChildJpaEntity {
+public class CasWarningEntity extends ValueObjectJpaEntity {
 
   /// 关联期刊 ID（逻辑外键 → cat_venue.id）
   @Column(name = "venue_id", nullable = false)

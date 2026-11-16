@@ -80,6 +80,37 @@ class ValueObjectJpaEntityTest {
   }
 
   @Nested
+  @DisplayName("新行判断（Persistable）")
+  class NewRowTests {
+
+    @Test
+    @DisplayName("新建的实体即使已分配 id 也是新行，加载或插入后不再是")
+    void should_be_new_until_loaded_or_persisted() {
+      entity.setId(1L);
+      assertThat(entity.isNew()).isTrue();
+
+      entity.markNotNew();
+
+      assertThat(entity.isNew()).isFalse();
+    }
+
+    @Test
+    @DisplayName("构建器建出的实体也是新行")
+    void should_be_new_when_built() {
+      assertThat(TestValueEntity.builder().id(2L).build().isNew()).isTrue();
+    }
+
+    @Test
+    @DisplayName("新行标记不参与相等判断")
+    void should_ignore_new_flag_in_equality() {
+      TestValueEntity loaded = TestValueEntity.builder().id(3L).build();
+      loaded.markNotNew();
+
+      assertThat(loaded).isEqualTo(TestValueEntity.builder().id(3L).build());
+    }
+  }
+
+  @Nested
   @DisplayName("无审计字段验证")
   class NoAuditFieldsTests {
 

@@ -57,6 +57,20 @@ class PubmedFileRepositoryAdapterIT {
         .isInstanceOf(IllegalTransactionStateException.class);
   }
 
+  /// 同一事务里重跑失败的文件：第二次 `markRunning` 查到的是第一次插入的那个实体，要更新它而不是再插一行。
+  @Test
+  @DisplayName("同一个文件失败后重跑：再次标记开始更新原行，不新增")
+  void should_save_same_file_twice() {
+    PubmedFileRef ref = ref(1340);
+    adapter.markRunning(ref, PubmedImportScope.EXISTING_ONLY, null, T0);
+    adapter.markFailed(ref.fileName(), "boom", T0);
+    adapter.markRunning(ref, PubmedImportScope.EXISTING_ONLY, null, T0.plusSeconds(60));
+
+    assertThat(dao.count()).isEqualTo(1);
+    assertThat(adapter.findByFileName(ref.fileName()).orElseThrow().status())
+        .isEqualTo(PubmedFileStatus.RUNNING);
+  }
+
   @Test
   @DisplayName("返回最后一个成功文件的文件号，失败的不算")
   void should_return_last_completed_seq() {

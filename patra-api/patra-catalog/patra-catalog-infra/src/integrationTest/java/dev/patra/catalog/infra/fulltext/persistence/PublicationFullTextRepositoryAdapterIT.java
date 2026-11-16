@@ -65,6 +65,22 @@ class PublicationFullTextRepositoryAdapterIT {
     assertThat(saved.lastError()).isEqualTo("x");
   }
 
+  /// 不清一级缓存连续保存两次：第二次查到的是第一次新建的那个托管实体，要更新它而不是再插一行。
+  @Test
+  @DisplayName("同一事务里同一文献连续 save 两次，仍只有一行")
+  void should_save_same_fulltext_twice() {
+    adapter.save(failed(7003L, 1));
+    adapter.save(failed(7003L, 2));
+    flushAndClear();
+
+    assertThat(
+            jdbc.queryForObject(
+                "SELECT count(*) FROM cat_publication_fulltext WHERE publication_id = 7003",
+                Integer.class))
+        .isEqualTo(1);
+    assertThat(adapter.findByPublicationId(7003L).orElseThrow().attemptCount()).isEqualTo(2);
+  }
+
   @Test
   @DisplayName("全部字段往返一致，含宽高为空的图片")
   void should_round_trip_all_fields() {
