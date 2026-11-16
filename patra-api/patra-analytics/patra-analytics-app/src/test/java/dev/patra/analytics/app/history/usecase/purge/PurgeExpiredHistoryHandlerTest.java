@@ -34,12 +34,16 @@ class PurgeExpiredHistoryHandlerTest {
     assertThat(
             meters
                 .get("analytics.history.purged")
-                .tag("table", "reading_history")
+                .tag("table", "anl_reading_history")
                 .counter()
                 .count())
         .isEqualTo(20_042.0);
     assertThat(
-            meters.get("analytics.history.purged").tag("table", "deleted_entry").counter().count())
+            meters
+                .get("analytics.history.purged")
+                .tag("table", "anl_reading_history_tombstone")
+                .counter()
+                .count())
         .isEqualTo(10_007.0);
   }
 

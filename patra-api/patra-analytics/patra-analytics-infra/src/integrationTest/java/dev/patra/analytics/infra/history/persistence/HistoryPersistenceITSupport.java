@@ -1,6 +1,7 @@
 package dev.patra.analytics.infra.history.persistence;
 
 import dev.patra.analytics.infra.config.AnalyticsITPostgreSQLContainerInitializer;
+import dev.patra.tool.jpa.id.SnowflakeIdGenerator;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
@@ -25,7 +26,7 @@ abstract class HistoryPersistenceITSupport {
   @BeforeEach
   void truncateHistoryTables() {
     jdbcTemplate.update(
-        "TRUNCATE history.reading_history, history.recording_setting, history.deleted_entry");
+        "TRUNCATE anl_reading_history, anl_recording_setting, anl_reading_history_tombstone");
   }
 
   /// 直接插一行历史。
@@ -36,8 +37,9 @@ abstract class HistoryPersistenceITSupport {
   /// @param fulltext 是否读过全文
   protected void insertHistory(long userId, long articleId, Instant at, boolean fulltext) {
     jdbcTemplate.update(
-        "INSERT INTO history.reading_history (user_id, article_id, last_read_at, fulltext_read)"
-            + " VALUES (?, ?, ?, ?)",
+        "INSERT INTO anl_reading_history (id, user_id, publication_id, last_read_at, fulltext_read)"
+            + " VALUES (?, ?, ?, ?, ?)",
+        SnowflakeIdGenerator.getId(),
         userId,
         articleId,
         at.atOffset(ZoneOffset.UTC),
@@ -51,7 +53,9 @@ abstract class HistoryPersistenceITSupport {
   /// @param at 删除时刻
   protected void insertDeletion(long userId, long articleId, Instant at) {
     jdbcTemplate.update(
-        "INSERT INTO history.deleted_entry (user_id, article_id, deleted_at) VALUES (?, ?, ?)",
+        "INSERT INTO anl_reading_history_tombstone (id, user_id, publication_id, removed_at)"
+            + " VALUES (?, ?, ?, ?)",
+        SnowflakeIdGenerator.getId(),
         userId,
         articleId,
         at.atOffset(ZoneOffset.UTC));
@@ -63,8 +67,8 @@ abstract class HistoryPersistenceITSupport {
   /// @param enabled 开关
   protected void insertSetting(long userId, boolean enabled) {
     jdbcTemplate.update(
-        "INSERT INTO history.recording_setting (user_id, recording_enabled, updated_at)"
-            + " VALUES (?, ?, now())",
+        "INSERT INTO anl_recording_setting (id, user_id, recording_enabled) VALUES (?, ?, ?)",
+        SnowflakeIdGenerator.getId(),
         userId,
         enabled);
   }
@@ -77,7 +81,7 @@ abstract class HistoryPersistenceITSupport {
   protected Instant lastReadAt(long userId, long articleId) {
     return jdbcTemplate
         .queryForObject(
-            "SELECT last_read_at FROM history.reading_history WHERE user_id = ? AND article_id = ?",
+            "SELECT last_read_at FROM anl_reading_history WHERE user_id = ? AND publication_id = ?",
             OffsetDateTime.class,
             userId,
             articleId)

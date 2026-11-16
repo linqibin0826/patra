@@ -67,7 +67,7 @@ class HistoryFlowIT {
   @BeforeEach
   void truncateHistory() {
     jdbcTemplate.update(
-        "TRUNCATE history.reading_history, history.recording_setting, history.deleted_entry");
+        "TRUNCATE anl_reading_history, anl_recording_setting, anl_reading_history_tombstone");
   }
 
   @Test

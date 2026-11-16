@@ -2,6 +2,7 @@ package dev.patra.analytics.infra.insight.persistence;
 
 import dev.patra.analytics.domain.insight.model.vo.HotReadingEntry;
 import dev.patra.analytics.domain.insight.port.repository.HotReadingSnapshotRepository;
+import dev.patra.tool.jpa.id.SnowflakeIdGenerator;
 import java.time.Instant;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -26,7 +27,7 @@ public class HotReadingSnapshotRepositoryAdapter implements HotReadingSnapshotRe
   @Override
   @Transactional(propagation = Propagation.MANDATORY)
   public void replace(List<HotReadingEntry> entries, Instant computedAt) {
-    jdbc.sql("DELETE FROM insight.hot_reading").update();
+    jdbc.sql("DELETE FROM anl_hot_reading").update();
     for (int from = 0; from < entries.size(); from += SnapshotRuns.CHUNK) {
       insert(entries.subList(from, Math.min(from + SnapshotRuns.CHUNK, entries.size())));
     }
@@ -38,10 +39,13 @@ public class HotReadingSnapshotRepositoryAdapter implements HotReadingSnapshotRe
   /// @param chunk 一块
   private void insert(List<HotReadingEntry> chunk) {
     jdbc.sql(
-            "INSERT INTO insight.hot_reading (position, article_id, ranked, score, readers_7d)"
-                + " SELECT * FROM unnest(CAST(:positions AS smallint[]), CAST(:articles AS bigint[]),"
+            "INSERT INTO anl_hot_reading (id, position, publication_id, ranked, score, readers_7d)"
+                + " SELECT * FROM unnest(CAST(:ids AS bigint[]), CAST(:positions AS smallint[]),"
+                + " CAST(:articles AS bigint[]),"
                 + " CAST(:ranked AS boolean[]), CAST(:scores AS double precision[]),"
                 + " CAST(:readers AS integer[]))")
+        .param(
+            "ids", chunk.stream().map(entry -> SnowflakeIdGenerator.getId()).toArray(Long[]::new))
         .param("positions", chunk.stream().map(HotReadingEntry::position).toArray(Integer[]::new))
         .param("articles", chunk.stream().map(HotReadingEntry::articleId).toArray(Long[]::new))
         .param("ranked", chunk.stream().map(HotReadingEntry::ranked).toArray(Boolean[]::new))

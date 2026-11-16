@@ -1,10 +1,11 @@
 package dev.patra.analytics.infra.insight.persistence;
 
+import dev.patra.tool.jpa.id.SnowflakeIdGenerator;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import org.springframework.jdbc.core.simple.JdbcClient;
 
-/// `insight.snapshot_run` 的写法：两种快照的写入适配器共用。
+/// `anl_snapshot_run` 的写法：两种快照的写入适配器共用。
 final class SnapshotRuns {
 
   /// 热读快照。
@@ -26,10 +27,11 @@ final class SnapshotRuns {
   /// @param rowCount 行数
   static void record(JdbcClient jdbc, String kind, Instant computedAt, int rowCount) {
     jdbc.sql(
-            "INSERT INTO insight.snapshot_run (kind, computed_at, row_count)"
-                + " VALUES (:kind, :at, :rows)"
+            "INSERT INTO anl_snapshot_run (id, kind, computed_at, row_count)"
+                + " VALUES (:id, :kind, :at, :rows)"
                 + " ON CONFLICT (kind) DO UPDATE"
                 + " SET computed_at = EXCLUDED.computed_at, row_count = EXCLUDED.row_count")
+        .param("id", SnowflakeIdGenerator.getId())
         .param("kind", kind)
         .param("at", computedAt.atOffset(ZoneOffset.UTC))
         .param("rows", rowCount)

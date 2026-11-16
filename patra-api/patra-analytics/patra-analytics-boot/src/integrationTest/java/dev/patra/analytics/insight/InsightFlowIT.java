@@ -205,7 +205,7 @@ class InsightFlowIT {
 
   @Test
   void hot_reads_empty_before_first_run() {
-    jdbcTemplate.update("TRUNCATE insight.hot_reading, insight.snapshot_run");
+    jdbcTemplate.update("TRUNCATE anl_hot_reading, anl_snapshot_run");
 
     JsonNode page = json(get("/hot-reads"));
 

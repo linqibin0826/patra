@@ -7,7 +7,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
-/// 阅读历史与删除记录的写端（`history.reading_history`、`history.deleted_entry`），以及注销清理要覆盖的三张表。
+/// 阅读历史与删除记录的写端（`anl_reading_history`、`anl_reading_history_tombstone`），以及注销清理要覆盖的三张表。
 public interface ReadingHistoryRepository {
 
   /// 把调用方事务里之后每条语句的执行与锁等待各限 500 ms：PG 卡住或被锁时写历史很快失败，不拖慢采集。

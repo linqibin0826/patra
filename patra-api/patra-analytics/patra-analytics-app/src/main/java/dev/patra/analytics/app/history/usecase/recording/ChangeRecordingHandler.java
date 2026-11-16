@@ -3,7 +3,6 @@ package dev.patra.analytics.app.history.usecase.recording;
 import dev.patra.analytics.domain.history.port.repository.RecordingSettingRepository;
 import dev.patra.tool.core.security.CurrentUserPort;
 import dev.patra.tool.cqrs.CommandHandler;
-import java.time.Clock;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -15,7 +14,6 @@ public class ChangeRecordingHandler
 
   private final RecordingSettingRepository settings;
   private final CurrentUserPort currentUser;
-  private final Clock clock;
 
   /// 保存开关。
   ///
@@ -23,7 +21,7 @@ public class ChangeRecordingHandler
   /// @return 保存后的开关
   @Override
   public RecordingResult handle(ChangeRecordingCommand command) {
-    settings.saveEnabled(currentUser.require().userId(), command.enabled(), clock.instant());
+    settings.saveEnabled(currentUser.require().userId(), command.enabled());
     return RecordingResult.of(command.enabled());
   }
 }

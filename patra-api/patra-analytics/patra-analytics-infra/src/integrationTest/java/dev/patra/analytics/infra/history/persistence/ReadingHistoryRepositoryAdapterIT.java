@@ -31,7 +31,7 @@ class ReadingHistoryRepositoryAdapterIT extends HistoryPersistenceITSupport {
     upsert(ReadingRecord.of(1L, 100L, T0, false));
     upsert(ReadingRecord.of(1L, 100L, T0.plusSeconds(3600), false));
 
-    assertThat(count("SELECT count(*) FROM history.reading_history")).isEqualTo(1L);
+    assertThat(count("SELECT count(*) FROM anl_reading_history")).isEqualTo(1L);
     assertThat(lastReadAt(1L, 100L)).isEqualTo(T0.plusSeconds(3600));
   }
 
@@ -63,7 +63,7 @@ class ReadingHistoryRepositoryAdapterIT extends HistoryPersistenceITSupport {
                 transactions.executeWithoutResult(
                     s -> {
                       jdbcTemplate.queryForList(
-                          "SELECT * FROM history.reading_history WHERE user_id = 1 FOR UPDATE");
+                          "SELECT * FROM anl_reading_history WHERE user_id = 1 FOR UPDATE");
                       locked.countDown();
                       sleep(Duration.ofSeconds(3));
                     }));
@@ -95,7 +95,7 @@ class ReadingHistoryRepositoryAdapterIT extends HistoryPersistenceITSupport {
                 transactions.executeWithoutResult(
                     s -> {
                       jdbcTemplate.execute(
-                          "LOCK TABLE history.recording_setting IN ACCESS EXCLUSIVE MODE");
+                          "LOCK TABLE anl_recording_setting IN ACCESS EXCLUSIVE MODE");
                       locked.countDown();
                       sleep(Duration.ofSeconds(3));
                     }));
@@ -125,9 +125,9 @@ class ReadingHistoryRepositoryAdapterIT extends HistoryPersistenceITSupport {
     transactions.executeWithoutResult(s -> history.deleteOne(1L, 100L, T0.plusSeconds(20)));
     transactions.executeWithoutResult(s -> history.deleteOne(1L, 999L, T0.plusSeconds(30)));
 
-    assertThat(count("SELECT count(*) FROM history.reading_history WHERE article_id = 100"))
+    assertThat(count("SELECT count(*) FROM anl_reading_history WHERE publication_id = 100"))
         .isZero();
-    assertThat(count("SELECT count(*) FROM history.reading_history WHERE article_id = 101"))
+    assertThat(count("SELECT count(*) FROM anl_reading_history WHERE publication_id = 101"))
         .isEqualTo(1L);
     assertThat(
             history.findDeletedAt(
@@ -147,11 +147,12 @@ class ReadingHistoryRepositoryAdapterIT extends HistoryPersistenceITSupport {
 
     transactions.executeWithoutResult(s -> history.deleteAllOf(1L));
 
-    assertThat(count("SELECT count(*) FROM history.reading_history WHERE user_id = 1")).isZero();
-    assertThat(count("SELECT count(*) FROM history.deleted_entry WHERE user_id = 1")).isZero();
-    assertThat(count("SELECT count(*) FROM history.reading_history WHERE user_id = 2"))
+    assertThat(count("SELECT count(*) FROM anl_reading_history WHERE user_id = 1")).isZero();
+    assertThat(count("SELECT count(*) FROM anl_reading_history_tombstone WHERE user_id = 1"))
+        .isZero();
+    assertThat(count("SELECT count(*) FROM anl_reading_history WHERE user_id = 2")).isEqualTo(1L);
+    assertThat(count("SELECT count(*) FROM anl_reading_history_tombstone WHERE user_id = 2"))
         .isEqualTo(1L);
-    assertThat(count("SELECT count(*) FROM history.deleted_entry WHERE user_id = 2")).isEqualTo(1L);
   }
 
   @Test
@@ -172,7 +173,7 @@ class ReadingHistoryRepositoryAdapterIT extends HistoryPersistenceITSupport {
             purgeRead(cutoff, 10));
 
     assertThat(batches).containsExactly(10, 10, 5, 0);
-    assertThat(count("SELECT count(*) FROM history.reading_history")).isEqualTo(3L);
+    assertThat(count("SELECT count(*) FROM anl_reading_history")).isEqualTo(3L);
   }
 
   @Test
@@ -185,7 +186,8 @@ class ReadingHistoryRepositoryAdapterIT extends HistoryPersistenceITSupport {
     Integer purged = transactions.execute(s -> history.purgeDeletionsBefore(cutoff, 10));
 
     assertThat(purged).isEqualTo(2);
-    assertThat(count("SELECT count(*) FROM history.deleted_entry WHERE article_id = 102"))
+    assertThat(
+            count("SELECT count(*) FROM anl_reading_history_tombstone WHERE publication_id = 102"))
         .isEqualTo(1L);
   }
 
@@ -213,7 +215,7 @@ class ReadingHistoryRepositoryAdapterIT extends HistoryPersistenceITSupport {
     transactions.executeWithoutResult(s -> history.deleteUsers(List.of(3L, 5L)));
 
     assertThat(history.findUsersAfter(0L, 10)).containsExactly(9L);
-    assertThat(count("SELECT count(*) FROM history.recording_setting")).isEqualTo(1L);
+    assertThat(count("SELECT count(*) FROM anl_recording_setting")).isEqualTo(1L);
   }
 
   private void upsert(ReadingRecord record) {
@@ -226,7 +228,7 @@ class ReadingHistoryRepositoryAdapterIT extends HistoryPersistenceITSupport {
 
   private boolean fulltext(long userId, long articleId) {
     return jdbcTemplate.queryForObject(
-        "SELECT fulltext_read FROM history.reading_history WHERE user_id = ? AND article_id = ?",
+        "SELECT fulltext_read FROM anl_reading_history WHERE user_id = ? AND publication_id = ?",
         Boolean.class,
         userId,
         articleId);

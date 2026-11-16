@@ -6,7 +6,7 @@ import java.util.Collection;
 import java.util.Map;
 import java.util.Optional;
 
-/// 阅读记录设置的读写（`history.recording_setting`）：只有改过开关或清空过的人才有一行。
+/// 阅读记录设置的读写（`anl_recording_setting`）：只有改过开关或清空过的人才有一行。
 public interface RecordingSettingRepository {
 
   /// 一个人的设置。
@@ -25,8 +25,7 @@ public interface RecordingSettingRepository {
   ///
   /// @param userId 用户 ID
   /// @param enabled 是否记录
-  /// @param now 现在
-  void saveEnabled(long userId, boolean enabled, Instant now);
+  void saveEnabled(long userId, boolean enabled);
 
   /// 记下清空时刻，开关不变；没有这一行时插入一行开着的。
   ///
