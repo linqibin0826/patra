@@ -3,6 +3,8 @@ CREATE EXTENSION IF NOT EXISTS pg_trgm;
 
 CREATE FUNCTION set_audit_times() RETURNS trigger
 LANGUAGE plpgsql AS $$
+DECLARE
+    generated_columns text[];
 BEGIN
     IF TG_OP = 'INSERT' THEN
         NEW.created_at := now();
@@ -11,7 +13,16 @@ BEGIN
     END IF;
     NEW.created_at := OLD.created_at;
     NEW.updated_at := OLD.updated_at;
-    IF NEW IS DISTINCT FROM OLD THEN
+    IF NEW IS NOT DISTINCT FROM OLD THEN
+        RETURN NEW;
+    END IF;
+    -- BEFORE 触发器里存储生成列在 NEW 中还没算出来（是空的），OLD 里是旧值，整行比较会永远算「变了」：
+    -- 整行不同时再查一次本表的生成列，去掉它们重比；没有生成列的表查到空，直接算变了
+    SELECT array_agg(attname::text) INTO generated_columns
+      FROM pg_attribute
+     WHERE attrelid = TG_RELID AND attgenerated = 's' AND NOT attisdropped;
+    IF generated_columns IS NULL
+       OR (to_jsonb(NEW) - generated_columns) IS DISTINCT FROM (to_jsonb(OLD) - generated_columns) THEN
         NEW.updated_at := now();
     END IF;
     RETURN NEW;

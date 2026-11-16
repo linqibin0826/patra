@@ -12,11 +12,11 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ContextConfiguration;
 
-/// 库表规范推断 1：审计时间由数据库填，`updated_at` 只在行内容真的变了时刷新。
+/// 验证库表规范依赖的一个前提（设计文档推断 1）：审计时间由数据库填，`updated_at` 只在行内容真的变了时刷新。
 ///
 /// 规范要求应用不写 `created_at` / `updated_at`，由触发器保证：插入时两列都取当前时间；
 /// 更新时先把两列恢复成旧值再比较整行，应用即使写了这两列也不算变化，其余列有变化才把
-/// `updated_at` 设成当前时间。这里的函数体就是规范要各服务照抄的 `set_audit_times()`。
+/// `updated_at` 设成当前时间。用的是测试库迁移脚本里的 `set_audit_times()`，函数体与各服务照抄的一致。
 ///
 /// `now()` 是事务开始的时间，所以每条语句各自提交（`JdbcTemplate` 默认自动提交），
 /// 中间再停 10 毫秒，保证前后两次的时间能比出先后。
@@ -25,31 +25,10 @@ import org.springframework.test.context.ContextConfiguration;
 @DisplayName("库表规范推断 1：审计时间触发器")
 class AuditTimestampTriggerIT {
 
-  private static final String CREATE_FUNCTION =
-      """
-      CREATE OR REPLACE FUNCTION it_touch_audit_times() RETURNS trigger
-      LANGUAGE plpgsql AS $$
-      BEGIN
-          IF TG_OP = 'INSERT' THEN
-              NEW.created_at := now();
-              NEW.updated_at := NEW.created_at;
-              RETURN NEW;
-          END IF;
-          NEW.created_at := OLD.created_at;
-          NEW.updated_at := OLD.updated_at;
-          IF NEW IS DISTINCT FROM OLD THEN
-              NEW.updated_at := now();
-          END IF;
-          RETURN NEW;
-      END
-      $$
-      """;
-
   @Autowired private JdbcTemplate jdbc;
 
   @BeforeEach
   void createTable() {
-    jdbc.execute(CREATE_FUNCTION);
     jdbc.execute(
         """
         CREATE TABLE it_trigger_note
@@ -64,15 +43,33 @@ class AuditTimestampTriggerIT {
         """
         CREATE TRIGGER trg_it_trigger_note_audit_times
             BEFORE INSERT OR UPDATE ON it_trigger_note
-            FOR EACH ROW EXECUTE FUNCTION it_touch_audit_times()
+            FOR EACH ROW EXECUTE FUNCTION set_audit_times()
         """);
     jdbc.update("INSERT INTO it_trigger_note (id, content) VALUES (1, 'a')");
+    jdbc.execute(
+        """
+        CREATE TABLE it_trigger_generated_note
+        (
+            id            BIGINT      NOT NULL PRIMARY KEY,
+            content       TEXT        NULL,
+            content_upper TEXT GENERATED ALWAYS AS (upper(content)) STORED,
+            created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+            updated_at    TIMESTAMPTZ NOT NULL DEFAULT now()
+        )
+        """);
+    jdbc.execute(
+        """
+        CREATE TRIGGER trg_it_trigger_generated_note_audit_times
+            BEFORE INSERT OR UPDATE ON it_trigger_generated_note
+            FOR EACH ROW EXECUTE FUNCTION set_audit_times()
+        """);
+    jdbc.update("INSERT INTO it_trigger_generated_note (id, content) VALUES (1, 'a')");
   }
 
   @AfterEach
   void dropTable() {
     jdbc.execute("DROP TABLE it_trigger_note");
-    jdbc.execute("DROP FUNCTION it_touch_audit_times()");
+    jdbc.execute("DROP TABLE it_trigger_generated_note");
   }
 
   @Test
@@ -133,6 +130,31 @@ class AuditTimestampTriggerIT {
     jdbc.update("UPDATE it_trigger_note SET content = 'b', updated_at = '2000-01-01' WHERE id = 1");
 
     assertThat(updatedAfterCreated()).isTrue();
+  }
+
+  /// BEFORE 触发器里存储生成列在 `NEW` 中还没算出来、是空的，`OLD` 里是旧值；不排除它们，整行比较永远「变了」。
+  @Test
+  @DisplayName("有生成列的表：更新语句没改任何值，updated_at 保持原样")
+  void should_keep_updated_at_when_update_changes_nothing_on_table_with_generated_column() {
+    pause();
+    jdbc.update("UPDATE it_trigger_generated_note SET content = 'a' WHERE id = 1");
+
+    assertThat(sameTimes("it_trigger_generated_note")).isTrue();
+  }
+
+  @Test
+  @DisplayName("有生成列的表：内容变了，updated_at 刷新")
+  void should_refresh_updated_at_when_content_changes_on_table_with_generated_column() {
+    pause();
+    jdbc.update("UPDATE it_trigger_generated_note SET content = 'b' WHERE id = 1");
+
+    assertThat(sameTimes("it_trigger_generated_note")).isFalse();
+  }
+
+  private boolean sameTimes(String table) {
+    return Boolean.TRUE.equals(
+        jdbc.queryForObject(
+            "SELECT created_at = updated_at FROM " + table + " WHERE id = 1", Boolean.class));
   }
 
   private boolean sameTimes() {
