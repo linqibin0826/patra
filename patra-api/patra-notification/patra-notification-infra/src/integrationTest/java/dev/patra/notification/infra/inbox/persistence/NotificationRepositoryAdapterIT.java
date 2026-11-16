@@ -68,7 +68,7 @@ class NotificationRepositoryAdapterIT extends InboxPersistenceITSupport {
   @Test
   void should_delete_by_subject() {
     notifications.insertAll(List.of(draft(2L, COMMENT_REPLY, 500L), draft(4L, MENTION, 501L)));
-    jdbcTemplate.update("UPDATE inbox.notification SET subject_id = 41 WHERE recipient_id = 4");
+    jdbcTemplate.update("UPDATE ntf_notification SET subject_id = 41 WHERE recipient_user_id = 4");
 
     assertThat(notifications.deleteBySubject(40L)).containsExactly(2L);
     assertThat(notificationRows()).isEqualTo(1);
@@ -89,7 +89,7 @@ class NotificationRepositoryAdapterIT extends InboxPersistenceITSupport {
     assertThat(notifications.markRead(3L, id, NOW)).isEqualTo(MarkReadOutcome.NOT_FOUND);
     assertThat(
             jdbcTemplate.queryForObject(
-                "SELECT read_at = ?::timestamptz FROM inbox.notification",
+                "SELECT read_at = ?::timestamptz FROM ntf_notification",
                 Boolean.class,
                 NOW.toString()))
         .isTrue();

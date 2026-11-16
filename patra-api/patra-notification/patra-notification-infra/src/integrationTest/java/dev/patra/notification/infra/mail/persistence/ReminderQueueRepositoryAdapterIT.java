@@ -37,7 +37,7 @@ class ReminderQueueRepositoryAdapterIT {
   /// 每例前清空排队表。
   @BeforeEach
   void clean() {
-    jdbcClient.sql("TRUNCATE mail.reminder_queue").update();
+    jdbcClient.sql("TRUNCATE ntf_reminder_queue").update();
   }
 
   /// 同一条提醒入队两次只有一行。

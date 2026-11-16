@@ -6,8 +6,6 @@ import dev.patra.notification.domain.preference.model.aggregate.EmailPreference;
 import dev.patra.notification.domain.preference.model.vo.UnsubscribeToken;
 import dev.patra.notification.domain.preference.port.repository.EmailPreferenceRepository;
 import java.security.SecureRandom;
-import java.time.Clock;
-import java.time.Instant;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
@@ -22,7 +20,6 @@ import org.springframework.stereotype.Component;
 public class EmailPreferenceCreationListener {
 
   private final EmailPreferenceRepository preferences;
-  private final Clock clock;
   private final SecureRandom random = new SecureRandom();
 
   /// 每个会收到邮件的收件人各建一次。
@@ -30,7 +27,6 @@ public class EmailPreferenceCreationListener {
   /// @param event 提醒生成事件
   @EventListener
   public void on(NotificationsCreatedEvent event) {
-    Instant now = clock.instant();
     event.notifications().stream()
         .filter(created -> created.category().hasEmail())
         .map(CreatedNotification::recipientId)
@@ -38,7 +34,6 @@ public class EmailPreferenceCreationListener {
         .forEach(
             recipientId ->
                 preferences.insertIfAbsent(
-                    EmailPreference.createDefault(recipientId, UnsubscribeToken.generate(random)),
-                    now));
+                    EmailPreference.createDefault(recipientId, UnsubscribeToken.generate(random))));
   }
 }

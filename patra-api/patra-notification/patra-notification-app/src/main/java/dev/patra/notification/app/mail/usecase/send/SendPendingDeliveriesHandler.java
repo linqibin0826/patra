@@ -21,7 +21,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -56,7 +55,7 @@ public class SendPendingDeliveriesHandler
   @Override
   public SendResult handle(SendPendingDeliveriesCommand command) {
     Instant now = clock.instant();
-    Set<UUID> seen = new HashSet<>();
+    Set<Long> seen = new HashSet<>();
     int sent = 0;
     int skipped = 0;
     int deferred = 0;
@@ -133,7 +132,7 @@ public class SendPendingDeliveriesHandler
     try {
       mail.deliver(
           OutgoingMail.builder()
-              .idempotencyKey(delivery.getDeliveryId().toString())
+              .idempotencyKey(String.valueOf(delivery.getDeliveryId()))
               .to(ready.to())
               .template(template(content))
               .subject(content.subject())

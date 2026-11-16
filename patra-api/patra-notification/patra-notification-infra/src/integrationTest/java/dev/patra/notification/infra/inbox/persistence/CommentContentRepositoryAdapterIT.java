@@ -21,7 +21,7 @@ class CommentContentRepositoryAdapterIT extends InboxPersistenceITSupport {
     assertThat(comments.saveIfNewer(500L, 40L, 2, "新", NOW)).isTrue();
     assertThat(comments.saveIfNewer(500L, 40L, 1, "旧", NOW)).isTrue();
 
-    assertThat(row(500L)).containsEntry("version", 2).containsEntry("plain_text", "新");
+    assertThat(row(500L)).containsEntry("source_version", 2).containsEntry("plain_text", "新");
   }
 
   /// v1 之后来 v2：覆盖。
@@ -30,7 +30,7 @@ class CommentContentRepositoryAdapterIT extends InboxPersistenceITSupport {
     comments.saveIfNewer(500L, 40L, 1, "旧", NOW);
     comments.saveIfNewer(500L, 40L, 2, "新", NOW);
 
-    assertThat(row(500L)).containsEntry("version", 2).containsEntry("plain_text", "新");
+    assertThat(row(500L)).containsEntry("source_version", 2).containsEntry("plain_text", "新");
   }
 
   /// 墓碑之后：写正文返回 false，正文仍为空。
@@ -55,7 +55,7 @@ class CommentContentRepositoryAdapterIT extends InboxPersistenceITSupport {
     assertThat(comments.saveIfNewer(500L, 40L, 1, "正文", NOW)).isFalse();
     assertThat(
             jdbcTemplate.queryForObject(
-                "SELECT deleted_at = ?::timestamptz FROM inbox.comment WHERE comment_id = 500",
+                "SELECT source_deleted_at = ?::timestamptz FROM ntf_comment WHERE comment_id = 500",
                 Boolean.class,
                 NOW.toString()))
         .isTrue();
@@ -69,7 +69,7 @@ class CommentContentRepositoryAdapterIT extends InboxPersistenceITSupport {
     comments.saveIfNewer(502L, 41L, 1, "b", NOW);
 
     assertThat(comments.deleteBySubject(40L)).isEqualTo(2);
-    assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM inbox.comment", Long.class))
+    assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM ntf_comment", Long.class))
         .isEqualTo(1);
   }
 
@@ -84,8 +84,21 @@ class CommentContentRepositoryAdapterIT extends InboxPersistenceITSupport {
 
     assertThat(comments.purgeUnreferencedBefore(Instant.parse("2026-05-31T00:00:00Z")))
         .isEqualTo(1);
-    assertThat(jdbcTemplate.queryForList("SELECT comment_id FROM inbox.comment", Long.class))
+    assertThat(jdbcTemplate.queryForList("SELECT comment_id FROM ntf_comment", Long.class))
         .containsExactlyInAnyOrder(500L, 502L);
+  }
+
+  /// 保留期按业务时间 `synced_at` 算：行被别的语句改过（触发器刷新 `updated_at`）也照样到期清掉。
+  @Test
+  void should_purge_by_synced_at() {
+    Instant old = Instant.parse("2026-04-01T00:00:00Z");
+    comments.saveIfNewer(501L, 40L, 1, "没人引用", old);
+    jdbcTemplate.update("UPDATE ntf_comment SET plain_text = '改过' WHERE comment_id = 501");
+
+    assertThat(comments.purgeUnreferencedBefore(Instant.parse("2026-05-31T00:00:00Z")))
+        .isEqualTo(1);
+    assertThat(jdbcTemplate.queryForList("SELECT comment_id FROM ntf_comment", Long.class))
+        .isEmpty();
   }
 
   /// 一行快照。
@@ -94,6 +107,6 @@ class CommentContentRepositoryAdapterIT extends InboxPersistenceITSupport {
   /// @return 列 → 值
   private Map<String, Object> row(long commentId) {
     return jdbcTemplate.queryForMap(
-        "SELECT version, plain_text FROM inbox.comment WHERE comment_id = ?", commentId);
+        "SELECT source_version, plain_text FROM ntf_comment WHERE comment_id = ?", commentId);
   }
 }

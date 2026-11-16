@@ -32,12 +32,16 @@ import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicLong;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InOrder;
 
 /// 逐条装配并发出待发的投递：四种发信结果、依赖不可用推迟并停下、意外异常继续、24 小时过期（spec 5.4、7.2、7.3）。
 class SendPendingDeliveriesHandlerTest {
+
+  /// 每条投递不同的 ID：处理器在一页里按 ID 去重。
+  private static final AtomicLong NEXT_ID = new AtomicLong(380631096924528641L);
 
   private static final Instant NOW = Instant.parse("2026-10-30T07:12:00Z");
   private static final String ONE_CLICK = "https://p/unsubscribe/one-click?token=T&category=REPLY";
@@ -62,7 +66,7 @@ class SendPendingDeliveriesHandlerTest {
     order.verify(deliveries).update(delivery);
     order.verify(mail).deliver(sent.capture());
     OutgoingMail outgoing = sent.getValue();
-    assertThat(outgoing.idempotencyKey()).isEqualTo(delivery.getDeliveryId().toString());
+    assertThat(outgoing.idempotencyKey()).isEqualTo(String.valueOf(delivery.getDeliveryId()));
     assertThat(outgoing.to()).isEqualTo("chen@example.com");
     assertThat(outgoing.template()).isEqualTo("notification-batch");
     assertThat(outgoing.subject()).isEqualTo("3 条新回复：王立");
@@ -192,7 +196,7 @@ class SendPendingDeliveriesHandlerTest {
     ready(delivery, Layout.SINGLE);
     fail(MailDeliveryFailure.TRANSIENT);
     handler.handle(SendPendingDeliveriesCommand.of());
-    UUID firstId = delivery.getDeliveryId();
+    long firstId = delivery.getDeliveryId();
 
     handler.handle(SendPendingDeliveriesCommand.of());
 
@@ -200,7 +204,7 @@ class SendPendingDeliveriesHandlerTest {
     verify(mail, times(2)).deliver(sent.capture());
     assertThat(sent.getAllValues())
         .extracting(OutgoingMail::idempotencyKey)
-        .containsOnly(firstId.toString());
+        .containsOnly(String.valueOf(firstId));
   }
 
   /// 调用过发信端口、满 24 小时仍失败：过期。
@@ -238,11 +242,7 @@ class SendPendingDeliveriesHandlerTest {
   void never_sent_delivery_survives_long_identity_outage() {
     ReminderDelivery delivery =
         ReminderDelivery.instant(
-            UUID.randomUUID(),
-            7L,
-            NotificationCategory.REPLY,
-            List.of(1L),
-            NOW.minus(Duration.ofDays(30)));
+            900016L, 7L, NotificationCategory.REPLY, List.of(1L), NOW.minus(Duration.ofDays(30)));
     page(delivery);
     when(assembler.assemble(delivery, NOW))
         .thenThrow(new IdentityUnavailableException(new RuntimeException("503")));
@@ -334,6 +334,6 @@ class SendPendingDeliveriesHandlerTest {
   /// @return 结果
   private static ReminderDelivery delivery() {
     return ReminderDelivery.instant(
-        UUID.randomUUID(), 7L, NotificationCategory.REPLY, List.of(1L), NOW);
+        NEXT_ID.incrementAndGet(), 7L, NotificationCategory.REPLY, List.of(1L), NOW);
   }
 }

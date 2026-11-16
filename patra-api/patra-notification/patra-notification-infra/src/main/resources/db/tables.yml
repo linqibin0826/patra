@@ -1,0 +1,39 @@
+# notification 库里的每一张表。档位：main 主表（带全套审计列）/ other 其他表。
+# 新建表必须在这里登记，否则结构检查（NotificationSchemaStandardIT）失败。规则见 .claude/rules/tech/database.md。
+prefix: ntf
+tables:
+  # inbox
+  ntf_notification:
+    tier: main
+    note: 站内提醒，按 recipient_user_id 哈希分 16 区；标已读、合并有帮助时会被修改
+  ntf_notification_helpful_actor:
+    tier: other
+    note: 合并的有帮助提醒的参与人，只增删
+  ntf_comment:
+    tier: other
+    note: 评论正文副本，按上游事件覆盖，「谁改的」没有意义
+  ntf_subject_tombstone:
+    tier: other
+    note: 被删帖子的墓碑，只增不改
+  # kernel
+  ntf_presence:
+    tier: other
+    note: 用户最后在线时间，只往前推
+  # mail
+  ntf_mail_delivery:
+    tier: other
+    note: 安全邮件的发送结果，按上游事件 ID 去重，写一次不改
+  ntf_reminder_queue:
+    tier: other
+    note: 离站提醒的排队，只增删
+  ntf_reminder_delivery:
+    tier: main
+    note: 提醒邮件的投递，状态随发送与重试变化
+  # preference
+  ntf_email_preference:
+    tier: main
+    note: 邮件偏好，每个用户一行，用户改档位或退订时修改
+framework:
+  - flyway_schema_history
+  - event_publication
+  - processed_event

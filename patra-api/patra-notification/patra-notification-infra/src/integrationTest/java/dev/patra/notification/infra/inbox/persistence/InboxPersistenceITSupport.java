@@ -26,7 +26,7 @@ abstract class InboxPersistenceITSupport {
   @BeforeEach
   void truncateInboxTables() {
     jdbcTemplate.update(
-        "TRUNCATE inbox.helpful_actor, inbox.notification, inbox.comment, inbox.subject_tombstone");
+        "TRUNCATE ntf_notification_helpful_actor, ntf_notification, ntf_comment, ntf_subject_tombstone");
   }
 
   /// 一条回复或 @ 提醒的草稿：触发人 9、对象 40、排序时间与写入时刻都是 {@link #NOW}。
@@ -64,6 +64,6 @@ abstract class InboxPersistenceITSupport {
   ///
   /// @return 行数
   protected long notificationRows() {
-    return jdbcTemplate.queryForObject("SELECT count(*) FROM inbox.notification", Long.class);
+    return jdbcTemplate.queryForObject("SELECT count(*) FROM ntf_notification", Long.class);
   }
 }

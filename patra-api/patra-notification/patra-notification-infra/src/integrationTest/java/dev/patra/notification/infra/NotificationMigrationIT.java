@@ -30,16 +30,4 @@ class NotificationMigrationIT {
                 String.class))
         .containsExactly("public");
   }
-
-  /// 除 PG 自带的 schema 外，只有 public 与子域清单里的 schema。新子域随自己的迁移建 schema，不用改这条测试。
-  @Test
-  void should_only_have_public_and_subdomain_schemas() {
-    assertThat(
-            jdbcTemplate.queryForList(
-                "SELECT schema_name FROM information_schema.schemata "
-                    + "WHERE schema_name NOT LIKE 'pg\\_%' AND schema_name <> 'information_schema'",
-                String.class))
-        .contains("public")
-        .isSubsetOf("public", "kernel", "inbox", "preference", "mail", "realtime");
-  }
 }

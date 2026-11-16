@@ -2,7 +2,6 @@ package dev.patra.notification.app.preference.listener;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -14,9 +13,7 @@ import dev.patra.notification.domain.kernel.model.enums.NotificationCategory;
 import dev.patra.notification.domain.preference.model.aggregate.EmailPreference;
 import dev.patra.notification.domain.preference.model.read.EmailMode;
 import dev.patra.notification.domain.preference.port.repository.EmailPreferenceRepository;
-import java.time.Clock;
 import java.time.Instant;
-import java.time.ZoneOffset;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -28,7 +25,7 @@ class EmailPreferenceCreationListenerTest {
 
   private final EmailPreferenceRepository preferences = mock(EmailPreferenceRepository.class);
   private final EmailPreferenceCreationListener listener =
-      new EmailPreferenceCreationListener(preferences, Clock.fixed(NOW, ZoneOffset.UTC));
+      new EmailPreferenceCreationListener(preferences);
 
   /// 同一个人一次收到回复和 @ 只建一次；默认两类都是即时，带退订令牌；有帮助没有邮件，不建。
   @Test
@@ -42,7 +39,7 @@ class EmailPreferenceCreationListenerTest {
                 created(4L, 9L, NotificationCategory.HELPFUL))));
 
     ArgumentCaptor<EmailPreference> inserted = ArgumentCaptor.forClass(EmailPreference.class);
-    verify(preferences, times(2)).insertIfAbsent(inserted.capture(), eq(NOW));
+    verify(preferences, times(2)).insertIfAbsent(inserted.capture());
     assertThat(inserted.getAllValues())
         .extracting(EmailPreference::getUserId)
         .containsExactlyInAnyOrder(7L, 8L);
@@ -61,7 +58,7 @@ class EmailPreferenceCreationListenerTest {
     listener.on(
         NotificationsCreatedEvent.of(List.of(created(4L, 9L, NotificationCategory.HELPFUL))));
 
-    verify(preferences, never()).insertIfAbsent(any(), any());
+    verify(preferences, never()).insertIfAbsent(any());
   }
 
   private static CreatedNotification created(

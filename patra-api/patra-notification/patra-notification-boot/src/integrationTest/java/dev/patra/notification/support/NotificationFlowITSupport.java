@@ -75,8 +75,8 @@ public abstract class NotificationFlowITSupport {
   void resetWorld() {
     List<String> tables =
         jdbcTemplate.queryForList(
-            "SELECT quote_ident(schemaname) || '.' || quote_ident(tablename) FROM pg_tables"
-                + " WHERE schemaname NOT IN ('public', 'pg_catalog', 'information_schema')",
+            "SELECT quote_ident(tablename) FROM pg_tables"
+                + " WHERE schemaname = 'public' AND tablename LIKE 'ntf\\_%'",
             String.class);
     if (!tables.isEmpty()) {
       jdbcTemplate.update("TRUNCATE " + String.join(", ", tables));

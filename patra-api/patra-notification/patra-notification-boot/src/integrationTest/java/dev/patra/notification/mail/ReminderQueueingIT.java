@@ -16,7 +16,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.support.TransactionTemplate;
 
-/// 信箱写入提醒时，离站邮件的排队行在同一个事务里写进 `mail.reminder_queue`（spec 2.2、7.1）。
+/// 信箱写入提醒时，离站邮件的排队行在同一个事务里写进 `ntf_reminder_queue`（spec 2.2、7.1）。
 class ReminderQueueingIT extends NotificationFlowITSupport {
 
   private static final Instant CREATED = Instant.parse("2026-10-30T07:02:00Z");
@@ -32,8 +32,8 @@ class ReminderQueueingIT extends NotificationFlowITSupport {
 
     Map<String, Object> row =
         jdbcTemplate.queryForMap(
-            "SELECT recipient_id, category, queued_at, due_at FROM mail.reminder_queue");
-    assertThat(row).containsEntry("recipient_id", 7L).containsEntry("category", "REPLY");
+            "SELECT recipient_user_id, category, queued_at, due_at FROM ntf_reminder_queue");
+    assertThat(row).containsEntry("recipient_user_id", 7L).containsEntry("category", "REPLY");
     assertThat(((Timestamp) row.get("queued_at")).toInstant()).isEqualTo(CREATED);
     assertThat(((Timestamp) row.get("due_at")).toInstant())
         .isEqualTo(CREATED.plus(Duration.ofMinutes(10)));
@@ -51,9 +51,9 @@ class ReminderQueueingIT extends NotificationFlowITSupport {
                     }))
         .isInstanceOf(IllegalStateException.class);
 
-    assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM inbox.notification", Long.class))
+    assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM ntf_notification", Long.class))
         .isZero();
-    assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM mail.reminder_queue", Long.class))
+    assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM ntf_reminder_queue", Long.class))
         .isZero();
   }
 

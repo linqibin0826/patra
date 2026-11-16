@@ -4,7 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -97,7 +96,7 @@ class ChangeEmailModeHandlerTest {
               return null;
             })
         .when(preferences)
-        .insertIfAbsent(any(), eq(NOW));
+        .insertIfAbsent(any());
     when(preferences.findByUserIdForUpdate(anyLong()))
         .thenAnswer(
             invocation -> {
@@ -105,7 +104,7 @@ class ChangeEmailModeHandlerTest {
               return Optional.of(
                   EmailPreference.restore(ME, SAVED, EmailMode.INSTANT, EmailMode.OFF));
             });
-    doAnswer(invocation -> events.add("update")).when(preferences).updateModes(any(), eq(NOW));
+    doAnswer(invocation -> events.add("update")).when(preferences).updateModes(any());
 
     EmailPreferenceView view = handler.handle(ChangeEmailModeCommand.of("REPLY", "DIGEST"));
 

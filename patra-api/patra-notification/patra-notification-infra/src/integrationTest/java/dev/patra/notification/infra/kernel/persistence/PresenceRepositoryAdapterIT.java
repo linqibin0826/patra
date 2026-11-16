@@ -29,7 +29,7 @@ class PresenceRepositoryAdapterIT {
   /// 每例从空表开始。
   @BeforeEach
   void truncate() {
-    jdbcTemplate.update("TRUNCATE kernel.presence");
+    jdbcTemplate.update("TRUNCATE ntf_presence");
   }
 
   /// 晚到的旧时刻（心跳与轮询并发）不把记录往回拨。

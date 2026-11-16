@@ -179,7 +179,9 @@ class HelpfulInboxFlowIT extends NotificationFlowITSupport {
 
     assertThat(helpfulItems()).isEmpty();
     assertThat(json(call(HttpMethod.GET, AUTHOR, UNREAD, null)).get("helpful").asInt()).isZero();
-    assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM inbox.helpful_actor", Long.class))
+    assertThat(
+            jdbcTemplate.queryForObject(
+                "SELECT count(*) FROM ntf_notification_helpful_actor", Long.class))
         .isZero();
   }
 
@@ -287,8 +289,8 @@ class HelpfulInboxFlowIT extends NotificationFlowITSupport {
         .until(
             () ->
                 jdbcTemplate.queryForObject(
-                        "SELECT count(*) FROM inbox.comment"
-                            + " WHERE comment_id = ? AND deleted_at IS NOT NULL",
+                        "SELECT count(*) FROM ntf_comment"
+                            + " WHERE comment_id = ? AND source_deleted_at IS NOT NULL",
                         Long.class,
                         sentinel)
                     == 1);

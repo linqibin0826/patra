@@ -49,7 +49,7 @@ public class UnsubscribeHandler implements CommandHandler<UnsubscribeCommand, Un
                       .orElseThrow(UnsubscribeLinkInvalidException::new);
               List<NotificationCategory> turnedOff = preference.unsubscribe(category);
               if (!turnedOff.isEmpty()) {
-                preferences.updateModes(preference, now);
+                preferences.updateModes(preference);
               }
               log.info(
                   "提醒邮件退订: userId={}, category={}, turnedOff={}, oneClick={}",

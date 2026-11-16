@@ -26,7 +26,7 @@ public class EmailSubscriptionReadAdapter implements EmailSubscriptionReadPort {
   @Override
   public EmailSubscription subscriptionOf(long userId) {
     return jdbc.sql(
-            "SELECT reply_mode, mention_mode, unsubscribe_token FROM preference.email_preference"
+            "SELECT reply_mode, mention_mode, unsubscribe_token FROM ntf_email_preference"
                 + " WHERE user_id = :userId")
         .param("userId", userId)
         .query(
@@ -47,7 +47,7 @@ public class EmailSubscriptionReadAdapter implements EmailSubscriptionReadPort {
   @Override
   public EmailModes findSubscription(long userId) {
     return jdbc.sql(
-            "SELECT reply_mode, mention_mode FROM preference.email_preference WHERE user_id = :userId")
+            "SELECT reply_mode, mention_mode FROM ntf_email_preference WHERE user_id = :userId")
         .param("userId", userId)
         .query(
             (rs, rowNum) ->
@@ -67,7 +67,7 @@ public class EmailSubscriptionReadAdapter implements EmailSubscriptionReadPort {
   public List<EmailSubscription> digestSubscribers(long afterUserId, int limit) {
     return jdbc.sql(
             """
-            SELECT user_id, reply_mode, mention_mode, unsubscribe_token FROM preference.email_preference
+            SELECT user_id, reply_mode, mention_mode, unsubscribe_token FROM ntf_email_preference
             WHERE (reply_mode = 'DIGEST' OR mention_mode = 'DIGEST') AND user_id > :after
             ORDER BY user_id LIMIT :limit
             """)

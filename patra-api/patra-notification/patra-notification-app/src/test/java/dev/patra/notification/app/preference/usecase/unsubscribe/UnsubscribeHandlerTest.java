@@ -3,7 +3,6 @@ package dev.patra.notification.app.preference.usecase.unsubscribe;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -102,7 +101,7 @@ class UnsubscribeHandlerTest {
                 .mention(EmailMode.INSTANT)
                 .othersEnabled(true)
                 .build());
-    verify(preferences).updateModes(any(), eq(NOW));
+    verify(preferences).updateModes(any());
   }
 
   /// 锁行与写回在同一个事务里（行锁要在事务里才持有到写回）。
@@ -120,7 +119,7 @@ class UnsubscribeHandlerTest {
                   EmailPreference.restore(
                       USER, new UnsubscribeToken(TOKEN), EmailMode.INSTANT, EmailMode.INSTANT));
             });
-    doAnswer(invocation -> events.add("update")).when(preferences).updateModes(any(), eq(NOW));
+    doAnswer(invocation -> events.add("update")).when(preferences).updateModes(any());
 
     recorded.handle(UnsubscribeCommand.oneClick(TOKEN, "REPLY"));
 
@@ -138,7 +137,7 @@ class UnsubscribeHandlerTest {
     assertThat(result.turnedOff()).isEmpty();
     assertThat(result.reply()).isEqualTo(EmailMode.OFF);
     assertThat(result.othersEnabled()).isTrue();
-    verify(preferences, never()).updateModes(any(), any());
+    verify(preferences, never()).updateModes(any());
   }
 
   /// 命令进日志时看不到令牌。

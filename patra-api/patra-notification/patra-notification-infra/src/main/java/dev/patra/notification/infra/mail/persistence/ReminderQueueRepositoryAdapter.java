@@ -3,6 +3,7 @@ package dev.patra.notification.infra.mail.persistence;
 import dev.patra.notification.domain.kernel.model.enums.NotificationCategory;
 import dev.patra.notification.domain.mail.model.vo.QueuedReminder;
 import dev.patra.notification.domain.mail.port.repository.ReminderQueueRepository;
+import dev.patra.tool.jpa.id.SnowflakeIdGenerator;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
@@ -25,7 +26,7 @@ public class ReminderQueueRepositoryAdapter implements ReminderQueueRepository {
       (rs, rowNum) ->
           QueuedReminder.builder()
               .notificationId(rs.getLong("notification_id"))
-              .recipientId(rs.getLong("recipient_id"))
+              .recipientId(rs.getLong("recipient_user_id"))
               .category(NotificationCategory.valueOf(rs.getString("category")))
               .queuedAt(rs.getObject("queued_at", OffsetDateTime.class).toInstant())
               .dueAt(rs.getObject("due_at", OffsetDateTime.class).toInstant())
@@ -42,10 +43,12 @@ public class ReminderQueueRepositoryAdapter implements ReminderQueueRepository {
     for (QueuedReminder row : rows) {
       jdbc.sql(
               """
-              INSERT INTO mail.reminder_queue (notification_id, recipient_id, category, queued_at, due_at)
-              VALUES (:notificationId, :recipientId, :category, :queuedAt, :dueAt)
+              INSERT INTO ntf_reminder_queue
+                     (id, notification_id, recipient_user_id, category, queued_at, due_at)
+              VALUES (:rowId, :notificationId, :recipientId, :category, :queuedAt, :dueAt)
               ON CONFLICT (notification_id) DO NOTHING
               """)
+          .param("rowId", SnowflakeIdGenerator.getId())
           .param("notificationId", row.notificationId())
           .param("recipientId", row.recipientId())
           .param("category", row.category().name())
@@ -65,9 +68,9 @@ public class ReminderQueueRepositoryAdapter implements ReminderQueueRepository {
   public List<Long> recipientsDue(Instant now, long afterRecipientId, int limit) {
     return jdbc.sql(
             """
-            SELECT DISTINCT recipient_id FROM mail.reminder_queue
-            WHERE due_at <= :now AND recipient_id > :after
-            ORDER BY recipient_id LIMIT :limit
+            SELECT DISTINCT recipient_user_id FROM ntf_reminder_queue
+            WHERE due_at <= :now AND recipient_user_id > :after
+            ORDER BY recipient_user_id LIMIT :limit
             """)
         .param("now", utc(now))
         .param("after", afterRecipientId)
@@ -82,7 +85,7 @@ public class ReminderQueueRepositoryAdapter implements ReminderQueueRepository {
   /// @return 排队行
   @Override
   public List<QueuedReminder> findByRecipient(long recipientId) {
-    return jdbc.sql("SELECT * FROM mail.reminder_queue WHERE recipient_id = :recipientId")
+    return jdbc.sql("SELECT * FROM ntf_reminder_queue WHERE recipient_user_id = :recipientId")
         .param("recipientId", recipientId)
         .query(ROW)
         .list();
@@ -98,7 +101,7 @@ public class ReminderQueueRepositoryAdapter implements ReminderQueueRepository {
       return List.of();
     }
     return jdbc.sql(
-            "DELETE FROM mail.reminder_queue WHERE notification_id IN (:ids)"
+            "DELETE FROM ntf_reminder_queue WHERE notification_id IN (:ids)"
                 + " RETURNING notification_id")
         .param("ids", notificationIds)
         .query(Long.class)

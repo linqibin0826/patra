@@ -1,12 +1,13 @@
 package dev.patra.notification.infra.inbox.persistence;
 
 import dev.patra.notification.domain.inbox.port.repository.CommentContentRepository;
+import dev.patra.tool.jpa.id.SnowflakeIdGenerator;
 import java.time.Instant;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Component;
 
-/// `CommentContentRepository` 的原生 SQL 实现（`inbox.comment`）。
+/// `CommentContentRepository` 的原生 SQL 实现（`ntf_comment`）。
 ///
 /// 写快照与写墓碑都用 `INSERT … ON CONFLICT DO UPDATE`：无论行在不在，语句结束时这一行都被当前事务锁住，同一条
 /// 评论的发表与删除因此串行；版本比较放在 `SET` 的 `CASE` 里，一条语句完成「比较 + 写」。
@@ -28,16 +29,18 @@ public class CommentContentRepositoryAdapter implements CommentContentRepository
   public boolean saveIfNewer(
       long commentId, long subjectId, int version, String plainText, Instant now) {
     return jdbc.sql(
-            "INSERT INTO inbox.comment AS c (comment_id, subject_id, version, plain_text, updated_at)"
-                + " VALUES (:commentId, :subjectId, :version, :plainText, :now)"
+            "INSERT INTO ntf_comment AS c"
+                + " (id, comment_id, subject_id, source_version, plain_text, synced_at)"
+                + " VALUES (:rowId, :commentId, :subjectId, :version, :plainText, :now)"
                 + " ON CONFLICT (comment_id) DO UPDATE SET"
-                + " version = CASE WHEN c.deleted_at IS NULL AND c.version < EXCLUDED.version"
-                + " THEN EXCLUDED.version ELSE c.version END,"
-                + " plain_text = CASE WHEN c.deleted_at IS NULL AND c.version < EXCLUDED.version"
+                + " source_version = CASE WHEN c.source_deleted_at IS NULL AND c.source_version < EXCLUDED.source_version"
+                + " THEN EXCLUDED.source_version ELSE c.source_version END,"
+                + " plain_text = CASE WHEN c.source_deleted_at IS NULL AND c.source_version < EXCLUDED.source_version"
                 + " THEN EXCLUDED.plain_text ELSE c.plain_text END,"
-                + " updated_at = CASE WHEN c.deleted_at IS NULL AND c.version < EXCLUDED.version"
-                + " THEN EXCLUDED.updated_at ELSE c.updated_at END"
-                + " RETURNING c.deleted_at IS NULL")
+                + " synced_at = CASE WHEN c.source_deleted_at IS NULL AND c.source_version < EXCLUDED.source_version"
+                + " THEN EXCLUDED.synced_at ELSE c.synced_at END"
+                + " RETURNING c.source_deleted_at IS NULL")
+        .param("rowId", SnowflakeIdGenerator.getId())
         .param("commentId", commentId)
         .param("subjectId", subjectId)
         .param("version", version)
@@ -56,12 +59,13 @@ public class CommentContentRepositoryAdapter implements CommentContentRepository
   @Override
   public void markDeleted(long commentId, long subjectId, Instant deletedAt, Instant now) {
     jdbc.sql(
-            "INSERT INTO inbox.comment AS c"
-                + " (comment_id, subject_id, version, plain_text, deleted_at, updated_at)"
-                + " VALUES (:commentId, :subjectId, 0, NULL, :deletedAt, :now)"
+            "INSERT INTO ntf_comment AS c"
+                + " (id, comment_id, subject_id, source_version, plain_text, source_deleted_at,"
+                + " synced_at) VALUES (:rowId, :commentId, :subjectId, 0, NULL, :deletedAt, :now)"
                 + " ON CONFLICT (comment_id) DO UPDATE SET plain_text = NULL,"
-                + " deleted_at = COALESCE(c.deleted_at, EXCLUDED.deleted_at),"
-                + " updated_at = EXCLUDED.updated_at")
+                + " source_deleted_at = COALESCE(c.source_deleted_at, EXCLUDED.source_deleted_at),"
+                + " synced_at = EXCLUDED.synced_at")
+        .param("rowId", SnowflakeIdGenerator.getId())
         .param("commentId", commentId)
         .param("subjectId", subjectId)
         .param("deletedAt", InboxRows.utc(deletedAt))
@@ -76,8 +80,8 @@ public class CommentContentRepositoryAdapter implements CommentContentRepository
   @Override
   public boolean isDeleted(long commentId) {
     return jdbc.sql(
-            "SELECT EXISTS (SELECT 1 FROM inbox.comment"
-                + " WHERE comment_id = :commentId AND deleted_at IS NOT NULL)")
+            "SELECT EXISTS (SELECT 1 FROM ntf_comment"
+                + " WHERE comment_id = :commentId AND source_deleted_at IS NOT NULL)")
         .param("commentId", commentId)
         .query(Boolean.class)
         .single();
@@ -89,7 +93,7 @@ public class CommentContentRepositoryAdapter implements CommentContentRepository
   /// @return 删除的行数
   @Override
   public int deleteBySubject(long subjectId) {
-    return jdbc.sql("DELETE FROM inbox.comment WHERE subject_id = :subjectId")
+    return jdbc.sql("DELETE FROM ntf_comment WHERE subject_id = :subjectId")
         .param("subjectId", subjectId)
         .update();
   }
@@ -101,8 +105,8 @@ public class CommentContentRepositoryAdapter implements CommentContentRepository
   @Override
   public int purgeUnreferencedBefore(Instant cutoff) {
     return jdbc.sql(
-            "DELETE FROM inbox.comment c WHERE c.updated_at < :cutoff AND NOT EXISTS"
-                + " (SELECT 1 FROM inbox.notification n WHERE n.comment_id = c.comment_id)")
+            "DELETE FROM ntf_comment c WHERE c.synced_at < :cutoff AND NOT EXISTS"
+                + " (SELECT 1 FROM ntf_notification n WHERE n.comment_id = c.comment_id)")
         .param("cutoff", InboxRows.utc(cutoff))
         .update();
   }

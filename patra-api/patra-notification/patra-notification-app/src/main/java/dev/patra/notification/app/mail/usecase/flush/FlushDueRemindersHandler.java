@@ -17,7 +17,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
-import java.util.UUID;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -98,7 +97,7 @@ public class FlushDueRemindersHandler
       List<Long> ids = batch.notificationIds().stream().filter(claimed::contains).toList();
       if (!ids.isEmpty()) {
         deliveries.insert(
-            ReminderDelivery.instant(UUID.randomUUID(), recipientId, batch.category(), ids, now));
+            ReminderDelivery.instant(deliveries.nextId(), recipientId, batch.category(), ids, now));
         created++;
       }
     }

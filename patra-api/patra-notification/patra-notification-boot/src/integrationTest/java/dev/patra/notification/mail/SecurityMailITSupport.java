@@ -54,7 +54,7 @@ abstract class SecurityMailITSupport {
   /// 清空发送记录、已处理事件与两个队列。
   @BeforeEach
   void resetState() {
-    jdbcClient.sql("DELETE FROM mail.mail_delivery").update();
+    jdbcClient.sql("DELETE FROM ntf_mail_delivery").update();
     jdbcClient.sql("DELETE FROM processed_event").update();
     amqpAdmin.purgeQueue(SecurityMailListener.QUEUE, false);
     amqpAdmin.purgeQueue(DEAD_LETTER_QUEUE, false);
@@ -83,7 +83,7 @@ abstract class SecurityMailITSupport {
   Map<String, Object> awaitDelivery(UUID deliveryId) {
     await().atMost(Duration.ofSeconds(15)).until(() -> deliveryRows(deliveryId) == 1);
     return jdbcClient
-        .sql("SELECT * FROM mail.mail_delivery WHERE delivery_id = ?")
+        .sql("SELECT * FROM ntf_mail_delivery WHERE event_id = ?")
         .param(deliveryId)
         .query()
         .singleRow();
@@ -95,7 +95,7 @@ abstract class SecurityMailITSupport {
   /// @return 行数
   int deliveryRows(UUID deliveryId) {
     return jdbcClient
-        .sql("SELECT count(*) FROM mail.mail_delivery WHERE delivery_id = ?")
+        .sql("SELECT count(*) FROM ntf_mail_delivery WHERE event_id = ?")
         .param(deliveryId)
         .query(Integer.class)
         .single();

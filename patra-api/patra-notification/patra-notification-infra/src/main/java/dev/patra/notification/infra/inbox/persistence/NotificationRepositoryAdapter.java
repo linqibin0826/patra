@@ -16,7 +16,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Component;
 
-/// `NotificationRepository` 的原生 SQL 实现（`inbox.notification`，按收件人哈希分区）。写方法不开事务，由 app 层的
+/// `NotificationRepository` 的原生 SQL 实现（`ntf_notification`，按收件人哈希分区）。写方法不开事务，由 app 层的
 /// 事务包住。
 @Component
 @RequiredArgsConstructor
@@ -24,8 +24,8 @@ public class NotificationRepositoryAdapter implements NotificationRepository {
 
   /// 一行的列（插入顺序）。
   private static final String COLUMNS =
-      "recipient_id, notification_id, category, type, actor_id, actor_anonymous, subject_id,"
-          + " comment_id, occurred_at, created_at";
+      "recipient_user_id, id, category, type, actor_user_id, actor_anonymous, subject_id,"
+          + " comment_id, occurred_at, notified_at";
 
   private final JdbcClient jdbc;
 
@@ -58,22 +58,22 @@ public class NotificationRepositoryAdapter implements NotificationRepository {
       params.put("created" + i, InboxRows.utc(draft.createdAt()));
     }
     return jdbc.sql(
-            "INSERT INTO inbox.notification ("
+            "INSERT INTO ntf_notification ("
                 + COLUMNS
                 + ") VALUES "
                 + String.join(", ", rows)
-                + " ON CONFLICT (recipient_id, comment_id) WHERE category IN ('REPLY', 'MENTION')"
+                + " ON CONFLICT (recipient_user_id, comment_id) WHERE category IN ('REPLY', 'MENTION')"
                 + " DO NOTHING"
-                + " RETURNING notification_id, recipient_id, category, occurred_at, created_at")
+                + " RETURNING id, recipient_user_id, category, occurred_at, notified_at")
         .params(params)
         .query(
             (rs, rowNum) ->
                 CreatedNotification.builder()
-                    .notificationId(rs.getLong("notification_id"))
-                    .recipientId(rs.getLong("recipient_id"))
+                    .notificationId(rs.getLong("id"))
+                    .recipientId(rs.getLong("recipient_user_id"))
                     .category(NotificationCategory.valueOf(rs.getString("category")))
                     .occurredAt(InboxRows.instant(rs, "occurred_at"))
-                    .createdAt(InboxRows.instant(rs, "created_at"))
+                    .createdAt(InboxRows.instant(rs, "notified_at"))
                     .build())
         .list();
   }
@@ -85,7 +85,10 @@ public class NotificationRepositoryAdapter implements NotificationRepository {
   @Override
   public Set<Long> deleteByComment(long commentId) {
     return jdbc.sql(
-            "DELETE FROM inbox.notification WHERE comment_id = :commentId RETURNING recipient_id")
+            "WITH removed AS (DELETE FROM ntf_notification WHERE comment_id = :commentId RETURNING recipient_user_id, id),"
+                + " actors AS (DELETE FROM ntf_notification_helpful_actor a USING removed r"
+                + " WHERE a.recipient_user_id = r.recipient_user_id AND a.notification_id = r.id)"
+                + " SELECT recipient_user_id FROM removed")
         .param("commentId", commentId)
         .query(Long.class)
         .set();
@@ -98,7 +101,10 @@ public class NotificationRepositoryAdapter implements NotificationRepository {
   @Override
   public Set<Long> deleteBySubject(long subjectId) {
     return jdbc.sql(
-            "DELETE FROM inbox.notification WHERE subject_id = :subjectId RETURNING recipient_id")
+            "WITH removed AS (DELETE FROM ntf_notification WHERE subject_id = :subjectId RETURNING recipient_user_id, id),"
+                + " actors AS (DELETE FROM ntf_notification_helpful_actor a USING removed r"
+                + " WHERE a.recipient_user_id = r.recipient_user_id AND a.notification_id = r.id)"
+                + " SELECT recipient_user_id FROM removed")
         .param("subjectId", subjectId)
         .query(Long.class)
         .set();
@@ -114,8 +120,8 @@ public class NotificationRepositoryAdapter implements NotificationRepository {
   public MarkReadOutcome markRead(long recipientId, long notificationId, Instant readAt) {
     int marked =
         jdbc.sql(
-                "UPDATE inbox.notification SET read_at = :readAt"
-                    + " WHERE recipient_id = :recipientId AND notification_id = :id"
+                "UPDATE ntf_notification SET read_at = :readAt"
+                    + " WHERE recipient_user_id = :recipientId AND id = :id"
                     + " AND read_at IS NULL")
             .param("readAt", InboxRows.utc(readAt))
             .param("recipientId", recipientId)
@@ -126,8 +132,8 @@ public class NotificationRepositoryAdapter implements NotificationRepository {
     }
     boolean exists =
         jdbc.sql(
-                "SELECT EXISTS (SELECT 1 FROM inbox.notification"
-                    + " WHERE recipient_id = :recipientId AND notification_id = :id)")
+                "SELECT EXISTS (SELECT 1 FROM ntf_notification"
+                    + " WHERE recipient_user_id = :recipientId AND id = :id)")
             .param("recipientId", recipientId)
             .param("id", notificationId)
             .query(Boolean.class)
@@ -143,8 +149,8 @@ public class NotificationRepositoryAdapter implements NotificationRepository {
   @Override
   public int markAllRead(long recipientId, Instant readAt) {
     return jdbc.sql(
-            "UPDATE inbox.notification SET read_at = :readAt"
-                + " WHERE recipient_id = :recipientId AND read_at IS NULL")
+            "UPDATE ntf_notification SET read_at = :readAt"
+                + " WHERE recipient_user_id = :recipientId AND read_at IS NULL")
         .param("readAt", InboxRows.utc(readAt))
         .param("recipientId", recipientId)
         .update();
@@ -156,9 +162,14 @@ public class NotificationRepositoryAdapter implements NotificationRepository {
   /// @return 删除的条数
   @Override
   public int deleteOccurredBefore(Instant cutoff) {
-    return jdbc.sql("DELETE FROM inbox.notification WHERE occurred_at < :cutoff")
+    return jdbc.sql(
+            "WITH removed AS (DELETE FROM ntf_notification WHERE occurred_at < :cutoff RETURNING recipient_user_id, id),"
+                + " actors AS (DELETE FROM ntf_notification_helpful_actor a USING removed r"
+                + " WHERE a.recipient_user_id = r.recipient_user_id AND a.notification_id = r.id)"
+                + " SELECT count(*) FROM removed")
         .param("cutoff", InboxRows.utc(cutoff))
-        .update();
+        .query(Integer.class)
+        .single();
   }
 
   /// 删除收件人的全部提醒。
@@ -167,9 +178,14 @@ public class NotificationRepositoryAdapter implements NotificationRepository {
   /// @return 删除的条数
   @Override
   public int deleteAllOf(long recipientId) {
-    return jdbc.sql("DELETE FROM inbox.notification WHERE recipient_id = :recipientId")
+    return jdbc.sql(
+            "WITH removed AS (DELETE FROM ntf_notification WHERE recipient_user_id = :recipientId RETURNING recipient_user_id, id),"
+                + " actors AS (DELETE FROM ntf_notification_helpful_actor a USING removed r"
+                + " WHERE a.recipient_user_id = r.recipient_user_id AND a.notification_id = r.id)"
+                + " SELECT count(*) FROM removed")
         .param("recipientId", recipientId)
-        .update();
+        .query(Integer.class)
+        .single();
   }
 
   /// 有提醒的收件人。
@@ -180,8 +196,8 @@ public class NotificationRepositoryAdapter implements NotificationRepository {
   @Override
   public List<Long> findRecipientsAfter(long afterUserId, int limit) {
     return jdbc.sql(
-            "SELECT DISTINCT recipient_id FROM inbox.notification"
-                + " WHERE recipient_id > :after ORDER BY recipient_id LIMIT :limit")
+            "SELECT DISTINCT recipient_user_id FROM ntf_notification"
+                + " WHERE recipient_user_id > :after ORDER BY recipient_user_id LIMIT :limit")
         .param("after", afterUserId)
         .param("limit", limit)
         .query(Long.class)

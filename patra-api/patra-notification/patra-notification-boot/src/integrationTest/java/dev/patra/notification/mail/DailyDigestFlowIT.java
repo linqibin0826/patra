@@ -63,7 +63,7 @@ class DailyDigestFlowIT extends ReminderMailITSupport {
     assertThat(mails()).isEmpty();
     assertThat(
             jdbcTemplate.queryForObject(
-                "SELECT skip_reason FROM mail.reminder_delivery WHERE kind = 'DIGEST'",
+                "SELECT skip_reason FROM ntf_reminder_delivery WHERE kind = 'DIGEST'",
                 String.class))
         .isEqualTo("NOTHING_UNREAD");
   }
@@ -96,7 +96,7 @@ class DailyDigestFlowIT extends ReminderMailITSupport {
 
     assertThat(
             jdbcTemplate.queryForList(
-                "SELECT recipient_id FROM mail.reminder_delivery WHERE kind = 'DIGEST'",
+                "SELECT recipient_user_id FROM ntf_reminder_delivery WHERE kind = 'DIGEST'",
                 Long.class))
         .containsExactly(ME);
     runReminderJob();
@@ -141,7 +141,7 @@ class DailyDigestFlowIT extends ReminderMailITSupport {
         .until(
             () ->
                 jdbcTemplate.queryForObject(
-                        "SELECT count(*) FROM inbox.notification WHERE category = 'HELPFUL'",
+                        "SELECT count(*) FROM ntf_notification WHERE category = 'HELPFUL'",
                         Long.class)
                     == 1);
 
@@ -149,12 +149,12 @@ class DailyDigestFlowIT extends ReminderMailITSupport {
     commandBus.handle(ScheduleDailyDigestCommand.scheduled());
     runReminderJob();
 
-    assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM mail.reminder_queue", Long.class))
+    assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM ntf_reminder_queue", Long.class))
         .isZero();
     assertThat(mails()).isEmpty();
     assertThat(
             jdbcTemplate.queryForObject(
-                "SELECT skip_reason FROM mail.reminder_delivery WHERE kind = 'DIGEST'",
+                "SELECT skip_reason FROM ntf_reminder_delivery WHERE kind = 'DIGEST'",
                 String.class))
         .isEqualTo("NOTHING_UNREAD");
   }
@@ -165,9 +165,7 @@ class DailyDigestFlowIT extends ReminderMailITSupport {
   private void readOne(long commentId) {
     Long id =
         jdbcTemplate.queryForObject(
-            "SELECT notification_id FROM inbox.notification WHERE comment_id = ?",
-            Long.class,
-            commentId);
+            "SELECT id FROM ntf_notification WHERE comment_id = ?", Long.class, commentId);
     call(HttpMethod.PUT, ME, "/me/notifications/" + id + "/read", null);
   }
 }

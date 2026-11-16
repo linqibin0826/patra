@@ -7,6 +7,11 @@ import java.util.List;
 /// 提醒邮件的投递记录（spec 6.2）。
 public interface ReminderDeliveryRepository {
 
+  /// 新投递的 ID（雪花 ID）：也用作服务商幂等键与 `Message-ID`，所以在建记录前就要拿到。
+  ///
+  /// @return 新 ID
+  long nextId();
+
   /// 新建一条。
   ///
   /// @param delivery 投递记录
