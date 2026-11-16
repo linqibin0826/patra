@@ -1,5 +1,6 @@
 package dev.patra.tool.jpa.autoconfigure;
 
+import dev.patra.tool.jpa.entity.ValueObjectStateInterceptor;
 import dev.patra.tool.jpa.json.Jackson3JsonFormatMapper;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
@@ -18,6 +19,9 @@ import tools.jackson.databind.json.JsonMapper;
 ///
 /// **注意**：Hibernate 7.x 移除了 `hibernate.jdbc.batch_versioned_data` 配置，
 /// 版本化实体的批量更新现在始终启用（自 Hibernate 5.0 起该配置默认为 true）。
+///
+/// **值对象行的新旧判断**：注册 `ValueObjectStateInterceptor`，父实体级联合并整组新子行时直接插入，
+/// 不逐行先查库。
 ///
 /// **二级缓存配置**：
 ///
@@ -66,6 +70,10 @@ public class PatraHibernatePropertiesCustomizer implements HibernatePropertiesCu
     hibernateProperties.putIfAbsent(AvailableSettings.STATEMENT_BATCH_SIZE, DEFAULT_BATCH_SIZE);
     hibernateProperties.putIfAbsent(AvailableSettings.ORDER_INSERTS, true);
     hibernateProperties.putIfAbsent(AvailableSettings.ORDER_UPDATES, true);
+
+    // 值对象行（预分配 ID、没有 version）在级联合并时按自己的「新行」标记判断新旧，不逐行先查库
+    hibernateProperties.putIfAbsent(
+        AvailableSettings.INTERCEPTOR, new ValueObjectStateInterceptor());
 
     // 禁用二级缓存（批量场景优化）
     hibernateProperties.putIfAbsent(AvailableSettings.USE_SECOND_LEVEL_CACHE, false);
