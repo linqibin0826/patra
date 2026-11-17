@@ -43,7 +43,7 @@ allowed-tools: Read, Edit, Write, Grep, Glob, Bash
 
 | 基类 | 映射的列 | 说明 |
 |------|----------|------|
-| `BaseJpaEntity` | `id`、`created_by`、`updated_by`、`ip_address`、`record_remarks`、`version` | 操作人由 Spring Data 审计填，`version` 是乐观锁 |
+| `BaseJpaEntity` | `id`、`created_by`、`updated_by`、`ip_address`、`record_remarks`、`version` | 操作人由 Spring Data 审计填（系统写入为空），`version` 是乐观锁 |
 | `ValueObjectJpaEntity` | `id` | 实现 `Persistable`，新行直接插入、不先查 |
 
 两个基类都不映射 `created_at` / `updated_at`：数据库触发器填，应用写了也被忽略。查询要用时实体自己加只读字段（`insertable = false, updatable = false`），不用 `@Generated` / `@CreationTimestamp`（会让批量插入退化成逐条执行）。

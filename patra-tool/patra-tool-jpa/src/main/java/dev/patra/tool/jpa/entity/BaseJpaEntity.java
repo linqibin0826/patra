@@ -1,5 +1,6 @@
 package dev.patra.tool.jpa.entity;
 
+import dev.patra.tool.jpa.audit.UpdatedByResetListener;
 import jakarta.persistence.Column;
 import jakarta.persistence.EntityListeners;
 import jakarta.persistence.Id;
@@ -26,7 +27,7 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 /// | 列 | 怎么来 |
 /// |---|---|
 /// | `id` | 应用预分配的雪花 ID（`SnowflakeIdGenerator.getId()`），不用数据库自增，批量插入才能攒批 |
-/// | `created_by` / `updated_by` | Spring Data 审计从当前操作人填，系统写入为空 |
+/// | `created_by` / `updated_by` | Spring Data 审计填当前操作人，系统写入为空（见 `UpdatedByResetListener`） |
 /// | `ip_address` | 发起请求的客户端 IP，存成 PostgreSQL 的 `INET` |
 /// | `record_remarks` | 给数据处理和人工核对写的备注 |
 /// | `version` | 乐观锁 |
@@ -39,7 +40,7 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 @AllArgsConstructor
 @EqualsAndHashCode
 @MappedSuperclass
-@EntityListeners(AuditingEntityListener.class)
+@EntityListeners({UpdatedByResetListener.class, AuditingEntityListener.class})
 public abstract class BaseJpaEntity implements Serializable, IdAwareEntity {
 
   @Serial private static final long serialVersionUID = 1L;

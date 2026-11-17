@@ -15,6 +15,8 @@ paths: patra-api/*/*-infra/**/*.java, patra-tool/patra-tool-jpa/**/*.java
 
 两个基类都不映射 `created_at` / `updated_at`（数据库填）。查询要用时，实体自己加只读字段（`insertable = false, updatable = false`），不用 `@Generated` / `@CreationTimestamp`。
 
+主表的 `created_by` / `updated_by` 由审计按当前用户填，没有当前用户时写空（`UpdatedByResetListener` 在更新前先清空），实体和映射器不写这两列。
+
 ## 核心规范
 
 1. **命名**：`{Name}Entity`、`{Name}Dao`、`{Name}JpaMapper`

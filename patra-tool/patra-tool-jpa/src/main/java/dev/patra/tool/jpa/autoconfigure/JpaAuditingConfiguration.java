@@ -13,6 +13,8 @@ import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
 ///
 /// 只管操作人。`created_at` / `updated_at` 由数据库触发器填（库表规范第 4 节），实体不映射，这里也就没有时间提供者。
 ///
+/// 拿不到当前用户时 Spring Data 不动 `updated_by`，由主表基类上的 `UpdatedByResetListener` 在更新前先清空，系统写入才会留空。
+///
 /// 扩展点：提供一个 {@link CurrentAuditorProvider} Bean 告诉审计「当前操作人是谁」（安全 starter 已经内置了实现）。
 @Configuration
 @EnableJpaAuditing(auditorAwareRef = "auditorAware")
