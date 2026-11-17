@@ -18,16 +18,12 @@ import dev.patra.identity.domain.account.model.vo.profile.ProfileContent;
 import dev.patra.identity.domain.account.model.vo.profile.ProfileLink;
 import dev.patra.identity.domain.account.model.vo.profile.ResearchInterest;
 import dev.patra.identity.domain.account.model.vo.profile.RorId;
-import java.time.Instant;
 import java.util.List;
 import java.util.stream.IntStream;
 import org.junit.jupiter.api.Test;
 
 /// UserProfile 单元测试。不用 JUnit 的 `@DisplayName`：它和值对象同名。
 class UserProfileTest {
-
-  private static final Instant CREATED_AT = Instant.parse("2026-10-01T00:00:00Z");
-  private static final Instant UPDATED_AT = Instant.parse("2026-10-02T00:00:00Z");
 
   @Test
   void should_create_with_default_privacy_and_empty_lists() {
@@ -114,16 +110,7 @@ class UserProfileTest {
     List<ProfileLink> six =
         IntStream.range(0, 6).mapToObj(i -> ProfileLink.of(null, "https://a.org/" + i)).toList();
 
-    assertThatThrownBy(
-            () ->
-                UserProfile.restore()
-                    .id(1L)
-                    .userId(7L)
-                    .links(six)
-                    .version(0L)
-                    .createdAt(CREATED_AT)
-                    .updatedAt(UPDATED_AT)
-                    .build())
+    assertThatThrownBy(() -> UserProfile.restore().id(1L).userId(7L).links(six).version(0L).build())
         .isInstanceOf(IllegalArgumentException.class);
   }
 
@@ -199,15 +186,11 @@ class UserProfileTest {
             .userId(7L)
             .displayName(new DisplayName("陈宇"))
             .version(3L)
-            .createdAt(CREATED_AT)
-            .updatedAt(UPDATED_AT)
             .build();
 
     assertThat(restored.getId()).isEqualTo(1L);
     assertThat(restored.getDisplayName()).contains(new DisplayName("陈宇"));
     assertThat(restored.getVersion()).isEqualTo(3L);
-    assertThat(restored.getCreatedAt()).isEqualTo(CREATED_AT);
-    assertThat(restored.getUpdatedAt()).isEqualTo(UPDATED_AT);
     assertThat(restored.getLinks()).isEmpty();
     assertThat(restored.getPrivacy()).isEqualTo(PrivacySettings.defaults());
   }

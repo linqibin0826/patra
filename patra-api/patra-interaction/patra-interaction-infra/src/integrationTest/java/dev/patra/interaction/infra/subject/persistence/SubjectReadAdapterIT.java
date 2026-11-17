@@ -106,7 +106,7 @@ class SubjectReadAdapterIT extends SubjectRegistryITSupport {
   @Test
   void should_read_rows_written_before_migration() {
     jdbcTemplate.update(
-        "INSERT INTO subject.registry (subject_id, target_type, natural_key, source_id, state,"
+        "INSERT INTO itr_subject (id, target_type, natural_key, source_id, state,"
             + " snapshot, snapshot_at) VALUES (5, 1, 'pmid:5', 500, 'ACTIVE',"
             + " '{\"title\":\"T\",\"journal\":\"J\",\"publishedDate\":\"2019\"}'::jsonb, now())");
 

@@ -21,7 +21,7 @@ public interface UserResearchInterestDao extends JpaRepository<UserResearchInter
   ///
   /// @param userId 用户 ID
   /// @return 删掉的行数
-  @Modifying
+  @Modifying(flushAutomatically = true, clearAutomatically = true)
   @Query("delete from UserResearchInterestEntity e where e.userId = :userId")
   int deleteAllByUserId(@Param("userId") Long userId);
 }

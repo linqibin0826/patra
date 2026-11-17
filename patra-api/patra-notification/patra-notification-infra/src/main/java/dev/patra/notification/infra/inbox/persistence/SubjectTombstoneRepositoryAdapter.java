@@ -1,12 +1,13 @@
 package dev.patra.notification.infra.inbox.persistence;
 
 import dev.patra.notification.domain.inbox.port.repository.SubjectTombstoneRepository;
+import dev.patra.tool.jpa.id.SnowflakeIdGenerator;
 import java.time.Instant;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Component;
 
-/// `SubjectTombstoneRepository` 的原生 SQL 实现（`inbox.subject_tombstone`）。
+/// `SubjectTombstoneRepository` 的原生 SQL 实现（`ntf_subject_tombstone`）。
 @Component
 @RequiredArgsConstructor
 public class SubjectTombstoneRepositoryAdapter implements SubjectTombstoneRepository {
@@ -20,7 +21,7 @@ public class SubjectTombstoneRepositoryAdapter implements SubjectTombstoneReposi
   @Override
   public boolean exists(long subjectId) {
     return jdbc.sql(
-            "SELECT EXISTS (SELECT 1 FROM inbox.subject_tombstone WHERE subject_id = :subjectId)")
+            "SELECT EXISTS (SELECT 1 FROM ntf_subject_tombstone WHERE subject_id = :subjectId)")
         .param("subjectId", subjectId)
         .query(Boolean.class)
         .single();
@@ -33,8 +34,9 @@ public class SubjectTombstoneRepositoryAdapter implements SubjectTombstoneReposi
   @Override
   public void save(long subjectId, Instant deletedAt) {
     jdbc.sql(
-            "INSERT INTO inbox.subject_tombstone (subject_id, deleted_at)"
-                + " VALUES (:subjectId, :deletedAt) ON CONFLICT (subject_id) DO NOTHING")
+            "INSERT INTO ntf_subject_tombstone (id, subject_id, source_deleted_at)"
+                + " VALUES (:rowId, :subjectId, :deletedAt) ON CONFLICT (subject_id) DO NOTHING")
+        .param("rowId", SnowflakeIdGenerator.getId())
         .param("subjectId", subjectId)
         .param("deletedAt", InboxRows.utc(deletedAt))
         .update();
@@ -46,7 +48,7 @@ public class SubjectTombstoneRepositoryAdapter implements SubjectTombstoneReposi
   /// @return 删除的行数
   @Override
   public int purgeBefore(Instant cutoff) {
-    return jdbc.sql("DELETE FROM inbox.subject_tombstone WHERE deleted_at < :cutoff")
+    return jdbc.sql("DELETE FROM ntf_subject_tombstone WHERE source_deleted_at < :cutoff")
         .param("cutoff", InboxRows.utc(cutoff))
         .update();
   }

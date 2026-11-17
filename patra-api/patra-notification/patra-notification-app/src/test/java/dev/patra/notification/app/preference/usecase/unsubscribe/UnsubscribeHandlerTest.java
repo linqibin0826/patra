@@ -3,7 +3,6 @@ package dev.patra.notification.app.preference.usecase.unsubscribe;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -19,9 +18,6 @@ import dev.patra.notification.domain.preference.model.read.EmailMode;
 import dev.patra.notification.domain.preference.model.vo.UnsubscribeToken;
 import dev.patra.notification.domain.preference.port.repository.EmailPreferenceRepository;
 import dev.patra.tool.test.transaction.RecordingTransactions;
-import java.time.Clock;
-import java.time.Instant;
-import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -36,15 +32,11 @@ import org.springframework.transaction.support.TransactionOperations;
 class UnsubscribeHandlerTest {
 
   private static final long USER = 7L;
-  private static final Instant NOW = Instant.parse("2026-10-31T08:00:00Z");
   private static final String TOKEN = "T".repeat(43);
 
   private final EmailPreferenceRepository preferences = mock(EmailPreferenceRepository.class);
   private final UnsubscribeHandler handler =
-      new UnsubscribeHandler(
-          preferences,
-          TransactionOperations.withoutTransaction(),
-          Clock.fixed(NOW, ZoneOffset.UTC));
+      new UnsubscribeHandler(preferences, TransactionOperations.withoutTransaction());
 
   /// 被截断、改写、缺参数的链接：两种入口都是链接无效，不查库。
   @ParameterizedTest
@@ -102,7 +94,7 @@ class UnsubscribeHandlerTest {
                 .mention(EmailMode.INSTANT)
                 .othersEnabled(true)
                 .build());
-    verify(preferences).updateModes(any(), eq(NOW));
+    verify(preferences).updateModes(any(), any());
   }
 
   /// 锁行与写回在同一个事务里（行锁要在事务里才持有到写回）。
@@ -110,8 +102,7 @@ class UnsubscribeHandlerTest {
   void locks_and_writes_inside_one_transaction() {
     List<String> events = new ArrayList<>();
     UnsubscribeHandler recorded =
-        new UnsubscribeHandler(
-            preferences, new RecordingTransactions(events), Clock.fixed(NOW, ZoneOffset.UTC));
+        new UnsubscribeHandler(preferences, new RecordingTransactions(events));
     when(preferences.findByTokenForUpdate(new UnsubscribeToken(TOKEN)))
         .thenAnswer(
             invocation -> {
@@ -120,7 +111,7 @@ class UnsubscribeHandlerTest {
                   EmailPreference.restore(
                       USER, new UnsubscribeToken(TOKEN), EmailMode.INSTANT, EmailMode.INSTANT));
             });
-    doAnswer(invocation -> events.add("update")).when(preferences).updateModes(any(), eq(NOW));
+    doAnswer(invocation -> events.add("update")).when(preferences).updateModes(any(), any());
 
     recorded.handle(UnsubscribeCommand.oneClick(TOKEN, "REPLY"));
 

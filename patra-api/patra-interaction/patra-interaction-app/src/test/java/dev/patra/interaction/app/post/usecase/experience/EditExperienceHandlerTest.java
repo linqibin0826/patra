@@ -131,7 +131,7 @@ class EditExperienceHandlerTest {
     ExperienceDetailView detail = handler.handle(command());
 
     verify(posts).lockAuthor(U);
-    verify(posts).update(any(), any());
+    verify(posts).update(any());
     verify(posts, never()).insertRevision(any(), any());
     assertThat(detail.experience().edited()).isFalse();
   }
@@ -161,9 +161,9 @@ class EditExperienceHandlerTest {
 
     handler.handle(EditExperienceCommand.of(POST_ID.value(), input().body("正文").build()));
 
-    verify(posts, never()).update(any(), any());
+    verify(posts, never()).update(any());
     verify(posts, never()).insertRevision(any(), any());
-    verify(gateway, never()).updateLocal(any(), anyLong(), any(), any());
+    verify(gateway, never()).updateLocal(any(), anyLong(), any(), any(), any());
   }
 
   /// 改成自己另一条经验的投稿日期：409；查到的是自己则不算重复。
@@ -181,12 +181,12 @@ class EditExperienceHandlerTest {
         .isInstanceOfSatisfying(
             DuplicateSubmissionException.class,
             ex -> assertThat(ex.existingPostId()).isEqualTo(PostId.of(77L)));
-    verify(posts, never()).update(any(), any());
+    verify(posts, never()).update(any());
 
     when(posts.findActiveBySubmission(U, JOURNAL, LocalDate.parse("2026-03-02")))
         .thenReturn(Optional.of(POST_ID));
     handler.handle(command());
-    verify(posts).update(any(), any());
+    verify(posts).update(any());
   }
 
   /// 投稿月份变了：登记快照换成新月份（期刊全称与缩写不变）；月份没变不刷新。
@@ -204,10 +204,11 @@ class EditExperienceHandlerTest {
             SubjectType.POST,
             POST_ID.value(),
             SubjectState.ACTIVE,
-            SubjectSnapshot.of(null, "Journal of X", "2026-04", "J X"));
+            SubjectSnapshot.of(null, "Journal of X", "2026-04", "J X"),
+            U);
 
     handler.handle(command());
-    verify(gateway).updateLocal(any(), anyLong(), any(), any());
+    verify(gateway).updateLocal(any(), anyLong(), any(), any(), any());
   }
 
   /// 月份变没变按锁内重读的内容判：别的标签页刚把它改到 4 月，这次改回 3 月，登记快照要跟着回到 3 月；快照也在锁内读。
@@ -240,7 +241,8 @@ class EditExperienceHandlerTest {
             SubjectType.POST,
             POST_ID.value(),
             SubjectState.ACTIVE,
-            SubjectSnapshot.of(null, "Journal of X", "2026-03", "J X"));
+            SubjectSnapshot.of(null, "Journal of X", "2026-03", "J X"),
+            U);
     assertThat(events.indexOf("lock")).isLessThan(events.indexOf("snapshot"));
   }
 
@@ -264,7 +266,7 @@ class EditExperienceHandlerTest {
     when(posts.find(POST_ID)).thenReturn(Optional.of(post), Optional.of(deleted(post)));
 
     assertThatThrownBy(() -> handler.handle(command())).isInstanceOf(PostNotFoundException.class);
-    verify(posts, never()).update(any(), any());
+    verify(posts, never()).update(any());
   }
 
   /// 改正文的命令（字段同原样，正文换了）。

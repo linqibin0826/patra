@@ -22,7 +22,7 @@ import org.springframework.dao.DuplicateKeyException;
 import org.springframework.transaction.IllegalTransactionStateException;
 import org.springframework.transaction.support.TransactionTemplate;
 
-/// 有帮助合并条目的存储（PAP-144 spec 7.1）：信箱行加列、附表记点过的人、合并唯一约束与形状约束、级联删除。
+/// 有帮助合并条目的存储（PAP-144 spec 7.1）：信箱行加列、附表记点过的人、合并唯一约束与形状约束、随信箱行一并删除。
 class HelpfulNotificationRepositoryAdapterIT extends InboxPersistenceITSupport {
 
   private static final long AUTHOR = 101L;
@@ -55,8 +55,8 @@ class HelpfulNotificationRepositoryAdapterIT extends InboxPersistenceITSupport {
     assertThat(found.getDay()).isEqualTo(DAY);
     assertThat(
             jdbcTemplate.queryForMap(
-                "SELECT category, type, comment_id, subject_id, created_at = ? AS created"
-                    + " FROM inbox.notification WHERE notification_id = ?",
+                "SELECT category, type, comment_id, subject_id, notified_at = ? AS created"
+                    + " FROM ntf_notification WHERE id = ?",
                 Timestamp.from(NOW),
                 id))
         .containsEntry("category", "HELPFUL")
@@ -70,7 +70,7 @@ class HelpfulNotificationRepositoryAdapterIT extends InboxPersistenceITSupport {
   @Test
   void update_upserts_actor_and_keeps_earliest_time() {
     insert(HelpfulNotification.open(AUTHOR, COMMENT, OWNER, mark(C, 3), null));
-    jdbcTemplate.update("UPDATE inbox.notification SET read_at = ?", Timestamp.from(NOW));
+    jdbcTemplate.update("UPDATE ntf_notification SET read_at = ?", Timestamp.from(NOW));
 
     absorbAndUpdate(COMMENT, mark(D, 5));
     absorbAndUpdate(COMMENT, mark(C, 0));
@@ -81,10 +81,22 @@ class HelpfulNotificationRepositoryAdapterIT extends InboxPersistenceITSupport {
     assertThat(found.getReadAt()).isNull();
     assertThat(
             jdbcTemplate.queryForMap(
-                "SELECT actor_id, occurred_at = ? AS occurred FROM inbox.notification",
+                "SELECT actor_user_id, occurred_at = ? AS occurred FROM ntf_notification",
                 Timestamp.from(T0.plusSeconds(300))))
-        .containsEntry("actor_id", D)
+        .containsEntry("actor_user_id", D)
         .containsEntry("occurred", true);
+  }
+
+  /// 收件人标已读会把自己记成最后修改人；之后消费事件并入新的人是系统写入，最后修改人要清空，不能留着收件人。
+  @Test
+  void system_merge_clears_last_modifier_left_by_recipient() {
+    long id = insert(HelpfulNotification.open(AUTHOR, COMMENT, OWNER, mark(C, 3), null));
+    inTransaction(() -> notifications.markRead(AUTHOR, id, NOW));
+    assertThat(lastModifier()).isEqualTo(AUTHOR);
+
+    absorbAndUpdate(COMMENT, mark(D, 5));
+
+    assertThat(lastModifier()).isNull();
   }
 
   /// 不同的天、不同的内容各是一行，按合并键各自命中。
@@ -112,7 +124,7 @@ class HelpfulNotificationRepositoryAdapterIT extends InboxPersistenceITSupport {
 
     assertThatThrownBy(() -> rawInsert(2L, "HELPFUL", "POST_HELPFUL", null, "2026-10-31", T0))
         .isInstanceOf(DuplicateKeyException.class)
-        .hasMessageContaining("(recipient_id, subject_id, comment_id, helpful_day)");
+        .hasMessageContaining("(recipient_user_id, subject_id, comment_id, helpful_day)");
   }
 
   /// 形状约束：有帮助缺那一天、点经验却带评论、回复带经验正文都被拒。
@@ -120,25 +132,25 @@ class HelpfulNotificationRepositoryAdapterIT extends InboxPersistenceITSupport {
   void shape_checks_reject_bad_rows() {
     assertThatThrownBy(() -> rawInsert(1L, "HELPFUL", "POST_HELPFUL", null, null, T0))
         .isInstanceOf(DataIntegrityViolationException.class)
-        .hasMessageContaining("ck_notification_helpful_day");
+        .hasMessageContaining("ck_ntf_notification_helpful_day");
     assertThatThrownBy(() -> rawInsert(2L, "HELPFUL", "POST_HELPFUL", 500L, "2026-10-31", T0))
         .isInstanceOf(DataIntegrityViolationException.class)
-        .hasMessageContaining("ck_notification_helpful_comment");
+        .hasMessageContaining("ck_ntf_notification_helpful_comment");
     assertThatThrownBy(
             () ->
                 jdbcTemplate.update(
-                    "INSERT INTO inbox.notification (recipient_id, notification_id, category, type,"
-                        + " actor_id, actor_anonymous, subject_id, comment_id, occurred_at,"
-                        + " created_at, post_plain_text)"
+                    "INSERT INTO ntf_notification (recipient_user_id, id, category, type,"
+                        + " actor_user_id, actor_anonymous, subject_id, comment_id, occurred_at,"
+                        + " notified_at, post_plain_text)"
                         + " VALUES (101, 3, 'REPLY', 'COMMENT_REPLY', 9, false, 40, 501, now(),"
                         + " now(), '正文')"))
         .isInstanceOf(DataIntegrityViolationException.class)
-        .hasMessageContaining("ck_notification_post_text");
+        .hasMessageContaining("ck_ntf_notification_post_text");
   }
 
-  /// 信箱行被 PAP-143 的四种删除删掉时，附表随之清空（级联外键）。
+  /// 信箱行被 PAP-143 的四种删除删掉时，附表随之清空（删除语句用可写 CTE 一并删，不靠外键）。
   @Test
-  void deleting_parent_rows_cascades_to_actors() {
+  void deleting_parent_rows_removes_actors() {
     insert(HelpfulNotification.open(AUTHOR, COMMENT, OWNER, mark(C, 0), null));
     notifications.deleteByComment(500L);
     assertThat(actorRows()).isZero();
@@ -177,7 +189,7 @@ class HelpfulNotificationRepositoryAdapterIT extends InboxPersistenceITSupport {
 
     assertThat(
             jdbcTemplate.queryForObject(
-                "SELECT actor_anonymous FROM inbox.notification", Boolean.class))
+                "SELECT actor_anonymous FROM ntf_notification", Boolean.class))
         .isTrue();
   }
 
@@ -235,8 +247,8 @@ class HelpfulNotificationRepositoryAdapterIT extends InboxPersistenceITSupport {
   private void rawInsert(
       long id, String category, String type, Long commentId, String day, Instant at) {
     jdbcTemplate.update(
-        "INSERT INTO inbox.notification (recipient_id, notification_id, category, type, actor_id,"
-            + " actor_anonymous, subject_id, comment_id, occurred_at, created_at, helpful_day,"
+        "INSERT INTO ntf_notification (recipient_user_id, id, category, type, actor_user_id,"
+            + " actor_anonymous, subject_id, comment_id, occurred_at, notified_at, helpful_day,"
             + " post_plain_text_at)"
             + " VALUES (101, ?, ?, ?, 11, false, 41, ?, ?, ?, ?::date, ?)",
         id,
@@ -249,11 +261,19 @@ class HelpfulNotificationRepositoryAdapterIT extends InboxPersistenceITSupport {
         Timestamp.from(at));
   }
 
+  /// 唯一一行信箱的最后修改人。
+  ///
+  /// @return 用户 ID，系统写入为空
+  private Long lastModifier() {
+    return jdbcTemplate.queryForObject("SELECT updated_by FROM ntf_notification", Long.class);
+  }
+
   /// 附表行数。
   ///
   /// @return 行数
   private long actorRows() {
-    return jdbcTemplate.queryForObject("SELECT count(*) FROM inbox.helpful_actor", Long.class);
+    return jdbcTemplate.queryForObject(
+        "SELECT count(*) FROM ntf_notification_helpful_actor", Long.class);
   }
 
   /// 某人在 T0 之后若干分钟点。

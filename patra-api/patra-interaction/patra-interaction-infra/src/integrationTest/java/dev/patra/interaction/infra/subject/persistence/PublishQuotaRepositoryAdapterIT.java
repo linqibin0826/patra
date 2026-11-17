@@ -33,7 +33,7 @@ class PublishQuotaRepositoryAdapterIT extends SubjectRegistryITSupport {
   /// 每例从空表开始。
   @BeforeEach
   void truncateQuotas() {
-    jdbcTemplate.update("TRUNCATE subject.publish_quota");
+    jdbcTemplate.update("TRUNCATE itr_publish_quota");
   }
 
   /// 配额锁在事务外调用时被拒绝（`MANDATORY`）。

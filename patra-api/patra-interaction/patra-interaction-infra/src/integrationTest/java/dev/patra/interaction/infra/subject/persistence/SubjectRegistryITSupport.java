@@ -26,7 +26,7 @@ abstract class SubjectRegistryITSupport {
   /// 每例从空表开始。
   @BeforeEach
   void truncateRegistry() {
-    jdbcTemplate.update("TRUNCATE subject.registry");
+    jdbcTemplate.update("TRUNCATE itr_subject");
   }
 
   /// PMID 的身份锚。
@@ -54,6 +54,6 @@ abstract class SubjectRegistryITSupport {
   ///
   /// @return 行数
   protected long rowCount() {
-    return jdbcTemplate.queryForObject("SELECT count(*) FROM subject.registry", Long.class);
+    return jdbcTemplate.queryForObject("SELECT count(*) FROM itr_subject", Long.class);
   }
 }

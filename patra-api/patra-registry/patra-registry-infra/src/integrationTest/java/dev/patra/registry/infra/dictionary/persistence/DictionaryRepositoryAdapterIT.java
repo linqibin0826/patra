@@ -116,7 +116,7 @@ class DictionaryRepositoryAdapterIT {
       deletedType.setAllowCustomItems(false);
       typeDao.saveAndFlush(deletedType);
 
-      // 使用 Native SQL 标记为已删除（@SoftDelete 由 Hibernate 自动管理，不暴露 setter）
+      // 直接在库里标删，验证查询自己带了「未删除」条件
       entityManager
           .createNativeQuery("UPDATE sys_dict_type SET deleted_at = NOW() WHERE id = :id")
           .setParameter("id", deletedTypeId)
@@ -164,7 +164,7 @@ class DictionaryRepositoryAdapterIT {
       SysDictItemEntity deletedItem = new SysDictItemEntity();
       Long deletedItemId = SnowflakeIdGenerator.getId();
       deletedItem.setId(deletedItemId);
-      deletedItem.setTypeId(testTypeId);
+      deletedItem.setDictTypeId(testTypeId);
       deletedItem.setItemCode("DELETED");
       deletedItem.setItemName("已删除项");
       deletedItem.setDisplayOrder(100);
@@ -172,7 +172,7 @@ class DictionaryRepositoryAdapterIT {
       deletedItem.setIsDefault(false);
       itemDao.saveAndFlush(deletedItem);
 
-      // 使用 Native SQL 标记为已删除（@SoftDelete 由 Hibernate 自动管理，不暴露 setter）
+      // 直接在库里标删，验证查询自己带了「未删除」条件
       entityManager
           .createNativeQuery("UPDATE sys_dict_item SET deleted_at = NOW() WHERE id = :id")
           .setParameter("id", deletedItemId)
@@ -222,7 +222,7 @@ class DictionaryRepositoryAdapterIT {
       assertThat(result.get("United States").itemCode()).isEqualTo("US");
     }
 
-    // 注：软删除测试已移除 - SysDictItemAliasEntity 现在继承 BaseJpaEntity，使用物理删除
+    // 注：SysDictItemAliasEntity 没有 deletedAt 字段，删除即物理删除，所以没有软删除测试
 
     @Test
     @DisplayName("类型不匹配的别名应被过滤")
@@ -239,7 +239,7 @@ class DictionaryRepositoryAdapterIT {
       // 在其他类型下创建字典项和别名
       SysDictItemEntity otherItem = new SysDictItemEntity();
       otherItem.setId(SnowflakeIdGenerator.getId());
-      otherItem.setTypeId(otherType.getId());
+      otherItem.setDictTypeId(otherType.getId());
       otherItem.setItemCode("ZH");
       otherItem.setItemName("中文");
       otherItem.setDisplayOrder(100);
@@ -322,7 +322,7 @@ class DictionaryRepositoryAdapterIT {
   private void createDisabledItem(String code, String name, int order) {
     SysDictItemEntity item = new SysDictItemEntity();
     item.setId(SnowflakeIdGenerator.getId());
-    item.setTypeId(testTypeId);
+    item.setDictTypeId(testTypeId);
     item.setItemCode(code);
     item.setItemName(name);
     item.setDisplayOrder(order);
@@ -335,7 +335,7 @@ class DictionaryRepositoryAdapterIT {
   private Long createItem(String code, String name, int order) {
     SysDictItemEntity item = new SysDictItemEntity();
     item.setId(SnowflakeIdGenerator.getId());
-    item.setTypeId(testTypeId);
+    item.setDictTypeId(testTypeId);
     item.setItemCode(code);
     item.setItemName(name);
     item.setDisplayOrder(order);
@@ -349,7 +349,7 @@ class DictionaryRepositoryAdapterIT {
   private void createAlias(Long itemId, String sourceStandard, String externalCode) {
     SysDictItemAliasEntity alias = new SysDictItemAliasEntity();
     alias.setId(SnowflakeIdGenerator.getId());
-    alias.setItemId(itemId);
+    alias.setDictItemId(itemId);
     alias.setSourceStandard(sourceStandard);
     alias.setExternalCode(externalCode);
     aliasDao.save(alias);

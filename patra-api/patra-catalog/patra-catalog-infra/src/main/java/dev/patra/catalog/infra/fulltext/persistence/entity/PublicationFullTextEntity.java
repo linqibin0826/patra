@@ -3,7 +3,7 @@ package dev.patra.catalog.infra.fulltext.persistence.entity;
 import dev.patra.catalog.domain.fulltext.model.enums.FullTextUnavailableReason;
 import dev.patra.catalog.domain.fulltext.model.vo.FullTextMedia;
 import dev.patra.catalog.domain.kernel.model.enums.FullTextStatus;
-import dev.patra.tool.jpa.entity.ValueObjectJpaEntity;
+import dev.patra.tool.jpa.entity.BaseJpaEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -19,7 +19,11 @@ import org.hibernate.type.SqlTypes;
 
 /// 全文记录实体，映射 `cat_publication_fulltext`。
 ///
-/// 状态与原因存枚举名；`media` 以 JSONB 直接映射领域 record 列表。审计列由数据库维护，实体不映射。
+/// 状态与原因存枚举名；`media` 以 JSONB 直接映射领域 record 列表。
+///
+/// 主表：抓取与解析两条流水线各持一把运行锁，可以同时改同一篇（PMCID 变更、手动重抓不看状态），
+/// 所以带乐观锁版本号；两边的持久化事务都先锁住这行再重读（见 `PublicationFullTextRepository#lockByPublicationId`），
+/// 正常情况下不会撞版本。`created_at` / `updated_at` 由数据库填，实体不映射。
 ///
 /// @author linqibin
 /// @since 0.11.0
@@ -27,7 +31,7 @@ import org.hibernate.type.SqlTypes;
 @Setter
 @Entity
 @Table(name = "cat_publication_fulltext")
-public class PublicationFullTextEntity extends ValueObjectJpaEntity {
+public class PublicationFullTextEntity extends BaseJpaEntity {
 
   @Column(name = "publication_id", nullable = false)
   private Long publicationId;

@@ -21,7 +21,7 @@ import org.springframework.test.context.ContextConfiguration;
 /// **测试目标**：
 ///
 /// - 批量投影只命中 `status = 'ACTIVE'` 的作者
-/// - 已软删除（`deleted_at` 非空）的作者被 Hibernate `@SoftDelete` 自动过滤
+/// - 已软删除（`deleted_at` 非空）的作者被查询自己带的 `deleted_at IS NULL` 条件排除
 /// - 库中不存在的 ORCID 不产生任何行（写链路据此判定"无法软关联"）
 ///
 /// **测试数据**：ORCID 样例均为 ISO 7064 校验位合法值。
@@ -110,8 +110,7 @@ class AuthorOrcidDaoIT {
       jdbc.update("UPDATE cat_author SET deleted_at = NOW() WHERE id = ?", authorId);
     }
     jdbc.update(
-        "INSERT INTO cat_author_orcid (id, author_id, orcid, is_primary, version, "
-            + "created_at, updated_at) VALUES (?, ?, ?, true, 0, NOW(), NOW())",
+        "INSERT INTO cat_author_orcid (id, author_id, orcid, is_primary) VALUES (?, ?, ?, true)",
         ++idSeq,
         authorId,
         orcid);

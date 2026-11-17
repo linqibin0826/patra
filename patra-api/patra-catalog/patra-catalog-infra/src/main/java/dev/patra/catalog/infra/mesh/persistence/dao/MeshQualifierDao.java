@@ -20,13 +20,12 @@ import org.springframework.data.jpa.repository.Query;
 /// - `saveAll(entities)` - 批量保存
 /// - `findById(id)` - 按主键查询
 /// - `findAll()` - 查询所有
-/// - `deleteById(id)` - 按主键删除（软删除）
+/// - `deleteById(id)` - 按主键删除（物理删除）
 /// - `count()` - 统计总数
 ///
-/// **软删除说明**：
+/// **删除说明**：
 ///
-/// 由于 `MeshQualifierEntity` 继承了 `BaseJpaEntity`，所有查询自动过滤已删除记录，
-/// 删除操作会自动更新 `deleted_at` 字段而非物理删除。
+/// `MeshQualifierEntity` 没有 `deleted_at` 字段，删除操作是物理删除，查询也不带「未删除」条件。
 ///
 /// @author linqibin
 /// @since 0.1.0

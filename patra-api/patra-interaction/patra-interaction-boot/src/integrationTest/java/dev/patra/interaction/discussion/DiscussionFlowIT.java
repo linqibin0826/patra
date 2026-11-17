@@ -188,12 +188,11 @@ class DiscussionFlowIT extends DiscussionFlowITSupport {
         start.countDown();
         assertThat(delete.get()).isEqualTo(200);
         int replied = reply.get();
-        long xRows = count("SELECT count(*) FROM discussion.comment WHERE comment_id = ?", x);
+        long xRows = count("SELECT count(*) FROM itr_comment WHERE id = ?", x);
         if (replied == 201) {
           assertThat(
                   count(
-                      "SELECT count(*) FROM discussion.comment WHERE comment_id = ? AND state ="
-                          + " 'DELETED'",
+                      "SELECT count(*) FROM itr_comment WHERE id = ? AND state =" + " 'DELETED'",
                       x))
               .isEqualTo(1L);
         } else {
@@ -204,9 +203,9 @@ class DiscussionFlowIT extends DiscussionFlowITSupport {
     }
     assertThat(
             count(
-                "SELECT count(*) FROM discussion.comment c WHERE c.parent_id IS NOT NULL AND NOT"
-                    + " EXISTS (SELECT 1 FROM discussion.comment p WHERE p.comment_id ="
-                    + " c.parent_id)"))
+                "SELECT count(*) FROM itr_comment c WHERE c.parent_comment_id IS NOT NULL AND NOT"
+                    + " EXISTS (SELECT 1 FROM itr_comment p WHERE p.id ="
+                    + " c.parent_comment_id)"))
         .isZero();
   }
 }

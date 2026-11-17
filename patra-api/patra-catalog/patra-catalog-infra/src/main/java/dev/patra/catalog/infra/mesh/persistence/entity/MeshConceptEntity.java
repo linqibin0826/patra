@@ -6,9 +6,7 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
-import jakarta.persistence.Index;
 import jakarta.persistence.Table;
-import jakarta.persistence.UniqueConstraint;
 import java.util.List;
 import lombok.Getter;
 import lombok.Setter;
@@ -30,20 +28,12 @@ import org.hibernate.type.SqlTypes;
 /// - `is_preferred` 是否首选概念（每个记录只有一个）
 /// - `registry_numbers` 注册号列表（JSON 数组）
 ///
-/// **索引说明**：
-///
-/// - 唯一索引 `uk_concept_ui`: concept_ui 支持精确查询
-/// - 复合索引 `idx_record_type_owner`: 支持按类型和所有者查询概念
-///
 /// @author linqibin
 /// @since 0.1.0
 @Getter
 @Setter
 @Entity
-@Table(
-    name = "cat_mesh_concept",
-    uniqueConstraints = {@UniqueConstraint(name = "uk_concept_ui", columnNames = "concept_ui")},
-    indexes = {@Index(name = "idx_record_type_owner", columnList = "record_type, owner_ui")})
+@Table(name = "cat_mesh_concept")
 public class MeshConceptEntity extends ValueObjectJpaEntity {
 
   /// 记录类型（DESCRIPTOR=主题词，SCR=补充概念）

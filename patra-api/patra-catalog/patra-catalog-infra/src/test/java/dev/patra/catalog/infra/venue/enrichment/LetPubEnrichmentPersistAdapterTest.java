@@ -13,6 +13,7 @@ import dev.patra.catalog.infra.venue.persistence.dao.JcrRatingDao;
 import dev.patra.catalog.infra.venue.persistence.dao.VenueDao;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -41,7 +42,8 @@ class LetPubEnrichmentPersistAdapterTest {
   @BeforeEach
   void setUp() {
     MockitoAnnotations.openMocks(this);
-    adapter = new LetPubEnrichmentPersistAdapter(jcrDao, casDao, warnDao, venueDao);
+    adapter =
+        new LetPubEnrichmentPersistAdapter(jcrDao, casDao, warnDao, venueDao, Optional::empty);
   }
 
   @Test
@@ -58,7 +60,7 @@ class LetPubEnrichmentPersistAdapterTest {
     // 10 年趋势 - 3 年已存在 = 7 年应插入
     assertThat(stats.jcrInserted()).isEqualTo(7);
     verify(jcrDao).saveAll(argThat(list -> ((List<?>) list).size() == 7));
-    verify(venueDao, never()).updateImageObjectKey(anyLong(), any());
+    verify(venueDao, never()).updateImageObjectKey(anyLong(), any(), any());
   }
 
   @Test
@@ -68,12 +70,12 @@ class LetPubEnrichmentPersistAdapterTest {
     when(jcrDao.findYearsByVenueId(anyLong())).thenReturn(Set.of());
     when(casDao.findKeysByVenueId(anyLong())).thenReturn(Set.of());
     when(warnDao.findKeysByVenueId(anyLong())).thenReturn(Set.of());
-    when(venueDao.updateImageObjectKey(100L, "catalog/venue-cover/100.jpg")).thenReturn(1);
+    when(venueDao.updateImageObjectKey(100L, "catalog/venue-cover/100.jpg", null)).thenReturn(1);
 
     PersistStats stats = adapter.persist(100L, data, "catalog/venue-cover/100.jpg");
 
     assertThat(stats.coverUpdated()).isTrue();
-    verify(venueDao).updateImageObjectKey(100L, "catalog/venue-cover/100.jpg");
+    verify(venueDao).updateImageObjectKey(100L, "catalog/venue-cover/100.jpg", null);
   }
 
   @Test

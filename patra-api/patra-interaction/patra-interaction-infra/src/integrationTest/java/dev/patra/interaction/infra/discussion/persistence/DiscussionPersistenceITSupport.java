@@ -35,8 +35,8 @@ abstract class DiscussionPersistenceITSupport {
   @BeforeEach
   void truncateDiscussionTables() {
     jdbcTemplate.update(
-        "TRUNCATE discussion.comment_revision, discussion.comment, discussion.thread_stats,"
-            + " discussion.subject_stats, reaction.target_stats, reaction.helpful");
+        "TRUNCATE itr_comment_revision, itr_comment, itr_comment_thread_stats,"
+            + " itr_comment_subject_stats, itr_helpful_target_stats, itr_helpful");
   }
 
   /// 不经仓储直接插一行（约束测试用）。
@@ -50,8 +50,8 @@ abstract class DiscussionPersistenceITSupport {
   protected void insertRaw(
       long commentId, long rootId, Long parentId, String state, String body, Instant deletedAt) {
     jdbcTemplate.update(
-        "INSERT INTO discussion.comment (comment_id, subject_id, root_id, parent_id, author_id,"
-            + " state, body, created_at, deleted_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        "INSERT INTO itr_comment (id, subject_id, root_comment_id, parent_comment_id, author_user_id,"
+            + " state, body, published_at, deleted_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
         commentId,
         S1.value(),
         rootId,

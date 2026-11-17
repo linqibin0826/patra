@@ -181,7 +181,7 @@ class PublicationDetailReadAdapterIT {
     em.clear();
 
     PublicationEntity pub = em.find(PublicationEntity.class, pubId);
-    em.remove(pub); // Hibernate @SoftDelete 自动转为 UPDATE deleted_at = now()
+    pub.setDeletedAt(java.time.Instant.parse("2026-11-16T00:00:00Z")); // 软删除就是写上删除时间
     em.flush();
     em.clear();
 
@@ -411,7 +411,7 @@ class PublicationDetailReadAdapterIT {
   private void saveAffiliation(Long pubAuthorId, Long pubId, int order, String affiliationString) {
     PublicationAuthorAffiliationEntity aff = new PublicationAuthorAffiliationEntity();
     aff.setId(SnowflakeIdGenerator.getId());
-    aff.setPubAuthorId(pubAuthorId);
+    aff.setPublicationAuthorId(pubAuthorId);
     aff.setPublicationId(pubId);
     aff.setAffiliationOrder(order);
     aff.setAffiliationString(affiliationString);

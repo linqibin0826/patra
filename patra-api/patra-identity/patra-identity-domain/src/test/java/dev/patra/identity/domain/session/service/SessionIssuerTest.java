@@ -115,8 +115,6 @@ class SessionIssuerTest {
             .deviceClass(DeviceClass.UNKNOWN)
             .expiresAt(NOW.plusSeconds(1))
             .version(0L)
-            .createdAt(NOW)
-            .updatedAt(NOW)
             .build();
     when(records.findById(6001L)).thenReturn(Optional.of(replaced));
     when(records.findById(6002L)).thenReturn(Optional.empty());
@@ -162,8 +160,6 @@ class SessionIssuerTest {
         .endedAt(login.getEndedAt())
         .endReason(login.getEndReason())
         .version(0L)
-        .createdAt(NOW)
-        .updatedAt(NOW)
         .build();
   }
 

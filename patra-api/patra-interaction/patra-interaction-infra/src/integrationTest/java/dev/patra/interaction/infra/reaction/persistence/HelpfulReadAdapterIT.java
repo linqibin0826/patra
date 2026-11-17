@@ -14,7 +14,7 @@ class HelpfulReadAdapterIT extends ReactionPersistenceITSupport {
   @Test
   void should_read_received_or_zero() {
     jdbcTemplate.update(
-        "INSERT INTO reaction.user_stats (user_id, helpful_received) VALUES (9, 3)");
+        "INSERT INTO itr_helpful_user_stats (id, user_id, helpful_received) VALUES (1, 9, 3)");
 
     assertThat(reads.helpfulReceived(9L)).isEqualTo(3L);
     assertThat(reads.helpfulReceived(10L)).isZero();

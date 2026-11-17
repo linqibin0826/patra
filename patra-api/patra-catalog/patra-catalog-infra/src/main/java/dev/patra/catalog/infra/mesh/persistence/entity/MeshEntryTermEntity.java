@@ -6,7 +6,6 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
-import jakarta.persistence.Index;
 import jakarta.persistence.Table;
 import java.time.LocalDate;
 import java.util.List;
@@ -31,22 +30,12 @@ import org.hibernate.type.SqlTypes;
 /// - `lexical_tag` 词法标记（NON/PEF/LAB/ABB/ACR/NAM）
 /// - `is_concept_preferred` 是否概念首选术语
 ///
-/// **索引说明**：
-///
-/// - 复合索引 `idx_record_type_owner`: 支持按类型和所有者查询
-/// - 普通索引 `idx_concept_ui`: 支持按概念查询入口术语
-///
 /// @author linqibin
 /// @since 0.1.0
 @Getter
 @Setter
 @Entity
-@Table(
-    name = "cat_mesh_entry_term",
-    indexes = {
-      @Index(name = "idx_record_type_owner", columnList = "record_type, owner_ui"),
-      @Index(name = "idx_concept_ui", columnList = "concept_ui")
-    })
+@Table(name = "cat_mesh_entry_term")
 public class MeshEntryTermEntity extends ValueObjectJpaEntity {
 
   /// 记录类型（DESCRIPTOR=主题词，SCR=补充概念）

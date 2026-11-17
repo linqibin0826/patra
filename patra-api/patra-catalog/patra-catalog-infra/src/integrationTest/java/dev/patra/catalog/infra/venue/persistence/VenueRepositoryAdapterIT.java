@@ -80,6 +80,23 @@ class VenueRepositoryAdapterIT {
 
   // ========== hasAnyData() 测试 ==========
 
+  /// 删除用 `deleted_at` 列标记，「未删除」条件要每个查询自己带：已删的期刊按 ISSN-L、NLM 号都查不到。
+  @Test
+  @DisplayName("已删除的期刊按 ISSN-L、NLM 号都查不到")
+  void should_not_find_soft_deleted_venue() {
+    repository.insertAll(
+        List.of(VenueAggregate.fromPubMed("Deleted Journal", "9900001", "9900-0001")));
+    em.flush();
+    em.getEntityManager()
+        .createNativeQuery("UPDATE cat_venue SET deleted_at = now() WHERE nlm_id = '9900001'")
+        .executeUpdate();
+    em.clear();
+
+    assertThat(repository.findByIssnLs(List.of("9900-0001"))).isEmpty();
+    assertThat(repository.findByNlmIds(List.of("9900001"))).isEmpty();
+    assertThat(repository.findSoftDeletedNlmIds(List.of("9900001"))).containsExactly("9900001");
+  }
+
   @Nested
   @DisplayName("hasAnyData() 测试")
   class HasAnyDataTests {
@@ -555,7 +572,7 @@ class VenueRepositoryAdapterIT {
   class NlmUniquenessTests {
 
     @Test
-    @DisplayName("主 NLM 与已有期刊相同的期刊被 uk_venue_nlm_id 拒绝")
+    @DisplayName("主 NLM 与已有期刊相同的期刊被 uk_cat_venue_nlm 拒绝")
     void should_reject_second_venue_with_same_primary_nlm() {
       repository.insertAll(List.of(VenueAggregate.fromPubMed("Journal A", "0404401", "1111-1111")));
       em.flush();
@@ -567,11 +584,11 @@ class VenueRepositoryAdapterIT {
                 em.flush();
               })
           .isInstanceOfAny(PersistenceException.class, DataIntegrityViolationException.class)
-          .hasStackTraceContaining("uk_venue_nlm_id");
+          .hasStackTraceContaining("uk_cat_venue_nlm");
     }
 
     @Test
-    @DisplayName("把别的期刊已有的 NLM 加成副 NLM 被 uk_venue_identifier_nlm 拒绝")
+    @DisplayName("把别的期刊已有的 NLM 加成副 NLM 被 uk_cat_venue_identifier_nlm 拒绝")
     void should_reject_nlm_identifier_already_owned_by_another_venue() {
       repository.insertAll(
           List.of(
@@ -588,7 +605,7 @@ class VenueRepositoryAdapterIT {
                 em.flush();
               })
           .isInstanceOfAny(PersistenceException.class, DataIntegrityViolationException.class)
-          .hasStackTraceContaining("uk_venue_identifier_nlm");
+          .hasStackTraceContaining("uk_cat_venue_identifier_nlm");
     }
 
     @Test

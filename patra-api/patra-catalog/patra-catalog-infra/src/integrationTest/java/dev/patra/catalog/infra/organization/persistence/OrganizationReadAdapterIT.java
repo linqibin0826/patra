@@ -333,7 +333,7 @@ class OrganizationReadAdapterIT {
   private void saveName(Long orgId, String value, String type, String lang) {
     OrganizationNameEntity n = new OrganizationNameEntity();
     n.setId(SnowflakeIdGenerator.getId());
-    n.setOrgId(orgId);
+    n.setOrganizationId(orgId);
     n.setValue(value);
     n.setTypes(Set.of(type));
     n.setLang(lang);
@@ -343,7 +343,7 @@ class OrganizationReadAdapterIT {
   private void saveLocation(Long orgId, String countryCode, String city) {
     OrganizationLocationEntity l = new OrganizationLocationEntity();
     l.setId(SnowflakeIdGenerator.getId());
-    l.setOrgId(orgId);
+    l.setOrganizationId(orgId);
     l.setCountryCode(countryCode);
     l.setCityName(city);
     em.persist(l);
@@ -352,8 +352,9 @@ class OrganizationReadAdapterIT {
   private void saveAlias(String rorId, String alias, String lang, String aliasType) {
     em.getEntityManager()
         .createNativeQuery(
-            "INSERT INTO cat_organization_alias (ror_id, alias, lang, alias_type, source)"
-                + " VALUES (?1, ?2, ?3, ?4, 'SEED')")
+            "INSERT INTO cat_organization_alias (id, ror_id, alias, lang, alias_type, source)"
+                + " VALUES ((SELECT COALESCE(max(id), 0) + 1 FROM cat_organization_alias),"
+                + " ?1, ?2, ?3, ?4, 'SEED')")
         .setParameter(1, rorId)
         .setParameter(2, alias)
         .setParameter(3, lang)

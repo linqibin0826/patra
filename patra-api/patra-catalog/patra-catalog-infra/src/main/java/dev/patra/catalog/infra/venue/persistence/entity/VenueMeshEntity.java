@@ -3,9 +3,7 @@ package dev.patra.catalog.infra.venue.persistence.entity;
 import dev.patra.tool.jpa.entity.ValueObjectJpaEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.Index;
 import jakarta.persistence.Table;
-import jakarta.persistence.UniqueConstraint;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -22,12 +20,6 @@ import lombok.Setter;
 /// - `qualifier_name` 限定符名称，如 "methods", "diagnosis"
 /// - `qualifier_ui` 限定符唯一标识符，格式 Q000001
 ///
-/// **索引说明**：
-///
-/// - 唯一索引 `uk_venue_mesh`: (venue_id, descriptor_name) 防止重复
-/// - 普通索引 `idx_venue_id`: venue_id 支持查询期刊的所有主题词
-/// - 普通索引 `idx_descriptor_ui`: descriptor_ui 支持按 MeSH ID 反查期刊
-///
 /// **使用场景**：
 ///
 /// 1. 从 Serfile 导入期刊的 MeshHeadingList 数据
@@ -39,20 +31,10 @@ import lombok.Setter;
 @Getter
 @Setter
 @Entity
-@Table(
-    name = "cat_venue_mesh",
-    uniqueConstraints = {
-      @UniqueConstraint(
-          name = "uk_venue_mesh",
-          columnNames = {"venue_id", "descriptor_name"})
-    },
-    indexes = {
-      @Index(name = "idx_venue_id", columnList = "venue_id"),
-      @Index(name = "idx_descriptor_ui", columnList = "descriptor_ui")
-    })
+@Table(name = "cat_venue_mesh")
 public class VenueMeshEntity extends ValueObjectJpaEntity {
 
-  /// 载体 ID（外键：cat_venue.id）
+  /// 载体 ID（引用 cat_venue.id，不建外键）
   @Column(name = "venue_id", nullable = false)
   private Long venueId;
 

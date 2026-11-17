@@ -15,12 +15,8 @@ public interface UserPasswordCredentialJpaMapper {
   /// @param credential 凭据
   /// @return 实体
   @Mapping(target = "passwordHash", expression = "java(credential.getPasswordHash().value())")
-  @Mapping(target = "createdAt", ignore = true)
   @Mapping(target = "createdBy", ignore = true)
-  @Mapping(target = "createdByName", ignore = true)
-  @Mapping(target = "updatedAt", ignore = true)
   @Mapping(target = "updatedBy", ignore = true)
-  @Mapping(target = "updatedByName", ignore = true)
   @Mapping(target = "recordRemarks", ignore = true)
   @Mapping(target = "ipAddress", ignore = true)
   UserPasswordCredentialEntity toEntity(UserPasswordCredential credential);

@@ -92,9 +92,7 @@ class PostRepositoryAdapterIT extends PostPersistenceITSupport {
             .after();
 
     transactions.executeWithoutResult(
-        s ->
-            posts.update(
-                after.toBuilder().authorId(V).anonymous(false).subjectId(J2).build(), now));
+        s -> posts.update(after.toBuilder().authorId(V).anonymous(false).subjectId(J2).build()));
 
     assertThat(posts.find(post.postId())).contains(after);
   }
@@ -117,13 +115,13 @@ class PostRepositoryAdapterIT extends PostPersistenceITSupport {
 
     assertThat(
             jdbcTemplate.queryForList(
-                "SELECT revision_no FROM post.revision WHERE post_id = ? ORDER BY revision_no",
+                "SELECT revision_no FROM itr_post_revision WHERE post_id = ? ORDER BY revision_no",
                 Integer.class,
                 post.postId().value()))
         .containsExactly(1, 2);
     assertThat(
             jdbcTemplate.queryForObject(
-                "SELECT fields->>'firstDecision' FROM post.revision WHERE revision_no = 1",
+                "SELECT fields->>'firstDecision' FROM itr_post_revision WHERE revision_no = 1",
                 String.class))
         .isEqualTo("MAJOR_REVISION");
   }
@@ -140,7 +138,7 @@ class PostRepositoryAdapterIT extends PostPersistenceITSupport {
     assertThat(deleted.body()).isEqualTo(new PostBody("正文"));
     assertThat(
             jdbcTemplate.queryForObject(
-                "SELECT deleted_at IS NOT NULL FROM post.post WHERE post_id = ?",
+                "SELECT deleted_at IS NOT NULL FROM itr_post WHERE id = ?",
                 Boolean.class,
                 post.postId().value()))
         .isTrue();

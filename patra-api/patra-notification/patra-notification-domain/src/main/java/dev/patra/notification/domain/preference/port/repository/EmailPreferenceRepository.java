@@ -2,7 +2,6 @@ package dev.patra.notification.domain.preference.port.repository;
 
 import dev.patra.notification.domain.preference.model.aggregate.EmailPreference;
 import dev.patra.notification.domain.preference.model.vo.UnsubscribeToken;
-import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
@@ -36,14 +35,14 @@ public interface EmailPreferenceRepository {
   /// 没有这个用户的行时插入，有就什么都不做（不覆盖档位和令牌）。
   ///
   /// @param preference 要插入的偏好（通常是默认值加新令牌）
-  /// @param now 写入时刻
-  void insertIfAbsent(EmailPreference preference, Instant now);
+  /// @param actorUserId 操作人：用户自己改档位时是他，写提醒时预建为空
+  void insertIfAbsent(EmailPreference preference, Long actorUserId);
 
   /// 写回两类的档位。
   ///
   /// @param preference 改过的偏好
-  /// @param now 写入时刻
-  void updateModes(EmailPreference preference, Instant now);
+  /// @param actorUserId 操作人：改档位时是当前用户，邮件里的一键退订不登录、为空
+  void updateModes(EmailPreference preference, Long actorUserId);
 
   /// 有偏好行的用户，按用户 ID 升序的一批（注销清理用）。
   ///

@@ -126,8 +126,6 @@ class BanUserHandlerTest {
             .deviceClass(DeviceClass.UNKNOWN)
             .expiresAt(NOW.plusSeconds(1))
             .version(0L)
-            .createdAt(NOW)
-            .updatedAt(NOW)
             .build();
     when(records.findAllByIds(List.of(7001L, 7002L))).thenReturn(List.of(first));
 

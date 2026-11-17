@@ -190,7 +190,7 @@ class InboxReadAdapterIT extends InboxPersistenceITSupport {
 
   /// 条目带写入信箱的时刻。
   @Test
-  void entries_carry_created_at() {
+  void entries_carry_notified_at() {
     Instant created = Instant.parse("2026-10-31T03:04:05.123456Z");
     notifications.insertAll(
         List.of(drafted(2L, COMMENT_REPLY, 500L, NOW.minusSeconds(60), created)));
@@ -229,13 +229,30 @@ class InboxReadAdapterIT extends InboxPersistenceITSupport {
 
   /// 窗口按写入信箱的时刻算，不按排序时间。
   @Test
-  void unread_between_filters_on_created_at_not_occurred_at() {
+  void unread_between_filters_on_notified_at_not_occurred_at() {
     Instant from = Instant.parse("2026-10-30T00:00:00Z");
     Instant to = Instant.parse("2026-10-31T00:00:00Z");
     notifications.insertAll(
         List.of(
             drafted(2L, MENTION, 500L, from.minus(Duration.ofMinutes(30)), from.plusSeconds(60)),
             drafted(2L, MENTION, 501L, from.plusSeconds(60), to.plusSeconds(60))));
+
+    UnreadWindow window = reads.unreadBetween(2L, NotificationCategory.MENTION, from, to, 10);
+
+    assertThat(window.total()).isEqualTo(1);
+    assertThat(window.newest()).extracting(InboxEntry::commentId).containsExactly(500L);
+  }
+
+  /// 窗口按写入信箱的业务时间 `notified_at` 算：只改了非内容列（触发器刷新 `updated_at`）不影响落在哪个窗口。
+  @Test
+  void should_filter_digest_by_notified_at_even_after_row_updated() {
+    Instant from = Instant.parse("2026-10-30T00:00:00Z");
+    Instant to = Instant.parse("2026-10-31T00:00:00Z");
+    notifications.insertAll(
+        List.of(drafted(2L, MENTION, 500L, from.plusSeconds(60), from.plusSeconds(60))));
+    jdbcTemplate.update(
+        "UPDATE ntf_notification SET record_remarks = '{\"note\":\"x\"}'::jsonb"
+            + " WHERE recipient_user_id = 2");
 
     UnreadWindow window = reads.unreadBetween(2L, NotificationCategory.MENTION, from, to, 10);
 

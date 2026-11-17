@@ -242,7 +242,7 @@ patra:
 
 - 第三方登录的客户端 ID 与密钥来自 `~/.patra/secrets/oauth.env`（模板 `patra-infra/docker/secrets/oauth.env.example`），本机和线上是两套应用。可选：没配的平台不注册，入口 404，identity 照常启动。
 - 配置从 mini 的 Nacos 读（`patra-common.yaml`、`patra-identity.yaml`，源文件在 `patra-infra/nacos/dev/`）：连 mini 上的 `patra_identity` 库和 Redis（`PATRA_INFRA_HOST`），和 mini 上的容器共用同一个 Redis 0 号库。Redis 密码在 Nacos 里写成 `${REDIS_PASSWORD}`，本机由 Nacos starter 从 `~/.patra/secrets/redis.env` 读；生成和复制见 `patra-infra/docker/README.md`「密钥」。
-- 库结构只有一份 `V1`（`infra/src/main/resources/db/migration/`）。库还是旧结构时启动会因 Flyway 校验失败起不来，推倒重建再启动；开发数据可丢弃，不做 `pg_dump`：
+- 库结构按子域放在 `infra/src/main/resources/db/migration/` 下（`account`、`session`、`events` 各一份建表脚本，另有顶层的审计时间触发器函数脚本）。库还是旧结构时启动会因 Flyway 校验失败起不来，推倒重建再启动；开发数据可丢弃，不做 `pg_dump`：
 
 ```bash
 docker exec patra-postgres psql -U postgres -c 'DROP DATABASE IF EXISTS patra_identity WITH (FORCE);' -c 'CREATE DATABASE patra_identity;'

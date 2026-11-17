@@ -64,7 +64,7 @@ public class MarkHelpfulHandler implements CommandHandler<MarkHelpfulCommand, He
           helpful.lockTarget(target);
           targets.require(target).requireAvailable();
           Long credited = profile.creditedUserId();
-          if (helpful.insert(userId, target, credited, now)) {
+          if (helpful.insert(userId, target, credited)) {
             helpful.adjustTargetCount(target, 1);
             if (credited != null) {
               helpful.adjustReceived(credited, 1);

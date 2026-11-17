@@ -1,0 +1,18 @@
+# registry 库里的每一张表。档位：main 主表（带全套审计列）/ other 其他表。
+# 新建表必须在这里登记，否则结构检查（RegistrySchemaStandardIT）失败。规则见 .claude/rules/tech/database.md。
+prefix: sys
+tables:
+  sys_dict_type:
+    tier: main
+    note: 字典类型，如国家、语言
+  sys_dict_item:
+    tier: main
+    note: 字典类型下的条目，如 CN、en
+  sys_dict_item_alias:
+    tier: other
+    note: 条目在外部标准里的编码或名称，用于把外部数据解析成字典条目
+  sys_reference_standard:
+    tier: main
+    note: 某个字典类型允许使用的参考标准，如 ISO 3166-1 alpha-2
+framework:
+  - flyway_schema_history

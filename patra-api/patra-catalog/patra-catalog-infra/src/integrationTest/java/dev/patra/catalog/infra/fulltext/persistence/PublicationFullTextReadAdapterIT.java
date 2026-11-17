@@ -49,8 +49,9 @@ class PublicationFullTextReadAdapterIT {
     FullTextBody body = body();
     insert(9_700_001L, "PARSED", null, "k.pdf", false);
     jdbc.update(
-        "INSERT INTO cat_publication_fulltext_body (publication_id, body, parser_version)"
-            + " VALUES (?, CAST(? AS jsonb), 1)",
+        "INSERT INTO cat_publication_fulltext_body (id, publication_id, body, parser_version)"
+            + " VALUES (?, ?, CAST(? AS jsonb), 1)",
+        9_800_001L,
         9_700_001L,
         jsonMapper.writeValueAsString(body));
 

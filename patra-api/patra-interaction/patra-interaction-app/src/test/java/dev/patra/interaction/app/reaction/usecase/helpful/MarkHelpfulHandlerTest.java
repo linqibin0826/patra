@@ -84,9 +84,7 @@ class MarkHelpfulHandlerTest {
             })
         .when(helpful)
         .exists(ME, TARGET);
-    doAnswer(invocation -> events.add("insert"))
-        .when(helpful)
-        .insert(anyLong(), any(), any(), any());
+    doAnswer(invocation -> events.add("insert")).when(helpful).insert(anyLong(), any(), any());
     doAnswer(invocation -> events.add("target" + invocation.getArgument(1, Integer.class)))
         .when(helpful)
         .adjustTargetCount(any(), anyInt());
@@ -131,7 +129,7 @@ class MarkHelpfulHandlerTest {
             "publish",
             "count",
             RecordingTransactions.END);
-    verify(helpful).insert(ME, TARGET, AUTHOR, NOW);
+    verify(helpful).insert(ME, TARGET, AUTHOR);
     verify(helpful).adjustReceived(AUTHOR, 1L);
   }
 
@@ -142,7 +140,7 @@ class MarkHelpfulHandlerTest {
 
     handler.handle(MarkHelpfulCommand.of(HelpfulTargetType.COMMENT, 42L));
 
-    verify(helpful).insert(ME, TARGET, null, NOW);
+    verify(helpful).insert(ME, TARGET, null);
     verify(helpful).adjustTargetCount(TARGET, 1);
     verify(helpful, never()).adjustReceived(anyLong(), anyLong());
   }
@@ -150,7 +148,7 @@ class MarkHelpfulHandlerTest {
   /// 并发的另一个请求先插了：什么都不加，照样返回已点。
   @Test
   void should_skip_counters_when_insert_lost_race() {
-    when(helpful.insert(anyLong(), any(), any(), any())).thenReturn(false);
+    when(helpful.insert(anyLong(), any(), any())).thenReturn(false);
 
     HelpfulResult result = handler.handle(MarkHelpfulCommand.of(HelpfulTargetType.COMMENT, 42L));
 
@@ -231,7 +229,7 @@ class MarkHelpfulHandlerTest {
 
     assertThatThrownBy(() -> handler.handle(MarkHelpfulCommand.of(HelpfulTargetType.COMMENT, 42L)))
         .isInstanceOf(HelpfulTargetNotFoundException.class);
-    verify(helpful, never()).insert(anyLong(), any(), any(), any());
+    verify(helpful, never()).insert(anyLong(), any(), any());
   }
 
   /// 桩目标画像，每次解析记一笔。

@@ -3,9 +3,7 @@ package dev.patra.catalog.infra.publication.persistence.entity;
 import dev.patra.tool.jpa.entity.ValueObjectJpaEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.Index;
 import jakarta.persistence.Table;
-import jakarta.persistence.UniqueConstraint;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -27,13 +25,6 @@ import lombok.experimental.SuperBuilder;
 /// - 基金会资助
 /// - 企业资助
 ///
-/// **索引设计**：
-///
-/// - `uk_pub_org_grant`：出版物+机构+项目编号唯一索引
-/// - `idx_publication`：出版物索引
-/// - `idx_organization`：机构索引
-/// - `idx_provenance`：数据来源索引
-///
 /// @author linqibin
 /// @since 0.1.0
 @Data
@@ -42,27 +33,16 @@ import lombok.experimental.SuperBuilder;
 @AllArgsConstructor
 @EqualsAndHashCode(callSuper = true)
 @Entity
-@Table(
-    name = "cat_publication_funding",
-    uniqueConstraints = {
-      @UniqueConstraint(
-          name = "uk_pub_org_grant",
-          columnNames = {"publication_id", "organization_id", "grant_id"})
-    },
-    indexes = {
-      @Index(name = "idx_publication", columnList = "publication_id"),
-      @Index(name = "idx_organization", columnList = "organization_id"),
-      @Index(name = "idx_provenance", columnList = "provenance_code")
-    })
+@Table(name = "cat_publication_funding")
 public class PublicationFundingEntity extends ValueObjectJpaEntity {
 
   // ========== 关联关系 ==========
 
-  /// 出版物 ID（外键：cat_publication.id）。
+  /// 出版物 ID（引用 cat_publication.id，不建外键）。
   @Column(name = "publication_id", nullable = false)
   private Long publicationId;
 
-  /// 资助机构 ID（外键：cat_organization.id，匹配后填充）。
+  /// 资助机构 ID（引用 cat_organization.id，不建外键；匹配后填充）。
   ///
   /// 可能为 null，表示尚未匹配到机构。
   @Column(name = "organization_id")

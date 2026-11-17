@@ -1,0 +1,26 @@
+# analytics 的 PostgreSQL 库里的每一张表（ClickHouse 不在内）。档位：main 主表（带全套审计列）/ other 其他表。
+# 新建表必须在这里登记，否则结构检查（AnalyticsSchemaStandardIT）失败。规则见 .claude/rules/tech/database.md。
+prefix: anl
+tables:
+  # history
+  anl_reading_history:
+    tier: other
+    note: 阅读历史，每个（用户、文献）一行，按读到的时间覆盖
+  anl_recording_setting:
+    tier: main
+    note: 阅读记录设置，每个用户一行，用户开关记录、清空历史时修改
+  anl_reading_history_tombstone:
+    tier: other
+    note: 用户删掉的历史条目墓碑，晚到的阅读事件据此丢弃
+  # insight
+  anl_hot_reading:
+    tier: other
+    note: 热读榜快照，每次计算整表替换
+  anl_co_reading:
+    tier: other
+    note: 看过还看了的快照，每次计算整表替换
+  anl_snapshot_run:
+    tier: other
+    note: 每种快照最近一次计算的时间与行数
+framework:
+  - flyway_schema_history

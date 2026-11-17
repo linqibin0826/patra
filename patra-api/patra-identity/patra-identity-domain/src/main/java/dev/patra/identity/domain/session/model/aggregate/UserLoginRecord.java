@@ -13,7 +13,7 @@ import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 
-/// 一次登录的记录：ID 就是会话 ID。登录时间是审计列 `createdAt`。
+/// 一次登录的记录：ID 就是会话 ID。
 ///
 /// 设备、UA、IP 与属地是登录时的值（PAP-99），登录设备列表与新设备判定读它们。
 /// 只用于审计和查看登录设备，不在请求路径上。会话过期不回写这里。
@@ -36,8 +36,6 @@ public final class UserLoginRecord {
   private Instant endedAt;
   private LoginEndReason endReason;
   private Long version;
-  private Instant createdAt;
-  private Instant updatedAt;
 
   /// 只能经工厂方法创建。
   private UserLoginRecord() {}
@@ -81,8 +79,6 @@ public final class UserLoginRecord {
   /// @param endedAt 结束时间，未结束时为 `null`
   /// @param endReason 结束原因，未结束时为 `null`
   /// @param version 乐观锁版本
-  /// @param createdAt 创建时间，也是登录时间
-  /// @param updatedAt 更新时间
   /// @return 记录
   @Builder(builderMethodName = "restore")
   private static UserLoginRecord restored(
@@ -98,9 +94,7 @@ public final class UserLoginRecord {
       Instant expiresAt,
       Instant endedAt,
       LoginEndReason endReason,
-      Long version,
-      Instant createdAt,
-      Instant updatedAt) {
+      Long version) {
     if ((endedAt == null) != (endReason == null)) {
       throw new IllegalArgumentException("结束时间和结束原因要么都有，要么都没有");
     }
@@ -118,8 +112,6 @@ public final class UserLoginRecord {
     login.endedAt = endedAt;
     login.endReason = endReason;
     login.version = version;
-    login.createdAt = createdAt;
-    login.updatedAt = updatedAt;
     return login;
   }
 

@@ -8,7 +8,8 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.Optional;
 
-/// 有帮助的合并条目：存在 `inbox.notification`（`category = HELPFUL`）与附表 `inbox.helpful_actor`。都必须在调用方的事务里调。
+/// 有帮助的合并条目：存在 `ntf_notification`（`category = HELPFUL`）与附表
+/// `ntf_notification_helpful_actor`。都必须在调用方的事务里调。
 public interface HelpfulNotificationRepository {
 
   /// 按合并键找条目并锁住信箱行。

@@ -78,11 +78,15 @@ public class EditExperienceHandler
               if (edit.kind() == EditKind.REVISE) {
                 posts.insertRevision(id, edit.replaced());
               }
-              posts.update(edit.after(), now);
+              posts.update(edit.after());
               String month = draft.fields().submittedMonth();
               if (!month.equals(post.fields().submittedMonth())) {
                 gateway.updateLocal(
-                    SubjectType.POST, id.value(), SubjectState.ACTIVE, withMonth(id, month));
+                    SubjectType.POST,
+                    id.value(),
+                    SubjectState.ACTIVE,
+                    withMonth(id, month),
+                    userId);
               }
               return edit.after();
             });

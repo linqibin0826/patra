@@ -2,6 +2,7 @@ package dev.patra.notification.infra.mail.persistence;
 
 import dev.patra.notification.domain.mail.model.aggregate.MailDelivery;
 import dev.patra.notification.domain.mail.port.repository.MailDeliveryRepository;
+import dev.patra.tool.jpa.id.SnowflakeIdGenerator;
 import java.sql.Timestamp;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -27,7 +28,7 @@ public class MailDeliveryRepositoryAdapter implements MailDeliveryRepository {
   @Override
   public boolean exists(UUID deliveryId) {
     return jdbcClient
-        .sql("SELECT EXISTS (SELECT 1 FROM mail.mail_delivery WHERE delivery_id = ?)")
+        .sql("SELECT EXISTS (SELECT 1 FROM ntf_mail_delivery WHERE event_id = ?)")
         .param(deliveryId)
         .query(Boolean.class)
         .single();
@@ -42,9 +43,10 @@ public class MailDeliveryRepositoryAdapter implements MailDeliveryRepository {
     jdbcClient
         .sql(
             """
-            INSERT INTO mail.mail_delivery (delivery_id, template, outcome, recorded_at)
-            VALUES (?, ?, ?, ?)
+            INSERT INTO ntf_mail_delivery (id, event_id, template, outcome, recorded_at)
+            VALUES (?, ?, ?, ?, ?)
             """)
+        .param(SnowflakeIdGenerator.getId())
         .param(delivery.deliveryId())
         .param(delivery.template())
         .param(delivery.outcome().name())

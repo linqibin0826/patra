@@ -34,7 +34,7 @@ public class SubjectStatsReadAdapter implements SubjectStatsReadPort {
     List<Long> values = ids.stream().map(SubjectId::value).toList();
     Map<SubjectId, SubjectStats> result = new HashMap<>();
     jdbc.sql(
-            "SELECT subject_id, collector_count FROM collection.subject_stats"
+            "SELECT subject_id, collector_count FROM itr_library_subject_stats"
                 + " WHERE subject_id IN (:ids)")
         .param("ids", values)
         .query(
@@ -44,7 +44,7 @@ public class SubjectStatsReadAdapter implements SubjectStatsReadPort {
                   SubjectStats.of(rs.getInt("collector_count"), 0));
             });
     jdbc.sql(
-            "SELECT subject_id, comment_count FROM discussion.subject_stats"
+            "SELECT subject_id, comment_count FROM itr_comment_subject_stats"
                 + " WHERE subject_id IN (:ids)")
         .param("ids", values)
         .query(

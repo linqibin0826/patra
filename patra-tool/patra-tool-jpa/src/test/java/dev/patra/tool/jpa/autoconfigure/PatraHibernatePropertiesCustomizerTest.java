@@ -2,6 +2,7 @@ package dev.patra.tool.jpa.autoconfigure;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import dev.patra.tool.jpa.entity.ValueObjectStateInterceptor;
 import dev.patra.tool.jpa.json.Jackson3JsonFormatMapper;
 import java.util.HashMap;
 import java.util.Map;
@@ -50,6 +51,16 @@ class PatraHibernatePropertiesCustomizerTest {
     Object formatMapper = properties.get(AvailableSettings.JSON_FORMAT_MAPPER);
     assertThat(formatMapper).isInstanceOf(Jackson3JsonFormatMapper.class);
     return (FormatMapper) formatMapper;
+  }
+
+  @Test
+  @DisplayName("注册值对象行的新旧判断拦截器")
+  void should_register_value_object_state_interceptor() {
+    Map<String, Object> properties = new HashMap<>();
+    new PatraHibernatePropertiesCustomizer(JsonMapper.builder().build()).customize(properties);
+
+    assertThat(properties.get(AvailableSettings.INTERCEPTOR))
+        .isInstanceOf(ValueObjectStateInterceptor.class);
   }
 
   @Test

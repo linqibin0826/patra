@@ -1,11 +1,9 @@
 package dev.patra.catalog.infra.venue.persistence.entity;
 
-import dev.patra.tool.jpa.entity.ChildJpaEntity;
+import dev.patra.tool.jpa.entity.ValueObjectJpaEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.Index;
 import jakarta.persistence.Table;
-import jakarta.persistence.UniqueConstraint;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -22,12 +20,6 @@ import lombok.Setter;
 /// - `citation_subset` 引用子集：IM/AIM/N/D 等
 /// - `start_year`/`end_year` 索引起止年份
 ///
-/// **索引说明**：
-///
-/// - 唯一索引 `uk_venue_indexing`: (venue_id, indexing_source, start_year) 防止重复
-/// - 普通索引 `idx_venue_id`: venue_id 支持查询期刊的索引历史
-/// - 复合索引 `idx_source_indexed`: (indexing_source, currently_indexed) 支持按来源筛选当前索引期刊
-///
 /// **使用场景**：
 ///
 /// 1. 从 Serfile 导入期刊的 IndexingHistoryList 数据
@@ -40,20 +32,10 @@ import lombok.Setter;
 @Getter
 @Setter
 @Entity
-@Table(
-    name = "cat_venue_indexing_history",
-    uniqueConstraints = {
-      @UniqueConstraint(
-          name = "uk_venue_indexing",
-          columnNames = {"venue_id", "indexing_source", "start_year"})
-    },
-    indexes = {
-      @Index(name = "idx_venue_id", columnList = "venue_id"),
-      @Index(name = "idx_source_indexed", columnList = "indexing_source, currently_indexed")
-    })
-public class VenueIndexingHistoryEntity extends ChildJpaEntity {
+@Table(name = "cat_venue_indexing_history")
+public class VenueIndexingHistoryEntity extends ValueObjectJpaEntity {
 
-  /// 载体 ID（外键：cat_venue.id）
+  /// 载体 ID（引用 cat_venue.id，不建外键）
   @Column(name = "venue_id", nullable = false)
   private Long venueId;
 

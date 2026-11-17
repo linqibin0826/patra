@@ -1,0 +1,35 @@
+# identity 库里的每一张表。档位：main 主表（带全套审计列）/ other 其他表。
+# 新建表必须在这里登记，否则结构检查（IdentitySchemaStandardIT）失败。规则见 .claude/rules/tech/database.md。
+# 9 张表原来都带全套审计列，按「原来带全套的不降档」都算主表。
+prefix: idn
+tables:
+  idn_user:
+    tier: main
+    note: 前台用户账号，行永久保留，注销后匿名化
+  idn_user_password_credential:
+    tier: main
+    note: 用户的密码凭据，每个用户一行
+  idn_user_login_record:
+    tier: main
+    note: 登录记录，ID 就是会话 ID；结束会话时会被修改
+  idn_user_profile:
+    tier: main
+    note: 用户资料，每个用户一行
+  idn_user_profile_link:
+    tier: main
+    note: 资料里的链接，随资料整组替换；原来带全套审计列，不降档
+  idn_user_research_interest:
+    tier: main
+    note: 资料里的研究兴趣，随资料整组替换；原来带全套审计列，不降档
+  idn_user_former_username:
+    tier: main
+    note: 改名留下的曾用用户名，保留期内只有原主人能改回；原来带全套审计列，不降档
+  idn_email_token:
+    tier: main
+    note: 一次性邮件令牌，使用、作废时被修改
+  idn_user_external_identity:
+    tier: main
+    note: 绑定的第三方账号，登录时刷新最近登录时间
+framework:
+  - flyway_schema_history
+  - event_publication

@@ -3,9 +3,7 @@ package dev.patra.catalog.infra.mesh.persistence.entity;
 import dev.patra.tool.jpa.entity.BaseJpaEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.Index;
 import jakarta.persistence.Table;
-import jakarta.persistence.UniqueConstraint;
 import java.time.LocalDate;
 import lombok.Getter;
 import lombok.Setter;
@@ -26,24 +24,12 @@ import org.hibernate.type.SqlTypes;
 /// - `active_status` 是否有效（false=已废弃，true=有效）
 /// - `mesh_version` MeSH 版本年份（如 "2025"）
 ///
-/// **索引说明**：
-///
-/// - 唯一索引 `uk_mesh_ui`: ui 支持高频精确查询
-/// - 普通索引 `idx_name`: name 支持按名称查询
-/// - 复合索引 `idx_active_version`: (active_status, mesh_version) 筛选某版本的有效主题词
-///
 /// @author linqibin
 /// @since 0.1.0
 @Getter
 @Setter
 @Entity
-@Table(
-    name = "cat_mesh_descriptor",
-    uniqueConstraints = {@UniqueConstraint(name = "uk_mesh_ui", columnNames = "ui")},
-    indexes = {
-      @Index(name = "idx_name", columnList = "name"),
-      @Index(name = "idx_active_version", columnList = "active_status, mesh_version")
-    })
+@Table(name = "cat_mesh_descriptor")
 public class MeshDescriptorEntity extends BaseJpaEntity {
 
   /// MeSH 唯一标识符（格式：D000001-D999999）

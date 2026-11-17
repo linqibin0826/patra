@@ -36,7 +36,8 @@ class JpaAutoConfigurationTest {
         ctx ->
             assertThat(ctx)
                 .hasSingleBean(JsonColumnCodec.class)
-                .hasSingleBean(DateTimeProvider.class)
+                .hasBean("auditorAware")
+                .doesNotHaveBean(DateTimeProvider.class)
                 .hasSingleBean(JpaErrorMappingContributor.class)
                 .doesNotHaveBean(Clock.class));
   }

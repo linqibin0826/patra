@@ -74,7 +74,7 @@ class ReferenceStandardRepositoryAdapterIT {
       assertThat(result.orElseThrow().enabled()).isTrue();
     }
 
-    // 注：软删除测试已移除 - ReferenceStandardEntity 现在继承 BaseJpaEntity，使用物理删除
+    // 注：ReferenceStandardEntity 没有 deletedAt 字段，删除即物理删除，所以没有软删除测试
 
     @Test
     @DisplayName("不同字典类型的同名标准不应混淆")

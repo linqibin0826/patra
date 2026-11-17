@@ -33,7 +33,7 @@ class EmailPreferenceRepositoryAdapterIT extends PreferencePersistenceITSupport 
     transactions.executeWithoutResult(
         s ->
             preferences.insertIfAbsent(
-                EmailPreference.createDefault(7L, new UnsubscribeToken(TOKEN_B)), T1));
+                EmailPreference.createDefault(7L, new UnsubscribeToken(TOKEN_B)), null));
 
     EmailPreference found = preferences.findByUserId(7L).orElseThrow();
     assertThat(found.getReply()).isEqualTo(EmailMode.DIGEST);
@@ -48,12 +48,12 @@ class EmailPreferenceRepositoryAdapterIT extends PreferencePersistenceITSupport 
     transactions.executeWithoutResult(
         s ->
             preferences.insertIfAbsent(
-                EmailPreference.createDefault(7L, new UnsubscribeToken(TOKEN_A)), T1));
+                EmailPreference.createDefault(7L, new UnsubscribeToken(TOKEN_A)), null));
 
     EmailPreference found = preferences.findByUserId(7L).orElseThrow();
     assertThat(found.getReply()).isEqualTo(EmailMode.INSTANT);
     assertThat(found.getMention()).isEqualTo(EmailMode.INSTANT);
-    assertThat(createdAt(7L)).isEqualTo(T1);
+    assertThat(createdAt(7L)).isNotNull();
   }
 
   /// 按用户、按令牌都能读到同一行；读不到为空。
@@ -82,9 +82,9 @@ class EmailPreferenceRepositoryAdapterIT extends PreferencePersistenceITSupport 
         .isInstanceOf(IllegalTransactionStateException.class);
   }
 
-  /// 写回两类档位和更新时间，令牌与创建时间不动。
+  /// 写回两类档位，操作人是用户本人；令牌不动。
   @Test
-  void update_modes_writes_both_modes_and_updated_at() {
+  void update_modes_writes_both_modes_and_actor() {
     insertRow(7L, "INSTANT", "INSTANT", TOKEN_A);
 
     transactions.executeWithoutResult(
@@ -93,15 +93,15 @@ class EmailPreferenceRepositoryAdapterIT extends PreferencePersistenceITSupport 
               preferences.findByTokenForUpdate(new UnsubscribeToken(TOKEN_A)).orElseThrow();
           locked.change(NotificationCategory.REPLY, EmailMode.OFF);
           locked.change(NotificationCategory.MENTION, EmailMode.DIGEST);
-          preferences.updateModes(locked, T1);
+          preferences.updateModes(locked, 7L);
         });
 
     EmailPreference found = preferences.findByUserId(7L).orElseThrow();
     assertThat(found.getReply()).isEqualTo(EmailMode.OFF);
     assertThat(found.getMention()).isEqualTo(EmailMode.DIGEST);
     assertThat(found.getUnsubscribeToken().value()).isEqualTo(TOKEN_A);
-    assertThat(updatedAt(7L)).isEqualTo(T1);
-    assertThat(createdAt(7L)).isEqualTo(Instant.parse("2026-10-30T08:00:00Z"));
+    assertThat(updatedBy(7L)).isEqualTo(7L);
+    assertThat(createdAt(7L)).isNotNull();
   }
 
   /// 同一个人同时改两类：后一个事务在行锁上等前一个提交，读到的是新值，两项都生效、不会互相覆盖。
@@ -119,7 +119,7 @@ class EmailPreferenceRepositoryAdapterIT extends PreferencePersistenceITSupport 
                       firstLocked.countDown();
                       sleep(300);
                       locked.change(NotificationCategory.REPLY, EmailMode.DIGEST);
-                      preferences.updateModes(locked, T1);
+                      preferences.updateModes(locked, 7L);
                     }));
     assertThat(firstLocked.await(5, TimeUnit.SECONDS)).isTrue();
     CompletableFuture<Void> second =
@@ -129,7 +129,7 @@ class EmailPreferenceRepositoryAdapterIT extends PreferencePersistenceITSupport 
                     s -> {
                       EmailPreference locked = preferences.findByUserIdForUpdate(7L).orElseThrow();
                       locked.change(NotificationCategory.MENTION, EmailMode.OFF);
-                      preferences.updateModes(locked, T1);
+                      preferences.updateModes(locked, 7L);
                     }));
     CompletableFuture.allOf(first, second).get(10, TimeUnit.SECONDS);
 
@@ -168,7 +168,7 @@ class EmailPreferenceRepositoryAdapterIT extends PreferencePersistenceITSupport 
   void constraints_reject_bad_mode_and_duplicate_token() {
     assertThatThrownBy(() -> insertRow(7L, "WEEKLY", "INSTANT", TOKEN_A))
         .isInstanceOf(DataIntegrityViolationException.class)
-        .hasMessageContaining("ck_email_preference_reply_mode");
+        .hasMessageContaining("ck_ntf_email_preference_reply_mode");
 
     insertRow(7L, "INSTANT", "INSTANT", TOKEN_A);
     assertThatThrownBy(
@@ -176,9 +176,10 @@ class EmailPreferenceRepositoryAdapterIT extends PreferencePersistenceITSupport 
                 transactions.executeWithoutResult(
                     s ->
                         preferences.insertIfAbsent(
-                            EmailPreference.createDefault(8L, new UnsubscribeToken(TOKEN_A)), T1)))
+                            EmailPreference.createDefault(8L, new UnsubscribeToken(TOKEN_A)),
+                            null)))
         .isInstanceOf(DataIntegrityViolationException.class)
-        .hasMessageContaining("uk_email_preference_token");
+        .hasMessageContaining("uk_ntf_email_preference_token");
   }
 
   /// 读创建时间。
@@ -188,23 +189,49 @@ class EmailPreferenceRepositoryAdapterIT extends PreferencePersistenceITSupport 
   private Instant createdAt(long userId) {
     return jdbcTemplate
         .queryForObject(
-            "SELECT created_at FROM preference.email_preference WHERE user_id = ?",
+            "SELECT created_at FROM ntf_email_preference WHERE user_id = ?",
             OffsetDateTime.class,
             userId)
         .toInstant();
   }
 
-  /// 读更新时间。
+  /// 改档位的操作人是当前用户。
+  @Test
+  void should_record_actor_when_changing_modes() {
+    insertRow(7L, "INSTANT", "INSTANT", TOKEN_A);
+
+    transactions.executeWithoutResult(
+        s -> {
+          EmailPreference locked = preferences.findByUserIdForUpdate(7L).orElseThrow();
+          locked.change(NotificationCategory.REPLY, EmailMode.OFF);
+          preferences.updateModes(locked, 7L);
+        });
+
+    assertThat(updatedBy(7L)).isEqualTo(7L);
+  }
+
+  /// 邮件里的一键退订不登录，没有当前用户，操作人留空。
+  @Test
+  void should_leave_actor_empty_when_unsubscribed_anonymously() {
+    insertRow(7L, "INSTANT", "INSTANT", TOKEN_A);
+
+    transactions.executeWithoutResult(
+        s -> {
+          EmailPreference locked = preferences.findByUserIdForUpdate(7L).orElseThrow();
+          locked.change(NotificationCategory.REPLY, EmailMode.OFF);
+          preferences.updateModes(locked, null);
+        });
+
+    assertThat(updatedBy(7L)).isNull();
+  }
+
+  /// 偏好行的 `updated_by`。
   ///
-  /// @param userId 用户 ID
-  /// @return 更新时间
-  private Instant updatedAt(long userId) {
-    return jdbcTemplate
-        .queryForObject(
-            "SELECT updated_at FROM preference.email_preference WHERE user_id = ?",
-            OffsetDateTime.class,
-            userId)
-        .toInstant();
+  /// @param userId 用户
+  /// @return 操作人
+  private Long updatedBy(long userId) {
+    return jdbcTemplate.queryForObject(
+        "SELECT updated_by FROM ntf_email_preference WHERE user_id = ?", Long.class, userId);
   }
 
   /// 睡一会儿，让另一个事务撞上行锁。

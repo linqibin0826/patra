@@ -79,7 +79,6 @@ class UserLoginRecordRepositoryAdapterIT {
 
     assertThat(saved.getId()).isPositive();
     assertThat(saved.getVersion()).isNotNull();
-    assertThat(saved.getCreatedAt()).isNotNull();
     UserLoginRecord reloaded = records.findById(saved.getId()).orElseThrow();
     assertThat(reloaded.getUserId()).isEqualTo(user.getId());
     assertThat(reloaded.getClientType()).isEqualTo(ClientType.WEB);

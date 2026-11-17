@@ -9,6 +9,7 @@ import dev.patra.tool.jpa.id.SnowflakeIdGenerator;
 import java.util.List;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.AuditorAware;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,6 +24,9 @@ public class ExternalIdentityRepositoryAdapter implements ExternalIdentityReposi
 
   private final ExternalIdentityDao dao;
   private final ExternalIdentityJpaMapper mapper;
+
+  /// 原生插入不经实体审计，操作人从这里取。
+  private final AuditorAware<Long> auditor;
 
   /// 按平台和主体查。
   ///
@@ -77,7 +81,8 @@ public class ExternalIdentityRepositoryAdapter implements ExternalIdentityReposi
             identity.getProvider().name(),
             identity.getSubject(),
             identity.getAccountLabel(),
-            identity.getLinkedAt())
+            identity.getLinkedAt(),
+            currentActor())
         > 0;
   }
 
@@ -107,5 +112,10 @@ public class ExternalIdentityRepositoryAdapter implements ExternalIdentityReposi
   @Transactional(propagation = Propagation.MANDATORY)
   public void deleteAllByUserId(long userId) {
     dao.deleteAllByUserId(userId);
+  }
+
+  /// 当前操作人，与实体审计用的是同一个来源；系统写入时为空。
+  private Long currentActor() {
+    return auditor.getCurrentAuditor().orElse(null);
   }
 }

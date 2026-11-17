@@ -56,14 +56,14 @@ class DeletedUserCleanupFlowIT extends NotificationFlowITSupport {
   @Test
   void should_delete_inbox_and_presence_of_deleted_users() {
     jdbcTemplate.update(
-        "INSERT INTO inbox.notification (recipient_id, notification_id, category, type, actor_id,"
-            + " actor_anonymous, subject_id, comment_id, occurred_at, created_at)"
+        "INSERT INTO ntf_notification (recipient_user_id, id, category, type, actor_user_id,"
+            + " actor_anonymous, subject_id, comment_id, occurred_at, notified_at)"
             + " VALUES (?, 1, 'REPLY', 'COMMENT_REPLY', 3, false, 40, 500, now(), now()),"
             + " (?, 2, 'REPLY', 'COMMENT_REPLY', 3, false, 40, 500, now(), now())",
         GONE,
         ACTIVE);
     jdbcTemplate.update(
-        "INSERT INTO kernel.presence (user_id, last_seen_at) VALUES (?, now()), (?, now())",
+        "INSERT INTO ntf_presence (id, user_id, last_seen_at) VALUES (1, ?, now()), (2, ?, now())",
         GONE,
         ACTIVE);
     identity.stubFor(
@@ -79,9 +79,10 @@ class DeletedUserCleanupFlowIT extends NotificationFlowITSupport {
     CleanupResult result = commandBus.handle(CleanupDeletedUsersCommand.of());
 
     assertThat(result.failedBatches()).isZero();
-    assertThat(jdbcTemplate.queryForList("SELECT recipient_id FROM inbox.notification", Long.class))
+    assertThat(
+            jdbcTemplate.queryForList("SELECT recipient_user_id FROM ntf_notification", Long.class))
         .containsExactly(ACTIVE);
-    assertThat(jdbcTemplate.queryForList("SELECT user_id FROM kernel.presence", Long.class))
+    assertThat(jdbcTemplate.queryForList("SELECT user_id FROM ntf_presence", Long.class))
         .containsExactly(ACTIVE);
   }
 
@@ -116,7 +117,7 @@ class DeletedUserCleanupFlowIT extends NotificationFlowITSupport {
   /// @return 行数
   private long rows(long userId) {
     return jdbcTemplate.queryForObject(
-        "SELECT count(*) FROM preference.email_preference WHERE user_id = ?", Long.class, userId);
+        "SELECT count(*) FROM ntf_email_preference WHERE user_id = ?", Long.class, userId);
   }
 
   /// 这个人的退订令牌。
@@ -125,7 +126,7 @@ class DeletedUserCleanupFlowIT extends NotificationFlowITSupport {
   /// @return 令牌
   private String tokenOf(long userId) {
     return jdbcTemplate.queryForObject(
-        "SELECT unsubscribe_token FROM preference.email_preference WHERE user_id = ?",
+        "SELECT unsubscribe_token FROM ntf_email_preference WHERE user_id = ?",
         String.class,
         userId);
   }

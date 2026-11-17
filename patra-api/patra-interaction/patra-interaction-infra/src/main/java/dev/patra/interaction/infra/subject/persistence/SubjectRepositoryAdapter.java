@@ -22,6 +22,9 @@ import org.springframework.transaction.annotation.Transactional;
 /// 写入，之后没有任何语句改它们。
 ///
 /// 写方法不开事务，由 app 层的事务包住（`upsertResolved` 的两条语句、`saveReconciled` 的一页）。
+///
+/// 操作人：本地对象的登记与修改写 `created_by` / `updated_by`；从 catalog 解析来的外部对象、释放占用、对账写回都是
+/// 系统写入，两列保持为空。
 @Component
 @RequiredArgsConstructor
 public class SubjectRepositoryAdapter implements SubjectRepository {
@@ -29,15 +32,15 @@ public class SubjectRepositoryAdapter implements SubjectRepository {
   /// 别的行还占着这个来源 ID：它是过期缓存，清掉并置为失效，下一次对账按它自己的身份锚补回。
   private static final String RELEASE_SOURCE_ID =
       """
-      UPDATE subject.registry SET source_id = NULL, state = 'UNAVAILABLE'
-       WHERE target_type = :type AND source_id = :sourceId AND subject_id <> :subjectId
+      UPDATE itr_subject SET source_id = NULL, state = 'UNAVAILABLE'
+       WHERE target_type = :type AND source_id = :sourceId AND id <> :subjectId
       """;
 
-  /// 同一身份锚的 upsert 用事务级 advisory lock 串行化，键为 `subject.registry:{类型编码}:{身份锚}`。
+  /// 同一身份锚的 upsert 用事务级 advisory lock 串行化，键为 `itr_subject:{类型编码}:{身份锚}`。
   ///
   /// 只靠 `ON CONFLICT (target_type, natural_key)` 不够：两个事务都通过它的预检查后，非判定索引
-  /// `uk_registry_source_id` 会直接报唯一冲突，走不到 `DO UPDATE`（两个人同时首次收藏同一篇）。
-  private static final String LOCK_PREFIX = "subject.registry:";
+  /// `uk_itr_subject_source` 会直接报唯一冲突，走不到 `DO UPDATE`（两个人同时首次收藏同一篇）。
+  private static final String LOCK_PREFIX = "itr_subject:";
 
   private final JdbcClient jdbc;
   private final SubjectRows rows;
@@ -52,7 +55,7 @@ public class SubjectRepositoryAdapter implements SubjectRepository {
     return jdbc.sql(
             "SELECT "
                 + SubjectRows.COLUMNS
-                + " FROM subject.registry WHERE target_type = :type AND source_id = :sourceId")
+                + " FROM itr_subject WHERE target_type = :type AND source_id = :sourceId")
         .param("type", type.code())
         .param("sourceId", sourceId)
         .query(rows.aggregateMapper())
@@ -74,7 +77,7 @@ public class SubjectRepositoryAdapter implements SubjectRepository {
         .single();
     jdbc.sql(
             """
-            UPDATE subject.registry SET source_id = NULL, state = 'UNAVAILABLE'
+            UPDATE itr_subject SET source_id = NULL, state = 'UNAVAILABLE'
              WHERE target_type = :type AND source_id = :sourceId AND natural_key <> :naturalKey
             """)
         .param("type", type.code())
@@ -83,8 +86,8 @@ public class SubjectRepositoryAdapter implements SubjectRepository {
         .update();
     return jdbc.sql(
             """
-            INSERT INTO subject.registry
-                   (subject_id, target_type, natural_key, source_id, state, snapshot, snapshot_at)
+            INSERT INTO itr_subject
+                   (id, target_type, natural_key, source_id, state, snapshot, snapshot_at)
             VALUES (:subjectId, :type, :naturalKey, :sourceId, 'ACTIVE', CAST(:snapshot AS jsonb),
                     :snapshotAt)
             ON CONFLICT (target_type, natural_key) DO UPDATE
@@ -102,7 +105,7 @@ public class SubjectRepositoryAdapter implements SubjectRepository {
         .single();
   }
 
-  /// 按 `subject_id` 升序取一页。
+  /// 按 `id` 升序取一页。
   ///
   /// @param type 对象种类
   /// @param afterSubjectId 游标
@@ -113,8 +116,8 @@ public class SubjectRepositoryAdapter implements SubjectRepository {
     return jdbc.sql(
             "SELECT "
                 + SubjectRows.COLUMNS
-                + " FROM subject.registry WHERE target_type = :type AND subject_id > :after"
-                + " ORDER BY subject_id LIMIT :limit")
+                + " FROM itr_subject WHERE target_type = :type AND id > :after"
+                + " ORDER BY id LIMIT :limit")
         .param("type", type.code())
         .param("after", afterSubjectId)
         .param("limit", limit)
@@ -137,10 +140,10 @@ public class SubjectRepositoryAdapter implements SubjectRepository {
       }
       jdbc.sql(
               """
-              UPDATE subject.registry
+              UPDATE itr_subject
                  SET source_id = :sourceId, state = :state, snapshot = CAST(:snapshot AS jsonb),
                      snapshot_at = :snapshotAt
-               WHERE subject_id = :subjectId
+               WHERE id = :subjectId
               """)
           .param("sourceId", subject.getSourceId())
           .param("state", subject.getState().name())
@@ -152,6 +155,7 @@ public class SubjectRepositoryAdapter implements SubjectRepository {
   }
 
   /// 插入本地对象的登记行：锚由类型的前缀与 `localId` 拼成（同时校验 `localId` 的写法），来源 ID 就是 `localId`。
+  /// 本地对象由所有者发布，操作人就是所有者（匿名只影响展示）。
   ///
   /// @param type 本地对象种类
   /// @param localId 所属子域里的 ID
@@ -165,11 +169,11 @@ public class SubjectRepositoryAdapter implements SubjectRepository {
     NaturalKey naturalKey = NaturalKey.of(type.naturalKeyScheme(), Long.toString(localId));
     return jdbc.sql(
             """
-            INSERT INTO subject.registry
-                   (subject_id, target_type, natural_key, source_id, state, snapshot, snapshot_at,
-                    owner_user_id, owner_anonymous)
+            INSERT INTO itr_subject
+                   (id, target_type, natural_key, source_id, state, snapshot, snapshot_at,
+                    owner_user_id, owner_anonymous, created_by, updated_by)
             VALUES (:subjectId, :type, :naturalKey, :sourceId, 'ACTIVE', CAST(:snapshot AS jsonb),
-                    :snapshotAt, :ownerUserId, :ownerAnonymous)
+                    :snapshotAt, :ownerUserId, :ownerAnonymous, :ownerUserId, :ownerUserId)
             RETURNING\s"""
                 + SubjectRows.COLUMNS)
         .param("subjectId", SnowflakeIdGenerator.getId())
@@ -184,27 +188,34 @@ public class SubjectRepositoryAdapter implements SubjectRepository {
         .single();
   }
 
-  /// 按类型与来源 ID 改本地对象的状态与快照，不碰所有者两列。
+  /// 按类型与来源 ID 改本地对象的状态与快照，记下操作人，不碰所有者两列。
   ///
   /// @param type 本地对象种类
   /// @param localId 所属子域里的 ID
   /// @param state 新状态
   /// @param snapshot 新快照
   /// @param now 快照时间
+  /// @param actorUserId 操作人
   /// @return 有这一行时为 `true`
   @Override
   public boolean updateLocal(
-      SubjectType type, long localId, SubjectState state, SubjectSnapshot snapshot, Instant now) {
+      SubjectType type,
+      long localId,
+      SubjectState state,
+      SubjectSnapshot snapshot,
+      Instant now,
+      Long actorUserId) {
     return jdbc.sql(
                 """
-                UPDATE subject.registry
+                UPDATE itr_subject
                    SET state = :state, snapshot = CAST(:snapshot AS jsonb),
-                       snapshot_at = :snapshotAt
+                       snapshot_at = :snapshotAt, updated_by = :actorUserId
                  WHERE target_type = :type AND source_id = :sourceId
                 """)
             .param("state", state.name())
             .param("snapshot", rows.writeSnapshot(snapshot))
             .param("snapshotAt", SubjectRows.utc(now))
+            .param("actorUserId", actorUserId)
             .param("type", type.code())
             .param("sourceId", localId)
             .update()

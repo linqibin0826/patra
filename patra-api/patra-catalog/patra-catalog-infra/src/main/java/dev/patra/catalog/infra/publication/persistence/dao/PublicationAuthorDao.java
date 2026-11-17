@@ -32,7 +32,7 @@ public interface PublicationAuthorDao extends JpaRepository<PublicationAuthorEnt
   /// 实体继承 `ValueObjectJpaEntity`（无 `@Version` / 无软删除），bulk DML 无副作用。
   ///
   /// @param publicationIds 出版物 ID 列表
-  @Modifying
+  @Modifying(flushAutomatically = true, clearAutomatically = true)
   @Query("DELETE FROM PublicationAuthorEntity e WHERE e.publicationId IN :publicationIds")
   void deleteAllByPublicationIdIn(@Param("publicationIds") Collection<Long> publicationIds);
 }

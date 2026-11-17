@@ -38,17 +38,13 @@ public class DiscussionReadAdapter implements DiscussionReadPort {
       SubjectId subjectId, ThreadSort sort, ThreadCursor after, int limit) {
     boolean asc = sort == ThreadSort.ASC;
     String cursor =
-        after == null
-            ? ""
-            : " AND (c.created_at, c.comment_id) " + (asc ? ">" : "<") + " (:at, :id)";
+        after == null ? "" : " AND (c.published_at, c.id) " + (asc ? ">" : "<") + " (:at, :id)";
     String order =
-        asc
-            ? " ORDER BY c.created_at, c.comment_id"
-            : " ORDER BY c.created_at DESC, c.comment_id DESC";
+        asc ? " ORDER BY c.published_at, c.id" : " ORDER BY c.published_at DESC, c.id DESC";
     JdbcClient.StatementSpec spec =
         jdbc.sql(
                 CommentRows.RECORD_SELECT
-                    + " WHERE c.subject_id = :subjectId AND c.parent_id IS NULL"
+                    + " WHERE c.subject_id = :subjectId AND c.parent_comment_id IS NULL"
                     + cursor
                     + order
                     + " LIMIT :limit")
@@ -68,15 +64,15 @@ public class DiscussionReadAdapter implements DiscussionReadPort {
     String cursor =
         after == null
             ? ""
-            : " AND (COALESCE(hs.helpful_count, 0), c.created_at, c.comment_id)"
+            : " AND (COALESCE(hs.helpful_count, 0), c.published_at, c.id)"
                 + " < (:helpful, :at, :id)";
     JdbcClient.StatementSpec spec =
         jdbc.sql(
                 CommentRows.RECORD_SELECT
-                    + " WHERE c.subject_id = :subjectId AND c.parent_id IS NULL"
+                    + " WHERE c.subject_id = :subjectId AND c.parent_comment_id IS NULL"
                     + cursor
-                    + " ORDER BY COALESCE(hs.helpful_count, 0) DESC, c.created_at DESC,"
-                    + " c.comment_id DESC LIMIT :limit")
+                    + " ORDER BY COALESCE(hs.helpful_count, 0) DESC, c.published_at DESC,"
+                    + " c.id DESC LIMIT :limit")
             .param("subjectId", subjectId.value())
             .param("limit", limit);
     if (after != null) {
@@ -100,7 +96,7 @@ public class DiscussionReadAdapter implements DiscussionReadPort {
     }
     return Set.copyOf(
         jdbc.sql(
-                "SELECT target_id FROM reaction.helpful WHERE user_id = :viewer"
+                "SELECT target_id FROM itr_helpful WHERE user_id = :viewer"
                     + " AND target_type = 'COMMENT' AND target_id IN (:ids)")
             .param("viewer", viewerId)
             .param("ids", List.copyOf(commentIds))
@@ -119,13 +115,13 @@ public class DiscussionReadAdapter implements DiscussionReadPort {
     }
     return jdbc
         .sql(
-            "SELECT root_id, reply_count, last_reply_at FROM discussion.thread_stats"
-                + " WHERE root_id IN (:rootIds)")
+            "SELECT root_comment_id, reply_count, last_reply_at FROM itr_comment_thread_stats"
+                + " WHERE root_comment_id IN (:rootIds)")
         .param("rootIds", List.copyOf(rootIds))
         .query(
             (rs, rowNum) ->
                 Map.entry(
-                    rs.getLong("root_id"),
+                    rs.getLong("root_comment_id"),
                     ThreadStats.of(
                         rs.getInt("reply_count"), CommentRows.instant(rs, "last_reply_at"))))
         .list()
@@ -140,7 +136,7 @@ public class DiscussionReadAdapter implements DiscussionReadPort {
   @Override
   public int countComments(SubjectId subjectId) {
     return jdbc.sql(
-            "SELECT COALESCE((SELECT comment_count FROM discussion.subject_stats"
+            "SELECT COALESCE((SELECT comment_count FROM itr_comment_subject_stats"
                 + " WHERE subject_id = :subjectId), 0)")
         .param("subjectId", subjectId.value())
         .query(Integer.class)
@@ -161,15 +157,15 @@ public class DiscussionReadAdapter implements DiscussionReadPort {
         jdbc.sql(
                 """
                 WITH ranked AS (
-                  SELECT comment_id,
-                         row_number() OVER (PARTITION BY root_id ORDER BY created_at, comment_id)
+                  SELECT id,
+                         row_number() OVER (PARTITION BY root_comment_id ORDER BY published_at, id)
                              AS rn
-                    FROM discussion.comment
-                   WHERE root_id IN (:rootIds) AND parent_id IS NOT NULL)
+                    FROM itr_comment
+                   WHERE root_comment_id IN (:rootIds) AND parent_comment_id IS NOT NULL)
                 """
                     + CommentRows.RECORD_SELECT
-                    + " JOIN ranked k ON k.comment_id = c.comment_id WHERE k.rn <= :perThread"
-                    + " ORDER BY c.root_id, c.created_at, c.comment_id")
+                    + " JOIN ranked k ON k.id = c.id WHERE k.rn <= :perThread"
+                    + " ORDER BY c.root_comment_id, c.published_at, c.id")
             .param("rootIds", List.copyOf(rootIds))
             .param("perThread", perThread)
             .query(CommentRows.RECORD)
@@ -188,13 +184,13 @@ public class DiscussionReadAdapter implements DiscussionReadPort {
   /// @return 回复
   @Override
   public List<CommentRecord> findReplies(long rootId, ThreadCursor after, int limit) {
-    String cursor = after == null ? "" : " AND (c.created_at, c.comment_id) > (:at, :id)";
+    String cursor = after == null ? "" : " AND (c.published_at, c.id) > (:at, :id)";
     JdbcClient.StatementSpec spec =
         jdbc.sql(
                 CommentRows.RECORD_SELECT
-                    + " WHERE c.root_id = :rootId AND c.parent_id IS NOT NULL"
+                    + " WHERE c.root_comment_id = :rootId AND c.parent_comment_id IS NOT NULL"
                     + cursor
-                    + " ORDER BY c.created_at, c.comment_id LIMIT :limit")
+                    + " ORDER BY c.published_at, c.id LIMIT :limit")
             .param("rootId", rootId)
             .param("limit", limit);
     return withCursor(spec, after).query(CommentRows.RECORD).list();
@@ -208,8 +204,8 @@ public class DiscussionReadAdapter implements DiscussionReadPort {
   public List<CommentRecord> findThread(long rootId) {
     return jdbc.sql(
             CommentRows.RECORD_SELECT
-                + " WHERE c.root_id = :rootId"
-                + " ORDER BY c.parent_id IS NOT NULL, c.created_at, c.comment_id")
+                + " WHERE c.root_comment_id = :rootId"
+                + " ORDER BY c.parent_comment_id IS NOT NULL, c.published_at, c.id")
         .param("rootId", rootId)
         .query(CommentRows.RECORD)
         .list();
@@ -221,7 +217,7 @@ public class DiscussionReadAdapter implements DiscussionReadPort {
   /// @return 评论
   @Override
   public Optional<CommentRecord> findById(long commentId) {
-    return jdbc.sql(CommentRows.RECORD_SELECT + " WHERE c.comment_id = :id")
+    return jdbc.sql(CommentRows.RECORD_SELECT + " WHERE c.id = :id")
         .param("id", commentId)
         .query(CommentRows.RECORD)
         .optional();
@@ -235,14 +231,14 @@ public class DiscussionReadAdapter implements DiscussionReadPort {
   public List<CommentRecord> findAncestry(long commentId) {
     return jdbc.sql(
             """
-            WITH RECURSIVE chain (comment_id, parent_id, depth) AS (
-              SELECT comment_id, parent_id, 0 FROM discussion.comment WHERE comment_id = :id
+            WITH RECURSIVE chain (id, parent_comment_id, depth) AS (
+              SELECT id, parent_comment_id, 0 FROM itr_comment WHERE id = :id
               UNION ALL
-              SELECT a.comment_id, a.parent_id, chain.depth + 1
-                FROM discussion.comment a JOIN chain ON a.comment_id = chain.parent_id)
+              SELECT a.id, a.parent_comment_id, chain.depth + 1
+                FROM itr_comment a JOIN chain ON a.id = chain.parent_comment_id)
             """
                 + CommentRows.RECORD_SELECT
-                + " JOIN chain h ON h.comment_id = c.comment_id ORDER BY h.depth DESC")
+                + " JOIN chain h ON h.id = c.id ORDER BY h.depth DESC")
         .param("id", commentId)
         .query(CommentRows.RECORD)
         .list();
@@ -255,7 +251,7 @@ public class DiscussionReadAdapter implements DiscussionReadPort {
   @Override
   public List<RevisionRecord> findRevisions(long commentId) {
     return jdbc.sql(
-            "SELECT body, version_at FROM discussion.comment_revision WHERE comment_id = :id"
+            "SELECT body, version_at FROM itr_comment_revision WHERE comment_id = :id"
                 + " ORDER BY revision_no DESC")
         .param("id", commentId)
         .query(
@@ -275,11 +271,11 @@ public class DiscussionReadAdapter implements DiscussionReadPort {
       SubjectId subjectId, Collection<Long> excludedUserIds, int limit) {
     return jdbc.sql(
             """
-            SELECT author_id FROM discussion.comment
+            SELECT author_user_id FROM itr_comment
              WHERE subject_id = :subjectId AND state = 'ACTIVE'
-               AND author_id <> ALL (CAST(:excluded AS bigint[]))
-             GROUP BY author_id
-             ORDER BY max(created_at) DESC, author_id DESC
+               AND author_user_id <> ALL (CAST(:excluded AS bigint[]))
+             GROUP BY author_user_id
+             ORDER BY max(published_at) DESC, author_user_id DESC
              LIMIT :limit
             """)
         .param("subjectId", subjectId.value())

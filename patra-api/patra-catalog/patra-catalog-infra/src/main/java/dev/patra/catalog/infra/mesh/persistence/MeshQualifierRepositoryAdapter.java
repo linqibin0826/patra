@@ -24,7 +24,7 @@ import org.springframework.stereotype.Repository;
 /// - 使用 Spring Data JPA 的 `saveAll()` 进行批量保存
 /// - Hibernate 配置了 `batch_size=500`、`order_inserts=true` 优化批量性能
 /// - ID 由 `SnowflakeIdGenerator` 雪花算法生成
-/// - 审计字段（createdAt 等）由 JPA Auditing 自动填充
+/// - 操作人（createdBy 等）由 JPA Auditing 自动填充；created_at / updated_at 由数据库填
 ///
 /// @author linqibin
 /// @since 0.1.0
@@ -49,7 +49,7 @@ public class MeshQualifierRepositoryAdapter implements MeshQualifierRepository {
     List<MeshQualifierEntity> entities =
         qualifiers.stream().map(jpaConverter::toEntity).peek(this::assignIdIfMissing).toList();
 
-    // 批量保存（审计字段由 JPA Auditing 自动填充）
+    // 批量保存（操作人由 JPA Auditing 自动填充）
     jpaRepository.saveAll(entities);
 
     log.info("限定词批量保存完成，共 {} 条", entities.size());

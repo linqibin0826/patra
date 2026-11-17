@@ -20,7 +20,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.ContextConfiguration;
 
-/// 建表脚本里的检查约束、唯一约束和外键：绕过应用层直接写库，数据库自己也要拦住不合法的数据。
+/// 建表脚本里的检查约束和唯一索引：绕过应用层直接写库，数据库自己也要拦住不合法的数据。引用关系由应用保证，不建外键。
 /// 每个用例只有一条会失败的写入：测试事务在第一次失败后就被 PostgreSQL 标成 aborted，后面的语句一律报错。
 @DataJpaTest
 @ContextConfiguration(initializers = IdentityITPostgreSQLContainerInitializer.class)
@@ -187,21 +187,6 @@ class IdentitySchemaConstraintsIT {
   }
 
   @Test
-  @DisplayName("凭据必须指向存在的用户")
-  void should_reject_credential_of_missing_user() {
-    assertThatThrownBy(
-            () ->
-                jdbcTemplate.update(
-                    "INSERT INTO idn_user_password_credential (id, user_id, password_hash) "
-                        + "VALUES (?, ?, ?)",
-                    17L,
-                    999_999L,
-                    "$argon2id$x"))
-        .isInstanceOf(DataIntegrityViolationException.class)
-        .hasMessageContaining("fk_idn_user_password_credential_user");
-  }
-
-  @Test
   @DisplayName("资料的昵称最多 120 字节")
   void should_reject_profile_display_name_over_120_bytes() {
     insertActive(20L, "profile-long@example.com", "profile-long");
@@ -216,14 +201,6 @@ class IdentitySchemaConstraintsIT {
     insertActive(22L, "profile-null@example.com", "profile-null");
     assertThatCode(() -> jdbcTemplate.update(INSERT_PROFILE, 23L, 22L, null))
         .doesNotThrowAnyException();
-  }
-
-  @Test
-  @DisplayName("资料必须指向存在的用户")
-  void should_reject_profile_of_missing_user() {
-    assertThatThrownBy(() -> jdbcTemplate.update(INSERT_PROFILE, 24L, 999_998L, "陈宇"))
-        .isInstanceOf(DataIntegrityViolationException.class)
-        .hasMessageContaining("fk_idn_user_profile_user");
   }
 
   @Test
@@ -308,14 +285,6 @@ class IdentitySchemaConstraintsIT {
     assertThatThrownBy(() -> insertToken(50L, 48L, "PASSWORD_RESET", "token-dup@example.com", HASH))
         .isInstanceOf(DataIntegrityViolationException.class)
         .hasMessageContaining("uk_idn_email_token_hash");
-  }
-
-  @Test
-  @DisplayName("令牌必须指向存在的用户")
-  void should_reject_token_of_missing_user() {
-    assertThatThrownBy(() -> insertToken(51L, 999_997L, "EMAIL_VERIFY", "x@example.com", HASH))
-        .isInstanceOf(DataIntegrityViolationException.class)
-        .hasMessageContaining("fk_idn_email_token_user");
   }
 
   @Test
@@ -410,19 +379,5 @@ class IdentitySchemaConstraintsIT {
                     AT))
         .isInstanceOf(DataIntegrityViolationException.class)
         .hasMessageContaining("ck_idn_user_external_identity_provider");
-  }
-
-  @Test
-  @DisplayName("外部身份的 user_id 要指向存在的用户")
-  void should_reject_external_identity_of_missing_user() {
-    assertThatThrownBy(
-            () ->
-                jdbcTemplate.update(
-                    "INSERT INTO idn_user_external_identity "
-                        + "(id, user_id, provider, subject, account_label, linked_at) "
-                        + "VALUES (9903, 9999999, 'GITHUB', 'x', 'x', ?)",
-                    AT))
-        .isInstanceOf(DataIntegrityViolationException.class)
-        .hasMessageContaining("fk_idn_user_external_identity_user");
   }
 }

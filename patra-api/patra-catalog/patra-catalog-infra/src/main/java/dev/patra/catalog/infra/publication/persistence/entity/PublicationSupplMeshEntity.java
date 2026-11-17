@@ -3,9 +3,7 @@ package dev.patra.catalog.infra.publication.persistence.entity;
 import dev.patra.tool.jpa.entity.ValueObjectJpaEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.Index;
 import jakarta.persistence.Table;
-import jakarta.persistence.UniqueConstraint;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -29,11 +27,6 @@ import lombok.experimental.SuperBuilder;
 ///
 /// 与 MeshHeading 不同，SCR 不在 MeSH 层级树中，而是通过 HeadingMappedTo 关联到正式描述符。
 ///
-/// **索引设计**：
-///
-/// - `uk_pub_scr`：文献 ID + SCR UI 唯一索引，防止重复标引
-/// - `idx_scr_ui`：SCR UI 索引，支持反向查询（查询某个 SCR 的所有文献）
-///
 /// @author linqibin
 /// @since 0.1.0
 @Data
@@ -42,19 +35,12 @@ import lombok.experimental.SuperBuilder;
 @AllArgsConstructor
 @EqualsAndHashCode(callSuper = true)
 @Entity
-@Table(
-    name = "cat_publication_suppl_mesh",
-    uniqueConstraints = {
-      @UniqueConstraint(
-          name = "uk_pub_scr",
-          columnNames = {"publication_id", "scr_ui"})
-    },
-    indexes = {@Index(name = "idx_scr_ui", columnList = "scr_ui")})
+@Table(name = "cat_publication_suppl_mesh")
 public class PublicationSupplMeshEntity extends ValueObjectJpaEntity {
 
   // ========== 关联信息 ==========
 
-  /// 文献 ID（外键：cat_publication.id）。
+  /// 文献 ID（引用 cat_publication.id，不建外键）。
   @Column(name = "publication_id", nullable = false)
   private Long publicationId;
 

@@ -128,7 +128,7 @@ class PublicationAuthorRoundTripIT {
     assertThat(second.firstAuthor()).isFalse();
     assertThat(second.equalContribution()).isFalse();
 
-    // 机构须按 pub_author_id 正确归属，不得因预分配 ID 串位而错挂到另一作者
+    // 机构须按 publication_author_id 正确归属，不得因预分配 ID 串位而错挂到另一作者
     assertThat(first.affiliations())
         .extracting(PublicationAuthorAffiliationSnapshot::affiliationString)
         .containsExactly("Harvard", "MIT");
@@ -271,8 +271,7 @@ class PublicationAuthorRoundTripIT {
         "TEST+" + authorId,
         "Test Author " + authorId);
     jdbc.update(
-        "INSERT INTO cat_author_orcid (id, author_id, orcid, is_primary, version, "
-            + "created_at, updated_at) VALUES (?, ?, ?, true, 0, NOW(), NOW())",
+        "INSERT INTO cat_author_orcid (id, author_id, orcid, is_primary) VALUES (?, ?, ?, true)",
         ++idSeq,
         authorId,
         orcid);

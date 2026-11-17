@@ -10,7 +10,8 @@ import org.mapstruct.Mapping;
 
 /// User 与 UserEntity 的转换。
 ///
-/// `id`、`version`、`createdAt`、`updatedAt` 和各时间列同名映射：更新时带上版本才能做乐观锁检查。
+/// `id`、`version` 和各业务时间列同名映射（`createdAt` 由数据库填，只读，不写回）：
+/// 更新时带上版本才能做乐观锁检查。
 /// 操作人字段由 JPA 审计管理。
 @Mapper(componentModel = "spring", imports = EmailAddress.class)
 public interface UserJpaMapper {
@@ -25,11 +26,10 @@ public interface UserJpaMapper {
   @Mapping(target = "username", expression = "java(user.getUsername().value())")
   @Mapping(target = "status", expression = "java(user.getStatus().name())")
   @Mapping(target = "createdBy", ignore = true)
-  @Mapping(target = "createdByName", ignore = true)
   @Mapping(target = "updatedBy", ignore = true)
-  @Mapping(target = "updatedByName", ignore = true)
   @Mapping(target = "recordRemarks", ignore = true)
   @Mapping(target = "ipAddress", ignore = true)
+  @Mapping(target = "createdAt", ignore = true)
   UserEntity toEntity(User user);
 
   /// 实体转聚合。
@@ -52,8 +52,6 @@ public interface UserJpaMapper {
         .deletionRemindedAt(entity.getDeletionRemindedAt())
         .deletedAt(entity.getDeletedAt())
         .version(entity.getVersion())
-        .createdAt(entity.getCreatedAt())
-        .updatedAt(entity.getUpdatedAt())
         .build();
   }
 }

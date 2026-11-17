@@ -5,6 +5,7 @@ import dev.patra.interaction.domain.collection.model.read.LibraryEntry;
 import dev.patra.interaction.domain.collection.port.repository.LibraryRepository;
 import dev.patra.interaction.domain.subject.model.read.StatsCorrection;
 import dev.patra.interaction.domain.subject.model.vo.SubjectId;
+import dev.patra.tool.jpa.id.SnowflakeIdGenerator;
 import java.time.Instant;
 import java.util.Collection;
 import java.util.HashSet;
@@ -50,10 +51,11 @@ public class LibraryRepositoryAdapter implements LibraryRepository {
     boolean inserted =
         jdbc.sql(
                     """
-                    INSERT INTO collection.library_item (user_id, subject_id, collected_at)
-                    VALUES (:userId, :subjectId, :collectedAt)
+                    INSERT INTO itr_library_item (id, user_id, subject_id, collected_at)
+                    VALUES (:rowId, :userId, :subjectId, :collectedAt)
                     ON CONFLICT (user_id, subject_id) DO NOTHING
                     """)
+                .param("rowId", SnowflakeIdGenerator.getId())
                 .param("userId", userId)
                 .param("subjectId", subjectId.value())
                 .param("collectedAt", CollectionRows.utc(collectedAt))
@@ -79,15 +81,18 @@ public class LibraryRepositoryAdapter implements LibraryRepository {
     List<Long> inserted =
         jdbc.sql(
                 """
-                INSERT INTO collection.library_item (user_id, subject_id, collected_at)
-                SELECT :userId, s.id, CAST(:collectedAt AS timestamptz) - (s.ord - 1) * INTERVAL '1 microsecond'
-                  FROM unnest(CAST(:ids AS bigint[])) WITH ORDINALITY AS s(id, ord)
+                INSERT INTO itr_library_item (id, user_id, subject_id, collected_at)
+                SELECT s.row_id, :userId, s.id,
+                       CAST(:collectedAt AS timestamptz) - (s.ord - 1) * INTERVAL '1 microsecond'
+                  FROM unnest(CAST(:ids AS bigint[]), CAST(:rowIds AS bigint[]))
+                       WITH ORDINALITY AS s(id, row_id, ord)
                 ON CONFLICT (user_id, subject_id) DO NOTHING
                 RETURNING subject_id
                 """)
             .param("userId", userId)
             .param("collectedAt", CollectionRows.utc(collectedAt))
             .param("ids", CollectionRows.idArray(subjectIds))
+            .param("rowIds", CollectionRows.newRowIds(subjectIds.size()))
             .query(Long.class)
             .list();
     incrementCollectors(inserted);
@@ -100,7 +105,7 @@ public class LibraryRepositoryAdapter implements LibraryRepository {
   /// @return 条数
   @Override
   public int countItems(long userId) {
-    return jdbc.sql("SELECT count(*) FROM collection.library_item WHERE user_id = :userId")
+    return jdbc.sql("SELECT count(*) FROM itr_library_item WHERE user_id = :userId")
         .param("userId", userId)
         .query(Integer.class)
         .single();
@@ -114,7 +119,7 @@ public class LibraryRepositoryAdapter implements LibraryRepository {
   @Override
   public Optional<LibraryEntry> findItem(long userId, SubjectId subjectId) {
     return jdbc.sql(
-            "SELECT subject_id, note, collected_at FROM collection.library_item"
+            "SELECT subject_id, note, collected_at FROM itr_library_item"
                 + " WHERE user_id = :userId AND subject_id = :subjectId")
         .param("userId", userId)
         .param("subjectId", subjectId.value())
@@ -139,7 +144,7 @@ public class LibraryRepositoryAdapter implements LibraryRepository {
     }
     return new HashSet<>(
         jdbc.sql(
-                "SELECT subject_id FROM collection.library_item"
+                "SELECT subject_id FROM itr_library_item"
                     + " WHERE user_id = :userId AND subject_id IN (:ids)")
             .param("userId", userId)
             .param("ids", CollectionRows.ids(subjectIds))
@@ -156,7 +161,7 @@ public class LibraryRepositoryAdapter implements LibraryRepository {
   @Override
   public boolean updateNote(long userId, SubjectId subjectId, String note) {
     return jdbc.sql(
-                "UPDATE collection.library_item SET note = :note"
+                "UPDATE itr_library_item SET note = :note"
                     + " WHERE user_id = :userId AND subject_id = :subjectId")
             .param("note", note)
             .param("userId", userId)
@@ -178,16 +183,17 @@ public class LibraryRepositoryAdapter implements LibraryRepository {
     jdbc.sql(
             """
             WITH removed AS (
-                DELETE FROM collection.collection_item
+                DELETE FROM itr_collection_item
                  WHERE user_id = :userId AND subject_id IN (:ids)
                 RETURNING collection_id
             ), counts AS (
                 SELECT collection_id, count(*) AS n FROM removed GROUP BY collection_id
             )
-            UPDATE collection.collection c
-               SET item_count = c.item_count - counts.n, updated_at = :now
+            UPDATE itr_collection c
+               SET item_count = c.item_count - counts.n, content_changed_at = :now,
+                   updated_by = :userId
               FROM counts
-             WHERE c.collection_id = counts.collection_id
+             WHERE c.id = counts.collection_id
             """)
         .param("userId", userId)
         .param("ids", CollectionRows.ids(subjectIds))
@@ -195,7 +201,7 @@ public class LibraryRepositoryAdapter implements LibraryRepository {
         .update();
     decrementCollectors(
         jdbc.sql(
-                "DELETE FROM collection.library_item WHERE user_id = :userId"
+                "DELETE FROM itr_library_item WHERE user_id = :userId"
                     + " AND subject_id IN (:ids) RETURNING subject_id")
             .param("userId", userId)
             .param("ids", CollectionRows.ids(subjectIds))
@@ -209,10 +215,10 @@ public class LibraryRepositoryAdapter implements LibraryRepository {
   /// @return 行数
   @Override
   public DeletedUserData deleteAllOf(long userId) {
-    int collectionItems = deleteByUser("collection.collection_item", userId);
-    int collections = deleteByUser("collection.collection", userId);
+    int collectionItems = deleteByUser("itr_collection_item", userId);
+    int collections = deleteByUser("itr_collection", userId);
     List<Long> removed =
-        jdbc.sql("DELETE FROM collection.library_item WHERE user_id = :userId RETURNING subject_id")
+        jdbc.sql("DELETE FROM itr_library_item WHERE user_id = :userId RETURNING subject_id")
             .param("userId", userId)
             .query(Long.class)
             .list();
@@ -228,8 +234,8 @@ public class LibraryRepositoryAdapter implements LibraryRepository {
     return jdbc.sql(
             """
             SELECT COALESCE(d.subject_id, s.subject_id) AS subject_id
-              FROM (SELECT subject_id, count(*) AS n FROM collection.library_item GROUP BY subject_id) d
-              FULL JOIN collection.subject_stats s ON s.subject_id = d.subject_id
+              FROM (SELECT subject_id, count(*) AS n FROM itr_library_item GROUP BY subject_id) d
+              FULL JOIN itr_library_subject_stats s ON s.subject_id = d.subject_id
              WHERE COALESCE(d.n, 0) <> COALESCE(s.collector_count, 0)
             """)
         .query((rs, rowNum) -> SubjectId.of(rs.getLong("subject_id")))
@@ -245,26 +251,27 @@ public class LibraryRepositoryAdapter implements LibraryRepository {
   @Transactional(propagation = Propagation.MANDATORY)
   public Optional<StatsCorrection> recountCollectorCount(SubjectId subjectId) {
     jdbc.sql(
-            "INSERT INTO collection.subject_stats (subject_id, collector_count) VALUES (:id, 0)"
-                + " ON CONFLICT (subject_id) DO NOTHING")
+            "INSERT INTO itr_library_subject_stats (id, subject_id, collector_count)"
+                + " VALUES (:rowId, :id, 0) ON CONFLICT (subject_id) DO NOTHING")
+        .param("rowId", SnowflakeIdGenerator.getId())
         .param("id", subjectId.value())
         .update();
     int before =
         jdbc.sql(
-                "SELECT collector_count FROM collection.subject_stats WHERE subject_id = :id"
+                "SELECT collector_count FROM itr_library_subject_stats WHERE subject_id = :id"
                     + " FOR UPDATE")
             .param("id", subjectId.value())
             .query(Integer.class)
             .single();
     int after =
-        jdbc.sql("SELECT count(*) FROM collection.library_item WHERE subject_id = :id")
+        jdbc.sql("SELECT count(*) FROM itr_library_item WHERE subject_id = :id")
             .param("id", subjectId.value())
             .query(Integer.class)
             .single();
     if (before == after) {
       return Optional.empty();
     }
-    jdbc.sql("UPDATE collection.subject_stats SET collector_count = :n WHERE subject_id = :id")
+    jdbc.sql("UPDATE itr_library_subject_stats SET collector_count = :n WHERE subject_id = :id")
         .param("n", after)
         .param("id", subjectId.value())
         .update();
@@ -281,12 +288,15 @@ public class LibraryRepositoryAdapter implements LibraryRepository {
     }
     jdbc.sql(
             """
-            INSERT INTO collection.subject_stats (subject_id, collector_count)
-            SELECT id, 1 FROM unnest(CAST(:ids AS bigint[])) AS t(id) ORDER BY id
+            INSERT INTO itr_library_subject_stats (id, subject_id, collector_count)
+            SELECT t.row_id, t.id, 1
+              FROM unnest(CAST(:ids AS bigint[]), CAST(:rowIds AS bigint[])) AS t(id, row_id)
+             ORDER BY t.id
             ON CONFLICT (subject_id) DO UPDATE
-               SET collector_count = collection.subject_stats.collector_count + 1
+               SET collector_count = itr_library_subject_stats.collector_count + 1
             """)
         .param("ids", subjectIds.toArray(Long[]::new))
+        .param("rowIds", CollectionRows.newRowIds(subjectIds.size()))
         .update();
   }
 
@@ -299,13 +309,13 @@ public class LibraryRepositoryAdapter implements LibraryRepository {
       return;
     }
     jdbc.sql(
-            "SELECT subject_id FROM collection.subject_stats WHERE subject_id IN (:ids)"
+            "SELECT subject_id FROM itr_library_subject_stats WHERE subject_id IN (:ids)"
                 + " ORDER BY subject_id FOR UPDATE")
         .param("ids", subjectIds)
         .query(Long.class)
         .list();
     jdbc.sql(
-            "UPDATE collection.subject_stats SET collector_count = collector_count - 1"
+            "UPDATE itr_library_subject_stats SET collector_count = collector_count - 1"
                 + " WHERE subject_id IN (:ids)")
         .param("ids", subjectIds)
         .update();
@@ -313,7 +323,7 @@ public class LibraryRepositoryAdapter implements LibraryRepository {
 
   /// 按用户删一张表的行。
   ///
-  /// @param table 带 schema 的表名（常量）
+  /// @param table 表名（常量，`itr_` 前缀）
   /// @param userId 用户
   /// @return 行数
   private int deleteByUser(String table, long userId) {

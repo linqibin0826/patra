@@ -12,7 +12,7 @@ import java.util.Set;
 
 /// 文献库条目的写端。写方法不开事务，由 app 层的事务包住；改某个用户数据的事务先调 {@link #lockOwner}。
 ///
-/// 每个对象的收藏人数（`collection.subject_stats`）由四个改条目的方法在同一事务里维护：条目真插入、真删除才 ±1。
+/// 每个对象的收藏人数（`itr_library_subject_stats`）由四个改条目的方法在同一事务里维护：条目真插入、真删除才 ±1。
 public interface LibraryRepository {
 
   /// 拿该用户的事务级锁（`collection.user:{userId}`），之后的「查上限 / 查重名 → 写」与该用户的其他写事务串行。

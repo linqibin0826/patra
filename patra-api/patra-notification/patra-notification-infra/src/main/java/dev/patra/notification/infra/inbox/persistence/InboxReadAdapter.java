@@ -17,7 +17,7 @@ import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Component;
 
-/// `InboxReadPort` 的原生 SQL 实现。每条语句都带 `recipient_id`，只扫收件人所在的分区。
+/// `InboxReadPort` 的原生 SQL 实现。每条语句都带 `recipient_user_id`，只扫收件人所在的分区。
 @Component
 @RequiredArgsConstructor
 public class InboxReadAdapter implements InboxReadPort {
@@ -25,41 +25,40 @@ public class InboxReadAdapter implements InboxReadPort {
   /// 一行提醒的列：评论正文从快照表关联（墓碑的正文为空），有帮助点经验时取条目上的经验正文；有帮助的人数数附表，
   /// 其余为 1。列表与提醒邮件（按 ID 复查、汇总窗口）共用这一份列清单。
   private static final String SELECT =
-      "SELECT n.notification_id, n.type, n.actor_id, n.actor_anonymous, n.subject_id, n.comment_id,"
-          + " COALESCE(c.plain_text, n.post_plain_text) AS plain_text, n.occurred_at, n.created_at,"
+      "SELECT n.id, n.type, n.actor_user_id, n.actor_anonymous, n.subject_id, n.comment_id,"
+          + " COALESCE(c.plain_text, n.post_plain_text) AS plain_text, n.occurred_at, n.notified_at,"
           + " n.read_at,"
-          + " CASE WHEN n.category = 'HELPFUL' THEN (SELECT count(*) FROM inbox.helpful_actor a"
-          + " WHERE a.recipient_id = n.recipient_id AND a.notification_id = n.notification_id)"
+          + " CASE WHEN n.category = 'HELPFUL' THEN (SELECT count(*) FROM ntf_notification_helpful_actor a"
+          + " WHERE a.recipient_user_id = n.recipient_user_id AND a.notification_id = n.id)"
           + " ELSE 1 END AS actor_count"
-          + " FROM inbox.notification n LEFT JOIN inbox.comment c ON c.comment_id = n.comment_id";
+          + " FROM ntf_notification n LEFT JOIN ntf_comment c ON c.comment_id = n.comment_id";
 
   /// 一个收件人一个类别的提醒。
   private static final String PAGE =
-      SELECT + " WHERE n.recipient_id = :recipientId AND n.category = :category";
+      SELECT + " WHERE n.recipient_user_id = :recipientId AND n.category = :category";
 
   /// 一个类别在写入时刻窗口里的未读（走部分索引 `idx_notification_unread`，再按写入时刻过滤）。
   private static final String UNREAD_IN_WINDOW =
-      " FROM inbox.notification n WHERE n.recipient_id = :recipientId AND n.category = :category"
-          + " AND n.read_at IS NULL AND n.created_at >= :from AND n.created_at < :to";
+      " FROM ntf_notification n WHERE n.recipient_user_id = :recipientId AND n.category = :category"
+          + " AND n.read_at IS NULL AND n.notified_at >= :from AND n.notified_at < :to";
 
   /// 列表的顺序：排序时间倒序，同一时刻按 ID 倒序（走 `idx_notification_list`）。
-  private static final String ORDER =
-      " ORDER BY n.occurred_at DESC, n.notification_id DESC LIMIT :limit";
+  private static final String ORDER = " ORDER BY n.occurred_at DESC, n.id DESC LIMIT :limit";
 
   /// 一行映射成读模型。
   private static final RowMapper<InboxEntry> ENTRY =
       (rs, rowNum) ->
           InboxEntry.builder()
-              .notificationId(rs.getLong("notification_id"))
+              .notificationId(rs.getLong("id"))
               .type(NotificationType.valueOf(rs.getString("type")))
-              .actorId(rs.getLong("actor_id"))
+              .actorId(rs.getLong("actor_user_id"))
               .actorAnonymous(rs.getBoolean("actor_anonymous"))
               .actorCount(rs.getInt("actor_count"))
               .subjectId(rs.getLong("subject_id"))
               .commentId(rs.getObject("comment_id", Long.class))
               .plainText(rs.getString("plain_text"))
               .occurredAt(InboxRows.instant(rs, "occurred_at"))
-              .createdAt(InboxRows.instant(rs, "created_at"))
+              .createdAt(InboxRows.instant(rs, "notified_at"))
               .readAt(InboxRows.instant(rs, "read_at"))
               .build();
 
@@ -83,7 +82,7 @@ public class InboxReadAdapter implements InboxReadPort {
           .query(ENTRY)
           .list();
     }
-    return jdbc.sql(PAGE + " AND (n.occurred_at, n.notification_id) < (:at, :id)" + ORDER)
+    return jdbc.sql(PAGE + " AND (n.occurred_at, n.id) < (:at, :id)" + ORDER)
         .param("recipientId", recipientId)
         .param("category", category.name())
         .param("at", InboxRows.utc(after.occurredAt()))
@@ -101,8 +100,8 @@ public class InboxReadAdapter implements InboxReadPort {
   public UnreadCounts unreadCounts(long recipientId) {
     Map<NotificationCategory, Integer> counts = new EnumMap<>(NotificationCategory.class);
     jdbc.sql(
-            "SELECT category, count(*) AS n FROM inbox.notification"
-                + " WHERE recipient_id = :recipientId AND read_at IS NULL GROUP BY category")
+            "SELECT category, count(*) AS n FROM ntf_notification"
+                + " WHERE recipient_user_id = :recipientId AND read_at IS NULL GROUP BY category")
         .param("recipientId", recipientId)
         .query(
             rs -> {
@@ -126,8 +125,8 @@ public class InboxReadAdapter implements InboxReadPort {
     }
     return jdbc.sql(
             SELECT
-                + " WHERE n.recipient_id = :recipientId AND n.notification_id IN (:ids)"
-                + " AND n.read_at IS NULL ORDER BY n.occurred_at, n.notification_id")
+                + " WHERE n.recipient_user_id = :recipientId AND n.id IN (:ids)"
+                + " AND n.read_at IS NULL ORDER BY n.occurred_at, n.id")
         .param("recipientId", recipientId)
         .param("ids", notificationIds)
         .query(ENTRY)
@@ -159,8 +158,8 @@ public class InboxReadAdapter implements InboxReadPort {
     List<InboxEntry> newest =
         jdbc.sql(
                 SELECT
-                    + " WHERE n.recipient_id = :recipientId AND n.category = :category"
-                    + " AND n.read_at IS NULL AND n.created_at >= :from AND n.created_at < :to"
+                    + " WHERE n.recipient_user_id = :recipientId AND n.category = :category"
+                    + " AND n.read_at IS NULL AND n.notified_at >= :from AND n.notified_at < :to"
                     + ORDER)
             .param("recipientId", recipientId)
             .param("category", category.name())

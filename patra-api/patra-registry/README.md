@@ -137,8 +137,8 @@ cd patra-registry-boot
 ### 数据库迁移
 
 Flyway 自动执行数据库迁移,种子数据包括:
-- 国家字典（V2：ISO 3166-1 alpha-2 代码、英文名与中文名别名及其来源标准）
-- 语言字典（V3）
+- 国家字典（`R__seed_dict_country.sql`：ISO 3166-1 alpha-2 代码、英文名与中文名别名及其来源标准）
+- 语言字典（`R__seed_dict_language.sql`）
 
 ## 相关文档
 

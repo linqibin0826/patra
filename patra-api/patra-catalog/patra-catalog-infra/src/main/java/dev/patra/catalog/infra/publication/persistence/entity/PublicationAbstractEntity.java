@@ -5,7 +5,6 @@ import dev.patra.tool.jpa.entity.ValueObjectJpaEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
-import jakarta.persistence.UniqueConstraint;
 import java.util.List;
 import lombok.Getter;
 import lombok.Setter;
@@ -23,25 +22,15 @@ import org.hibernate.type.SqlTypes;
 /// - `structured_sections` 结构化摘要（有序数组 `[{"label","text"}]`）
 /// - `abstract_type` 摘要类型：structured/unstructured/graphical/none
 ///
-/// **索引说明**：
-///
-/// - 唯一索引 `uk_publication`: publication_id 保证一对一关系
-///
 /// @author linqibin
 /// @since 0.1.0
 @Getter
 @Setter
 @Entity
-@Table(
-    name = "cat_publication_abstract",
-    uniqueConstraints = {
-      @UniqueConstraint(
-          name = "uk_publication",
-          columnNames = {"publication_id"})
-    })
+@Table(name = "cat_publication_abstract")
 public class PublicationAbstractEntity extends ValueObjectJpaEntity {
 
-  /// 文献 ID（外键：cat_publication.id，一对一关系）
+  /// 文献 ID（引用 cat_publication.id，不建外键；一对一关系）
   @Column(name = "publication_id", nullable = false)
   private Long publicationId;
 

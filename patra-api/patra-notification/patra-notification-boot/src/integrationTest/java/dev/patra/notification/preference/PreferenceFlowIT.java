@@ -49,7 +49,7 @@ class PreferenceFlowIT extends NotificationFlowITSupport {
     assertThat(rows()).isEqualTo(1L);
     assertThat(
             jdbcTemplate.queryForObject(
-                "SELECT unsubscribe_token FROM preference.email_preference WHERE user_id = ?",
+                "SELECT unsubscribe_token FROM ntf_email_preference WHERE user_id = ?",
                 String.class,
                 ME))
         .matches("^[A-Za-z0-9_-]{43}$");
@@ -89,7 +89,6 @@ class PreferenceFlowIT extends NotificationFlowITSupport {
   ///
   /// @return 行数
   private long rows() {
-    return jdbcTemplate.queryForObject(
-        "SELECT count(*) FROM preference.email_preference", Long.class);
+    return jdbcTemplate.queryForObject("SELECT count(*) FROM ntf_email_preference", Long.class);
   }
 }

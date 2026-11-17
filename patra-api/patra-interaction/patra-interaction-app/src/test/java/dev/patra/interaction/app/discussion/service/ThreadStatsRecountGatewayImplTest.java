@@ -22,7 +22,7 @@ class ThreadStatsRecountGatewayImplTest {
   void should_name_counter_and_find_drift() {
     when(comments.findThreadStatsDrift()).thenReturn(List.of(7L));
 
-    assertThat(gateway.counter()).isEqualTo("discussion.thread_stats");
+    assertThat(gateway.counter()).isEqualTo("itr_comment_thread_stats");
     assertThat(gateway.findDrifted()).containsExactly(7L);
   }
 

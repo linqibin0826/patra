@@ -48,6 +48,20 @@ class DiscussionReadAdapterIT extends DiscussionPersistenceITSupport {
         .containsExactly(r1);
   }
 
+  /// 排序、游标与「发布于」取发布时间：只改了非内容列（触发器刷新 `updated_at`）的评论不会挪位置。
+  @Test
+  void should_order_roots_by_published_at_not_updated_at() {
+    long older = root(S1, 1L, T0);
+    long newer = root(S1, 1L, T0.plusSeconds(1));
+    jdbcTemplate.update(
+        "UPDATE itr_comment SET record_remarks = '{\"note\":\"x\"}'::jsonb WHERE id = ?", older);
+
+    List<CommentRecord> asc = reads.findRoots(S1, ThreadSort.ASC, null, 2);
+    assertThat(ids(asc)).containsExactly(older, newer);
+    assertThat(asc.getFirst().createdAt()).isEqualTo(T0);
+    assertThat(ids(reads.findRoots(S1, ThreadSort.LATEST, null, 2))).containsExactly(newer, older);
+  }
+
   /// 翻页之间删掉第一页里的一条，第二页照游标继续，不重复也不漏。
   @Test
   void should_not_skip_or_repeat_when_a_root_is_deleted_between_pages() {
@@ -110,7 +124,7 @@ class DiscussionReadAdapterIT extends DiscussionPersistenceITSupport {
     long x = reply(r, r, 2L, T0.plusSeconds(1));
     long y = reply(r, x, 3L, T0.plusSeconds(2));
     long z = reply(r, y, 4L, T0.plusSeconds(3));
-    transactions.executeWithoutResult(s -> comments.markDeleted(x, T0.plusSeconds(10)));
+    transactions.executeWithoutResult(s -> comments.markDeleted(x, T0.plusSeconds(10), 1L));
 
     assertThat(ids(reads.findAncestry(z))).containsExactly(r, x, y, z);
   }
@@ -121,7 +135,7 @@ class DiscussionReadAdapterIT extends DiscussionPersistenceITSupport {
     long r = root(S1, 1L, T0);
     long x = reply(r, r, 2L, T0.plusSeconds(1));
     long y = reply(r, x, 3L, T0.plusSeconds(2));
-    transactions.executeWithoutResult(s -> comments.markDeleted(x, T0.plusSeconds(10)));
+    transactions.executeWithoutResult(s -> comments.markDeleted(x, T0.plusSeconds(10), 1L));
 
     CommentRecord yRecord = reads.findById(y).orElseThrow();
     assertThat(yRecord.parentAuthorId()).isEqualTo(2L);
@@ -163,7 +177,7 @@ class DiscussionReadAdapterIT extends DiscussionPersistenceITSupport {
     reply(two, two, 1L, T0.plusSeconds(20));
     reply(two, two, 4L, T0.plusSeconds(15));
     root(S2, 5L, T0.plusSeconds(30));
-    transactions.executeWithoutResult(s -> comments.markDeleted(three, T0.plusSeconds(40)));
+    transactions.executeWithoutResult(s -> comments.markDeleted(three, T0.plusSeconds(40), 1L));
 
     assertThat(reads.findRecentParticipants(S1, List.of(), 10)).containsExactly(1L, 4L, 2L);
     assertThat(reads.findRecentParticipants(S1, List.of(4L), 10)).containsExactly(1L, 2L);
@@ -262,8 +276,12 @@ class DiscussionReadAdapterIT extends DiscussionPersistenceITSupport {
   @Test
   void should_find_thread_stats_and_comment_count() {
     jdbcTemplate.update(
-        "INSERT INTO discussion.thread_stats VALUES (40, 2, ?), (41, 0, NULL)", Timestamp.from(T0));
-    jdbcTemplate.update("INSERT INTO discussion.subject_stats VALUES (?, 5)", S1.value());
+        "INSERT INTO itr_comment_thread_stats (id, root_comment_id, reply_count, last_reply_at)"
+            + " VALUES (1, 40, 2, ?), (2, 41, 0, NULL)",
+        Timestamp.from(T0));
+    jdbcTemplate.update(
+        "INSERT INTO itr_comment_subject_stats (id, subject_id, comment_count) VALUES (1, ?, 5)",
+        S1.value());
 
     assertThat(reads.findThreadStats(List.of(40L, 41L, 42L)))
         .containsExactlyInAnyOrderEntriesOf(
@@ -279,8 +297,9 @@ class DiscussionReadAdapterIT extends DiscussionPersistenceITSupport {
   /// @param count 有帮助数
   private void helpful(long commentId, int count) {
     jdbcTemplate.update(
-        "INSERT INTO reaction.target_stats (target_type, target_id, helpful_count)"
-            + " VALUES ('COMMENT', ?, ?)",
+        "INSERT INTO itr_helpful_target_stats (id, target_type, target_id, helpful_count)"
+            + " VALUES (?, 'COMMENT', ?, ?)",
+        commentId,
         commentId,
         count);
   }
@@ -291,8 +310,8 @@ class DiscussionReadAdapterIT extends DiscussionPersistenceITSupport {
   /// @param commentId 评论
   private void marked(long userId, long commentId) {
     jdbcTemplate.update(
-        "INSERT INTO reaction.helpful (user_id, target_type, target_id, credited_user_id,"
-            + " created_at) VALUES (?, 'COMMENT', ?, NULL, now())",
+        "INSERT INTO itr_helpful (id, user_id, target_type, target_id, credited_user_id)"
+            + " VALUES ((SELECT COALESCE(max(id), 0) + 1 FROM itr_helpful), ?, 'COMMENT', ?, NULL)",
         userId,
         commentId);
   }

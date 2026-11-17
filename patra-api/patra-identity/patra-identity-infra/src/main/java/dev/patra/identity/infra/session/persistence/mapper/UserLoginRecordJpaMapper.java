@@ -11,7 +11,7 @@ import org.mapstruct.Mapping;
 
 /// UserLoginRecord 与 UserLoginRecordEntity 的转换。
 ///
-/// `id`、`version`、`createdAt`、`updatedAt` 同名映射：更新时带上版本才能做乐观锁检查。
+/// `id`、`version` 和各业务时间列同名映射：更新时带上版本才能做乐观锁检查。
 /// 操作人字段由 JPA 审计管理。
 @Mapper(componentModel = "spring")
 public interface UserLoginRecordJpaMapper {
@@ -29,9 +29,7 @@ public interface UserLoginRecordJpaMapper {
       target = "endReason",
       expression = "java(login.getEndReason() == null ? null : login.getEndReason().name())")
   @Mapping(target = "createdBy", ignore = true)
-  @Mapping(target = "createdByName", ignore = true)
   @Mapping(target = "updatedBy", ignore = true)
-  @Mapping(target = "updatedByName", ignore = true)
   @Mapping(target = "recordRemarks", ignore = true)
   @Mapping(target = "ipAddress", ignore = true)
   UserLoginRecordEntity toEntity(UserLoginRecord login);
@@ -59,8 +57,6 @@ public interface UserLoginRecordJpaMapper {
         .endReason(
             entity.getEndReason() == null ? null : LoginEndReason.valueOf(entity.getEndReason()))
         .version(entity.getVersion())
-        .createdAt(entity.getCreatedAt())
-        .updatedAt(entity.getUpdatedAt())
         .build();
   }
 }

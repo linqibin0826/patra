@@ -20,30 +20,30 @@ public interface OrganizationRelationDao extends JpaRepository<OrganizationRelat
   ///
   /// @param orgId 机构 ID
   /// @return 关系实体列表
-  List<OrganizationRelationEntity> findAllByOrgId(Long orgId);
+  List<OrganizationRelationEntity> findAllByOrganizationId(Long orgId);
 
   /// 按机构 ID 列表批量查询关系。
   ///
   /// @param orgIds 机构 ID 列表
   /// @return 关系实体列表
-  List<OrganizationRelationEntity> findAllByOrgIdIn(Collection<Long> orgIds);
+  List<OrganizationRelationEntity> findAllByOrganizationIdIn(Collection<Long> orgIds);
 
   /// 按机构 ID 删除所有关系。
   ///
   /// @param orgId 机构 ID
-  void deleteAllByOrgId(Long orgId);
+  void deleteAllByOrganizationId(Long orgId);
 
   /// 按机构 ID 列表批量删除关系。
   ///
   /// @param orgIds 机构 ID 列表
-  void deleteAllByOrgIdIn(Collection<Long> orgIds);
+  void deleteAllByOrganizationIdIn(Collection<Long> orgIds);
 
   /// 查询所有未关联内部 ID 的关系。
   ///
   /// 用于导入后的延迟关联填充。
   ///
   /// @return 未关联的关系实体列表
-  @Query("SELECT r FROM OrganizationRelationEntity r WHERE r.relatedOrgId IS NULL")
+  @Query("SELECT r FROM OrganizationRelationEntity r WHERE r.relatedOrganizationId IS NULL")
   List<OrganizationRelationEntity> findAllUnlinked();
 
   /// 批量更新关系的内部关联 ID。
@@ -53,9 +53,9 @@ public interface OrganizationRelationDao extends JpaRepository<OrganizationRelat
   /// @param relatedRorId 关联机构的 ROR ID
   /// @param relatedOrgId 关联机构的内部 ID
   /// @return 更新的记录数
-  @Modifying
+  @Modifying(flushAutomatically = true, clearAutomatically = true)
   @Query(
-      "UPDATE OrganizationRelationEntity r SET r.relatedOrgId = :relatedOrgId WHERE r.relatedRorId = :relatedRorId")
+      "UPDATE OrganizationRelationEntity r SET r.relatedOrganizationId = :relatedOrgId WHERE r.relatedRorId = :relatedRorId")
   int linkByRorId(
       @Param("relatedRorId") String relatedRorId, @Param("relatedOrgId") Long relatedOrgId);
 }

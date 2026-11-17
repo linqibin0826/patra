@@ -3,9 +3,7 @@ package dev.patra.catalog.infra.venue.persistence.entity;
 import dev.patra.tool.jpa.entity.ValueObjectJpaEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.Index;
 import jakarta.persistence.Table;
-import jakarta.persistence.UniqueConstraint;
 import java.time.LocalDate;
 import lombok.Getter;
 import lombok.Setter;
@@ -23,13 +21,6 @@ import lombok.Setter;
 /// - `relation_type` 关系类型枚举：PRECEDING/SUCCEEDING/ABSORBED/MERGED 等
 /// - `effective_date` 关系生效日期
 ///
-/// **索引说明**：
-///
-/// - 唯一索引 `uk_venue_relation`: (venue_id, related_title, relation_type) 防止重复
-/// - 普通索引 `idx_venue_id`: venue_id 支持查询期刊的所有关联关系
-/// - 普通索引 `idx_related_venue_id`: related_venue_id 支持反向查询
-/// - 普通索引 `idx_relation_type`: relation_type 支持按关系类型筛选
-///
 /// **使用场景**：
 ///
 /// 1. 从 Serfile 导入期刊的 TitleRelated 数据
@@ -41,21 +32,10 @@ import lombok.Setter;
 @Getter
 @Setter
 @Entity
-@Table(
-    name = "cat_venue_relation",
-    uniqueConstraints = {
-      @UniqueConstraint(
-          name = "uk_venue_relation",
-          columnNames = {"venue_id", "related_title", "relation_type"})
-    },
-    indexes = {
-      @Index(name = "idx_venue_id", columnList = "venue_id"),
-      @Index(name = "idx_related_venue_id", columnList = "related_venue_id"),
-      @Index(name = "idx_relation_type", columnList = "relation_type")
-    })
+@Table(name = "cat_venue_relation")
 public class VenueRelationEntity extends ValueObjectJpaEntity {
 
-  /// 载体 ID（外键：cat_venue.id）
+  /// 载体 ID（引用 cat_venue.id，不建外键）
   @Column(name = "venue_id", nullable = false)
   private Long venueId;
 

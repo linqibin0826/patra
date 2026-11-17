@@ -17,7 +17,7 @@ spring:
   flyway:
     enabled: true
     # 递归扫描：每个子域的脚本在 db/migration/{子域}/，整个服务一份历史（public.flyway_schema_history）。
-    # 不设 schemas：设了 Flyway 会自己建这些 schema 并把历史表挪进第一个，脚本里由 CREATE SCHEMA 建
+    # 不设 schemas：设了 Flyway 会把历史表挪进第一个 schema，而表都在 public
     locations: classpath:db/migration
   jpa:
     # 关掉 OSIV：请求第一次查库拿到的连接不会一直占到请求结束

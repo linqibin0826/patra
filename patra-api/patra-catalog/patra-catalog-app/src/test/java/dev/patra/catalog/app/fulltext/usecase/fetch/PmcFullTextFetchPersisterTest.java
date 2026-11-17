@@ -2,6 +2,7 @@ package dev.patra.catalog.app.fulltext.usecase.fetch;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -28,11 +29,14 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
+import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
 
 /// `PmcFullTextFetchPersister` 单元测试。
+///
+/// 解析任务可能同时写同一篇：每个写方法先锁住全文记录（有记录时），与解析的持久化事务排队。
 @ExtendWith(MockitoExtension.class)
 @DisplayName("PmcFullTextFetchPersister")
 class PmcFullTextFetchPersisterTest {
@@ -71,7 +75,9 @@ class PmcFullTextFetchPersisterTest {
 
     persister.recordFetched(candidate(FullTextStatus.FETCH_FAILED, 3), selected, 1024L, media, NOW);
 
-    verify(fullTextRepository).save(savedCaptor.capture());
+    InOrder order = inOrder(fullTextRepository);
+    order.verify(fullTextRepository).lockByPublicationId(7L);
+    order.verify(fullTextRepository).save(savedCaptor.capture());
     PublicationFullText saved = savedCaptor.getValue();
     assertThat(saved.status()).isEqualTo(FullTextStatus.FETCHED);
     assertThat(saved.attemptCount()).isZero();
@@ -94,7 +100,9 @@ class PmcFullTextFetchPersisterTest {
     persister.recordUnavailable(
         candidate(FullTextStatus.UNAVAILABLE, 2), FullTextUnavailableReason.NOT_IN_BUCKET);
 
-    verify(fullTextRepository).save(savedCaptor.capture());
+    InOrder order = inOrder(fullTextRepository);
+    order.verify(fullTextRepository).lockByPublicationId(7L);
+    order.verify(fullTextRepository).save(savedCaptor.capture());
     assertThat(savedCaptor.getValue().attemptCount()).isEqualTo(3);
     assertThat(savedCaptor.getValue().nextAttemptAt()).isEqualTo(NOW.plus(Duration.ofDays(7)));
     verify(events, never()).publishEvent(any(Object.class));
@@ -148,7 +156,7 @@ class PmcFullTextFetchPersisterTest {
             .parserVersion(1)
             .wordCount(500)
             .build();
-    when(fullTextRepository.findByPublicationId(7L)).thenReturn(Optional.of(parsed));
+    when(fullTextRepository.lockByPublicationId(7L)).thenReturn(Optional.of(parsed));
 
     persister.recordFailure(candidate(FullTextStatus.PARSED, 0), new IllegalStateException("503"));
 

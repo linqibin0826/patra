@@ -642,7 +642,7 @@ class ThymeleafMailRendererTest {
   /// @return 邮件
   private static OutgoingMail probe(SecurityNotice notice) {
     return OutgoingMail.builder()
-        .deliveryId(UUID.randomUUID())
+        .idempotencyKey(UUID.randomUUID().toString())
         .to("probe@example.com")
         .template("security-notice-probe")
         .subject("probe")

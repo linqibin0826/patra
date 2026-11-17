@@ -10,9 +10,11 @@ import dev.patra.identity.domain.account.model.vo.Username;
 import dev.patra.identity.infra.account.persistence.mapper.UserJpaMapper;
 import dev.patra.identity.infra.config.IdentityITPostgreSQLContainerInitializer;
 import dev.patra.identity.infra.session.persistence.mapper.UserLoginRecordJpaMapper;
+import dev.patra.tool.jpa.audit.CurrentAuditorProvider;
 import dev.patra.tool.jpa.autoconfigure.JpaAuditingConfiguration;
 import dev.patra.tool.jpa.autoconfigure.PatraHibernatePropertiesCustomizer;
 import java.time.Instant;
+import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,6 +23,8 @@ import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.boot.flyway.autoconfigure.FlywayAutoConfiguration;
 import org.springframework.boot.jackson.autoconfigure.JacksonAutoConfiguration;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -45,6 +49,9 @@ class ExternalIdentityRepositoryAdapterIT {
 
   private static final Instant T0 = Instant.parse("2026-11-04T08:00:00Z");
 
+  /// 测试上下文里的当前操作人。
+  private static final long AUDITOR_ID = 42L;
+
   @Autowired private UserRepositoryAdapter users;
   @Autowired private ExternalIdentityRepositoryAdapter identities;
   @Autowired private JdbcTemplate jdbcTemplate;
@@ -57,6 +64,31 @@ class ExternalIdentityRepositoryAdapterIT {
 
   private static ExternalIdentity github(long userId, String subject) {
     return ExternalIdentity.link(userId, IdentityProvider.GITHUB, subject, "octocat", T0);
+  }
+
+  /// 原生插入不经实体审计，操作人由适配器从同一个 `AuditorAware` 取来写进去。
+  @Test
+  @DisplayName("插入时记录操作人")
+  void should_record_actor_when_inserting() {
+    long userId = newUser("u-ext-actor");
+
+    identities.insertIfAbsent(github(userId, "1009"));
+
+    assertThat(
+            jdbcTemplate.queryForMap(
+                "SELECT created_by, updated_by FROM idn_user_external_identity WHERE subject = '1009'"))
+        .containsEntry("created_by", AUDITOR_ID)
+        .containsEntry("updated_by", AUDITOR_ID);
+  }
+
+  /// 提供一个固定的当前操作人。
+  @TestConfiguration
+  static class FixedAuditorConfig {
+
+    @Bean
+    CurrentAuditorProvider fixedAuditorProvider() {
+      return () -> Optional.of(AUDITOR_ID);
+    }
   }
 
   @Test

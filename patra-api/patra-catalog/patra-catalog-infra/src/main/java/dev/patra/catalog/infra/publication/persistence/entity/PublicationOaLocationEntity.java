@@ -3,9 +3,7 @@ package dev.patra.catalog.infra.publication.persistence.entity;
 import dev.patra.tool.jpa.entity.ValueObjectJpaEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.Index;
 import jakarta.persistence.Table;
-import jakarta.persistence.UniqueConstraint;
 import java.time.Instant;
 import java.time.LocalDate;
 import lombok.Getter;
@@ -22,31 +20,15 @@ import lombok.Setter;
 /// - `location_type` 位置类型：publisher/repository/pubmed_central/preprint
 /// - `is_best` 是否最佳位置
 ///
-/// **索引说明**：
-///
-/// - 复合唯一索引 `uk_oa_url`: (publication_id, url) 防止重复记录
-/// - 普通索引支持按文献、OA 状态、位置类型查询
-///
 /// @author linqibin
 /// @since 0.1.0
 @Getter
 @Setter
 @Entity
-@Table(
-    name = "cat_publication_oa_location",
-    uniqueConstraints = {
-      @UniqueConstraint(
-          name = "uk_oa_url",
-          columnNames = {"publication_id", "url"})
-    },
-    indexes = {
-      @Index(name = "idx_publication", columnList = "publication_id"),
-      @Index(name = "idx_oa_status", columnList = "oa_status"),
-      @Index(name = "idx_location_type", columnList = "location_type")
-    })
+@Table(name = "cat_publication_oa_location")
 public class PublicationOaLocationEntity extends ValueObjectJpaEntity {
 
-  /// 文献 ID（外键：cat_publication.id）
+  /// 文献 ID（引用 cat_publication.id，不建外键）
   @Column(name = "publication_id", nullable = false)
   private Long publicationId;
 

@@ -3,7 +3,6 @@ package dev.patra.catalog.infra.publication.persistence.entity;
 import dev.patra.tool.jpa.entity.BaseJpaEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.Index;
 import jakarta.persistence.Table;
 import java.util.Locale;
 import lombok.AllArgsConstructor;
@@ -29,12 +28,6 @@ import lombok.experimental.SuperBuilder;
 /// - indexer（索引机构添加的关键词）
 /// - pubmed（PubMed 系统添加）
 ///
-/// **索引设计**：
-///
-/// - `idx_normalized`：规范化词形索引（去重查询）
-/// - `idx_frequency`：频次索引（热门关键词排序）
-/// - `idx_source_lang`：来源+语言复合索引
-///
 /// @author linqibin
 /// @since 0.1.0
 @Data
@@ -43,17 +36,7 @@ import lombok.experimental.SuperBuilder;
 @AllArgsConstructor
 @EqualsAndHashCode(callSuper = true)
 @Entity
-@Table(
-    name = "cat_keyword",
-    indexes = {
-      @Index(name = "idx_frequency", columnList = "frequency"),
-      @Index(name = "idx_source_lang", columnList = "source, language")
-    },
-    uniqueConstraints = {
-      @jakarta.persistence.UniqueConstraint(
-          name = "uk_normalized_term",
-          columnNames = "normalized_term")
-    })
+@Table(name = "cat_keyword")
 public class KeywordEntity extends BaseJpaEntity {
 
   private static final int TERM_MAX_LENGTH = 500;

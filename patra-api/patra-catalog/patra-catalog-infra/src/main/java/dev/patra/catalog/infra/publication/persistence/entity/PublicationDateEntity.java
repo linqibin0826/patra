@@ -3,7 +3,6 @@ package dev.patra.catalog.infra.publication.persistence.entity;
 import dev.patra.tool.jpa.entity.ValueObjectJpaEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.Index;
 import jakarta.persistence.Table;
 import java.time.LocalDate;
 import lombok.Getter;
@@ -20,27 +19,15 @@ import lombok.Setter;
 /// - `year/month/day` 分别存储年月日（支持不完整日期）
 /// - `date_precision` 精度：year/month/day
 ///
-/// **索引说明**：
-///
-/// - 普通索引 `idx_publication`: publication_id 支持查询某文献的所有日期
-/// - 普通索引 `idx_date_type`: date_type 支持按类型查询
-/// - 普通索引 `idx_year`: year 支持按年份范围查询
-///
 /// @author linqibin
 /// @since 0.1.0
 @Getter
 @Setter
 @Entity
-@Table(
-    name = "cat_publication_date",
-    indexes = {
-      @Index(name = "idx_publication", columnList = "publication_id"),
-      @Index(name = "idx_date_type", columnList = "date_type"),
-      @Index(name = "idx_year", columnList = "year")
-    })
+@Table(name = "cat_publication_date")
 public class PublicationDateEntity extends ValueObjectJpaEntity {
 
-  /// 文献 ID（外键：cat_publication.id）
+  /// 文献 ID（引用 cat_publication.id，不建外键）
   @Column(name = "publication_id", nullable = false)
   private Long publicationId;
 

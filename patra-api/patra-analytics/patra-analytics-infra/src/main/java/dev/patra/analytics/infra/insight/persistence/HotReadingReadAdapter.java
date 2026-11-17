@@ -32,10 +32,10 @@ public class HotReadingReadAdapter implements HotReadingReadPort {
     List<HotReadingEntry> items = new ArrayList<>();
     jdbc.sql(
             "SELECT r.computed_at,"
-                + " (SELECT count(*) FROM insight.hot_reading WHERE ranked) AS ranked_total,"
-                + " h.position, h.article_id, h.ranked, h.score, h.readers_7d"
-                + " FROM insight.snapshot_run r"
-                + " LEFT JOIN LATERAL (SELECT * FROM insight.hot_reading"
+                + " (SELECT count(*) FROM anl_hot_reading WHERE ranked) AS ranked_total,"
+                + " h.position, h.publication_id, h.ranked, h.score, h.readers_7d"
+                + " FROM anl_snapshot_run r"
+                + " LEFT JOIN LATERAL (SELECT * FROM anl_hot_reading"
                 + " ORDER BY position LIMIT :limit) h ON true"
                 + " WHERE r.kind = :kind ORDER BY h.position")
         .param("limit", limit)
@@ -50,7 +50,7 @@ public class HotReadingReadAdapter implements HotReadingReadPort {
                 items.add(
                     HotReadingEntry.builder()
                         .position(rs.getInt("position"))
-                        .articleId(rs.getLong("article_id"))
+                        .articleId(rs.getLong("publication_id"))
                         .ranked(rs.getBoolean("ranked"))
                         .score(rs.getObject("score", Double.class))
                         .readers7d(rs.getObject("readers_7d", Integer.class))
@@ -63,7 +63,7 @@ public class HotReadingReadAdapter implements HotReadingReadPort {
     return HotReadingSummary.of(computedAt.getFirst(), rankedTotal.getFirst(), items);
   }
 
-  /// 按 `article_id` 的唯一索引查。
+  /// 按 `publication_id` 的唯一索引查。
   ///
   /// @param ids 文献 ID
   /// @return 在榜上的
@@ -74,8 +74,8 @@ public class HotReadingReadAdapter implements HotReadingReadPort {
     }
     return new HashSet<>(
         jdbc.sql(
-                "SELECT article_id FROM insight.hot_reading"
-                    + " WHERE ranked AND article_id = ANY(CAST(:ids AS bigint[]))")
+                "SELECT publication_id FROM anl_hot_reading"
+                    + " WHERE ranked AND publication_id = ANY(CAST(:ids AS bigint[]))")
             .param("ids", ids.toArray(Long[]::new))
             .query(Long.class)
             .list());

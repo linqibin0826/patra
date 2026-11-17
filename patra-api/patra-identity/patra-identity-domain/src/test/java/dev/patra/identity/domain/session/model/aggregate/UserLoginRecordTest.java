@@ -100,8 +100,6 @@ class UserLoginRecordTest {
         .clientType(ClientType.WEB)
         .deviceClass(DeviceClass.UNKNOWN)
         .expiresAt(EXPIRES_AT)
-        .version(1L)
-        .createdAt(NOW)
-        .updatedAt(NOW);
+        .version(1L);
   }
 }

@@ -43,12 +43,12 @@ class InboxEventFlowIT extends NotificationFlowITSupport {
     awaitRows(2);
     assertThat(
             jdbcTemplate.queryForList(
-                "SELECT recipient_id || ':' || type FROM inbox.notification ORDER BY recipient_id",
+                "SELECT recipient_user_id || ':' || type FROM ntf_notification ORDER BY recipient_user_id",
                 String.class))
         .containsExactly("2:COMMENT_REPLY", "4:MENTION");
     assertThat(
             jdbcTemplate.queryForObject(
-                "SELECT plain_text FROM inbox.comment WHERE comment_id = 500", String.class))
+                "SELECT plain_text FROM ntf_comment WHERE comment_id = 500", String.class))
         .isEqualTo("谢谢 <@4>");
   }
 
@@ -95,12 +95,12 @@ class InboxEventFlowIT extends NotificationFlowITSupport {
     awaitRows(2);
     assertThat(
             jdbcTemplate.queryForObject(
-                "SELECT version || ':' || plain_text FROM inbox.comment WHERE comment_id = 500",
+                "SELECT source_version || ':' || plain_text FROM ntf_comment WHERE comment_id = 500",
                 String.class))
         .isEqualTo("3:第三版");
     assertThat(
             jdbcTemplate.queryForObject(
-                "SELECT type FROM inbox.notification WHERE recipient_id = 7", String.class))
+                "SELECT type FROM ntf_notification WHERE recipient_user_id = 7", String.class))
         .isEqualTo("MENTION");
   }
 
@@ -115,12 +115,12 @@ class InboxEventFlowIT extends NotificationFlowITSupport {
     awaitRows(3);
     assertThat(
             jdbcTemplate.queryForList(
-                "SELECT recipient_id || ':' || type FROM inbox.notification ORDER BY recipient_id",
+                "SELECT recipient_user_id || ':' || type FROM ntf_notification ORDER BY recipient_user_id",
                 String.class))
         .containsExactly("2:COMMENT_REPLY", "4:MENTION", "7:MENTION");
     assertThat(
             jdbcTemplate.queryForObject(
-                "SELECT version || ':' || plain_text FROM inbox.comment WHERE comment_id = 500",
+                "SELECT source_version || ':' || plain_text FROM ntf_comment WHERE comment_id = 500",
                 String.class))
         .isEqualTo("2:第二版");
   }
@@ -133,7 +133,7 @@ class InboxEventFlowIT extends NotificationFlowITSupport {
             + " $$ BEGIN IF NEW.comment_id = 600 THEN RAISE EXCEPTION 'test failure'; END IF;"
             + " RETURN NEW; END $$");
     jdbcTemplate.execute(
-        "CREATE TRIGGER test_fail_inbox BEFORE INSERT ON inbox.notification"
+        "CREATE TRIGGER test_fail_inbox BEFORE INSERT ON ntf_notification"
             + " FOR EACH ROW EXECUTE FUNCTION public.test_fail_inbox()");
     CommentPublished event = published(UUID.randomUUID(), 600L, 40L, "会失败");
     try {
@@ -150,10 +150,10 @@ class InboxEventFlowIT extends NotificationFlowITSupport {
           .isZero();
       assertThat(
               jdbcTemplate.queryForObject(
-                  "SELECT count(*) FROM inbox.comment WHERE comment_id = 600", Long.class))
+                  "SELECT count(*) FROM ntf_comment WHERE comment_id = 600", Long.class))
           .isZero();
     } finally {
-      jdbcTemplate.execute("DROP TRIGGER IF EXISTS test_fail_inbox ON inbox.notification");
+      jdbcTemplate.execute("DROP TRIGGER IF EXISTS test_fail_inbox ON ntf_notification");
       jdbcTemplate.execute("DROP FUNCTION IF EXISTS public.test_fail_inbox()");
       amqpAdmin.purgeQueue(DEAD_LETTERS, false);
     }
@@ -185,9 +185,7 @@ class InboxEventFlowIT extends NotificationFlowITSupport {
     assertThat(rows()).isZero();
     assertThat(
             jdbcTemplate.queryForObject(
-                "SELECT count(*) FROM inbox.comment WHERE subject_id = ?",
-                Long.class,
-                POST_SUBJECT))
+                "SELECT count(*) FROM ntf_comment WHERE subject_id = ?", Long.class, POST_SUBJECT))
         .isZero();
   }
 
@@ -215,8 +213,8 @@ class InboxEventFlowIT extends NotificationFlowITSupport {
         .until(
             () ->
                 jdbcTemplate.queryForObject(
-                        "SELECT count(*) FROM inbox.comment"
-                            + " WHERE comment_id = ? AND deleted_at IS NOT NULL",
+                        "SELECT count(*) FROM ntf_comment"
+                            + " WHERE comment_id = ? AND source_deleted_at IS NOT NULL",
                         Long.class,
                         commentId)
                     == 1);
@@ -226,7 +224,7 @@ class InboxEventFlowIT extends NotificationFlowITSupport {
   ///
   /// @return 行数
   private long rows() {
-    return jdbcTemplate.queryForObject("SELECT count(*) FROM inbox.notification", Long.class);
+    return jdbcTemplate.queryForObject("SELECT count(*) FROM ntf_notification", Long.class);
   }
 
   /// 作者 9 在对象下回复 2 的评论。

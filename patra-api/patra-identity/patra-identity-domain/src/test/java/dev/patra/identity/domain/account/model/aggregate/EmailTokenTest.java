@@ -127,13 +127,7 @@ class EmailTokenTest {
   void should_restore_every_column_and_settled_tokens_are_inactive() {
     Instant settledAt = NOW.plusSeconds(60);
     EmailToken consumed =
-        restorable()
-            .consumedAt(settledAt)
-            .requestedIp("203.0.113.9")
-            .version(3L)
-            .createdAt(NOW)
-            .updatedAt(settledAt)
-            .build();
+        restorable().consumedAt(settledAt).requestedIp("203.0.113.9").version(3L).build();
 
     assertThat(consumed.getId()).isEqualTo(1L);
     assertThat(consumed.getUserId()).isEqualTo(42L);
@@ -145,8 +139,6 @@ class EmailTokenTest {
     assertThat(consumed.getRevokedAt()).isNull();
     assertThat(consumed.getRequestedIp()).contains("203.0.113.9");
     assertThat(consumed.getVersion()).isEqualTo(3L);
-    assertThat(consumed.getCreatedAt()).isEqualTo(NOW);
-    assertThat(consumed.getUpdatedAt()).isEqualTo(settledAt);
     assertThat(consumed.isActive()).isFalse();
     assertThat(consumed.isUsableAt(NOW)).isFalse();
 

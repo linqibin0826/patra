@@ -56,4 +56,10 @@ public class UserEntity extends BaseJpaEntity {
   /// 注销完成时间，未注销时为 null
   @Column(name = "deleted_at")
   private Instant deletedAt;
+
+  /// 注册时间，即审计列 `created_at`，公开主页显示「加入于」用。
+  ///
+  /// 由数据库填，只读映射：基类不映射审计时间，这里是唯一要读它的地方。
+  @Column(name = "created_at", insertable = false, updatable = false)
+  private Instant createdAt;
 }

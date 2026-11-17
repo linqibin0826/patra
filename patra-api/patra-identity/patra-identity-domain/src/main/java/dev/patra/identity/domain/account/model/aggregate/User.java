@@ -45,8 +45,6 @@ public final class User {
   private Instant deletionRemindedAt;
   private Instant deletedAt;
   private Long version;
-  private Instant createdAt;
-  private Instant updatedAt;
 
   /// 只能经工厂方法创建。
   private User() {}
@@ -64,8 +62,6 @@ public final class User {
   /// @param deletionRemindedAt 到期前提醒的发送时间，没发过为 `null`
   /// @param deletedAt 注销完成时间
   /// @param version 乐观锁版本
-  /// @param createdAt 创建时间
-  /// @param updatedAt 更新时间
   @Builder(builderMethodName = "restore")
   private User(
       Long id,
@@ -78,9 +74,7 @@ public final class User {
       Instant deletionDueAt,
       Instant deletionRemindedAt,
       Instant deletedAt,
-      Long version,
-      Instant createdAt,
-      Instant updatedAt) {
+      Long version) {
     this.id = Objects.requireNonNull(id, "id 不能为 null");
     this.username = Objects.requireNonNull(username, "username 不能为 null");
     this.status = Objects.requireNonNull(status, "status 不能为 null");
@@ -95,8 +89,6 @@ public final class User {
     this.deletionRemindedAt = deletionRemindedAt;
     this.deletedAt = deletedAt;
     this.version = version;
-    this.createdAt = createdAt;
-    this.updatedAt = updatedAt;
   }
 
   /// 注册一个新用户：正常状态、邮箱未验证。ID 由仓储在保存时分配。

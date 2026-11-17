@@ -228,8 +228,11 @@ class UserReadAdapterIT {
     User saved =
         users.save(User.register(EmailAddress.of("joined@example.com"), Username.of("u-joined")));
     profiles.save(UserProfile.create(saved.getId()));
+    // 审计时间由触发器维护、应用写的值会被忽略，回填过去的注册时间要先关掉触发器
+    jdbcTemplate.execute("ALTER TABLE idn_user DISABLE TRIGGER trg_idn_user_audit_times");
     jdbcTemplate.update(
         "UPDATE idn_user SET created_at = ? WHERE id = ?", Timestamp.from(T0), saved.getId());
+    jdbcTemplate.execute("ALTER TABLE idn_user ENABLE TRIGGER trg_idn_user_audit_times");
     entityManager.clear();
 
     assertThat(reader.findPublicIdentityByUserId(saved.getId()).orElseThrow().joinedAt())

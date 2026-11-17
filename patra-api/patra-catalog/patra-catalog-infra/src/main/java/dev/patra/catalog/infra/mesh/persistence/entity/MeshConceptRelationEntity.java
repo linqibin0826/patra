@@ -3,7 +3,6 @@ package dev.patra.catalog.infra.mesh.persistence.entity;
 import dev.patra.tool.jpa.entity.ValueObjectJpaEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.Index;
 import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
@@ -23,22 +22,12 @@ import lombok.Setter;
 /// - `concept1_ui` 概念 1 UI（DTD 定义总是首选概念）
 /// - `concept2_ui` 概念 2 UI（关联概念）
 ///
-/// **索引说明**：
-///
-/// - 普通索引 `idx_descriptor_ui`: 支持查询某主题词的所有概念关系
-/// - 普通索引 `idx_concept`: 支持查询某概念的所有关系
-///
 /// @author linqibin
 /// @since 0.1.0
 @Getter
 @Setter
 @Entity
-@Table(
-    name = "cat_mesh_concept_relation",
-    indexes = {
-      @Index(name = "idx_descriptor_ui", columnList = "descriptor_ui"),
-      @Index(name = "idx_concept", columnList = "concept_ui")
-    })
+@Table(name = "cat_mesh_concept_relation")
 public class MeshConceptRelationEntity extends ValueObjectJpaEntity {
 
   /// 主题词 UI（关联：cat_mesh_descriptor.ui）

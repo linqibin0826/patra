@@ -41,11 +41,10 @@ class DeletedUserCleanupFlowIT extends InteractionFlowITSupport {
     assertThat(result.scannedUsers()).isEqualTo(3);
     assertThat(result.deletedUsers()).isEqualTo(2);
     assertThat(result.failedBatches()).isZero();
-    assertThat(count("SELECT count(*) FROM collection.library_item WHERE user_id = ?", A)).isZero();
-    assertThat(count("SELECT count(*) FROM subject.publish_quota WHERE user_id IN (?, ?)", A, B))
+    assertThat(count("SELECT count(*) FROM itr_library_item WHERE user_id = ?", A)).isZero();
+    assertThat(count("SELECT count(*) FROM itr_publish_quota WHERE user_id IN (?, ?)", A, B))
         .isZero();
-    assertThat(count("SELECT count(*) FROM collection.library_item WHERE user_id = ?", C))
-        .isEqualTo(1L);
+    assertThat(count("SELECT count(*) FROM itr_library_item WHERE user_id = ?", C)).isEqualTo(1L);
     identity.verify(1, postRequestedFor(urlEqualTo("/_internal/users/summaries")));
   }
 
@@ -96,10 +95,10 @@ class DeletedUserCleanupFlowIT extends InteractionFlowITSupport {
     CleanupResult result = commandBus.handle(CleanupDeletedUsersCommand.of());
 
     assertThat(result.deletedUsers()).isEqualTo(2);
-    assertThat(count("SELECT count(*) FROM reaction.helpful")).isEqualTo(2L);
-    assertThat(count("SELECT sum(helpful_count) FROM reaction.target_stats")).isEqualTo(2L);
-    assertThat(count("SELECT sum(helpful_received) FROM reaction.user_stats")).isEqualTo(2L);
-    assertThat(count("SELECT count(*) FROM reaction.user_stats WHERE user_id IN (?, ?)", A, B))
+    assertThat(count("SELECT count(*) FROM itr_helpful")).isEqualTo(2L);
+    assertThat(count("SELECT sum(helpful_count) FROM itr_helpful_target_stats")).isEqualTo(2L);
+    assertThat(count("SELECT sum(helpful_received) FROM itr_helpful_user_stats")).isEqualTo(2L);
+    assertThat(count("SELECT count(*) FROM itr_helpful_user_stats WHERE user_id IN (?, ?)", A, B))
         .isEqualTo(2L);
   }
 
@@ -125,8 +124,8 @@ class DeletedUserCleanupFlowIT extends InteractionFlowITSupport {
   /// @param kind 种类
   private void seedQuota(long userId, String kind) {
     jdbcTemplate.update(
-        "INSERT INTO subject.publish_quota (user_id, kind, quota_day, day_count, last_published_at)"
-            + " VALUES (?, ?, CURRENT_DATE, 1, now())",
+        "INSERT INTO itr_publish_quota (id, user_id, kind, quota_day, day_count, last_published_at)"
+            + " VALUES ((SELECT COALESCE(max(id), 0) + 1 FROM itr_publish_quota), ?, ?, CURRENT_DATE, 1, now())",
         userId,
         kind);
   }

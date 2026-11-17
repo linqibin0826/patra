@@ -7,16 +7,20 @@ import dev.patra.catalog.infra.fulltext.persistence.dao.PublicationFullTextDao;
 import dev.patra.catalog.infra.fulltext.persistence.entity.PublicationFullTextEntity;
 import dev.patra.tool.jpa.id.SnowflakeIdGenerator;
 import jakarta.persistence.EntityManager;
+import jakarta.persistence.LockModeType;
 import java.util.ArrayList;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.databind.json.JsonMapper;
 
 /// `PublicationFullTextRepository` 的 JPA 实现。
 ///
-/// `save` 先按 `publication_id` 取托管实体再改；并发写同一篇由任务互斥锁与
-/// `uk_publication_fulltext_publication` 兜底，撞唯一约束时异常交给调用方按失败处理。
+/// `save` 先按 `publication_id` 取托管实体再改。抓取与解析可以同时写同一篇：持久化事务先用
+/// [#lockByPublicationId] 锁行，乐观锁版本号兜底；两边同时新建同一篇时由
+/// `uk_cat_publication_fulltext_publication` 拦下，异常交给调用方按失败处理。
 ///
 /// @author linqibin
 /// @since 0.11.0
@@ -36,6 +40,22 @@ public class PublicationFullTextRepositoryAdapter implements PublicationFullText
   public Optional<PublicationFullText> findByPublicationId(long publicationId) {
     return dao.findByPublicationId(publicationId)
         .map(PublicationFullTextRepositoryAdapter::toDomain);
+  }
+
+  /// 先按普通查询取实体，再带 `PESSIMISTIC_WRITE` 刷新：带锁的查询不会刷新一级缓存里已有的实体，
+  /// 拿到的可能是别的事务提交前读到的旧值。
+  ///
+  /// @param publicationId 文献 ID
+  /// @return 当前全文记录
+  @Override
+  @Transactional(propagation = Propagation.MANDATORY)
+  public Optional<PublicationFullText> lockByPublicationId(long publicationId) {
+    return dao.findByPublicationId(publicationId)
+        .map(
+            entity -> {
+              entityManager.refresh(entity, LockModeType.PESSIMISTIC_WRITE);
+              return toDomain(entity);
+            });
   }
 
   /// 按 `publication_id` upsert。
@@ -100,26 +120,18 @@ public class PublicationFullTextRepositoryAdapter implements PublicationFullText
         .build();
   }
 
-  /// 正文表没有实体：用 native `INSERT … ON CONFLICT (publication_id) DO UPDATE` 写入，
-  /// 正文以注入的 `JsonMapper` 序列化。
+  /// 写正文：正文表没有实体，经 Dao 上的原生 upsert 写入，正文以注入的 `JsonMapper` 序列化。
   ///
   /// @param publicationId 文献 ID
   /// @param body 正文
   /// @param parserVersion 解析器版本
   @Override
   public void saveBody(long publicationId, FullTextBody body, int parserVersion) {
-    entityManager
-        .createNativeQuery(
-            """
-            INSERT INTO cat_publication_fulltext_body (publication_id, body, parser_version)
-            VALUES (:id, CAST(:body AS jsonb), :version)
-            ON CONFLICT (publication_id) DO UPDATE
-               SET body = EXCLUDED.body, parser_version = EXCLUDED.parser_version, updated_at = now()
-            """)
-        .setParameter("id", publicationId)
-        .setParameter("body", jsonMapper.writeValueAsString(body))
-        .setParameter("version", parserVersion)
-        .executeUpdate();
+    dao.upsertBody(
+        SnowflakeIdGenerator.getId(),
+        publicationId,
+        jsonMapper.writeValueAsString(body),
+        parserVersion);
   }
 
   /// 更新 `has_full_text`；没有 metadata 行时什么也不做。
@@ -128,12 +140,6 @@ public class PublicationFullTextRepositoryAdapter implements PublicationFullText
   /// @param value 是否有全文
   @Override
   public void setHasFullText(long publicationId, boolean value) {
-    entityManager
-        .createQuery(
-            "UPDATE PublicationMetadataEntity m SET m.hasFullText = :value"
-                + " WHERE m.publicationId = :id")
-        .setParameter("value", value)
-        .setParameter("id", publicationId)
-        .executeUpdate();
+    dao.updateHasFullText(publicationId, value);
   }
 }

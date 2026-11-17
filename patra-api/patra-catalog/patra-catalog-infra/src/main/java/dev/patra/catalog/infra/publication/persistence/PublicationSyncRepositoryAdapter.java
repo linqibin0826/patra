@@ -10,6 +10,7 @@ import dev.patra.catalog.infra.publication.persistence.dao.PublicationAbstractDa
 import dev.patra.catalog.infra.publication.persistence.dao.PublicationAlternativeAbstractDao;
 import dev.patra.catalog.infra.publication.persistence.dao.PublicationAuthorAffiliationDao;
 import dev.patra.catalog.infra.publication.persistence.dao.PublicationAuthorDao;
+import dev.patra.catalog.infra.publication.persistence.dao.PublicationDao;
 import dev.patra.catalog.infra.publication.persistence.dao.PublicationDateDao;
 import dev.patra.catalog.infra.publication.persistence.dao.PublicationFundingDao;
 import dev.patra.catalog.infra.publication.persistence.dao.PublicationIdentifierDao;
@@ -20,13 +21,13 @@ import dev.patra.catalog.infra.publication.persistence.dao.PublicationMeshQualif
 import dev.patra.catalog.infra.publication.persistence.dao.PublicationMetadataDao;
 import dev.patra.catalog.infra.publication.persistence.dao.PublicationPersonalNameSubjectDao;
 import dev.patra.catalog.infra.publication.persistence.dao.PublicationSupplMeshDao;
+import dev.patra.catalog.infra.publication.persistence.dao.PublicationSyncDao;
 import dev.patra.catalog.infra.publication.persistence.dao.PublicationTypeDao;
 import dev.patra.catalog.infra.publication.persistence.entity.PublicationEntity;
 import dev.patra.catalog.infra.publication.persistence.entity.PublicationMetadataEntity;
 import dev.patra.catalog.infra.publication.persistence.mapper.PublicationJpaMapper;
 import dev.patra.tool.jpa.id.SnowflakeIdGenerator;
 import jakarta.persistence.EntityManager;
-import jakarta.persistence.Query;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -38,21 +39,23 @@ import java.util.Map;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.AuditorAware;
 import org.springframework.stereotype.Repository;
 
 /// `PublicationSyncRepository` 的 JPA 实现（PubMed 增量同步覆盖更新）。
 ///
 /// 覆盖顺序（一个事务，由调用方的 chunk 事务承载）：
 ///
-/// 1. native 复活已软删除的行（JPQL 会被 `@SoftDelete` 过滤掉）；
+/// 1. 复活这批里已删除的行；
 /// 2. 按"先子后父"批量删 PubMed 管的子表，标识符只删 `source = 'PubMed'`；
 /// 3. 主表与 metadata 用**显式列名**的 JPQL 批量 UPDATE，只改 PubMed 管的列——
 ///    不用托管实体改字段，否则 Hibernate 按载入时的值写回整行，会覆盖并发运行的
 ///    抓取 / 解析任务在这期间写入的 `is_oa`、`has_full_text`；
 /// 4. `clear` 后复用 `PublicationRepositoryAdapter#writeImportOwnedAssociations` 重建子表。
 ///
+/// 批量语句都在 [PublicationSyncDao] 上；写主表时带操作人，同步由定时任务触发，操作人为空。
 /// `IN` 参数按 5000 一批分片（PostgreSQL 绑定参数上限 65535）。标为 `@Repository` 以启用持久化异常转换：
-/// 直接经 `EntityManager` 执行的语句撞唯一约束时转成 `DataIntegrityViolationException`，作业的跳过策略才认得。
+/// `flush` 撞唯一约束时转成 `DataIntegrityViolationException`，作业的跳过策略才认得。
 ///
 /// @author linqibin
 /// @since 0.11.0
@@ -66,6 +69,9 @@ public class PublicationSyncRepositoryAdapter implements PublicationSyncReposito
   private static final String PUBMED_SOURCE = "PubMed";
 
   private final EntityManager entityManager;
+  private final PublicationDao publicationDao;
+  private final PublicationSyncDao syncDao;
+  private final AuditorAware<Long> auditor;
   private final PublicationJpaMapper jpaConverter;
   private final PublicationRepositoryAdapter publicationRepositoryAdapter;
   private final PublicationMetadataDao metadataDao;
@@ -84,16 +90,9 @@ public class PublicationSyncRepositoryAdapter implements PublicationSyncReposito
   private final PublicationAuthorDao authorDao;
   private final PublicationIdentifierDao identifierDao;
 
-  /// 同步目标查询：由请求的 PMID（`:pmids`，`text[]`）驱动，分别左连文献表与来源表，两边都走 PMID 索引；
-  /// 两边都没有的 PMID 不返回。
-  static final String SYNC_TARGETS_SQL =
-      "SELECT p.id, k.pmid, p.doi, COALESCE(p.deleted_at IS NOT NULL, false), s.source_rank"
-          + " FROM unnest(CAST(:pmids AS text[])) AS k(pmid)"
-          + " LEFT JOIN cat_publication p ON p.pmid = k.pmid"
-          + " LEFT JOIN cat_publication_source s ON s.pmid = k.pmid"
-          + " WHERE p.id IS NOT NULL OR s.pmid IS NOT NULL";
-
-  /// 按 PMID 查同步目标：文献行（含已软删）与来源位置，两边任一有就返回（墓碑只有来源行）。
+  /// 按 PMID 查同步目标：文献行（含已删除）与来源位置，两边任一有就返回（墓碑只有来源行）。
+  ///
+  /// 墓碑：只被删除列表记过、没写过原文的来源行（只有来源位置），用来挡住比删除更早的旧文件把这篇再导回来。
   ///
   /// @param pmids PMID
   /// @return PMID → 同步目标
@@ -101,13 +100,7 @@ public class PublicationSyncRepositoryAdapter implements PublicationSyncReposito
   public Map<String, PublicationSyncTarget> findSyncTargetsByPmids(Collection<String> pmids) {
     Map<String, PublicationSyncTarget> result = new HashMap<>();
     for (List<String> batch : partition(pmids)) {
-      List<?> rows =
-          entityManager
-              .createNativeQuery(SYNC_TARGETS_SQL)
-              .setParameter("pmids", batch.toArray(String[]::new))
-              .getResultList();
-      for (Object row : rows) {
-        Object[] cols = (Object[]) row;
+      for (Object[] cols : syncDao.findSyncTargets(batch.toArray(String[]::new))) {
         String pmid = (String) cols[1];
         result.put(
             pmid,
@@ -123,7 +116,7 @@ public class PublicationSyncRepositoryAdapter implements PublicationSyncReposito
     return result;
   }
 
-  /// 按 DOI 原值精确查文献 ID，包含已软删除的行。
+  /// 按 DOI 原值精确查文献 ID，包含已删除的行。
   ///
   /// @param dois DOI
   /// @return DOI 原值 → 文献 ID
@@ -131,13 +124,7 @@ public class PublicationSyncRepositoryAdapter implements PublicationSyncReposito
   public Map<String, Long> findPublicationIdsByDois(Collection<String> dois) {
     Map<String, Long> result = new HashMap<>();
     for (List<String> batch : partition(dois)) {
-      List<?> rows =
-          entityManager
-              .createNativeQuery("SELECT doi, id FROM cat_publication WHERE doi IN (:dois)")
-              .setParameter("dois", batch)
-              .getResultList();
-      for (Object row : rows) {
-        Object[] cols = (Object[]) row;
+      for (Object[] cols : syncDao.findIdsByDois(batch)) {
         result.put((String) cols[0], ((Number) cols[1]).longValue());
       }
     }
@@ -164,12 +151,16 @@ public class PublicationSyncRepositoryAdapter implements PublicationSyncReposito
       throw new IllegalArgumentException("覆盖更新的文献必须已分配 ID");
     }
 
+    Long actorId = auditor.getCurrentAuditor().orElse(null);
     entityManager.flush();
-    reviveSoftDeleted(ids);
+    reviveDeleted(ids, actorId);
     deleteImportOwnedChildren(ids);
     for (PublicationCompleteData item : data) {
       updatePublicationColumns(
-          item, doiOverrides, refreshSyncedAt.contains(item.getPublicationId()) ? syncedAt : null);
+          item,
+          doiOverrides,
+          refreshSyncedAt.contains(item.getPublicationId()) ? syncedAt : null,
+          actorId);
       updateMetadataColumns(item);
     }
     entityManager.flush();
@@ -185,20 +176,13 @@ public class PublicationSyncRepositoryAdapter implements PublicationSyncReposito
   @Override
   public void upsertSources(List<PublicationSourceRow> rows) {
     for (PublicationSourceRow row : rows) {
-      entityManager
-          .createNativeQuery(
-              "INSERT INTO cat_publication_source"
-                  + " (pmid, source_file, source_rank, raw_xml, parsed_at)"
-                  + " VALUES (:pmid, :file, :rank, :raw, :parsedAt)"
-                  + " ON CONFLICT (pmid) DO UPDATE SET source_file = EXCLUDED.source_file,"
-                  + " source_rank = EXCLUDED.source_rank, raw_xml = EXCLUDED.raw_xml,"
-                  + " parsed_at = EXCLUDED.parsed_at")
-          .setParameter("pmid", row.pmid())
-          .setParameter("file", row.sourceFile())
-          .setParameter("rank", row.sourceRank())
-          .setParameter("raw", row.rawXml())
-          .setParameter("parsedAt", row.parsedAt() == null ? null : Timestamp.from(row.parsedAt()))
-          .executeUpdate();
+      publicationDao.upsertSource(
+          SnowflakeIdGenerator.getId(),
+          row.pmid(),
+          row.sourceFile(),
+          row.sourceRank(),
+          row.rawXml(),
+          row.parsedAt() == null ? null : Timestamp.from(row.parsedAt()));
     }
   }
 
@@ -215,62 +199,33 @@ public class PublicationSyncRepositoryAdapter implements PublicationSyncReposito
       SourcePosition position,
       boolean writeTombstones,
       Instant deletedAt) {
+    Long actorId = auditor.getCurrentAuditor().orElse(null);
     int total = 0;
     // 删除列表可能重复同一 PMID：同一条 upsert 不能两次命中同一行
     for (List<String> batch : partition(new LinkedHashSet<>(pmids))) {
       total +=
-          entityManager
-              .createNativeQuery(
-                  "UPDATE cat_publication p SET deleted_at = :deletedAt"
-                      + " WHERE p.pmid IN (:pmids) AND p.deleted_at IS NULL"
-                      + " AND NOT EXISTS (SELECT 1 FROM cat_publication_source s"
-                      + " WHERE s.pmid = p.pmid AND s.source_rank > :rank)")
-              .setParameter("deletedAt", Timestamp.from(deletedAt))
-              .setParameter("pmids", batch)
-              .setParameter("rank", position.rank())
-              .executeUpdate();
-      String candidates =
-          writeTombstones
-              ? "SELECT x FROM unnest(CAST(:pmids AS text[])) AS x"
-              : "SELECT p.pmid FROM cat_publication p WHERE p.pmid = ANY(CAST(:pmids AS text[]))";
-      entityManager
-          .createNativeQuery(
-              "INSERT INTO cat_publication_source (pmid, source_file, source_rank)"
-                  + " SELECT c.pmid, :file, :rank FROM ("
-                  + candidates
-                  + ") AS c(pmid)"
-                  + " ON CONFLICT (pmid) DO UPDATE SET source_file = EXCLUDED.source_file,"
-                  + " source_rank = EXCLUDED.source_rank"
-                  + " WHERE cat_publication_source.source_rank <= EXCLUDED.source_rank")
-          .setParameter("pmids", batch.toArray(String[]::new))
-          .setParameter("file", position.fileName())
-          .setParameter("rank", position.rank())
-          .executeUpdate();
+          syncDao.markDeletedByPmids(batch, position.rank(), Timestamp.from(deletedAt), actorId);
+      // 墓碑候选：要写墓碑时是整个删除列表，否则只取库里已有的 PMID；新行各带一个雪花 ID
+      List<String> candidates =
+          writeTombstones ? batch : publicationDao.findExistingPmids(batch.toArray(String[]::new));
+      if (!candidates.isEmpty()) {
+        Long[] ids =
+            candidates.stream().map(pmid -> SnowflakeIdGenerator.getId()).toArray(Long[]::new);
+        publicationDao.upsertTombstones(
+            ids, candidates.toArray(String[]::new), position.fileName(), position.rank());
+      }
     }
     return total;
   }
 
-  /// 本地重算的候选：有原文、文献未软删的来源行，按 PMID 升序键集分页（PMID 按文本比较，只求稳定不求数值序）。
+  /// 本地重算的候选：有原文、文献未删除的来源行，按 PMID 升序键集分页（PMID 按文本比较，只求稳定不求数值序）。
   ///
   /// @param afterPmid 上一页最后一个 PMID；第一页为 null
   /// @param limit 每页条数
   /// @return 原文与来源位置
   @Override
   public List<PubmedSourceRecord> findReparseCandidates(String afterPmid, int limit) {
-    List<?> rows =
-        entityManager
-            .createNativeQuery(
-                "SELECT s.pmid, s.raw_xml, s.source_file, s.source_rank"
-                    + " FROM cat_publication_source s"
-                    + " JOIN cat_publication p ON p.pmid = s.pmid"
-                    + " WHERE s.raw_xml IS NOT NULL AND p.deleted_at IS NULL"
-                    + " AND (CAST(:after AS text) IS NULL OR s.pmid > CAST(:after AS text))"
-                    + " ORDER BY s.pmid LIMIT :limit")
-            .setParameter("after", afterPmid)
-            .setParameter("limit", limit)
-            .getResultList();
-    return rows.stream()
-        .map(Object[].class::cast)
+    return syncDao.findReparseCandidates(afterPmid, limit).stream()
         .map(
             cols ->
                 PubmedSourceRecord.of(
@@ -280,15 +235,10 @@ public class PublicationSyncRepositoryAdapter implements PublicationSyncReposito
         .toList();
   }
 
-  /// 复活已软删除的行。
-  private void reviveSoftDeleted(List<Long> ids) {
+  /// 复活这批里已删除的行。
+  private void reviveDeleted(List<Long> ids, Long actorId) {
     for (List<Long> batch : partition(ids)) {
-      entityManager
-          .createNativeQuery(
-              "UPDATE cat_publication SET deleted_at = NULL"
-                  + " WHERE id IN (:ids) AND deleted_at IS NOT NULL")
-          .setParameter("ids", batch)
-          .executeUpdate();
+      syncDao.revive(batch, actorId);
     }
   }
 
@@ -316,54 +266,14 @@ public class PublicationSyncRepositoryAdapter implements PublicationSyncReposito
   ///
   /// 列值取自与插入路径相同的 `toEntity` 转换，保证两条路径写出的值一致。
   private void updatePublicationColumns(
-      PublicationCompleteData item, Map<Long, String> doiOverrides, Instant syncedAt) {
-    // syncedAt 为 null 时保留原 last_synced_at（重处理、回填不刷新）
+      PublicationCompleteData item,
+      Map<Long, String> doiOverrides,
+      Instant syncedAt,
+      Long actorId) {
     long id = item.getPublicationId();
-    PublicationEntity e = jpaConverter.toEntity(item.publication());
-    String doi = doiOverrides.containsKey(id) ? doiOverrides.get(id) : e.getDoi();
-    Query query =
-        entityManager
-            .createQuery(
-                "UPDATE PublicationEntity p SET"
-                    + " p.provenanceCode = :provenanceCode, p.doi = :doi, p.title = :title,"
-                    + " p.originalTitle = :originalTitle, p.languageRaw = :languageRaw,"
-                    + " p.languageCode = :languageCode, p.publicationStatus = :publicationStatus,"
-                    + " p.mediaType = :mediaType, p.publicationYear = :publicationYear,"
-                    + " p.publicationMonth = :publicationMonth, p.publicationDay = :publicationDay,"
-                    + " p.medlinePgn = :medlinePgn, p.startPage = :startPage, p.endPage = :endPage,"
-                    + " p.journalIsoAbbreviation = :journalIsoAbbreviation,"
-                    + " p.authorsComplete = :authorsComplete,"
-                    + " p.numberOfReferences = :numberOfReferences,"
-                    + " p.conflictOfInterest = :conflictOfInterest, p.venueId = :venueId,"
-                    + " p.venueInstanceId = :venueInstanceId,"
-                    + (syncedAt != null ? " p.lastSyncedAt = :syncedAt," : "")
-                    + " p.version = p.version + 1"
-                    + " WHERE p.id = :id")
-            .setParameter("provenanceCode", e.getProvenanceCode())
-            .setParameter("doi", doi)
-            .setParameter("title", e.getTitle())
-            .setParameter("originalTitle", e.getOriginalTitle())
-            .setParameter("languageRaw", e.getLanguageRaw())
-            .setParameter("languageCode", e.getLanguageCode())
-            .setParameter("publicationStatus", e.getPublicationStatus())
-            .setParameter("mediaType", e.getMediaType())
-            .setParameter("publicationYear", e.getPublicationYear())
-            .setParameter("publicationMonth", e.getPublicationMonth())
-            .setParameter("publicationDay", e.getPublicationDay())
-            .setParameter("medlinePgn", e.getMedlinePgn())
-            .setParameter("startPage", e.getStartPage())
-            .setParameter("endPage", e.getEndPage())
-            .setParameter("journalIsoAbbreviation", e.getJournalIsoAbbreviation())
-            .setParameter("authorsComplete", e.getAuthorsComplete())
-            .setParameter("numberOfReferences", e.getNumberOfReferences())
-            .setParameter("conflictOfInterest", e.getConflictOfInterest())
-            .setParameter("venueId", e.getVenueId())
-            .setParameter("venueInstanceId", e.getVenueInstanceId())
-            .setParameter("id", id);
-    if (syncedAt != null) {
-      query.setParameter("syncedAt", syncedAt);
-    }
-    query.executeUpdate();
+    PublicationEntity row = jpaConverter.toEntity(item.publication());
+    String doi = doiOverrides.containsKey(id) ? doiOverrides.get(id) : row.getDoi();
+    syncDao.updateImportColumns(id, row, doi, syncedAt, actorId);
   }
 
   /// metadata 只改七个 PubMed 列，`has_full_text`、`full_text_url` 等保留；没有 metadata 行时新建。
@@ -373,24 +283,7 @@ public class PublicationSyncRepositoryAdapter implements PublicationSyncReposito
     }
     long id = item.getPublicationId();
     PublicationMetadataEntity m = jpaConverter.toMetadataEntity(item.metadata(), id);
-    int updated =
-        entityManager
-            .createQuery(
-                "UPDATE PublicationMetadataEntity m SET"
-                    + " m.indexingStatus = :indexingStatus, m.indexingMethod = :indexingMethod,"
-                    + " m.owner = :owner, m.citationSubset = :citationSubset,"
-                    + " m.dataSource = :dataSource, m.importBatch = :importBatch,"
-                    + " m.importDate = :importDate"
-                    + " WHERE m.publicationId = :id")
-            .setParameter("indexingStatus", m.getIndexingStatus())
-            .setParameter("indexingMethod", m.getIndexingMethod())
-            .setParameter("owner", m.getOwner())
-            .setParameter("citationSubset", m.getCitationSubset())
-            .setParameter("dataSource", m.getDataSource())
-            .setParameter("importBatch", m.getImportBatch())
-            .setParameter("importDate", m.getImportDate())
-            .setParameter("id", id)
-            .executeUpdate();
+    int updated = syncDao.updateMetadataImportColumns(m);
     if (updated == 0) {
       m.setId(SnowflakeIdGenerator.getId());
       metadataDao.save(m);

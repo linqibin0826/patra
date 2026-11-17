@@ -84,6 +84,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.AuditorAware;
 import org.springframework.stereotype.Repository;
 
 /// 文献聚合根仓储实现（JPA 版本）。
@@ -152,13 +153,17 @@ public class PublicationRepositoryAdapter implements PublicationRepository {
   private final PublicationAuthorDao publicationAuthorDao;
   private final PublicationAuthorAffiliationDao publicationAuthorAffiliationDao;
   private final AuthorOrcidReadPort authorOrcidReadPort;
+  private final AuditorAware<Long> auditor;
 
   @Override
   public Optional<PublicationAggregate> findById(Long id) {
     if (id == null) {
       return Optional.empty();
     }
-    return jpaRepository.findById(id).map(jpaConverter::toAggregate).map(this::loadAuthors);
+    return jpaRepository
+        .findByIdAndDeletedAtIsNull(id)
+        .map(jpaConverter::toAggregate)
+        .map(this::loadAuthors);
   }
 
   @Override
@@ -166,7 +171,10 @@ public class PublicationRepositoryAdapter implements PublicationRepository {
     if (pmid == null || pmid.isBlank()) {
       return Optional.empty();
     }
-    return jpaRepository.findByPmid(pmid).map(jpaConverter::toAggregate).map(this::loadAuthors);
+    return jpaRepository
+        .findByPmidAndDeletedAtIsNull(pmid)
+        .map(jpaConverter::toAggregate)
+        .map(this::loadAuthors);
   }
 
   /// 恢复聚合根的作者快照（含机构，按顺序还原）。
@@ -187,8 +195,9 @@ public class PublicationRepositoryAdapter implements PublicationRepository {
 
     List<Long> pubAuthorIds = authorEntities.stream().map(PublicationAuthorEntity::getId).toList();
     Map<Long, List<PublicationAuthorAffiliationEntity>> affiliationsByPubAuthorId =
-        publicationAuthorAffiliationDao.findAllByPubAuthorIdIn(pubAuthorIds).stream()
-            .collect(Collectors.groupingBy(PublicationAuthorAffiliationEntity::getPubAuthorId));
+        publicationAuthorAffiliationDao.findAllByPublicationAuthorIdIn(pubAuthorIds).stream()
+            .collect(
+                Collectors.groupingBy(PublicationAuthorAffiliationEntity::getPublicationAuthorId));
 
     aggregate.attachAuthors(
         authorEntities.stream()
@@ -205,7 +214,10 @@ public class PublicationRepositoryAdapter implements PublicationRepository {
     if (doi == null || doi.isBlank()) {
       return Optional.empty();
     }
-    return jpaRepository.findByDoi(doi).map(jpaConverter::toAggregate).map(this::loadAuthors);
+    return jpaRepository
+        .findByDoiAndDeletedAtIsNull(doi)
+        .map(jpaConverter::toAggregate)
+        .map(this::loadAuthors);
   }
 
   @Override
@@ -224,7 +236,7 @@ public class PublicationRepositoryAdapter implements PublicationRepository {
     if (pmid == null || pmid.isBlank()) {
       return false;
     }
-    return jpaRepository.existsByPmid(pmid);
+    return jpaRepository.existsByPmidAndDeletedAtIsNull(pmid);
   }
 
   @Override
@@ -232,7 +244,7 @@ public class PublicationRepositoryAdapter implements PublicationRepository {
     if (doi == null || doi.isBlank()) {
       return false;
     }
-    return jpaRepository.existsByDoi(doi);
+    return jpaRepository.existsByDoiAndDeletedAtIsNull(doi);
   }
 
   @Override
@@ -279,7 +291,7 @@ public class PublicationRepositoryAdapter implements PublicationRepository {
     if (venueInstanceId == null) {
       return List.of();
     }
-    return jpaRepository.findByVenueInstanceId(venueInstanceId).stream()
+    return jpaRepository.findByVenueInstanceIdAndDeletedAtIsNull(venueInstanceId).stream()
         .map(jpaConverter::toAggregate)
         .map(this::loadAuthors)
         .toList();
@@ -290,7 +302,7 @@ public class PublicationRepositoryAdapter implements PublicationRepository {
     if (venueId == null) {
       return List.of();
     }
-    return jpaRepository.findByVenueId(venueId).stream()
+    return jpaRepository.findByVenueIdAndDeletedAtIsNull(venueId).stream()
         .map(jpaConverter::toAggregate)
         .map(this::loadAuthors)
         .toList();
@@ -301,7 +313,7 @@ public class PublicationRepositoryAdapter implements PublicationRepository {
     if (venueId == null) {
       return 0;
     }
-    return jpaRepository.countByVenueId(venueId);
+    return jpaRepository.countByVenueIdAndDeletedAtIsNull(venueId);
   }
 
   @Override
@@ -321,8 +333,7 @@ public class PublicationRepositoryAdapter implements PublicationRepository {
       aggregate.assignId(PublicationId.of(saved.getId()));
     } else {
       // 更新：查找托管实体并原地更新
-      PublicationEntity managed =
-          entityManager.find(PublicationEntity.class, aggregate.getId().value());
+      PublicationEntity managed = findLiveEntity(aggregate.getId().value());
       if (managed == null) {
         throw new IllegalStateException("实体不存在：id=" + aggregate.getId());
       }
@@ -1044,7 +1055,7 @@ public class PublicationRepositoryAdapter implements PublicationRepository {
           affiliationRows.add(
               PublicationAuthorAffiliationEntity.builder()
                   .id(SnowflakeIdGenerator.getId())
-                  .pubAuthorId(authorEntity.getId())
+                  .publicationAuthorId(authorEntity.getId())
                   .publicationId(publicationId)
                   .affiliationOrder(affiliation.order())
                   .affiliationString(affiliation.affiliationString())
@@ -1089,8 +1100,7 @@ public class PublicationRepositoryAdapter implements PublicationRepository {
       if (aggregate.getId() == null) {
         throw new IllegalArgumentException("批量更新时聚合根 ID 不能为 null");
       }
-      PublicationEntity managed =
-          entityManager.find(PublicationEntity.class, aggregate.getId().value());
+      PublicationEntity managed = findLiveEntity(aggregate.getId().value());
       if (managed != null) {
         jpaConverter.updateEntity(managed, aggregate);
       }
@@ -1099,37 +1109,13 @@ public class PublicationRepositoryAdapter implements PublicationRepository {
     log.info("批量更新文献完成：{} 条", aggregates.size());
   }
 
-  @Override
-  public boolean deleteById(Long id) {
-    if (id == null) {
-      return false;
-    }
-    if (jpaRepository.existsById(id)) {
-      jpaRepository.deleteById(id);
-      log.debug("删除文献：id={}", id);
-      return true;
-    }
-    return false;
-  }
-
-  @Override
-  public int deleteByVenueInstanceId(Long venueInstanceId) {
-    if (venueInstanceId == null) {
-      return 0;
-    }
-    int deleted = jpaRepository.deleteByVenueInstanceId(venueInstanceId);
-    log.debug("根据 venueInstanceId={} 删除文献：{} 条", venueInstanceId, deleted);
-    return deleted;
-  }
-
-  @Override
-  public int deleteByVenueId(Long venueId) {
-    if (venueId == null) {
-      return 0;
-    }
-    int deleted = jpaRepository.deleteByVenueId(venueId);
-    log.debug("根据 venueId={} 删除文献：{} 条", venueId, deleted);
-    return deleted;
+  /// 按 ID 取托管实体，已删除的视为不存在。用 `find` 而不是查询：同一事务里刚读过的直接取一级缓存，不再发 SQL。
+  ///
+  /// @param id 文献 ID
+  /// @return 托管实体；不存在或已删除时为 null
+  private PublicationEntity findLiveEntity(Long id) {
+    PublicationEntity entity = entityManager.find(PublicationEntity.class, id);
+    return entity == null || entity.getDeletedAt() != null ? null : entity;
   }
 
   /// 为没有 ID 的实体分配雪花 ID。
@@ -1313,7 +1299,7 @@ public class PublicationRepositoryAdapter implements PublicationRepository {
     oaLocationDao.save(entity);
     entityManager.flush();
 
-    jpaRepository.markOpenAccess(publicationId);
+    jpaRepository.markOpenAccess(publicationId, auditor.getCurrentAuditor().orElse(null));
   }
 
   @Override

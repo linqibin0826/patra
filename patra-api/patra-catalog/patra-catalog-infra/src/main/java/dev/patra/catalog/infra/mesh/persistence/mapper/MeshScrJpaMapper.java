@@ -56,12 +56,8 @@ public abstract class MeshScrJpaMapper {
   @Mapping(target = "metadata", source = "metadataJson")
   // 审计字段由 JPA 管理
   @Mapping(target = "version", ignore = true)
-  @Mapping(target = "createdAt", ignore = true)
   @Mapping(target = "createdBy", ignore = true)
-  @Mapping(target = "createdByName", ignore = true)
-  @Mapping(target = "updatedAt", ignore = true)
   @Mapping(target = "updatedBy", ignore = true)
-  @Mapping(target = "updatedByName", ignore = true)
   @Mapping(target = "ipAddress", ignore = true)
   @Mapping(target = "recordRemarks", ignore = true)
   public abstract MeshScrEntity toEntity(MeshScrAggregate aggregate);

@@ -3,6 +3,7 @@ package dev.patra.analytics.infra.history.persistence;
 import dev.patra.analytics.domain.history.model.vo.ReadingKey;
 import dev.patra.analytics.domain.history.model.vo.ReadingRecord;
 import dev.patra.analytics.domain.history.port.repository.ReadingHistoryRepository;
+import dev.patra.tool.jpa.id.SnowflakeIdGenerator;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
@@ -18,7 +19,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
-/// `ReadingHistoryRepository` 的原生 SQL 实现（`history` schema）。写方法与限时要求调用方的事务。
+/// `ReadingHistoryRepository` 的原生 SQL 实现（阅读历史的三张 `anl_` 表）。写方法与限时要求调用方的事务。
 @Component
 @RequiredArgsConstructor
 public class ReadingHistoryRepositoryAdapter implements ReadingHistoryRepository {
@@ -46,21 +47,22 @@ public class ReadingHistoryRepositoryAdapter implements ReadingHistoryRepository
     Map<String, Object> params = new HashMap<>();
     for (int i = 0; i < merged.size(); i++) {
       ReadingRecord record = merged.get(i);
-      values.add("(:u" + i + ", :a" + i + ", :t" + i + ", :f" + i + ")");
+      values.add("(:id" + i + ", :u" + i + ", :a" + i + ", :t" + i + ", :f" + i + ")");
+      params.put("id" + i, SnowflakeIdGenerator.getId());
       params.put("u" + i, record.userId());
       params.put("a" + i, record.articleId());
       params.put("t" + i, utc(record.readAt()));
       params.put("f" + i, record.fulltext());
     }
     jdbc.sql(
-            "INSERT INTO history.reading_history (user_id, article_id, last_read_at, fulltext_read)"
+            "INSERT INTO anl_reading_history (id, user_id, publication_id, last_read_at, fulltext_read)"
                 + " VALUES "
                 + values
                 + """
-                 ON CONFLICT (user_id, article_id) DO UPDATE
-                   SET last_read_at = GREATEST(history.reading_history.last_read_at,
+                 ON CONFLICT (user_id, publication_id) DO UPDATE
+                   SET last_read_at = GREATEST(anl_reading_history.last_read_at,
                                                EXCLUDED.last_read_at),
-                       fulltext_read = history.reading_history.fulltext_read
+                       fulltext_read = anl_reading_history.fulltext_read
                                        OR EXCLUDED.fulltext_read
                 """)
         .params(params)
@@ -87,16 +89,16 @@ public class ReadingHistoryRepositoryAdapter implements ReadingHistoryRepository
     }
     Map<ReadingKey, Instant> deletions = new HashMap<>();
     jdbc.sql(
-            "SELECT user_id, article_id, deleted_at FROM history.deleted_entry"
-                + " WHERE (user_id, article_id) IN ("
+            "SELECT user_id, publication_id, removed_at FROM anl_reading_history_tombstone"
+                + " WHERE (user_id, publication_id) IN ("
                 + tuples
                 + ")")
         .params(params)
         .query(
             rs -> {
               deletions.put(
-                  ReadingKey.of(rs.getLong("user_id"), rs.getLong("article_id")),
-                  rs.getObject("deleted_at", OffsetDateTime.class).toInstant());
+                  ReadingKey.of(rs.getLong("user_id"), rs.getLong("publication_id")),
+                  rs.getObject("removed_at", OffsetDateTime.class).toInstant());
             });
     return Map.copyOf(deletions);
   }
@@ -110,17 +112,18 @@ public class ReadingHistoryRepositoryAdapter implements ReadingHistoryRepository
   @Transactional(propagation = Propagation.MANDATORY)
   public void deleteOne(long userId, long articleId, Instant deletedAt) {
     jdbc.sql(
-            "DELETE FROM history.reading_history WHERE user_id = :userId"
-                + " AND article_id = :articleId")
+            "DELETE FROM anl_reading_history WHERE user_id = :userId"
+                + " AND publication_id = :articleId")
         .param("userId", userId)
         .param("articleId", articleId)
         .update();
     jdbc.sql(
             """
-            INSERT INTO history.deleted_entry (user_id, article_id, deleted_at)
-            VALUES (:userId, :articleId, :at)
-            ON CONFLICT (user_id, article_id) DO UPDATE SET deleted_at = EXCLUDED.deleted_at
+            INSERT INTO anl_reading_history_tombstone (id, user_id, publication_id, removed_at)
+            VALUES (:id, :userId, :articleId, :at)
+            ON CONFLICT (user_id, publication_id) DO UPDATE SET removed_at = EXCLUDED.removed_at
             """)
+        .param("id", SnowflakeIdGenerator.getId())
         .param("userId", userId)
         .param("articleId", articleId)
         .param("at", utc(deletedAt))
@@ -133,15 +136,15 @@ public class ReadingHistoryRepositoryAdapter implements ReadingHistoryRepository
   @Override
   @Transactional(propagation = Propagation.MANDATORY)
   public void deleteAllOf(long userId) {
-    jdbc.sql("DELETE FROM history.reading_history WHERE user_id = :userId")
+    jdbc.sql("DELETE FROM anl_reading_history WHERE user_id = :userId")
         .param("userId", userId)
         .update();
-    jdbc.sql("DELETE FROM history.deleted_entry WHERE user_id = :userId")
+    jdbc.sql("DELETE FROM anl_reading_history_tombstone WHERE user_id = :userId")
         .param("userId", userId)
         .update();
   }
 
-  /// 按 `ctid` 删一批：走 `idx_reading_history_time` 找出最多 `limit` 行。
+  /// 按 `ctid` 删一批：走 `idx_anl_reading_history_time` 找出最多 `limit` 行。
   ///
   /// @param cutoff 过期线（不含）
   /// @param limit 这一批最多删的行数
@@ -150,15 +153,15 @@ public class ReadingHistoryRepositoryAdapter implements ReadingHistoryRepository
   public int purgeReadBefore(Instant cutoff, int limit) {
     return jdbc.sql(
             """
-            DELETE FROM history.reading_history WHERE ctid IN (
-              SELECT ctid FROM history.reading_history WHERE last_read_at < :cutoff LIMIT :limit)
+            DELETE FROM anl_reading_history WHERE ctid IN (
+              SELECT ctid FROM anl_reading_history WHERE last_read_at < :cutoff LIMIT :limit)
             """)
         .param("cutoff", utc(cutoff))
         .param("limit", limit)
         .update();
   }
 
-  /// 按 `ctid` 删一批：走 `idx_deleted_entry_time` 找出最多 `limit` 行。
+  /// 按 `ctid` 删一批：走 `idx_anl_reading_history_tombstone_time` 找出最多 `limit` 行。
   ///
   /// @param cutoff 过期线（不含）
   /// @param limit 这一批最多删的行数
@@ -167,8 +170,8 @@ public class ReadingHistoryRepositoryAdapter implements ReadingHistoryRepository
   public int purgeDeletionsBefore(Instant cutoff, int limit) {
     return jdbc.sql(
             """
-            DELETE FROM history.deleted_entry WHERE ctid IN (
-              SELECT ctid FROM history.deleted_entry WHERE deleted_at < :cutoff LIMIT :limit)
+            DELETE FROM anl_reading_history_tombstone WHERE ctid IN (
+              SELECT ctid FROM anl_reading_history_tombstone WHERE removed_at < :cutoff LIMIT :limit)
             """)
         .param("cutoff", utc(cutoff))
         .param("limit", limit)
@@ -185,13 +188,13 @@ public class ReadingHistoryRepositoryAdapter implements ReadingHistoryRepository
     return jdbc.sql(
             """
             SELECT user_id FROM (
-              (SELECT DISTINCT user_id FROM history.reading_history WHERE user_id > :after
+              (SELECT DISTINCT user_id FROM anl_reading_history WHERE user_id > :after
                 ORDER BY user_id LIMIT :limit)
               UNION
-              (SELECT user_id FROM history.recording_setting WHERE user_id > :after
+              (SELECT user_id FROM anl_recording_setting WHERE user_id > :after
                 ORDER BY user_id LIMIT :limit)
               UNION
-              (SELECT DISTINCT user_id FROM history.deleted_entry WHERE user_id > :after
+              (SELECT DISTINCT user_id FROM anl_reading_history_tombstone WHERE user_id > :after
                 ORDER BY user_id LIMIT :limit)
             ) u ORDER BY user_id LIMIT :limit
             """)
@@ -212,7 +215,7 @@ public class ReadingHistoryRepositoryAdapter implements ReadingHistoryRepository
     }
     List<Long> ids = new ArrayList<>(userIds);
     for (String table :
-        List.of("history.reading_history", "history.recording_setting", "history.deleted_entry")) {
+        List.of("anl_reading_history", "anl_recording_setting", "anl_reading_history_tombstone")) {
       jdbc.sql("DELETE FROM " + table + " WHERE user_id IN (:ids)").param("ids", ids).update();
     }
   }

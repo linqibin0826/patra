@@ -45,7 +45,6 @@ import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -206,8 +205,7 @@ class ReminderDeliveryAssemblerTest {
                 1, List.of(entry(1L, NotificationType.MENTION, 9L, false, 40L, "<@7> 看"))));
 
     Ready ready =
-        (Ready)
-            assembler.assemble(ReminderDelivery.digest(UUID.randomUUID(), ME, windowEnd, NOW), NOW);
+        (Ready) assembler.assemble(ReminderDelivery.digest(900013L, ME, windowEnd, NOW), NOW);
 
     assertThat(ready.content().layout()).isEqualTo(Layout.DIGEST);
     assertThat(ready.content().subject()).isEqualTo("每日汇总：1 条未读的 @（10 月 31 日）");
@@ -218,7 +216,7 @@ class ReminderDeliveryAssemblerTest {
   /// 汇总：没有设为每日汇总的类别了，跳过；窗口里没有未读，跳过。
   @Test
   void digest_without_categories_or_unread_skips() {
-    ReminderDelivery digest = ReminderDelivery.digest(UUID.randomUUID(), ME, NOW, NOW);
+    ReminderDelivery digest = ReminderDelivery.digest(900014L, ME, NOW, NOW);
     assertThat(assembler.assemble(digest, NOW)).isEqualTo(Skip.of(SkipReason.MODE));
 
     when(subscriptions.findSubscription(ME))
@@ -240,8 +238,7 @@ class ReminderDeliveryAssemblerTest {
   ///
   /// @return 结果
   private static ReminderDelivery instant() {
-    return ReminderDelivery.instant(
-        UUID.randomUUID(), ME, NotificationCategory.REPLY, List.of(1L, 2L), NOW);
+    return ReminderDelivery.instant(900015L, ME, NotificationCategory.REPLY, List.of(1L, 2L), NOW);
   }
 
   /// 信箱里的一条提醒。

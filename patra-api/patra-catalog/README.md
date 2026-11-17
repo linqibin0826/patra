@@ -85,7 +85,7 @@ patra-catalog 是 Patra 医学文献数据平台的目录管理微服务，负�
 7. **PubMed Venue 数据导入**
    - 数据来源：NLM LSIOU（List of Serials Indexed for Online Users），约 15,000 条 MEDLINE 索引期刊
    - 增量覆盖模式：NLM ID → ISSN-L → ISSN 三级降级匹配策略（NLM 与 ISSN-L 指向不同期刊时 NLM 胜出）
-   - NLM 身份：NLM ID 全局唯一（主 NLM 与副 NLM 都只属于一个期刊，V12 两条唯一约束）；期刊的主 NLM 第一次写入后不再改，之后匹配上的其他 NLM 是副 NLM；NLM 属于已软删期刊的记录跳过
+   - NLM 身份：NLM ID 全局唯一（主 NLM 与副 NLM 都只属于一个期刊，`cat_venue.nlm_id` 与 `cat_venue_identifier` 的 NLM 行各一条唯一索引）；期刊的主 NLM 第一次写入后不再改，之后匹配上的其他 NLM 是副 NLM；NLM 属于已软删期刊的记录跳过
    - 批内去重：NLM ID + ISSN-L 双维度防重复创建
    - 已删除 Serial 过滤：跳过 `deletedTimestamp` 非空的记录
    - **OpenAlex 富化**：通过 REST API 查询 OpenAlex Sources，按 ISSN-L 批量获取期刊引用指标（H 指数、i10 指数、两年平均被引）、年度发文统计及开放获取信息（OA 状态、DOAJ 收录、APC 定价）（`OpenAlexEnrichmentQueryPort` → `OpenAlexEnrichmentQueryAdapter`）
@@ -478,7 +478,6 @@ patra:
   - `cat_venue`：载体主表（含 image_object_key 封面对象存储键字段（LetPub 下载后上传到对象存储），4 个 JSON 嵌入式值对象：publication_profile、citation_metrics、open_access、affiliated_societies）
   - `cat_venue_identifier`：载体标识符表（ISSN/OpenAlex ID/NLM ID/DOAJ/JCR 等）
   - `cat_venue_publication_stats`：载体年度发文统计表（发表量/被引量/OA 发文量）
-  - `cat_venue_source_data`：载体数据源表（各数据源原始 JSON 和提取字段）
   - `cat_venue_jcr_rating`：JCR 期刊评级表（Impact Factor 年度趋势 + 最新年分区/排名/百分位详情，来源 LetPub）
   - `cat_venue_cas_rating`：CAS 中科院分区表（支持多版本：升级版/新锐版/基础版，来源 LetPub）
   - `cat_venue_cas_warning`：CAS 预警名单表（按发布年月 + 版本标签记录历史预警等级，来源 LetPub）
@@ -504,7 +503,7 @@ patra:
   - `cat_organization_location`：机构地理位置表（基于 GeoNames，含洲/国家/省/市/经纬度）
   - `cat_organization_alias`：Patra 自维护的机构别名（按 `ror_id` 关联，ROR 重导不影响；`alias_type` LABEL / ALIAS，`source` SEED / WIKIDATA；种子在 `R__cat_organization_alias_seed.sql`；一家机构只能有一条 zh LABEL，由局部唯一索引守住）
   - 2 码点的中文子串查询走 `lower()` 条件稳定顺序扫描：`%协和%` 凑不出三元组，预编译语句的通用计划会把 trigram 索引用成全索引扫描
-  - 建议接口的索引（`V9`，`pg_trgm`）：`cat_organization_name.name_value`、`cat_organization_alias.alias` 的 GIN trigram；MeSH 主题词名与入口词的局部 GIN trigram（谓词与建议查询的 WHERE 逐字相同）
+  - 建议接口的索引（`pg_trgm`）：`cat_organization_name.name_value`、`cat_organization_alias.alias` 的 GIN trigram；MeSH 主题词名与入口词的局部 GIN trigram（谓词与建议查询的 WHERE 逐字相同）
 
 - **Funding（资助）相关表**
   - `cat_publication_funding`：文献-资助关联表（含资助机构 ID、项目编号、原始数据字段、数据来源追踪）

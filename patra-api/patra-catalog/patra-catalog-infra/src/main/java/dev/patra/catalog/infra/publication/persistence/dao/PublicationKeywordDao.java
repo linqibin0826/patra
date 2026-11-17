@@ -33,7 +33,7 @@ public interface PublicationKeywordDao extends JpaRepository<PublicationKeywordE
   ///
   /// @param publicationIds 文献 ID
   /// @return 删除行数
-  @Modifying
+  @Modifying(flushAutomatically = true, clearAutomatically = true)
   @Query("DELETE FROM PublicationKeywordEntity e WHERE e.publicationId IN :publicationIds")
   int deleteByPublicationIdIn(@Param("publicationIds") Collection<Long> publicationIds);
 }

@@ -3,9 +3,7 @@ package dev.patra.catalog.infra.mesh.persistence.entity;
 import dev.patra.tool.jpa.entity.ValueObjectJpaEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.Index;
 import jakarta.persistence.Table;
-import jakarta.persistence.UniqueConstraint;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -22,28 +20,12 @@ import lombok.Setter;
 /// - `tree_level` 层级深度（1-15）
 /// - `is_primary` 是否主要位置
 ///
-/// **索引说明**：
-///
-/// - 唯一索引 `uk_tree_number_descriptor`: (tree_number, descriptor_ui) 支持 MeSH 2026 共享树形位置
-/// - 普通索引 `idx_descriptor_ui`: 支持查询某主题词的所有位置
-/// - 前缀索引 `idx_tree_prefix`: 支持层次查询（LIKE "D12.%"）
-///
 /// @author linqibin
 /// @since 0.1.0
 @Getter
 @Setter
 @Entity
-@Table(
-    name = "cat_mesh_tree_number",
-    uniqueConstraints = {
-      @UniqueConstraint(
-          name = "uk_tree_number_descriptor",
-          columnNames = {"tree_number", "descriptor_ui"})
-    },
-    indexes = {
-      @Index(name = "idx_descriptor_ui", columnList = "descriptor_ui"),
-      @Index(name = "idx_tree_level", columnList = "tree_level, descriptor_ui")
-    })
+@Table(name = "cat_mesh_tree_number")
 public class MeshTreeNumberEntity extends ValueObjectJpaEntity {
 
   /// 主题词 UI（关联：cat_mesh_descriptor.ui）

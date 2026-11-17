@@ -3,9 +3,7 @@ package dev.patra.catalog.infra.organization.persistence.entity;
 import dev.patra.tool.jpa.entity.ValueObjectJpaEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.Index;
 import jakarta.persistence.Table;
-import jakarta.persistence.UniqueConstraint;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -29,7 +27,7 @@ import lombok.experimental.SuperBuilder;
 /// **延迟关联设计**：
 ///
 /// - `related_ror_id`：始终存储，用于 ROR 数据导入时的关系建立
-/// - `related_org_id`：导入完成后批量填充，用于内部查询优化
+/// - `related_organization_id`：导入完成后批量填充，用于内部查询优化
 ///
 /// @author linqibin
 /// @since 0.1.0
@@ -39,23 +37,12 @@ import lombok.experimental.SuperBuilder;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(
-    name = "cat_organization_relation",
-    uniqueConstraints = {
-      @UniqueConstraint(
-          name = "uk_org_relation",
-          columnNames = {"org_id", "relation_type", "related_ror_id"})
-    },
-    indexes = {
-      @Index(name = "idx_org_rel_org_id", columnList = "org_id"),
-      @Index(name = "idx_org_rel_related_ror_id", columnList = "related_ror_id"),
-      @Index(name = "idx_org_rel_related_org_id", columnList = "related_org_id")
-    })
+@Table(name = "cat_organization_relation")
 public class OrganizationRelationEntity extends ValueObjectJpaEntity {
 
   /// 源机构 ID（逻辑外键）。
-  @Column(name = "org_id", nullable = false)
-  private Long orgId;
+  @Column(name = "organization_id", nullable = false)
+  private Long organizationId;
 
   /// 关系类型代码：PARENT/CHILD/RELATED/SUCCESSOR/PREDECESSOR。
   @Column(name = "relation_type", nullable = false, length = 20)
@@ -77,6 +64,6 @@ public class OrganizationRelationEntity extends ValueObjectJpaEntity {
   ///
   /// 在全量导入完成后，根据 `related_ror_id` 批量查找并填充。
   /// 可能为 null（如关联机构尚未导入）。
-  @Column(name = "related_org_id")
-  private Long relatedOrgId;
+  @Column(name = "related_organization_id")
+  private Long relatedOrganizationId;
 }

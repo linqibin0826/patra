@@ -51,12 +51,8 @@ public interface AuthorJpaMapper {
   @Mapping(target = "orcids", ignore = true) // 子实体单独处理
   @Mapping(target = "extData", ignore = true)
   @Mapping(target = "version", ignore = true) // 由 JPA @Version 自动管理
-  @Mapping(target = "createdAt", ignore = true)
   @Mapping(target = "createdBy", ignore = true)
-  @Mapping(target = "createdByName", ignore = true)
-  @Mapping(target = "updatedAt", ignore = true)
   @Mapping(target = "updatedBy", ignore = true)
-  @Mapping(target = "updatedByName", ignore = true)
   @Mapping(target = "ipAddress", ignore = true)
   @Mapping(target = "recordRemarks", ignore = true)
   AuthorEntity toEntity(AuthorAggregate aggregate);

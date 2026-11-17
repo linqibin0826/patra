@@ -63,7 +63,10 @@ class BatchFunderLookupAdapterTest {
     void should_delegate_to_caching_decorator() {
       // given - 预热缓存时加载的数据
       OrganizationExternalIdEntity entity =
-          OrganizationExternalIdEntity.builder().preferredValue(FUNDREF_ID).orgId(ORG_ID).build();
+          OrganizationExternalIdEntity.builder()
+              .preferredValue(FUNDREF_ID)
+              .organizationId(ORG_ID)
+              .build();
       when(externalIdDao.findAllByIdType("FUNDREF")).thenReturn(List.of(entity));
 
       // 重新创建 adapter 以加载新的缓存数据
@@ -82,7 +85,7 @@ class BatchFunderLookupAdapterTest {
       // given - 模拟数据库查询未找到
       when(externalIdDao.findByIdTypeAndPreferredValue(anyString(), anyString()))
           .thenReturn(Optional.empty());
-      when(organizationDao.findByRorId(anyString())).thenReturn(Optional.empty());
+      when(organizationDao.findByRorIdAndDeletedAtIsNull(anyString())).thenReturn(Optional.empty());
 
       // when
       Optional<Long> result = adapter.findByIdentifier("unknown");
@@ -100,14 +103,14 @@ class BatchFunderLookupAdapterTest {
     @DisplayName("应该委托给内部 CachingFunderLookupDecorator")
     void should_delegate_to_caching_decorator() {
       // given
-      when(organizationDao.findByDisplayName("NIH")).thenReturn(Optional.empty());
+      when(organizationDao.findByDisplayNameAndDeletedAtIsNull("NIH")).thenReturn(Optional.empty());
 
       // when
       Optional<Long> result = adapter.findByName("NIH");
 
       // then
       assertThat(result).isEmpty();
-      verify(organizationDao).findByDisplayName("NIH");
+      verify(organizationDao).findByDisplayNameAndDeletedAtIsNull("NIH");
     }
   }
 

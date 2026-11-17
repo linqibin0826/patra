@@ -1,5 +1,6 @@
 package dev.patra.tool.jpa.entity;
 
+import dev.patra.tool.jpa.audit.UpdatedByResetListener;
 import jakarta.persistence.Column;
 import jakarta.persistence.EntityListeners;
 import jakarta.persistence.Id;
@@ -7,7 +8,7 @@ import jakarta.persistence.MappedSuperclass;
 import jakarta.persistence.Version;
 import java.io.Serial;
 import java.io.Serializable;
-import java.time.Instant;
+import java.net.InetAddress;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -16,132 +17,64 @@ import lombok.experimental.SuperBuilder;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 import org.springframework.data.annotation.CreatedBy;
-import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedBy;
-import org.springframework.data.annotation.LastModifiedDate;
-import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
-/// JPA 实体基类，提供审计和乐观锁功能。
+/// 主表实体的基类：映射主表在业务列之外必备的列（库表规范第 3 节）。
 ///
-/// **功能特性**：
+/// 主表是有自己生命周期、会被按行修改、「谁改的」有意义的表；其他表用 `ValueObjectJpaEntity`。
 ///
-/// - **雪花 ID**：应用层预分配，避免数据库自增以优化批量插入性能
-/// - **审计字段**：自动填充 createdAt/createdBy/updatedAt/updatedBy
-/// - **乐观锁**：通过 `@Version` 防止并发更新冲突
+/// | 列 | 怎么来 |
+/// |---|---|
+/// | `id` | 应用预分配的雪花 ID（`SnowflakeIdGenerator.getId()`），不用数据库自增，批量插入才能攒批 |
+/// | `created_by` / `updated_by` | Spring Data 审计填当前操作人，系统写入为空（见 `UpdatedByResetListener`） |
+/// | `ip_address` | 发起请求的客户端 IP，存成 PostgreSQL 的 `INET` |
+/// | `record_remarks` | 给数据处理和人工核对写的备注 |
+/// | `version` | 乐观锁 |
 ///
-/// **软删除（可选）**：
-///
-/// 如需软删除功能，请继承 `SoftDeletableJpaEntity` 而非此类。
-///
-/// 使用示例：
-///
-/// ```java
-/// @Entity
-/// @Table(name = "cat_mesh_qualifier")
-/// public class MeshQualifierEntity extends BaseJpaEntity {
-///     @Column(name = "ui", nullable = false, unique = true)
-///     private String ui;
-///
-///     @Column(name = "name", nullable = false)
-///     private String name;
-/// }
-/// ```
-///
-/// @author linqibin
-/// @since 0.1.0
-/// @see SoftDeletableJpaEntity
+/// `created_at` / `updated_at` 不映射：它们由数据库触发器填（第 4 节），应用写了也会被忽略。查询要用时，实体自己加只读字段，
+/// 不用 `@Generated`（它会让批量插入退化成逐条执行）。
 @Data
 @SuperBuilder
 @NoArgsConstructor
 @AllArgsConstructor
 @EqualsAndHashCode
 @MappedSuperclass
-@EntityListeners(AuditingEntityListener.class)
+// 顺序不能换：先清空 updated_by，再由 Spring Data 审计按当前用户填；反过来会把刚填的操作人清掉。
+@EntityListeners({UpdatedByResetListener.class, AuditingEntityListener.class})
 public abstract class BaseJpaEntity implements Serializable, IdAwareEntity {
 
   @Serial private static final long serialVersionUID = 1L;
 
-  /// 默认排序：按最后更新时间降序，再按 ID 降序。
-  ///
-  /// 适用于大多数分页列表场景，确保最近更新的记录排在前面，
-  /// 同一时间更新的记录按 ID 降序保证稳定排序。
-  public static final Sort DEFAULT_SORT =
-      Sort.by(Sort.Order.desc("updatedAt"), Sort.Order.desc("id"));
-
-  /// 实体的主键 ID。
-  ///
-  /// 使用应用层预分配的雪花 ID（`SnowflakeIdGenerator.getId()`）。
-  /// 不使用 `@GeneratedValue`，因为数据库自增会破坏 JPA 批量插入优化。
+  /// 主键，应用预分配的雪花 ID。
   @Id
   @Column(name = "id")
   private Long id;
 
-  /// 用于存储备注或变更审计跟踪的 JSON 格式字符串。
-  ///
-  /// 此字段可用于记录与实体生命周期相关的重要事件或注释。
-  ///
-  /// **持久化类型**：通过 `@JdbcTypeCode(SqlTypes.JSON)` 让 Hibernate 7
-  /// 按方言映射 —— PostgreSQL → `JSONB`（Hibernate 7 PG dialect 自动映射 SqlTypes.JSON）。
-  /// Java 端保持 `String`，调用方负责传入合法 JSON（推荐 `null` 表示无备注，避免空串）。
-  @Column(name = "record_remarks")
-  @JdbcTypeCode(SqlTypes.JSON)
-  private String recordRemarks;
-
-  /// 实体创建时间戳。
-  ///
-  /// 此字段在插入时由 Spring Data JPA Auditing 自动填充。
-  @CreatedDate
-  @Column(name = "created_at", updatable = false)
-  private Instant createdAt;
-
-  /// 创建实体的用户 ID。
-  ///
-  /// 此字段在插入时由 Spring Data JPA Auditing 自动填充，
-  /// 需要配置 `AuditorAware` Bean 从安全上下文获取当前用户。
+  /// 创建这一行的用户 ID，系统写入为空。
   @CreatedBy
   @Column(name = "created_by", updatable = false)
   private Long createdBy;
 
-  /// 创建实体的用户名称。
-  ///
-  /// 此字段提供了创建者的反规范化、易读的名称，有助于显示目的并避免额外的查询。
-  /// 需要通过 `@PrePersist` 回调或自定义 Auditor 填充。
-  @Column(name = "created_by_name", updatable = false)
-  private String createdByName;
-
-  /// 实体最后更新时间戳。
-  ///
-  /// 此字段在插入和更新时由 Spring Data JPA Auditing 自动填充。
-  @LastModifiedDate
-  @Column(name = "updated_at")
-  private Instant updatedAt;
-
-  /// 最后更新实体的用户 ID。
-  ///
-  /// 此字段在插入和更新时由 Spring Data JPA Auditing 自动填充。
+  /// 最后修改这一行的用户 ID，系统写入为空。
   @LastModifiedBy
   @Column(name = "updated_by")
   private Long updatedBy;
 
-  /// 最后更新实体的用户名称。
-  ///
-  /// 此字段提供了最后修改者的反规范化、易读的名称。
-  /// 需要通过 `@PreUpdate` 回调或自定义 Auditor 填充。
-  @Column(name = "updated_by_name")
-  private String updatedByName;
+  /// 发起请求的客户端 IP。
+  @Column(name = "ip_address")
+  @JdbcTypeCode(SqlTypes.INET)
+  private InetAddress ipAddress;
 
-  /// 用于乐观锁的版本号。
+  /// 备注，JSON 字符串，给数据处理和人工核对用，只在库里直接写。
   ///
-  /// 此字段由 JPA 自动管理，防止并发更新冲突。
-  /// 初始值为 0，每次更新时自动递增。
+  /// 只读映射：仓储由聚合重建实体再合并保存时，重建出的实体不带备注，可写的话每次保存都会把库里的备注清空。
+  @Column(name = "record_remarks", insertable = false, updatable = false)
+  @JdbcTypeCode(SqlTypes.JSON)
+  private String recordRemarks;
+
+  /// 乐观锁版本号，新行为空，由 JPA 维护。
   @Version
   @Column(name = "version")
   private Long version;
-
-  /// 发起请求的客户端 IP 地址，以二进制格式存储。
-  ///
-  /// 将 IP 地址存储为字节数组，可以高效地存储 IPv4 和 IPv6 地址。
-  @Column(name = "ip_address")
-  private byte[] ipAddress;
 }

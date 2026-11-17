@@ -201,12 +201,13 @@ class SubjectGatewayImplTest {
   /// 改本地对象的状态与快照。
   @Test
   void should_update_local_subject() {
-    when(repository.updateLocal(SubjectType.POST, 7L, SubjectState.UNAVAILABLE, SNAPSHOT, NOW))
+    when(repository.updateLocal(SubjectType.POST, 7L, SubjectState.UNAVAILABLE, SNAPSHOT, NOW, 9L))
         .thenReturn(true);
 
-    gateway.updateLocal(SubjectType.POST, 7L, SubjectState.UNAVAILABLE, SNAPSHOT);
+    gateway.updateLocal(SubjectType.POST, 7L, SubjectState.UNAVAILABLE, SNAPSHOT, 9L);
 
-    verify(repository).updateLocal(SubjectType.POST, 7L, SubjectState.UNAVAILABLE, SNAPSHOT, NOW);
+    verify(repository)
+        .updateLocal(SubjectType.POST, 7L, SubjectState.UNAVAILABLE, SNAPSHOT, NOW, 9L);
   }
 
   /// 外部对象只能经来源登记，不能当本地对象用。
@@ -215,7 +216,9 @@ class SubjectGatewayImplTest {
     assertThatThrownBy(() -> gateway.registerLocal(PUB, 7L, SubjectOwner.of(9L, false), SNAPSHOT))
         .isInstanceOf(IllegalArgumentException.class);
     assertThatThrownBy(
-            () -> gateway.updateLocal(SubjectType.JOURNAL, 7L, SubjectState.UNAVAILABLE, SNAPSHOT))
+            () ->
+                gateway.updateLocal(
+                    SubjectType.JOURNAL, 7L, SubjectState.UNAVAILABLE, SNAPSHOT, 9L))
         .isInstanceOf(IllegalArgumentException.class);
     verifyNoInteractions(repository);
   }
@@ -230,9 +233,9 @@ class SubjectGatewayImplTest {
     assertThatThrownBy(() -> gateway.registerLocal(SubjectType.POST, 7L, null, SNAPSHOT))
         .isInstanceOf(NullPointerException.class);
     assertThatThrownBy(
-            () -> gateway.updateLocal(SubjectType.POST, 7L, SubjectState.UNAVAILABLE, null))
+            () -> gateway.updateLocal(SubjectType.POST, 7L, SubjectState.UNAVAILABLE, null, 9L))
         .isInstanceOf(NullPointerException.class);
-    assertThatThrownBy(() -> gateway.updateLocal(SubjectType.POST, 7L, null, SNAPSHOT))
+    assertThatThrownBy(() -> gateway.updateLocal(SubjectType.POST, 7L, null, SNAPSHOT, 9L))
         .isInstanceOf(NullPointerException.class);
     verifyNoInteractions(repository);
   }
@@ -240,11 +243,11 @@ class SubjectGatewayImplTest {
   /// 改一个没登记过的本地对象是程序错误。
   @Test
   void should_fail_when_updating_unregistered_local() {
-    when(repository.updateLocal(SubjectType.POST, 7L, SubjectState.UNAVAILABLE, SNAPSHOT, NOW))
+    when(repository.updateLocal(SubjectType.POST, 7L, SubjectState.UNAVAILABLE, SNAPSHOT, NOW, 9L))
         .thenReturn(false);
 
     assertThatThrownBy(
-            () -> gateway.updateLocal(SubjectType.POST, 7L, SubjectState.UNAVAILABLE, SNAPSHOT))
+            () -> gateway.updateLocal(SubjectType.POST, 7L, SubjectState.UNAVAILABLE, SNAPSHOT, 9L))
         .isInstanceOf(IllegalStateException.class);
   }
 

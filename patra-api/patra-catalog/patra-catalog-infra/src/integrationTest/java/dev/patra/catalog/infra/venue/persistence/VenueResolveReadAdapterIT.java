@@ -149,7 +149,7 @@ class VenueResolveReadAdapterIT {
     em.clear();
   }
 
-  /// 软删一个载体：实体走 Hibernate `@SoftDelete` 会被过滤，测试直接改列。
+  /// 软删一个载体：测试直接写库置 `deleted_at`，读端靠自己的 `deleted_at IS NULL` 条件排除。
   ///
   /// @param id 载体 ID
   private void softDelete(long id) {

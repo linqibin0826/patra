@@ -250,7 +250,9 @@ class SecurityMailFlowIT extends SecurityMailITSupport {
     publish(event, PasswordResetMailEvent.ROUTING_KEY);
 
     Map<String, Object> row = awaitDelivery(event.eventId());
-    assertThat(row).containsOnlyKeys("delivery_id", "template", "outcome", "recorded_at");
+    assertThat(row)
+        .containsOnlyKeys(
+            "id", "event_id", "template", "outcome", "recorded_at", "created_at", "updated_at");
     assertThat(row.values())
         .allSatisfy(
             value ->

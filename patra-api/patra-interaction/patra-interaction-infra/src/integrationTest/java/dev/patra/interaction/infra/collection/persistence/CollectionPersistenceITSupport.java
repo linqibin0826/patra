@@ -50,8 +50,8 @@ abstract class CollectionPersistenceITSupport {
   @BeforeEach
   void truncateCollectionTables() {
     jdbcTemplate.update(
-        "TRUNCATE collection.library_item, collection.collection, collection.collection_item,"
-            + " collection.subject_stats");
+        "TRUNCATE itr_library_item, itr_collection, itr_collection_item,"
+            + " itr_library_subject_stats");
   }
 
   /// 在事务里执行。
@@ -80,7 +80,7 @@ abstract class CollectionPersistenceITSupport {
 
   /// 表行数。
   ///
-  /// @param table 带 schema 的表名
+  /// @param table 表名（`itr_` 前缀）
   /// @return 行数
   protected long count(String table) {
     return jdbcTemplate.queryForObject("SELECT count(*) FROM " + table, Long.class);

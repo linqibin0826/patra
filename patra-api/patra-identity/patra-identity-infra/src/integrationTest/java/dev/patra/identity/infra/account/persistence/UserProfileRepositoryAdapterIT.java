@@ -27,6 +27,7 @@ import dev.patra.identity.infra.config.IdentityITPostgreSQLContainerInitializer;
 import dev.patra.identity.infra.session.persistence.mapper.UserLoginRecordJpaMapper;
 import dev.patra.tool.jpa.autoconfigure.JpaAuditingConfiguration;
 import dev.patra.tool.jpa.autoconfigure.PatraHibernatePropertiesCustomizer;
+import jakarta.persistence.EntityManager;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
@@ -66,6 +67,7 @@ class UserProfileRepositoryAdapterIT {
   @Autowired private UserRepositoryAdapter users;
   @Autowired private UserProfileRepositoryAdapter profiles;
   @Autowired private JdbcTemplate jdbcTemplate;
+  @Autowired private EntityManager entityManager;
 
   /// 资料保存在事务外调用时被拒绝（`MANDATORY`）。
   @Test
@@ -104,6 +106,30 @@ class UserProfileRepositoryAdapterIT {
         .get()
         .extracting(profile -> profile.getDisplayName().map(DisplayName::value))
         .isEqualTo(Optional.of("陈宇"));
+  }
+
+  /// 备注只在库里直接写；仓储由聚合重建实体再保存时不能把它清空（库表规范验证场景 4）。
+  @Test
+  void should_keep_record_remarks_when_nickname_changed() {
+    User user =
+        users.save(User.register(EmailAddress.of("remarks@example.com"), Username.of("u-remarks")));
+    UserProfile saved = profiles.save(UserProfile.create(user.getId()));
+    entityManager.flush();
+    jdbcTemplate.update(
+        "UPDATE idn_user_profile SET record_remarks = '{\"note\":\"人工核对\"}' WHERE user_id = ?",
+        user.getId());
+
+    saved.edit(ProfileContent.builder().displayName(new DisplayName("陈宇")).build());
+    profiles.save(saved);
+    entityManager.flush();
+
+    assertThat(
+            jdbcTemplate.queryForMap(
+                "SELECT display_name, record_remarks ->> 'note' AS note FROM idn_user_profile"
+                    + " WHERE user_id = ?",
+                user.getId()))
+        .containsEntry("display_name", "陈宇")
+        .containsEntry("note", "人工核对");
   }
 
   @Test

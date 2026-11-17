@@ -109,10 +109,10 @@ public final class SmtpMailDeliveryAdapter implements MailDeliveryPort {
     for (Map.Entry<String, String> header : mail.headers().entrySet()) {
       message.setHeader(header.getKey(), header.getValue());
     }
-    message.setHeader(IDEMPOTENCY_KEY_HEADER, mail.deliveryId().toString());
+    message.setHeader(IDEMPOTENCY_KEY_HEADER, mail.idempotencyKey());
     message.setHeader("Auto-Submitted", "auto-generated");
     message.setHeader("X-Auto-Response-Suppress", "All");
-    message.setHeader("Message-ID", "<" + mail.deliveryId() + "@" + messageIdDomain + ">");
+    message.setHeader("Message-ID", "<" + mail.idempotencyKey() + "@" + messageIdDomain + ">");
     return message;
   }
 

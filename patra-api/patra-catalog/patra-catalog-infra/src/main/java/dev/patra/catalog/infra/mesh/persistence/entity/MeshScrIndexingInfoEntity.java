@@ -3,7 +3,6 @@ package dev.patra.catalog.infra.mesh.persistence.entity;
 import dev.patra.tool.jpa.entity.ValueObjectJpaEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.Index;
 import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
@@ -21,18 +20,12 @@ import lombok.Setter;
 /// - `qualifier_ui` 引用的限定词 UI（可选）
 /// - `chemical_ui` 引用的化学物质 UI（可选，指向其他 SCR 的 UI）
 ///
-/// **索引说明**：
-///
-/// - 普通索引 `idx_scr_ui`: 支持查询某 SCR 的索引信息
-///
 /// @author linqibin
 /// @since 0.1.0
 @Getter
 @Setter
 @Entity
-@Table(
-    name = "cat_mesh_scr_indexing_info",
-    indexes = {@Index(name = "idx_scr_ui", columnList = "scr_ui")})
+@Table(name = "cat_mesh_scr_indexing_info")
 public class MeshScrIndexingInfoEntity extends ValueObjectJpaEntity {
 
   /// SCR UI（关联：cat_mesh_scr.ui，格式：C000001）

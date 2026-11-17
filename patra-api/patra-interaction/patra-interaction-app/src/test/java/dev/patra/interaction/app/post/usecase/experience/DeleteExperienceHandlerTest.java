@@ -61,10 +61,10 @@ class DeleteExperienceHandlerTest {
         .thenReturn(Map.of("500", POST_SUBJECT));
     when(subjects.findByIds(List.of(POST_SUBJECT)))
         .thenReturn(Map.of(POST_SUBJECT, postView(U, true)));
-    doAnswer(invocation -> events.add("delete")).when(posts).markDeleted(any(), any());
+    doAnswer(invocation -> events.add("delete")).when(posts).markDeleted(any(), any(), any());
     doAnswer(invocation -> events.add("unavailable"))
         .when(gateway)
-        .updateLocal(any(), anyLong(), any(), any());
+        .updateLocal(any(), anyLong(), any(), any(), any());
     doAnswer(invocation -> events.add("publish")).when(publisher).publishEvent(any(Object.class));
     handler =
         new DeleteExperienceHandler(
@@ -92,13 +92,14 @@ class DeleteExperienceHandlerTest {
             "publish",
             RecordingTransactions.END);
     verify(posts).lockAuthor(U);
-    verify(posts).markDeleted(POST_ID, NOW);
+    verify(posts).markDeleted(POST_ID, NOW, U);
     verify(gateway)
         .updateLocal(
             SubjectType.POST,
             POST_ID.value(),
             SubjectState.UNAVAILABLE,
-            SubjectSnapshot.of(null, "Journal of X", "2026-03", "J X"));
+            SubjectSnapshot.of(null, "Journal of X", "2026-03", "J X"),
+            U);
   }
 
   /// 登记快照在作者锁之后读：读快照与拿锁之间若有一次改月份的编辑提交，不会把旧月份写回登记表。
@@ -150,8 +151,8 @@ class DeleteExperienceHandlerTest {
 
     handler.handle(DeleteExperienceCommand.of(POST_ID.value()));
 
-    verify(posts, never()).markDeleted(any(), any());
-    verify(gateway, never()).updateLocal(any(), anyLong(), any(), any());
+    verify(posts, never()).markDeleted(any(), any(), any());
+    verify(gateway, never()).updateLocal(any(), anyLong(), any(), any(), any());
     verifyNoInteractions(publisher);
   }
 
@@ -165,7 +166,7 @@ class DeleteExperienceHandlerTest {
 
     handler.handle(DeleteExperienceCommand.of(POST_ID.value()));
 
-    verify(posts, never()).markDeleted(any(), any());
+    verify(posts, never()).markDeleted(any(), any(), any());
     verifyNoInteractions(publisher);
   }
 
@@ -186,7 +187,7 @@ class DeleteExperienceHandlerTest {
 
     assertThatThrownBy(() -> handler.handle(DeleteExperienceCommand.of(POST_ID.value())))
         .isInstanceOf(PostForbiddenException.class);
-    verify(posts, never()).markDeleted(any(), any());
+    verify(posts, never()).markDeleted(any(), any(), any());
     verifyNoInteractions(publisher);
   }
 

@@ -2,6 +2,7 @@ package dev.patra.analytics.infra.insight.persistence;
 
 import dev.patra.analytics.domain.insight.model.vo.CoReadingEntry;
 import dev.patra.analytics.domain.insight.port.repository.CoReadingSnapshotRepository;
+import dev.patra.tool.jpa.id.SnowflakeIdGenerator;
 import java.time.Instant;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -24,7 +25,7 @@ public class CoReadingSnapshotRepositoryAdapter implements CoReadingSnapshotRepo
   @Override
   @Transactional(propagation = Propagation.MANDATORY)
   public void replace(List<CoReadingEntry> entries, Instant computedAt) {
-    jdbc.sql("DELETE FROM insight.co_reading").update();
+    jdbc.sql("DELETE FROM anl_co_reading").update();
     for (int from = 0; from < entries.size(); from += SnapshotRuns.CHUNK) {
       insert(entries.subList(from, Math.min(from + SnapshotRuns.CHUNK, entries.size())));
     }
@@ -36,11 +37,14 @@ public class CoReadingSnapshotRepositoryAdapter implements CoReadingSnapshotRepo
   /// @param chunk 一块
   private void insert(List<CoReadingEntry> chunk) {
     jdbc.sql(
-            "INSERT INTO insight.co_reading"
-                + " (article_id, position, related_article_id, similarity, co_readers)"
-                + " SELECT * FROM unnest(CAST(:articles AS bigint[]), CAST(:positions AS smallint[]),"
+            "INSERT INTO anl_co_reading"
+                + " (id, publication_id, position, related_publication_id, similarity, co_readers)"
+                + " SELECT * FROM unnest(CAST(:ids AS bigint[]), CAST(:articles AS bigint[]),"
+                + " CAST(:positions AS smallint[]),"
                 + " CAST(:related AS bigint[]), CAST(:similarities AS double precision[]),"
                 + " CAST(:coReaders AS integer[]))")
+        .param(
+            "ids", chunk.stream().map(entry -> SnowflakeIdGenerator.getId()).toArray(Long[]::new))
         .param("articles", chunk.stream().map(CoReadingEntry::articleId).toArray(Long[]::new))
         .param("positions", chunk.stream().map(CoReadingEntry::position).toArray(Integer[]::new))
         .param("related", chunk.stream().map(CoReadingEntry::relatedArticleId).toArray(Long[]::new))

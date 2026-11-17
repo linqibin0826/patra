@@ -3,7 +3,6 @@ package dev.patra.catalog.infra.publication.persistence.entity;
 import dev.patra.tool.jpa.entity.BaseJpaEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.Index;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -18,7 +17,7 @@ import tools.jackson.databind.JsonNode;
 ///
 /// **设计说明**：
 ///
-/// - 继承 `BaseJpaEntity` 支持完整审计（独立实体）
+/// - 继承 `BaseJpaEntity` 获得操作人审计与乐观锁（独立实体）
 /// - 存储研究者信息（非作者的研究人员，如临床试验 PI）
 /// - 支持通过 ORCID 或 dedupKey 进行去重匹配
 ///
@@ -29,12 +28,6 @@ import tools.jackson.databind.JsonNode;
 // "")))
 /// 3. **无匹配时创建新记录**
 ///
-/// **索引设计**：
-///
-/// - `idx_orcid`：ORCID 索引，支持按 ORCID 查询研究者
-/// - `idx_dedup_key`：去重键索引，支持研究者去重和合并
-/// - `idx_email`：邮箱索引，支持按邮箱查询研究者
-///
 /// @author linqibin
 /// @since 0.1.0
 @Data
@@ -43,13 +36,7 @@ import tools.jackson.databind.JsonNode;
 @AllArgsConstructor
 @EqualsAndHashCode(callSuper = true)
 @Entity
-@Table(
-    name = "cat_investigator",
-    indexes = {
-      @Index(name = "idx_orcid", columnList = "orcid"),
-      @Index(name = "idx_dedup_key", columnList = "dedup_key"),
-      @Index(name = "idx_email", columnList = "email")
-    })
+@Table(name = "cat_investigator")
 public class InvestigatorEntity extends BaseJpaEntity {
 
   // ========== 姓名信息 ==========

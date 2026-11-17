@@ -3,9 +3,7 @@ package dev.patra.catalog.infra.organization.persistence.entity;
 import dev.patra.tool.jpa.entity.ValueObjectJpaEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.Index;
 import jakarta.persistence.Table;
-import jakarta.persistence.UniqueConstraint;
 import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -39,22 +37,12 @@ import org.hibernate.type.SqlTypes;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(
-    name = "cat_organization_external_id",
-    uniqueConstraints = {
-      @UniqueConstraint(
-          name = "uk_org_ext_id_type",
-          columnNames = {"org_id", "id_type"})
-    },
-    indexes = {
-      @Index(name = "idx_org_ext_id_org_id", columnList = "org_id"),
-      @Index(name = "idx_org_ext_id_preferred", columnList = "preferred_value")
-    })
+@Table(name = "cat_organization_external_id")
 public class OrganizationExternalIdEntity extends ValueObjectJpaEntity {
 
   /// 所属机构 ID（逻辑外键）。
-  @Column(name = "org_id", nullable = false)
-  private Long orgId;
+  @Column(name = "organization_id", nullable = false)
+  private Long organizationId;
 
   /// 标识符类型代码：GRID/ISNI/WIKIDATA/FUNDREF/RINGGOLD。
   @Column(name = "id_type", nullable = false, length = 20)

@@ -2,12 +2,11 @@ package dev.patra.catalog.infra.organization.persistence.entity;
 
 import dev.patra.catalog.domain.organization.model.vo.AdminInfo;
 import dev.patra.catalog.domain.organization.model.vo.OrganizationLink;
-import dev.patra.tool.jpa.entity.SoftDeletableJpaEntity;
+import dev.patra.tool.jpa.entity.BaseJpaEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.Index;
 import jakarta.persistence.Table;
-import jakarta.persistence.UniqueConstraint;
+import java.time.Instant;
 import java.util.List;
 import java.util.Set;
 import lombok.AllArgsConstructor;
@@ -46,15 +45,8 @@ import org.hibernate.type.SqlTypes;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(
-    name = "cat_organization",
-    uniqueConstraints = {@UniqueConstraint(name = "uk_ror_id", columnNames = "ror_id")},
-    indexes = {
-      @Index(name = "idx_org_display_name", columnList = "display_name"),
-      @Index(name = "idx_org_status", columnList = "status"),
-      @Index(name = "idx_org_dedup_key", columnList = "dedup_key")
-    })
-public class OrganizationEntity extends SoftDeletableJpaEntity {
+@Table(name = "cat_organization")
+public class OrganizationEntity extends BaseJpaEntity {
 
   // ========================================
   // 核心标识
@@ -130,4 +122,8 @@ public class OrganizationEntity extends SoftDeletableJpaEntity {
   @JdbcTypeCode(SqlTypes.JSON)
   @Column(name = "metadata", columnDefinition = "JSON")
   private String metadata;
+
+  /// 删除时间，空表示未删除；查询方法自己带「未删除」条件（库表规范第 5 节）。
+  @Column(name = "deleted_at")
+  private Instant deletedAt;
 }

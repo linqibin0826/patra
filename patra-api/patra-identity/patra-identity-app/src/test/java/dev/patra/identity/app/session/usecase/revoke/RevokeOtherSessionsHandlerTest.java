@@ -138,8 +138,6 @@ class RevokeOtherSessionsHandlerTest {
         .endedAt(NOW)
         .endReason(LoginEndReason.REVOKED)
         .version(1L)
-        .createdAt(NOW.minusSeconds(60))
-        .updatedAt(NOW)
         .build();
   }
 }

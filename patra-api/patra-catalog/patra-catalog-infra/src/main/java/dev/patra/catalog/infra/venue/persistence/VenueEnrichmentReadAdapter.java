@@ -47,6 +47,7 @@ public class VenueEnrichmentReadAdapter implements VenueEnrichmentReadPort {
                 v.id, v.issnL, v.imageObjectKey)
             FROM VenueEntity v
             WHERE v.venueType = 'JOURNAL'
+              AND v.deletedAt IS NULL
               AND v.issnL IS NOT NULL
               AND v.id > :lastId
               AND NOT EXISTS (
@@ -85,6 +86,7 @@ public class VenueEnrichmentReadAdapter implements VenueEnrichmentReadPort {
                 v.id, v.issnL, v.imageObjectKey)
             FROM VenueEntity v
             WHERE v.venueType = 'JOURNAL'
+              AND v.deletedAt IS NULL
               AND v.issnL IS NOT NULL
               AND v.id > :lastId
               AND NOT EXISTS (

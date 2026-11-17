@@ -32,7 +32,7 @@ public interface PublicationMeshHeadingDao
   /// 根据出版物 ID 删除所有 MeSH 标引。
   ///
   /// @param publicationId 出版物 ID
-  @Modifying
+  @Modifying(flushAutomatically = true, clearAutomatically = true)
   @Query("DELETE FROM PublicationMeshHeadingEntity e WHERE e.publicationId = :publicationId")
   void deleteByPublicationId(@Param("publicationId") Long publicationId);
 
@@ -46,7 +46,7 @@ public interface PublicationMeshHeadingDao
   ///
   /// @param publicationIds 文献 ID
   /// @return 删除行数
-  @Modifying
+  @Modifying(flushAutomatically = true, clearAutomatically = true)
   @Query("DELETE FROM PublicationMeshHeadingEntity e WHERE e.publicationId IN :publicationIds")
   int deleteByPublicationIdIn(@Param("publicationIds") Collection<Long> publicationIds);
 }
