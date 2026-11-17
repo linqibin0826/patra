@@ -11,9 +11,6 @@ import jakarta.persistence.PreUpdate;
 /// 有当前用户时由它再填上。只在更新时清：插入时实体刚建出来，不会带着别人的 ID。
 public class UpdatedByResetListener {
 
-  /// 清空最后修改人。
-  ///
-  /// @param entity 将要更新的主表实体
   @PreUpdate
   public void clearUpdatedBy(BaseJpaEntity entity) {
     entity.setUpdatedBy(null);

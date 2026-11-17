@@ -110,9 +110,6 @@ class UpdatedByAuditingIT {
   @TestConfiguration
   static class SwitchableAuditorConfig {
 
-    /// 返回测试当前设定的用户，未设定时返回空。
-    ///
-    /// @return 操作人提供者
     @Bean
     CurrentAuditorProvider switchableAuditorProvider() {
       return () -> Optional.ofNullable(CURRENT_USER.get());

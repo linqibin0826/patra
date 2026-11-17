@@ -24,7 +24,7 @@ paths: patra-api/*/*-infra/**/*.java, patra-tool/patra-tool-jpa/**/*.java
 3. **ID**：使用 `SnowflakeIdGenerator.getId()` 预分配
 4. **事务**：infra 不划定事务边界，只允许 `@Transactional(propagation = MANDATORY)` 守卫，详见 [transaction.md](transaction.md)
 5. **批量**：大批量（> 500 条）需 `flush()` + `clear()`
-6. **不经实体的写入**：只能是 Dao 上的 `@Query`，带 `@Modifying(flushAutomatically = true, clearAutomatically = true)`；写主表时显式 `SET updated_by`（批量语句不触发审计）
+6. **不经实体的写入**：只能是 Dao 上的 `@Query`，带 `@Modifying(flushAutomatically = true, clearAutomatically = true)`；写主表时显式 `SET updated_by`，取当前用户、系统写入写空（批量语句不触发审计）
 
 ## 软删除
 

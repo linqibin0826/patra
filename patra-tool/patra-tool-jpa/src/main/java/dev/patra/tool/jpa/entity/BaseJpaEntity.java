@@ -40,6 +40,7 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 @AllArgsConstructor
 @EqualsAndHashCode
 @MappedSuperclass
+// 顺序不能换：先清空 updated_by，再由 Spring Data 审计按当前用户填；反过来会把刚填的操作人清掉。
 @EntityListeners({UpdatedByResetListener.class, AuditingEntityListener.class})
 public abstract class BaseJpaEntity implements Serializable, IdAwareEntity {
 
