@@ -16,6 +16,9 @@ patra:
       url: jdbc:postgresql://${PATRA_INFRA_HOST:127.0.0.1}:15432/patra_batch
       username: postgres
       password: ${PATRA_DB_PASSWORD:123456}
+    # 开发环境作者导入只导前 50 万条（全量约 2100 万），导入任务启动时读取，改了要重启 catalog
+    import-limit:
+      max-records: 500000
   catalog:
     pubmed:
       # 开发环境只更新库里已有的文献，不导入新文献（PubMed 导入的默认范围；绝不改成 ALL）
