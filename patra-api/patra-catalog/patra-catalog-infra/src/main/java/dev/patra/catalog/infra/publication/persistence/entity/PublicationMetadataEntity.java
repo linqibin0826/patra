@@ -3,9 +3,7 @@ package dev.patra.catalog.infra.publication.persistence.entity;
 import dev.patra.tool.jpa.entity.ValueObjectJpaEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.Index;
 import jakarta.persistence.Table;
-import jakarta.persistence.UniqueConstraint;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
@@ -25,32 +23,15 @@ import org.hibernate.type.SqlTypes;
 /// - `quality_score/completeness_score` 质量/完整性评分：A/B/C/D/F
 /// - `data_source` 数据来源：PubMed/EPMC/Crossref 等
 ///
-/// **索引说明**：
-///
-/// - 唯一索引 `uk_pub_metadata`: publication_id 保证一对一关系
-/// - 普通索引支持按索引状态、数据来源、导入批次、审核状态查询
-///
 /// @author linqibin
 /// @since 0.1.0
 @Getter
 @Setter
 @Entity
-@Table(
-    name = "cat_publication_metadata",
-    uniqueConstraints = {
-      @UniqueConstraint(
-          name = "uk_pub_metadata",
-          columnNames = {"publication_id"})
-    },
-    indexes = {
-      @Index(name = "idx_indexing_status", columnList = "indexing_status"),
-      @Index(name = "idx_data_source", columnList = "data_source"),
-      @Index(name = "idx_import_batch", columnList = "import_batch"),
-      @Index(name = "idx_review_status", columnList = "review_status")
-    })
+@Table(name = "cat_publication_metadata")
 public class PublicationMetadataEntity extends ValueObjectJpaEntity {
 
-  /// 文献 ID（外键：cat_publication.id，一对一关系）
+  /// 文献 ID（引用 cat_publication.id，不建外键；一对一关系）
   @Column(name = "publication_id", nullable = false)
   private Long publicationId;
 

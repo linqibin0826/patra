@@ -221,9 +221,9 @@ public class MeshDescriptorRepositoryAdapter implements MeshDescriptorRepository
 
   /// 为没有 ID 的实体分配雪花 ID。
   ///
-  /// 所有 MeSH 实体均继承 BaseJpaEntity，使用统一方法避免代码重复。
+  /// 所有 MeSH 实体均继承 `BaseJpaEntity` 或 `ValueObjectJpaEntity`，使用统一方法避免代码重复。
   ///
-  /// @param entity JPA 实体（继承自 BaseJpaEntity）
+  /// @param entity JPA 实体（继承自 `BaseJpaEntity` 或 `ValueObjectJpaEntity`）
   private void assignIdIfMissing(IdAwareEntity entity) {
     if (entity.getId() == null) {
       entity.setId(SnowflakeIdGenerator.getId());

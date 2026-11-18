@@ -1,6 +1,7 @@
 package dev.patra.notification.infra.kernel.persistence;
 
 import dev.patra.notification.domain.kernel.port.repository.PresenceRepository;
+import dev.patra.tool.jpa.id.SnowflakeIdGenerator;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
@@ -12,7 +13,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Component;
 
-/// `PresenceRepository` 的原生 SQL 实现（`kernel.presence`）。
+/// `PresenceRepository` 的原生 SQL 实现（`ntf_presence`）。
 @Component
 @RequiredArgsConstructor
 public class PresenceRepositoryAdapter implements PresenceRepository {
@@ -26,9 +27,11 @@ public class PresenceRepositoryAdapter implements PresenceRepository {
   @Override
   public void touch(long userId, Instant seenAt) {
     jdbc.sql(
-            "INSERT INTO kernel.presence AS p (user_id, last_seen_at) VALUES (:userId, :seenAt)"
+            "INSERT INTO ntf_presence AS p (id, user_id, last_seen_at)"
+                + " VALUES (:rowId, :userId, :seenAt)"
                 + " ON CONFLICT (user_id) DO UPDATE"
                 + " SET last_seen_at = GREATEST(p.last_seen_at, EXCLUDED.last_seen_at)")
+        .param("rowId", SnowflakeIdGenerator.getId())
         .param("userId", userId)
         .param("seenAt", seenAt.atOffset(ZoneOffset.UTC))
         .update();
@@ -41,7 +44,7 @@ public class PresenceRepositoryAdapter implements PresenceRepository {
   @Override
   public Map<Long, Instant> find(Collection<Long> userIds) {
     Map<Long, Instant> result = new HashMap<>();
-    jdbc.sql("SELECT user_id, last_seen_at FROM kernel.presence WHERE user_id IN (:userIds)")
+    jdbc.sql("SELECT user_id, last_seen_at FROM ntf_presence WHERE user_id IN (:userIds)")
         .param("userIds", List.copyOf(userIds))
         .query(
             rs -> {
@@ -58,7 +61,7 @@ public class PresenceRepositoryAdapter implements PresenceRepository {
   /// @return 删除的行数
   @Override
   public int deleteAllOf(long userId) {
-    return jdbc.sql("DELETE FROM kernel.presence WHERE user_id = :userId")
+    return jdbc.sql("DELETE FROM ntf_presence WHERE user_id = :userId")
         .param("userId", userId)
         .update();
   }
@@ -71,7 +74,7 @@ public class PresenceRepositoryAdapter implements PresenceRepository {
   @Override
   public List<Long> findUsersAfter(long afterUserId, int limit) {
     return jdbc.sql(
-            "SELECT user_id FROM kernel.presence WHERE user_id > :after"
+            "SELECT user_id FROM ntf_presence WHERE user_id > :after"
                 + " ORDER BY user_id LIMIT :limit")
         .param("after", afterUserId)
         .param("limit", limit)

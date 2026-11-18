@@ -92,12 +92,8 @@ public abstract class PublicationJpaMapper {
   @Mapping(target = "startPage", source = "pagination.startPage")
   @Mapping(target = "endPage", source = "pagination.endPage")
   @Mapping(target = "version", ignore = true)
-  @Mapping(target = "createdAt", ignore = true)
   @Mapping(target = "createdBy", ignore = true)
-  @Mapping(target = "createdByName", ignore = true)
-  @Mapping(target = "updatedAt", ignore = true)
   @Mapping(target = "updatedBy", ignore = true)
-  @Mapping(target = "updatedByName", ignore = true)
   @Mapping(target = "ipAddress", ignore = true)
   @Mapping(target = "recordRemarks", ignore = true)
   public abstract PublicationEntity toEntity(PublicationAggregate aggregate);

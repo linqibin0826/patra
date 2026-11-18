@@ -17,7 +17,7 @@ import org.springframework.stereotype.Component;
 public class PurgeExpiredHistoryHandler
     implements CommandHandler<PurgeExpiredHistoryCommand, PurgeResult> {
 
-  /// 过期清理删掉的行数（标签 `table`：`reading_history`、`deleted_entry`）
+  /// 过期清理删掉的行数（标签 `table`：`anl_reading_history`、`anl_reading_history_tombstone`）
   static final String PURGED_METRIC = "analytics.history.purged";
 
   private final ReadingHistoryRepository history;
@@ -34,9 +34,11 @@ public class PurgeExpiredHistoryHandler
     Instant historyCutoff = HistoryRetention.historyCutoff(now);
     Instant deletionCutoff = HistoryRetention.deletionCutoff(now);
     int historyRows =
-        purge("reading_history", limit -> history.purgeReadBefore(historyCutoff, limit));
+        purge("anl_reading_history", limit -> history.purgeReadBefore(historyCutoff, limit));
     int deletionRows =
-        purge("deleted_entry", limit -> history.purgeDeletionsBefore(deletionCutoff, limit));
+        purge(
+            "anl_reading_history_tombstone",
+            limit -> history.purgeDeletionsBefore(deletionCutoff, limit));
     return PurgeResult.of(historyRows, deletionRows);
   }
 

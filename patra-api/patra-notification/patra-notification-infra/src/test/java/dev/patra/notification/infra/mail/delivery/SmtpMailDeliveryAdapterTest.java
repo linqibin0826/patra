@@ -129,7 +129,7 @@ class SmtpMailDeliveryAdapterTest {
         .thenReturn(new MimeMessage(Session.getInstance(new Properties())));
     OutgoingMail broken =
         OutgoingMail.builder()
-            .deliveryId(EVENT_ID)
+            .idempotencyKey(EVENT_ID.toString())
             .to("not an address")
             .template("password-reset")
             .subject("重设你的 Patra 密码")
@@ -161,13 +161,37 @@ class SmtpMailDeliveryAdapterTest {
   }
 
   @Test
+  @DisplayName("提醒邮件的幂等键是投递 ID 的十进制串：原样写进幂等头与 Message-ID")
+  void should_use_string_idempotency_key_for_both_headers() throws Exception {
+    when(mailSender.createMimeMessage())
+        .thenReturn(new MimeMessage(Session.getInstance(new Properties())));
+    OutgoingMail reminder =
+        OutgoingMail.builder()
+            .idempotencyKey("380631096924528641")
+            .to(mail.to())
+            .template(mail.template())
+            .subject(mail.subject())
+            .model(mail.model())
+            .build();
+
+    new SmtpMailDeliveryAdapter(mailSender, renderer, FROM).deliver(reminder);
+
+    ArgumentCaptor<MimeMessage> sent = ArgumentCaptor.forClass(MimeMessage.class);
+    verify(mailSender).send(sent.capture());
+    assertThat(sent.getValue().getHeader("Resend-Idempotency-Key"))
+        .containsExactly("380631096924528641");
+    assertThat(sent.getValue().getHeader("Message-ID"))
+        .containsExactly("<380631096924528641@patra.local>");
+  }
+
+  @Test
   @DisplayName("调用方的附加头照写；固定头最后写，调用方覆盖不了")
   void should_write_extra_headers_without_overriding_fixed_ones() throws Exception {
     when(mailSender.createMimeMessage())
         .thenReturn(new MimeMessage(Session.getInstance(new Properties())));
     OutgoingMail withHeaders =
         OutgoingMail.builder()
-            .deliveryId(EVENT_ID)
+            .idempotencyKey(EVENT_ID.toString())
             .to(TO)
             .template("password-reset")
             .subject("重设你的 Patra 密码")
@@ -254,7 +278,7 @@ class SmtpMailDeliveryAdapterTest {
     SmtpMailDeliveryAdapter adapter = new SmtpMailDeliveryAdapter(mailSender, renderer, FROM);
     OutgoingMail missingTemplate =
         OutgoingMail.builder()
-            .deliveryId(EVENT_ID)
+            .idempotencyKey(EVENT_ID.toString())
             .to(TO)
             .template("no-such-template")
             .subject("x")

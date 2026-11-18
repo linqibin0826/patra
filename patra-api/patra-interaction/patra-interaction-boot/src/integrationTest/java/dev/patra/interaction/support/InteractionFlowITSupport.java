@@ -33,8 +33,8 @@ import tools.jackson.databind.json.JsonMapper;
 /// 各子域流程测试的共用底座：真实 PostgreSQL、真实 RabbitMQ、真实的身份断言验签；catalog 与 identity 由 WireMock 扮演，
 /// 经 Spring Cloud LoadBalancer + SimpleDiscoveryClient 走 `lb://` 这条真实的路（照 `SubjectRegistryFlowIT`）。
 ///
-/// 子类共用同一个 Spring 上下文。每例前清空全部子域 schema 里的表（从 `pg_tables` 现查，新子域的表自动纳入）、事件发布
-/// 登记表（在 public）与替通知服务绑定路由键的测试队列（PAP-141）。
+/// 子类共用同一个 Spring 上下文。每例前清空 public 里 `itr_` 开头的表（从 `pg_tables` 现查，新表自动纳入）、
+/// 事件发布登记表与替通知服务绑定路由键的测试队列（PAP-141）。
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ContextConfiguration(
     initializers = {
@@ -81,7 +81,7 @@ public abstract class InteractionFlowITSupport {
     List<String> tables =
         jdbcTemplate.queryForList(
             "SELECT quote_ident(schemaname) || '.' || quote_ident(tablename) FROM pg_tables"
-                + " WHERE schemaname NOT IN ('public', 'pg_catalog', 'information_schema')",
+                + " WHERE schemaname = 'public' AND tablename LIKE 'itr\\_%'",
             String.class);
     if (!tables.isEmpty()) {
       jdbcTemplate.update("TRUNCATE " + String.join(", ", tables));

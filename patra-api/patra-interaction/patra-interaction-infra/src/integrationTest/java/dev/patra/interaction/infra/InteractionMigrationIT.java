@@ -4,8 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import dev.patra.interaction.infra.config.InteractionITPostgreSQLContainerInitializer;
-import java.sql.Timestamp;
-import java.time.Instant;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -16,7 +14,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.ContextConfiguration;
 
-/// Flyway 迁移：每个子域一个 schema，整个服务一份历史，版本号是时间戳。
+/// Flyway 迁移：整个服务一份历史，版本号是时间戳；表名按 `itr_` 前缀放在 public（库表规范第 1 节）。
 @SpringBootTest(classes = InteractionITBootstrap.class)
 @ContextConfiguration(initializers = InteractionITPostgreSQLContainerInitializer.class)
 @ActiveProfiles("test")
@@ -25,28 +23,8 @@ class InteractionMigrationIT {
 
   @Autowired private JdbcTemplate jdbcTemplate;
 
-  /// 除 PG 自带的 schema 外，只有 public 与子域清单里的 schema（schema 名就是子域名）；subject、collection 一定在。
-  /// 新子域随自己的迁移建 schema，不用改这条测试。
-  @Test
-  void should_create_one_schema_per_subdomain() {
-    assertThat(
-            jdbcTemplate.queryForList(
-                "SELECT schema_name FROM information_schema.schemata "
-                    + "WHERE schema_name NOT LIKE 'pg\\_%' AND schema_name <> 'information_schema'",
-                String.class))
-        .contains("public", "subject", "collection")
-        .isSubsetOf("public", "subject", "collection", "discussion", "post", "reaction");
-  }
-
-  /// 提醒搬到通知服务后（PAP-143），旧的 `notification` schema 由前向迁移删掉，连同里面的表。
-  @Test
-  void should_drop_notification_schema() {
-    assertThat(
-            jdbcTemplate.queryForObject(
-                "SELECT count(*) FROM information_schema.schemata WHERE schema_name = 'notification'",
-                Long.class))
-        .isZero();
-  }
+  /// 直接插入发表计数时用的行 ID。
+  private long nextQuotaId = 1;
 
   /// 事件发布登记表（PAP-141）在 public，不属于任何子域；列是 Modulith 固定的那几列。
   @Test
@@ -99,22 +77,22 @@ class InteractionMigrationIT {
         .allMatch(version -> version.matches("[0-9]{14}"))
         .isSorted()
         .contains(
-            "20261024100000",
-            "20261024100100",
-            "20261024200000",
-            "20261024210000",
-            "20261027120000",
-            "20261027120100");
+            "20261116130000",
+            "20261116130100",
+            "20261116130200",
+            "20261116130300",
+            "20261116130400",
+            "20261116130500");
   }
 
   /// 身份锚全表唯一；来源 ID 只对非空行唯一。
   @Test
   void should_create_registry_with_partial_unique_source_index() {
-    assertThat(indexDefinition("uk_registry_natural_key"))
+    assertThat(indexDefinition("uk_itr_subject_natural_key"))
         .contains("UNIQUE")
         .contains("(target_type, natural_key)")
         .doesNotContain("WHERE");
-    assertThat(indexDefinition("uk_registry_source_id"))
+    assertThat(indexDefinition("uk_itr_subject_source"))
         .contains("UNIQUE")
         .contains("(target_type, source_id)")
         .contains("WHERE (source_id IS NOT NULL)");
@@ -123,7 +101,7 @@ class InteractionMigrationIT {
   /// 编码、状态、「无来源 ID 必须失效」、PMID 格式四条 CHECK（99 是不存在的类型编码）。
   @Test
   void should_enforce_registry_checks() {
-    jdbcTemplate.update("DELETE FROM subject.registry");
+    jdbcTemplate.update("DELETE FROM itr_subject");
 
     assertThatThrownBy(() -> insert(1L, 99, "pmid:1", 100L, "ACTIVE"))
         .isInstanceOf(DataIntegrityViolationException.class);
@@ -135,7 +113,7 @@ class InteractionMigrationIT {
         .isInstanceOf(DataIntegrityViolationException.class);
     insert(5L, 1, "pmid:5", null, "UNAVAILABLE");
 
-    assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM subject.registry", Long.class))
+    assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM itr_subject", Long.class))
         .isEqualTo(1L);
   }
 
@@ -143,7 +121,7 @@ class InteractionMigrationIT {
   /// 且只有本地对象（类型 3）有。
   @Test
   void should_enforce_journal_post_and_owner_checks() {
-    jdbcTemplate.update("DELETE FROM subject.registry");
+    jdbcTemplate.update("DELETE FROM itr_subject");
 
     insert(1L, 2, "nlm:0404401", 100L, "ACTIVE");
     insert(2L, 2, "nlm:2985213R", 200L, "ACTIVE");
@@ -163,7 +141,7 @@ class InteractionMigrationIT {
     assertThatThrownBy(() -> insertOwned(10L, 3, "post:10", 10L, 9L, null))
         .isInstanceOf(DataIntegrityViolationException.class);
 
-    assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM subject.registry", Long.class))
+    assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM itr_subject", Long.class))
         .isEqualTo(3L);
   }
 
@@ -171,17 +149,17 @@ class InteractionMigrationIT {
   /// 这里只能靠 `ck_registry_post_key` 自己拦住）。
   @Test
   void should_reject_post_without_source_id_even_when_unavailable() {
-    jdbcTemplate.update("DELETE FROM subject.registry");
+    jdbcTemplate.update("DELETE FROM itr_subject");
 
     assertThatThrownBy(() -> insertOwned(11L, 3, "post:11", null, "UNAVAILABLE", 9L, false))
         .isInstanceOf(DataIntegrityViolationException.class)
-        .hasMessageContaining("ck_registry_post_key");
+        .hasMessageContaining("ck_itr_subject_post_key");
   }
 
   /// 发表计数：种类只有 COMMENT / POST / HELPFUL，当天条数大于 0，每个作者每种一行。
   @Test
   void should_enforce_publish_quota_checks() {
-    jdbcTemplate.update("DELETE FROM subject.publish_quota");
+    jdbcTemplate.update("DELETE FROM itr_publish_quota");
 
     insertQuota(1L, "COMMENT", 1);
     insertQuota(1L, "HELPFUL", 1);
@@ -192,45 +170,26 @@ class InteractionMigrationIT {
     assertThatThrownBy(() -> insertQuota(1L, "COMMENT", 2))
         .isInstanceOf(DataIntegrityViolationException.class);
 
-    assertThat(
-            jdbcTemplate.queryForObject("SELECT count(*) FROM subject.publish_quota", Long.class))
+    assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM itr_publish_quota", Long.class))
         .isEqualTo(2L);
-  }
-
-  /// 更新时触发器推进 `updated_at`。
-  @Test
-  void should_bump_updated_at_on_update() {
-    jdbcTemplate.update("DELETE FROM subject.registry");
-    insert(6L, 1, "pmid:6", 600L, "ACTIVE");
-    Timestamp past = Timestamp.from(Instant.parse("2020-01-01T00:00:00Z"));
-    jdbcTemplate.update("ALTER TABLE subject.registry DISABLE TRIGGER trg_registry_updated_at");
-    jdbcTemplate.update("UPDATE subject.registry SET updated_at = ? WHERE subject_id = 6", past);
-    jdbcTemplate.update("ALTER TABLE subject.registry ENABLE TRIGGER trg_registry_updated_at");
-
-    jdbcTemplate.update("UPDATE subject.registry SET state = 'UNAVAILABLE' WHERE subject_id = 6");
-
-    assertThat(
-            jdbcTemplate.queryForObject(
-                "SELECT updated_at FROM subject.registry WHERE subject_id = 6", Timestamp.class))
-        .isAfter(past);
   }
 
   /// 两张状态窄表按 `user_id` 哈希分 16 区（release spec 决策 B）。
   @Test
   void should_hash_partition_state_tables_by_user_into_16() {
-    for (String table : List.of("library_item", "collection_item")) {
+    for (String table : List.of("itr_library_item", "itr_collection_item")) {
       assertThat(
               jdbcTemplate.queryForObject(
                   "SELECT count(*) FROM pg_inherits i JOIN pg_class p ON p.oid = i.inhparent"
                       + " JOIN pg_namespace n ON n.oid = p.relnamespace"
-                      + " WHERE n.nspname = 'collection' AND p.relname = ?",
+                      + " WHERE n.nspname = 'public' AND p.relname = ?",
                   Integer.class,
                   table))
           .as(table)
           .isEqualTo(16);
       assertThat(
               jdbcTemplate.queryForObject(
-                  "SELECT pg_get_partkeydef(('collection.' || ?)::regclass)", String.class, table))
+                  "SELECT pg_get_partkeydef(?::regclass)", String.class, table))
           .isEqualTo("HASH (user_id)");
     }
   }
@@ -238,53 +197,51 @@ class InteractionMigrationIT {
   /// 状态窄表的主键以分区键 `user_id` 打头。
   @Test
   void should_key_state_tables_by_user_first() {
-    assertThat(primaryKeyColumns("library_item")).containsExactly("user_id", "subject_id");
-    assertThat(primaryKeyColumns("collection_item"))
-        .containsExactly("user_id", "collection_id", "subject_id");
+    assertThat(primaryKeyColumns("itr_library_item")).containsExactly("user_id", "id");
+    assertThat(primaryKeyColumns("itr_collection_item")).containsExactly("user_id", "id");
   }
 
   /// 收藏夹名称在同一用户下唯一，不同用户可以同名。
   @Test
   void should_keep_collection_names_unique_per_user() {
-    jdbcTemplate.update("DELETE FROM collection.collection");
+    jdbcTemplate.update("DELETE FROM itr_collection");
     insertCollection(1L, 10L, "组会");
     assertThatThrownBy(() -> insertCollection(2L, 10L, "组会"))
         .isInstanceOf(DataIntegrityViolationException.class);
     insertCollection(3L, 11L, "组会");
 
-    assertThat(
-            jdbcTemplate.queryForObject("SELECT count(*) FROM collection.collection", Long.class))
+    assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM itr_collection", Long.class))
         .isEqualTo(2L);
   }
 
   /// 可见性只有两种取值，篇数在 0 ~ 5000。
   @Test
   void should_enforce_collection_checks() {
-    jdbcTemplate.update("DELETE FROM collection.collection");
+    jdbcTemplate.update("DELETE FROM itr_collection");
     assertThatThrownBy(
             () ->
                 jdbcTemplate.update(
-                    "INSERT INTO collection.collection (collection_id, user_id, name, visibility)"
-                        + " VALUES (1, 10, 'a', 'SHARED')"))
+                    "INSERT INTO itr_collection (id, user_id, name, visibility, content_changed_at)"
+                        + " VALUES (1, 10, 'a', 'SHARED', now())"))
         .isInstanceOf(DataIntegrityViolationException.class);
     assertThatThrownBy(
             () ->
                 jdbcTemplate.update(
-                    "INSERT INTO collection.collection (collection_id, user_id, name, visibility,"
-                        + " item_count) VALUES (2, 10, 'b', 'PRIVATE', 5001)"))
+                    "INSERT INTO itr_collection (id, user_id, name, visibility, item_count,"
+                        + " content_changed_at) VALUES (2, 10, 'b', 'PRIVATE', 5001, now())"))
         .isInstanceOf(DataIntegrityViolationException.class);
   }
 
   /// 取主键列（按序）。
   ///
-  /// @param table collection schema 下的表名
+  /// @param table public 下的表名
   /// @return 列名
   private List<String> primaryKeyColumns(String table) {
     return jdbcTemplate.queryForList(
         "SELECT k.column_name FROM information_schema.table_constraints c"
             + " JOIN information_schema.key_column_usage k"
             + " ON k.constraint_name = c.constraint_name AND k.table_schema = c.table_schema"
-            + " WHERE c.table_schema = 'collection' AND c.table_name = ?"
+            + " WHERE c.table_schema = 'public' AND c.table_name = ?"
             + " AND c.constraint_type = 'PRIMARY KEY' ORDER BY k.ordinal_position",
         String.class,
         table);
@@ -297,8 +254,8 @@ class InteractionMigrationIT {
   /// @param name 名称
   private void insertCollection(long collectionId, long userId, String name) {
     jdbcTemplate.update(
-        "INSERT INTO collection.collection (collection_id, user_id, name, visibility)"
-            + " VALUES (?, ?, ?, 'PRIVATE')",
+        "INSERT INTO itr_collection (id, user_id, name, visibility, content_changed_at)"
+            + " VALUES (?, ?, ?, 'PRIVATE', now())",
         collectionId,
         userId,
         name);
@@ -310,7 +267,7 @@ class InteractionMigrationIT {
   /// @return `pg_indexes.indexdef`
   private String indexDefinition(String name) {
     return jdbcTemplate.queryForObject(
-        "SELECT indexdef FROM pg_indexes WHERE schemaname = 'subject' AND indexname = ?",
+        "SELECT indexdef FROM pg_indexes WHERE schemaname = 'public' AND indexname = ?",
         String.class,
         name);
   }
@@ -322,8 +279,9 @@ class InteractionMigrationIT {
   /// @param dayCount 当天条数
   private void insertQuota(long userId, String kind, int dayCount) {
     jdbcTemplate.update(
-        "INSERT INTO subject.publish_quota (user_id, kind, quota_day, day_count,"
-            + " last_published_at) VALUES (?, ?, DATE '2026-10-27', ?, now())",
+        "INSERT INTO itr_publish_quota (id, user_id, kind, quota_day, day_count,"
+            + " last_published_at) VALUES (?, ?, ?, DATE '2026-10-27', ?, now())",
+        nextQuotaId++,
         userId,
         kind,
         dayCount);
@@ -365,7 +323,7 @@ class InteractionMigrationIT {
       long ownerUserId,
       Boolean anonymous) {
     jdbcTemplate.update(
-        "INSERT INTO subject.registry (subject_id, target_type, natural_key, source_id, state,"
+        "INSERT INTO itr_subject (id, target_type, natural_key, source_id, state,"
             + " snapshot, snapshot_at, owner_user_id, owner_anonymous)"
             + " VALUES (?, ?, ?, ?, ?, '{}'::jsonb, now(), ?, ?)",
         subjectId,
@@ -386,7 +344,7 @@ class InteractionMigrationIT {
   /// @param state 状态
   private void insert(long subjectId, int type, String naturalKey, Long sourceId, String state) {
     jdbcTemplate.update(
-        "INSERT INTO subject.registry (subject_id, target_type, natural_key, source_id, state,"
+        "INSERT INTO itr_subject (id, target_type, natural_key, source_id, state,"
             + " snapshot, snapshot_at) VALUES (?, ?, ?, ?, ?, '{}'::jsonb, now())",
         subjectId,
         type,

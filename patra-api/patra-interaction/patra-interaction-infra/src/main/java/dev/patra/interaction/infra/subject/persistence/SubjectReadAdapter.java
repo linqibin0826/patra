@@ -44,14 +44,13 @@ public class SubjectReadAdapter implements SubjectReadPort {
     }
     return jdbc
         .sql(
-            "SELECT subject_id, source_id FROM subject.registry"
+            "SELECT id, source_id FROM itr_subject"
                 + " WHERE target_type = :type AND source_id IN (:sourceIds)")
         .param("type", type.code())
         .param("sourceIds", sourceIds)
         .query(
             (rs, rowNum) ->
-                Map.entry(
-                    Long.toString(rs.getLong("source_id")), SubjectId.of(rs.getLong("subject_id"))))
+                Map.entry(Long.toString(rs.getLong("source_id")), SubjectId.of(rs.getLong("id"))))
         .list()
         .stream()
         .collect(Collectors.toUnmodifiableMap(Map.Entry::getKey, Map.Entry::getValue));
@@ -68,7 +67,7 @@ public class SubjectReadAdapter implements SubjectReadPort {
       return Map.of();
     }
     return jdbc
-        .sql("SELECT " + SubjectRows.COLUMNS + " FROM subject.registry WHERE subject_id IN (:ids)")
+        .sql("SELECT " + SubjectRows.COLUMNS + " FROM itr_subject WHERE id IN (:ids)")
         .param("ids", ids.stream().map(SubjectId::value).toList())
         .query(rows.aggregateMapper())
         .list()

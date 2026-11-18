@@ -2,7 +2,7 @@ package dev.patra.catalog.app.fulltext.usecase.parse;
 
 /// 一次解析运行的统计。
 ///
-/// @param processed 处理篇数
+/// @param processed 处理篇数（含解析期间被重抓、结果丢弃的）
 /// @param parsed 解析成功篇数
 /// @param noBody 无正文篇数
 /// @param failed 失败篇数（含解析失败与读存储失败）
@@ -54,5 +54,12 @@ public record FullTextParseRunStats(int processed, int parsed, int noBody, int f
   /// @return 摘要
   public String message() {
     return "全文解析完成：处理 %d 篇，成功 %d、无正文 %d、失败 %d".formatted(processed, parsed, noBody, failed);
+  }
+
+  /// 计一篇因解析期间被重抓而丢弃结果的：只计处理数。
+  ///
+  /// @return 新统计
+  FullTextParseRunStats plusSkipped() {
+    return new FullTextParseRunStats(processed + 1, parsed, noBody, failed);
   }
 }

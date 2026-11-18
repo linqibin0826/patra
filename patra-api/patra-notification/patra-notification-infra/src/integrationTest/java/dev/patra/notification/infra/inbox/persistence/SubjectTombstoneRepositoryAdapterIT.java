@@ -21,7 +21,7 @@ class SubjectTombstoneRepositoryAdapterIT extends InboxPersistenceITSupport {
     assertThat(tombstones.exists(41L)).isFalse();
     assertThat(
             jdbcTemplate.queryForObject(
-                "SELECT deleted_at = ?::timestamptz FROM inbox.subject_tombstone",
+                "SELECT source_deleted_at = ?::timestamptz FROM ntf_subject_tombstone",
                 Boolean.class,
                 NOW.toString()))
         .isTrue();

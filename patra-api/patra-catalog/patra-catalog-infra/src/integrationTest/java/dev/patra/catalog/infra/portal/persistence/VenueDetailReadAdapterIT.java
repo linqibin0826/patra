@@ -122,7 +122,7 @@ class VenueDetailReadAdapterIT {
     em.clear();
 
     VenueEntity venue = em.find(VenueEntity.class, venueId);
-    em.remove(venue); // Hibernate @SoftDelete 自动转为 UPDATE deleted_at = now()
+    venue.setDeletedAt(java.time.Instant.parse("2026-11-16T00:00:00Z")); // 软删除就是写上删除时间
     em.flush();
     em.clear();
 

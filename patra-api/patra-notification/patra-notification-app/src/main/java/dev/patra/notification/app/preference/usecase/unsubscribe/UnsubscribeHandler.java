@@ -7,8 +7,6 @@ import dev.patra.notification.domain.preference.model.enums.UnsubscribeCategory;
 import dev.patra.notification.domain.preference.model.vo.UnsubscribeToken;
 import dev.patra.notification.domain.preference.port.repository.EmailPreferenceRepository;
 import dev.patra.tool.cqrs.CommandHandler;
-import java.time.Clock;
-import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
 import lombok.RequiredArgsConstructor;
@@ -25,7 +23,6 @@ public class UnsubscribeHandler implements CommandHandler<UnsubscribeCommand, Un
 
   private final EmailPreferenceRepository preferences;
   private final TransactionOperations transactions;
-  private final Clock clock;
 
   /// 退订。
   ///
@@ -39,7 +36,6 @@ public class UnsubscribeHandler implements CommandHandler<UnsubscribeCommand, Un
         UnsubscribeCategory.parse(command.category())
             .filter(c -> !command.oneClick() || c.inLinks())
             .orElseThrow(UnsubscribeLinkInvalidException::new);
-    Instant now = clock.instant();
     return Objects.requireNonNull(
         transactions.execute(
             status -> {
@@ -49,7 +45,7 @@ public class UnsubscribeHandler implements CommandHandler<UnsubscribeCommand, Un
                       .orElseThrow(UnsubscribeLinkInvalidException::new);
               List<NotificationCategory> turnedOff = preference.unsubscribe(category);
               if (!turnedOff.isEmpty()) {
-                preferences.updateModes(preference, now);
+                preferences.updateModes(preference, null);
               }
               log.info(
                   "提醒邮件退订: userId={}, category={}, turnedOff={}, oneClick={}",

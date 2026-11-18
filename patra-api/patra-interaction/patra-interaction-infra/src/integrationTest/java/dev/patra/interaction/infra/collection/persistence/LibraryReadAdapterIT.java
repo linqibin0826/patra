@@ -127,6 +127,22 @@ class LibraryReadAdapterIT extends CollectionPersistenceITSupport {
     assertThat(reads.findCollection(CollectionId.of(999L))).isEmpty();
   }
 
+  /// 列表顺序与「更新于」取内容变更时间：只改了非内容列（触发器刷新 `updated_at`）的收藏夹不会排到前面。
+  @Test
+  void should_order_collections_by_content_changed_at_not_updated_at() {
+    CollectionSummary old = tx(() -> collections.create(U, name("旧"), null, T0));
+    tx(() -> collections.create(U, name("新"), null, T1));
+
+    jdbcTemplate.update(
+        "UPDATE itr_collection SET record_remarks = '{\"note\":\"x\"}'::jsonb WHERE id = ?",
+        old.collectionId().value());
+
+    assertThat(reads.findCollections(U))
+        .extracting(CollectionSummary::name)
+        .containsExactly("新", "旧");
+    assertThat(reads.findCollection(old.collectionId()).orElseThrow().updatedAt()).isEqualTo(T0);
+  }
+
   /// 有数据的用户：两表并集、升序、可续。
   @Test
   void should_iterate_owners_from_both_tables() {

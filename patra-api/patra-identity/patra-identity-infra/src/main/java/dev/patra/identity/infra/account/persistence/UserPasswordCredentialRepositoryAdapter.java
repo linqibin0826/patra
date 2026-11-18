@@ -27,14 +27,13 @@ public class UserPasswordCredentialRepositoryAdapter implements UserPasswordCred
     return dao.findByUserId(userId).map(mapper::toAggregate);
   }
 
-  /// 按用户 ID 删凭据，立刻刷到库里。
+  /// 按用户 ID 删凭据。批量语句立即执行，执行前后的落库与清缓存由 Dao 上的 `@Modifying` 负责。
   ///
   /// @param userId 用户 ID
   /// @return 真的删掉了一行时为 `true`
   @Override
   public boolean deleteByUserId(long userId) {
     int deleted = dao.deleteByUserId(userId);
-    dao.flush();
     return deleted > 0;
   }
 

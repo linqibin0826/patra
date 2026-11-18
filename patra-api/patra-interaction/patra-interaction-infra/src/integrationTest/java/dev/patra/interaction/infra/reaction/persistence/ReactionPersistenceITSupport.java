@@ -21,7 +21,7 @@ abstract class ReactionPersistenceITSupport {
   /// 每例从空表开始。
   @BeforeEach
   void truncateReactionTables() {
-    jdbcTemplate.update("TRUNCATE reaction.helpful, reaction.target_stats, reaction.user_stats");
+    jdbcTemplate.update("TRUNCATE itr_helpful, itr_helpful_target_stats, itr_helpful_user_stats");
   }
 
   /// 表行数。

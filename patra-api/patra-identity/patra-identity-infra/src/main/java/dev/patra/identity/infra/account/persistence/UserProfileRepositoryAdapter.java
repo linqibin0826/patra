@@ -70,8 +70,6 @@ public class UserProfileRepositoryAdapter implements UserProfileRepository {
     Long userId = profile.getUserId();
     linkDao.deleteAllByUserId(userId);
     interestDao.deleteAllByUserId(userId);
-    linkDao.flush();
-    interestDao.flush();
     List<UserProfileLinkEntity> links = mapper.toLinkEntities(profile);
     links.forEach(link -> link.setId(SnowflakeIdGenerator.getId()));
     List<UserResearchInterestEntity> interests = mapper.toInterestEntities(profile);

@@ -9,10 +9,14 @@ import dev.patra.catalog.infra.author.persistence.dao.AuthorDao;
 import dev.patra.catalog.infra.author.persistence.entity.AuthorEntity;
 import dev.patra.catalog.infra.config.CatalogITPostgreSQLContainerInitializer;
 import dev.patra.tool.jpa.autoconfigure.JpaAuditingConfiguration;
+import dev.patra.tool.jpa.autoconfigure.PatraHibernatePropertiesCustomizer;
 import dev.patra.tool.jpa.json.JsonColumnCodec;
+import jakarta.persistence.EntityManager;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import org.hibernate.SessionFactory;
+import org.hibernate.stat.Statistics;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -45,12 +49,13 @@ import org.springframework.test.context.ContextConfiguration;
 ///
 /// @author linqibin
 /// @since 0.1.0
-@DataJpaTest
+@DataJpaTest(properties = "spring.jpa.properties.hibernate.generate_statistics=true")
 @ContextConfiguration(initializers = CatalogITPostgreSQLContainerInitializer.class)
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @Import({
   AuthorRepositoryAdapter.class,
   JpaAuditingConfiguration.class,
+  PatraHibernatePropertiesCustomizer.class,
   JacksonAutoConfiguration.class,
   JsonColumnCodec.class
 })
@@ -66,6 +71,63 @@ class AuthorRepositoryAdapterIT {
   @Autowired private AuthorRepositoryAdapter authorRepository;
 
   @Autowired private AuthorDao jpaRepository;
+
+  @Autowired private EntityManager entityManager;
+
+  /// 删除用 `deleted_at` 列标记，「未删除」条件要每个查询自己带：已删的作者按 ID、规范化姓名、ORCID 都查不到。
+  @Test
+  @DisplayName("已删除的作者按 ID、规范化姓名、ORCID 都查不到")
+  void should_not_find_soft_deleted_author() {
+    AuthorAggregate author = AuthorAggregate.fromPubMedComputed("Deleted+A");
+    author.addNameVariant(AuthorNameVariant.of("Deleted", "Ann", "A", "Deleted,Ann,A"));
+    author.addOrcid(Orcid.of("0000-0001-5109-3700"));
+    AuthorAggregate saved = authorRepository.save(author);
+    entityManager.flush();
+    entityManager
+        .createNativeQuery("UPDATE cat_author SET deleted_at = now() WHERE id = :id")
+        .setParameter("id", saved.getId().value())
+        .executeUpdate();
+    entityManager.clear();
+
+    assertThat(authorRepository.findById(saved.getId())).isEmpty();
+    assertThat(authorRepository.findByNormalizedKey("Deleted+A")).isEmpty();
+    assertThat(authorRepository.existsByNormalizedKey("Deleted+A")).isFalse();
+    assertThat(authorRepository.findByOrcid("0000-0001-5109-3700")).isEmpty();
+    assertThat(authorRepository.existsByOrcid("0000-0001-5109-3700")).isFalse();
+  }
+
+  /// 更新已存在的作者会整组替换姓名变体：新子行带预分配的 ID、没有版本号，要靠值对象基类的「新行」标记
+  /// 直接插入。否则 Hibernate 判断不了新旧，每个子行先查一次库，语句数随子行数增长。
+  @Test
+  @DisplayName("更新作者时新子行直接插入，语句数不随子行数增长")
+  void should_not_select_each_new_child_when_updating_author() {
+    long withOneMore = statementsToUpdateAddingVariants(1);
+    long withSixMore = statementsToUpdateAddingVariants(6);
+
+    assertThat(withSixMore).isEqualTo(withOneMore);
+  }
+
+  /// 存一个带一个姓名变体的作者，再按已存在的作者批量保存、多加 `extra` 个变体，返回这次保存准备的语句数。
+  private long statementsToUpdateAddingVariants(int extra) {
+    AuthorAggregate author = AuthorAggregate.fromPubMedComputed("Count+" + extra);
+    author.addNameVariant(AuthorNameVariant.of("Count", "Base", "B", "Count,Base,B"));
+    AuthorAggregate saved = authorRepository.save(author);
+    entityManager.flush();
+    entityManager.clear();
+    AuthorAggregate loaded = authorRepository.findById(saved.getId()).orElseThrow();
+    for (int i = 0; i < extra; i++) {
+      loaded.addNameVariant(
+          AuthorNameVariant.of("Count", "Extra" + i, "E", "Count,Extra" + i + ",E"));
+    }
+    Statistics statistics =
+        entityManager.getEntityManagerFactory().unwrap(SessionFactory.class).getStatistics();
+    statistics.clear();
+
+    authorRepository.saveBatch(List.of(loaded));
+    entityManager.flush();
+
+    return statistics.getPrepareStatementCount();
+  }
 
   @Nested
   @DisplayName("save() 方法测试")

@@ -69,8 +69,6 @@ class LogoutUserHandlerTest {
             .deviceClass(DeviceClass.UNKNOWN)
             .expiresAt(NOW.plusSeconds(1))
             .version(0L)
-            .createdAt(NOW)
-            .updatedAt(NOW)
             .build();
     when(records.findById(7001L)).thenReturn(Optional.of(login));
 
@@ -117,8 +115,6 @@ class LogoutUserHandlerTest {
             .deviceClass(DeviceClass.UNKNOWN)
             .expiresAt(NOW.plusSeconds(1))
             .version(0L)
-            .createdAt(NOW)
-            .updatedAt(NOW)
             .build();
     when(records.findById(7001L)).thenReturn(Optional.of(login));
     when(records.save(any())).thenThrow(new DataAccessResourceFailureException("db down"));

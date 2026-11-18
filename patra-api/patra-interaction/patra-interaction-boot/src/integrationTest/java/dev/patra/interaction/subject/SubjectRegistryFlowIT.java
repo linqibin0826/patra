@@ -91,7 +91,7 @@ class SubjectRegistryFlowIT {
   @BeforeEach
   void reset() {
     catalog.resetAll();
-    jdbcTemplate.update("TRUNCATE subject.registry");
+    jdbcTemplate.update("TRUNCATE itr_subject");
   }
 
   /// AC1：catalog 内部 ID 变化后，对账让登记表指向新 ID，`subject_id` 不变。
@@ -207,7 +207,7 @@ class SubjectRegistryFlowIT {
         .forEach(
             i ->
                 jdbcTemplate.update(
-                    "INSERT INTO subject.registry (subject_id, target_type, natural_key, source_id,"
+                    "INSERT INTO itr_subject (id, target_type, natural_key, source_id,"
                         + " state, snapshot, snapshot_at) VALUES (?, 1, ?, ?, 'ACTIVE',"
                         + " '{\"title\":\"old\"}'::jsonb, now())",
                     (long) i,
@@ -408,7 +408,7 @@ class SubjectRegistryFlowIT {
   /// @return 身份锚
   private String naturalKeyOf(long subjectId) {
     return jdbcTemplate.queryForObject(
-        "SELECT natural_key FROM subject.registry WHERE subject_id = ?", String.class, subjectId);
+        "SELECT natural_key FROM itr_subject WHERE id = ?", String.class, subjectId);
   }
 
   /// 包成响应体。
@@ -452,7 +452,7 @@ class SubjectRegistryFlowIT {
   ///
   /// @return 行数
   private long rowCount() {
-    return jdbcTemplate.queryForObject("SELECT count(*) FROM subject.registry", Long.class);
+    return jdbcTemplate.queryForObject("SELECT count(*) FROM itr_subject", Long.class);
   }
 
   /// 某行的来源 ID。
@@ -461,7 +461,7 @@ class SubjectRegistryFlowIT {
   /// @return 来源 ID
   private Long sourceIdOf(long subjectId) {
     return jdbcTemplate.queryForObject(
-        "SELECT source_id FROM subject.registry WHERE subject_id = ?", Long.class, subjectId);
+        "SELECT source_id FROM itr_subject WHERE id = ?", Long.class, subjectId);
   }
 
   /// 整表内容的文本（比较「什么都没改」）。
@@ -471,8 +471,8 @@ class SubjectRegistryFlowIT {
     return String.join(
         "\n",
         jdbcTemplate.queryForList(
-            "SELECT concat_ws('|', subject_id, source_id, state, snapshot::text, snapshot_at,"
-                + " updated_at) FROM subject.registry ORDER BY subject_id",
+            "SELECT concat_ws('|', id, source_id, state, snapshot::text, snapshot_at,"
+                + " updated_at) FROM itr_subject ORDER BY id",
             String.class));
   }
 }

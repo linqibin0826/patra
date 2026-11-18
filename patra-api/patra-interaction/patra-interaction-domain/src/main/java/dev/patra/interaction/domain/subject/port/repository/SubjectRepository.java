@@ -60,7 +60,13 @@ public interface SubjectRepository {
   /// @param state 新状态
   /// @param snapshot 新快照
   /// @param now 快照时间
+  /// @param actorUserId 操作人（编辑或删除的人）
   /// @return 有这一行时为 `true`
   boolean updateLocal(
-      SubjectType type, long localId, SubjectState state, SubjectSnapshot snapshot, Instant now);
+      SubjectType type,
+      long localId,
+      SubjectState state,
+      SubjectSnapshot snapshot,
+      Instant now,
+      Long actorUserId);
 }

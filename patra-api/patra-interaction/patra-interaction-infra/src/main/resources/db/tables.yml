@@ -1,0 +1,60 @@
+# interaction 库里的每一张表。档位：main 主表（带全套审计列）/ other 其他表。
+# 新建表必须在这里登记，否则结构检查（InteractionSchemaStandardIT）失败。规则见 .claude/rules/tech/database.md。
+prefix: itr
+tables:
+  # subject
+  itr_subject:
+    tier: main
+    note: 对象登记，每个被互动过的对象一行，互动数据只引用它的 id；外部对象每日对账，本地对象由所属子域改状态
+  itr_publish_quota:
+    tier: other
+    note: 发表计数，每个作者每种发表一行；只在作者锁内累加，「谁改的」没有意义
+  # collection
+  itr_collection:
+    tier: main
+    note: 收藏夹
+  itr_collection_item:
+    tier: other
+    note: 收藏夹里的条目，按 user_id 哈希分区；只增删不改
+  itr_library_item:
+    tier: other
+    note: 文献库条目（收藏过的对象），按 user_id 哈希分区；只增删不改
+  itr_library_subject_stats:
+    tier: other
+    note: 每个对象被多少人收藏，随条目增删同事务维护
+  # discussion
+  itr_comment:
+    tier: main
+    note: 讨论区评论
+  itr_comment_revision:
+    tier: other
+    note: 评论的历史版本，只追加
+  itr_comment_thread_stats:
+    tier: other
+    note: 每个楼的回复数，随评论增删同事务维护
+  itr_comment_subject_stats:
+    tier: other
+    note: 每个对象的评论数，随评论增删同事务维护
+  # post
+  itr_post:
+    tier: main
+    note: 帖子（投稿经验）
+  itr_post_submission_experience:
+    tier: other
+    note: 投稿经验帖的结构化字段，随帖子整行替换
+  itr_post_revision:
+    tier: other
+    note: 帖子的历史版本，只追加
+  # reaction
+  itr_helpful:
+    tier: other
+    note: 有帮助明细，一人对一个目标最多一条；只增删不改
+  itr_helpful_target_stats:
+    tier: other
+    note: 每个目标的有帮助数，随明细增删同事务维护
+  itr_helpful_user_stats:
+    tier: other
+    note: 每个用户收到的有帮助数，随明细增删同事务维护
+framework:
+  - flyway_schema_history
+  - event_publication

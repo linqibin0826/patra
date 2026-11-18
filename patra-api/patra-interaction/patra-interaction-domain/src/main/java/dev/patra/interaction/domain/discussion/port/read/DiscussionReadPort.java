@@ -13,7 +13,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
-/// 讨论的读端：查 `discussion` schema，并按 SQL 关联 `reaction` 的有帮助统计与明细（不依赖 reaction 的 Java 类型）。
+/// 讨论的读端：查 `itr_comment` 开头的表，并按 SQL 关联 `itr_helpful` 开头的有帮助统计与明细
+/// （不依赖 reaction 的 Java 类型）。
 /// 每条 {@link CommentRecord} 都带父评论的作者与状态、有没有直接回复与有帮助数。
 ///
 /// 楼内回复与整楼都按 `(created_at, comment_id)` 正序。

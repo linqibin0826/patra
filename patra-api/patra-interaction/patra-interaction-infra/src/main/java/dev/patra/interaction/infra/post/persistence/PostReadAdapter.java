@@ -25,23 +25,23 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Component;
 
-/// `PostReadPort` 的原生 SQL 实现。列表用键集分页：游标反查自己的排序键 `(submitted_on, created_at, post_id)`，
+/// `PostReadPort` 的原生 SQL 实现。列表用键集分页：游标反查自己的排序键 `(submitted_on, published_at, post_id)`，
 /// 有无游标是两条 SQL（PG 推不出 `:after IS NULL` 里空参数的类型）。汇总一条 SQL 在 PG 里算完（spec 第 7 节），
-/// 分位数原值交给领域规则取整。公开计数按 SQL 读 `reaction.target_stats` / `reaction.helpful`（类型码 `'POST'`）
-/// 与 `discussion.subject_stats`（经 `subject.registry` 的 POST 行从经验 ID 找到它的对象 ID）。
+/// 分位数原值交给领域规则取整。公开计数按 SQL 读 `itr_helpful_target_stats` / `itr_helpful`（类型码 `'POST'`）
+/// 与 `itr_comment_subject_stats`（经 `itr_subject` 的 POST 行从经验 ID 找到它的对象 ID）。
 @Component
 @RequiredArgsConstructor
 public class PostReadAdapter implements PostReadPort {
 
   /// 列表排序。
   private static final String ORDER =
-      " ORDER BY e.submitted_on DESC, p.created_at DESC, p.post_id DESC LIMIT :limit";
+      " ORDER BY e.submitted_on DESC, p.published_at DESC, p.id DESC LIMIT :limit";
 
   /// 排在游标之后：与游标那条的排序键比较（它被删了也查得到）。
   private static final String AFTER_CURSOR =
-      " AND (e.submitted_on, p.created_at, p.post_id) < (SELECT ce.submitted_on, cp.created_at,"
-          + " cp.post_id FROM post.post cp JOIN post.submission_experience ce"
-          + " ON ce.post_id = cp.post_id WHERE cp.post_id = :after)";
+      " AND (e.submitted_on, p.published_at, p.id) < (SELECT ce.submitted_on, cp.published_at,"
+          + " cp.id FROM itr_post cp JOIN itr_post_submission_experience ce"
+          + " ON ce.post_id = cp.id WHERE cp.id = :after)";
 
   /// 期刊汇总：窗口内按投稿日期筛，分位数按非直接拒稿 / 直接拒稿分组，结果按最终结果计数。
   private static final String SUMMARY =
@@ -68,14 +68,14 @@ public class PostReadAdapter implements PostReadPort {
                AS withdrawn,
              count(*) FILTER (WHERE e.submitted_on >= :since AND e.final_outcome = 'IN_PROGRESS')
                AS in_progress
-        FROM post.post p JOIN post.submission_experience e ON e.post_id = p.post_id
+        FROM itr_post p JOIN itr_post_submission_experience e ON e.post_id = p.id
        WHERE p.subject_id = :journal AND p.status = 'ACTIVE'
          AND p.post_type = 'SUBMISSION_EXPERIENCE'
       """;
 
   /// 经验的有帮助数，表别名 `hs`。
   private static final String HELPFUL_JOIN =
-      " LEFT JOIN reaction.target_stats hs ON hs.target_type = 'POST' AND hs.target_id = p.post_id";
+      " LEFT JOIN itr_helpful_target_stats hs ON hs.target_type = 'POST' AND hs.target_id = p.id";
 
   private final JdbcClient jdbc;
   private final PostRows rows;
@@ -120,10 +120,10 @@ public class PostReadAdapter implements PostReadPort {
                     + " WHERE p.subject_id = :journal AND p.status = 'ACTIVE'"
                     + (after == null
                         ? ""
-                        : " AND (COALESCE(hs.helpful_count, 0), p.created_at, p.post_id)"
+                        : " AND (COALESCE(hs.helpful_count, 0), p.published_at, p.id)"
                             + " < (:helpful, :at, :id)")
-                    + " ORDER BY COALESCE(hs.helpful_count, 0) DESC, p.created_at DESC,"
-                    + " p.post_id DESC LIMIT :limit")
+                    + " ORDER BY COALESCE(hs.helpful_count, 0) DESC, p.published_at DESC,"
+                    + " p.id DESC LIMIT :limit")
             .param("journal", journal.value())
             .param("limit", limit);
     if (after != null) {
@@ -146,7 +146,7 @@ public class PostReadAdapter implements PostReadPort {
   @Override
   public long countByJournal(SubjectId journal) {
     return jdbc.sql(
-            "SELECT count(*) FROM post.post WHERE subject_id = :journal AND status = 'ACTIVE'")
+            "SELECT count(*) FROM itr_post WHERE subject_id = :journal AND status = 'ACTIVE'")
         .param("journal", journal.value())
         .query(Long.class)
         .single();
@@ -165,19 +165,19 @@ public class PostReadAdapter implements PostReadPort {
     String helpful =
         viewerId == null
             ? "CAST(NULL AS boolean)"
-            : "EXISTS (SELECT 1 FROM reaction.helpful h WHERE h.user_id = :viewer"
-                + " AND h.target_type = 'POST' AND h.target_id = p.post_id)";
+            : "EXISTS (SELECT 1 FROM itr_helpful h WHERE h.user_id = :viewer"
+                + " AND h.target_type = 'POST' AND h.target_id = p.id)";
     JdbcClient.StatementSpec spec =
         jdbc.sql(
-                "SELECT p.post_id, COALESCE(hs.helpful_count, 0) AS helpful_count,"
+                "SELECT p.id, COALESCE(hs.helpful_count, 0) AS helpful_count,"
                     + " COALESCE(ds.comment_count, 0) AS reply_count, "
                     + helpful
-                    + " AS helpful FROM post.post p"
+                    + " AS helpful FROM itr_post p"
                     + HELPFUL_JOIN
-                    + " LEFT JOIN subject.registry r ON r.target_type = 3"
-                    + " AND r.source_id = p.post_id"
-                    + " LEFT JOIN discussion.subject_stats ds ON ds.subject_id = r.subject_id"
-                    + " WHERE p.post_id IN (:ids)")
+                    + " LEFT JOIN itr_subject r ON r.target_type = 3"
+                    + " AND r.source_id = p.id"
+                    + " LEFT JOIN itr_comment_subject_stats ds ON ds.subject_id = r.id"
+                    + " WHERE p.id IN (:ids)")
             .param("ids", postIds.stream().map(PostId::value).toList());
     if (viewerId != null) {
       spec = spec.param("viewer", viewerId);
@@ -186,7 +186,7 @@ public class PostReadAdapter implements PostReadPort {
         .query(
             (rs, rowNum) ->
                 Map.entry(
-                    PostId.of(rs.getLong("post_id")),
+                    PostId.of(rs.getLong("id")),
                     PostStats.of(
                         rs.getInt("helpful_count"),
                         rs.getInt("reply_count"),
@@ -227,7 +227,7 @@ public class PostReadAdapter implements PostReadPort {
   @Override
   public List<PostRevision> revisions(PostId id) {
     return jdbc.sql(
-            "SELECT body, fields::text AS fields, written_at, replaced_at FROM post.revision"
+            "SELECT body, fields::text AS fields, written_at, replaced_at FROM itr_post_revision"
                 + " WHERE post_id = :id ORDER BY revision_no DESC")
         .param("id", id.value())
         .query(rows.revisionMapper())
@@ -240,7 +240,7 @@ public class PostReadAdapter implements PostReadPort {
   /// @return 摘要；没有这条为空
   @Override
   public Optional<ExperienceDigest> findDigest(long postId) {
-    return jdbc.sql("SELECT " + PostRows.COLUMNS + PostRows.FROM + " WHERE p.post_id = :id")
+    return jdbc.sql("SELECT " + PostRows.COLUMNS + PostRows.FROM + " WHERE p.id = :id")
         .param("id", postId)
         .query(rows.postMapper())
         .optional()
@@ -261,7 +261,7 @@ public class PostReadAdapter implements PostReadPort {
       return Map.of();
     }
     return jdbc
-        .sql("SELECT " + PostRows.COLUMNS + PostRows.FROM + " WHERE p.post_id IN (:ids)")
+        .sql("SELECT " + PostRows.COLUMNS + PostRows.FROM + " WHERE p.id IN (:ids)")
         .param("ids", postIds.stream().map(PostId::value).toList())
         .query(rows.postMapper())
         .list()

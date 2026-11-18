@@ -1,35 +1,23 @@
 package dev.patra.tool.jpa.autoconfigure;
 
 import dev.patra.tool.jpa.audit.CurrentAuditorProvider;
-import java.time.Clock;
-import java.time.Instant;
 import java.util.Optional;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.data.auditing.DateTimeProvider;
 import org.springframework.data.domain.AuditorAware;
 import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
 
-/// JPA 审计配置类。
+/// JPA 审计配置：给主表实体的 `@CreatedBy` / `@LastModifiedBy` 填当前操作人。
 ///
-/// **功能说明**：
+/// 只管操作人。`created_at` / `updated_at` 由数据库触发器填（库表规范第 4 节），实体不映射，这里也就没有时间提供者。
 ///
-/// - 启用 Spring Data JPA 审计功能（`@EnableJpaAuditing`）
-/// - 配置 `AuditorAware` 用于填充 `@CreatedBy` 和 `@LastModifiedBy` 字段
-/// - 配置 `DateTimeProvider` 用于填充 `@CreatedDate` 和 `@LastModifiedDate` 字段
+/// 拿不到当前用户时 Spring Data 不动 `updated_by`，由主表基类上的 `UpdatedByResetListener` 在更新前先清空，系统写入才会留空。
 ///
-/// **扩展点**：
-///
-/// - 提供一个 {@link CurrentAuditorProvider} Bean 来告诉审计「当前操作人是谁」
-///   （安全 starter 已经内置了实现）
-/// - 应用可以自定义 `Clock` Bean 来控制时间（用于测试场景）
-///
-/// @author linqibin
-/// @since 0.1.0
+/// 扩展点：提供一个 {@link CurrentAuditorProvider} Bean 告诉审计「当前操作人是谁」（安全 starter 已经内置了实现）。
 @Configuration
-@EnableJpaAuditing(auditorAwareRef = "auditorAware", dateTimeProviderRef = "dateTimeProvider")
+@EnableJpaAuditing(auditorAwareRef = "auditorAware")
 public class JpaAuditingConfiguration {
 
   /// 默认的审计用户提供者。
@@ -48,18 +36,5 @@ public class JpaAuditingConfiguration {
       return Optional::empty;
     }
     return provider::currentAuditorId;
-  }
-
-  /// 日期时间提供者。
-  ///
-  /// 使用注入的 `Clock` 实例获取当前时间，便于测试时控制时间。
-  /// 如果未配置 Clock Bean，则使用系统默认时钟。
-  ///
-  /// @param clock 容器里的时钟（launch 提供）；没有就用系统 UTC 时钟
-  /// @return 日期时间提供者
-  @Bean
-  @ConditionalOnMissingBean
-  public DateTimeProvider dateTimeProvider(ObjectProvider<Clock> clock) {
-    return () -> Optional.of(Instant.now(clock.getIfAvailable(Clock::systemUTC)));
   }
 }

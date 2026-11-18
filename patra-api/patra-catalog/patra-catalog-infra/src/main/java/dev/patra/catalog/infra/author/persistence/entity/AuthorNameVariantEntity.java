@@ -1,14 +1,12 @@
 package dev.patra.catalog.infra.author.persistence.entity;
 
-import dev.patra.tool.jpa.entity.ChildJpaEntity;
+import dev.patra.tool.jpa.entity.ValueObjectJpaEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
-import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
-import jakarta.persistence.UniqueConstraint;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -22,13 +20,7 @@ import lombok.experimental.SuperBuilder;
 ///
 /// - 存储作者在不同文献中出现的各种名字形式
 /// - 解析自 PubMed Computed Authors 的 names 数组
-/// - 继承 `ChildJpaEntity` 支持增量同步
-///
-/// **索引设计**：
-///
-/// - `uk_author_full`：作者 ID + 原始字符串唯一索引
-/// - `idx_author_id`：作者索引
-/// - `idx_last_name`：姓氏前缀索引
+/// - 继承 `ValueObjectJpaEntity`：随作者整组替换，不需要乐观锁
 ///
 /// @author linqibin
 /// @since 0.1.0
@@ -38,18 +30,8 @@ import lombok.experimental.SuperBuilder;
 @AllArgsConstructor
 @EqualsAndHashCode(callSuper = true)
 @Entity
-@Table(
-    name = "cat_author_name_variant",
-    uniqueConstraints = {
-      @UniqueConstraint(
-          name = "uk_author_full",
-          columnNames = {"author_id", "full_string"})
-    },
-    indexes = {
-      @Index(name = "idx_author_id", columnList = "author_id"),
-      @Index(name = "idx_last_name", columnList = "last_name")
-    })
-public class AuthorNameVariantEntity extends ChildJpaEntity {
+@Table(name = "cat_author_name_variant")
+public class AuthorNameVariantEntity extends ValueObjectJpaEntity {
 
   // ========== 关联信息 ==========
 

@@ -10,13 +10,12 @@ import dev.patra.notification.domain.mail.model.enums.SkipReason;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
-import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
 /// 一封提醒邮件的投递记录：退避、第一次发送时刻、24 小时过期（spec 2.4、2.5、5.4）。
 class ReminderDeliveryTest {
 
-  private static final UUID ID = UUID.fromString("00000000-0000-0000-0000-000000000146");
+  private static final long ID = 380631096924528641L;
   private static final Instant NOW = Instant.parse("2026-10-30T07:12:00Z");
 
   /// 新建的逐条投递马上可以尝试。

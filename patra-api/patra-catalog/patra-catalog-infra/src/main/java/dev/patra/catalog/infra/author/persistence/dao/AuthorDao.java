@@ -28,6 +28,18 @@ import org.springframework.data.repository.query.Param;
 /// @since 0.1.0
 public interface AuthorDao extends JpaRepository<AuthorEntity, Long> {
 
+  /// 按 ID 查未删除的作者。
+  ///
+  /// @param id 作者 ID
+  /// @return 匹配的作者
+  Optional<AuthorEntity> findByIdAndDeletedAtIsNull(Long id);
+
+  /// 按 ID 批量查未删除的作者。
+  ///
+  /// @param ids 作者 ID
+  /// @return 匹配的作者
+  List<AuthorEntity> findByIdInAndDeletedAtIsNull(Collection<Long> ids);
+
   // ========== 姓名规范化格式查询 ==========
 
   /// 根据姓名规范化格式查询作者。
@@ -36,19 +48,19 @@ public interface AuthorDao extends JpaRepository<AuthorEntity, Long> {
   ///
   /// @param normalizedKey 姓名规范化格式（如 "SMITH+R"）
   /// @return 匹配的作者列表（可能为空）
-  List<AuthorEntity> findByNormalizedKey(String normalizedKey);
+  List<AuthorEntity> findByNormalizedKeyAndDeletedAtIsNull(String normalizedKey);
 
   /// 检查姓名规范化格式下是否有作者。
   ///
   /// @param normalizedKey 姓名规范化格式
   /// @return true 如果有匹配的作者
-  boolean existsByNormalizedKey(String normalizedKey);
+  boolean existsByNormalizedKeyAndDeletedAtIsNull(String normalizedKey);
 
   /// 批量根据姓名规范化格式查询作者。
   ///
   /// @param normalizedKeys 姓名规范化格式集合
   /// @return 作者实体列表
-  List<AuthorEntity> findByNormalizedKeyIn(Collection<String> normalizedKeys);
+  List<AuthorEntity> findByNormalizedKeyInAndDeletedAtIsNull(Collection<String> normalizedKeys);
 
   // ========== 状态查询 ==========
 
@@ -57,13 +69,13 @@ public interface AuthorDao extends JpaRepository<AuthorEntity, Long> {
   /// @param status 状态（ACTIVE/MERGED/INACTIVE）
   /// @param pageable 分页参数
   /// @return 作者分页结果
-  Page<AuthorEntity> findByStatus(String status, Pageable pageable);
+  Page<AuthorEntity> findByStatusAndDeletedAtIsNull(String status, Pageable pageable);
 
   /// 查询活跃状态的作者（分页）。
   ///
   /// @param pageable 分页参数
   /// @return 活跃作者分页结果
-  @Query("SELECT a FROM AuthorEntity a WHERE a.status = 'ACTIVE'")
+  @Query("SELECT a FROM AuthorEntity a WHERE a.status = 'ACTIVE' AND a.deletedAt IS NULL")
   Page<AuthorEntity> findActiveAuthors(Pageable pageable);
 
   // ========== 数据来源查询 ==========
@@ -73,7 +85,8 @@ public interface AuthorDao extends JpaRepository<AuthorEntity, Long> {
   /// @param provenanceCode 数据来源代码（PUBMED/ORCID/OPENALEX/MANUAL）
   /// @param pageable 分页参数
   /// @return 作者分页结果
-  Page<AuthorEntity> findByProvenanceCode(String provenanceCode, Pageable pageable);
+  Page<AuthorEntity> findByProvenanceCodeAndDeletedAtIsNull(
+      String provenanceCode, Pageable pageable);
 
   // ========== 名称搜索 ==========
 
@@ -82,27 +95,28 @@ public interface AuthorDao extends JpaRepository<AuthorEntity, Long> {
   /// @param displayName 展示名称（模糊匹配）
   /// @param pageable 分页参数
   /// @return 作者分页结果
-  Page<AuthorEntity> findByDisplayNameContainingIgnoreCase(String displayName, Pageable pageable);
+  Page<AuthorEntity> findByDisplayNameContainingIgnoreCaseAndDeletedAtIsNull(
+      String displayName, Pageable pageable);
 
   // ========== 统计查询 ==========
 
   /// 检查表中是否有数据。
   ///
   /// @return true 如果有数据
-  @Query("SELECT COUNT(a) > 0 FROM AuthorEntity a")
+  @Query("SELECT COUNT(a) > 0 FROM AuthorEntity a WHERE a.deletedAt IS NULL")
   boolean hasAnyData();
 
   /// 统计各状态的作者数量。
   ///
   /// @param status 状态
   /// @return 数量
-  long countByStatus(String status);
+  long countByStatusAndDeletedAtIsNull(String status);
 
   /// 统计各数据来源的作者数量。
   ///
   /// @param provenanceCode 数据来源代码
   /// @return 数量
-  long countByProvenanceCode(String provenanceCode);
+  long countByProvenanceCodeAndDeletedAtIsNull(String provenanceCode);
 
   // ========== 关联查询 ==========
 
@@ -110,14 +124,16 @@ public interface AuthorDao extends JpaRepository<AuthorEntity, Long> {
   ///
   /// @param orcid ORCID 标识符
   /// @return 作者实体（可选）
-  @Query("SELECT a FROM AuthorEntity a JOIN a.orcids o WHERE o.orcid = :orcid")
+  @Query(
+      "SELECT a FROM AuthorEntity a JOIN a.orcids o WHERE o.orcid = :orcid AND a.deletedAt IS NULL")
   Optional<AuthorEntity> findByOrcid(@Param("orcid") String orcid);
 
   /// 检查 ORCID 是否已存在（通过子表关联）。
   ///
   /// @param orcid ORCID 标识符
   /// @return true 如果已存在
-  @Query("SELECT COUNT(a) > 0 FROM AuthorEntity a JOIN a.orcids o WHERE o.orcid = :orcid")
+  @Query(
+      "SELECT COUNT(a) > 0 FROM AuthorEntity a JOIN a.orcids o WHERE o.orcid = :orcid AND a.deletedAt IS NULL")
   boolean existsByOrcid(@Param("orcid") String orcid);
 
   /// 批量查询已存在的 ORCID（通过子表关联）。
@@ -146,7 +162,8 @@ public interface AuthorDao extends JpaRepository<AuthorEntity, Long> {
       SELECT DISTINCT a FROM AuthorEntity a
       JOIN FETCH a.orcids
       LEFT JOIN FETCH a.nameVariants
-      WHERE a.id IN (
+      WHERE a.deletedAt IS NULL
+        AND a.id IN (
           SELECT DISTINCT ao.author.id FROM AuthorOrcidEntity ao WHERE ao.orcid IN :orcids
       )
       """)

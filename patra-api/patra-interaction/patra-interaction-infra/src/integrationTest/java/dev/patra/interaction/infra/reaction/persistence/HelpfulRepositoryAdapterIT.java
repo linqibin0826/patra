@@ -9,7 +9,6 @@ import dev.patra.interaction.domain.reaction.model.vo.HelpfulTarget;
 import dev.patra.interaction.domain.reaction.port.repository.HelpfulRepository;
 import dev.patra.interaction.domain.subject.model.read.StatsCorrection;
 import java.time.Instant;
-import java.time.OffsetDateTime;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
@@ -34,27 +33,20 @@ class HelpfulRepositoryAdapterIT extends ReactionPersistenceITSupport {
   /// 同一人同一目标只插一次；同 ID 不同种类是两个目标。
   @Test
   void should_insert_once_and_ignore_duplicate() {
-    Boolean first = transactions.execute(s -> helpful.insert(1L, C1, 9L, T0));
-    Boolean again = transactions.execute(s -> helpful.insert(1L, C1, 9L, T0));
-    Boolean post = transactions.execute(s -> helpful.insert(1L, P1, null, T0));
+    Boolean first = transactions.execute(s -> helpful.insert(1L, C1, 9L));
+    Boolean again = transactions.execute(s -> helpful.insert(1L, C1, 9L));
+    Boolean post = transactions.execute(s -> helpful.insert(1L, P1, null));
 
     assertThat(first).isTrue();
     assertThat(again).isFalse();
     assertThat(post).isTrue();
 
-    assertThat(count("SELECT count(*) FROM reaction.helpful")).isEqualTo(2L);
+    assertThat(count("SELECT count(*) FROM itr_helpful")).isEqualTo(2L);
     assertThat(
             jdbcTemplate.queryForObject(
-                "SELECT credited_user_id FROM reaction.helpful WHERE target_type = 'COMMENT'",
+                "SELECT credited_user_id FROM itr_helpful WHERE target_type = 'COMMENT'",
                 Long.class))
         .isEqualTo(9L);
-    assertThat(
-            jdbcTemplate
-                .queryForObject(
-                    "SELECT created_at FROM reaction.helpful WHERE target_type = 'COMMENT'",
-                    OffsetDateTime.class)
-                .toInstant())
-        .isEqualTo(T0);
     assertThat(helpful.exists(1L, C1)).isTrue();
     assertThat(helpful.exists(2L, C1)).isFalse();
   }
@@ -64,8 +56,8 @@ class HelpfulRepositoryAdapterIT extends ReactionPersistenceITSupport {
   void should_return_mark_only_when_deleted() {
     transactions.executeWithoutResult(
         s -> {
-          helpful.insert(1L, C1, 9L, T0);
-          helpful.insert(1L, P1, null, T0);
+          helpful.insert(1L, C1, 9L);
+          helpful.insert(1L, P1, null);
         });
 
     Optional<HelpfulMark> deleted = transactions.execute(s -> helpful.delete(1L, C1));
@@ -94,7 +86,8 @@ class HelpfulRepositoryAdapterIT extends ReactionPersistenceITSupport {
     assertThat(helpful.countOf(C2)).isZero();
     assertThat(
             jdbcTemplate.queryForObject(
-                "SELECT helpful_received FROM reaction.user_stats WHERE user_id = 9", Long.class))
+                "SELECT helpful_received FROM itr_helpful_user_stats WHERE user_id = 9",
+                Long.class))
         .isEqualTo(1L);
   }
 
@@ -103,11 +96,11 @@ class HelpfulRepositoryAdapterIT extends ReactionPersistenceITSupport {
   void should_delete_all_on_target_and_group_by_credited_user() {
     transactions.executeWithoutResult(
         s -> {
-          helpful.insert(1L, C1, 9L, T0);
-          helpful.insert(2L, C1, 9L, T0);
-          helpful.insert(3L, C1, null, T0);
+          helpful.insert(1L, C1, 9L);
+          helpful.insert(2L, C1, 9L);
+          helpful.insert(3L, C1, null);
           helpful.adjustTargetCount(C1, 3);
-          helpful.insert(1L, C2, 9L, T0);
+          helpful.insert(1L, C2, 9L);
           helpful.adjustTargetCount(C2, 1);
         });
 
@@ -115,8 +108,9 @@ class HelpfulRepositoryAdapterIT extends ReactionPersistenceITSupport {
 
     assertThat(removed).containsExactlyEntriesOf(Map.of(9L, 2));
 
-    assertThat(count("SELECT count(*) FROM reaction.helpful WHERE target_id = 101")).isZero();
-    assertThat(count("SELECT count(*) FROM reaction.target_stats WHERE target_id = 101")).isZero();
+    assertThat(count("SELECT count(*) FROM itr_helpful WHERE target_id = 101")).isZero();
+    assertThat(count("SELECT count(*) FROM itr_helpful_target_stats WHERE target_id = 101"))
+        .isZero();
     assertThat(helpful.countOf(C2)).isEqualTo(1);
     Map<Long, Integer> nothing = transactions.execute(s -> helpful.deleteAllOn(C1));
     assertThat(nothing).isEmpty();
@@ -168,13 +162,13 @@ class HelpfulRepositoryAdapterIT extends ReactionPersistenceITSupport {
   void should_find_and_fix_helpful_count_drift() {
     transactions.executeWithoutResult(
         s -> {
-          helpful.insert(1L, C1, 9L, T0);
-          helpful.insert(2L, C1, 9L, T0);
-          helpful.insert(1L, P1, null, T0);
+          helpful.insert(1L, C1, 9L);
+          helpful.insert(2L, C1, 9L);
+          helpful.insert(1L, P1, null);
         });
     jdbcTemplate.update(
-        "INSERT INTO reaction.target_stats (target_type, target_id, helpful_count) VALUES"
-            + " ('COMMENT', 101, 5), ('COMMENT', 102, 3)");
+        "INSERT INTO itr_helpful_target_stats (id, target_type, target_id, helpful_count) VALUES"
+            + " (1, 'COMMENT', 101, 5), (2, 'COMMENT', 102, 3)");
 
     assertThat(helpful.findHelpfulCountDrift()).containsExactlyInAnyOrder(C1, C2, P1);
 
@@ -183,7 +177,7 @@ class HelpfulRepositoryAdapterIT extends ReactionPersistenceITSupport {
     assertThat(locked(C2)).contains(StatsCorrection.of(3, 0));
     assertThat(locked(P1)).contains(StatsCorrection.of(0, 1));
     assertThat(helpful.countOf(C2)).isZero();
-    assertThat(count("SELECT count(*) FROM reaction.target_stats WHERE target_id = 102"))
+    assertThat(count("SELECT count(*) FROM itr_helpful_target_stats WHERE target_id = 102"))
         .isEqualTo(1L);
     assertThat(helpful.findHelpfulCountDrift()).isEmpty();
   }
@@ -193,12 +187,12 @@ class HelpfulRepositoryAdapterIT extends ReactionPersistenceITSupport {
   void should_find_and_fix_received_drift() {
     transactions.executeWithoutResult(
         s -> {
-          helpful.insert(1L, C1, 9L, T0);
-          helpful.insert(2L, C1, 9L, T0);
-          helpful.insert(1L, P1, null, T0);
+          helpful.insert(1L, C1, 9L);
+          helpful.insert(2L, C1, 9L);
+          helpful.insert(1L, P1, null);
         });
     jdbcTemplate.update(
-        "INSERT INTO reaction.user_stats (user_id, helpful_received) VALUES (9, 7), (8, 2)");
+        "INSERT INTO itr_helpful_user_stats (id, user_id, helpful_received) VALUES (1, 9, 7), (2, 8, 2)");
 
     assertThat(helpful.findReceivedDrift()).containsExactlyInAnyOrder(9L, 8L);
 

@@ -43,8 +43,7 @@ public interface PostRepository {
   /// 写回内容：正文、扩展表全部字段、`revised_at`。作者、期刊、匿名、状态、发布时刻不动。
   ///
   /// @param post 编辑后的帖子
-  /// @param now 编辑时刻
-  void update(PostAggregate post, Instant now);
+  void update(PostAggregate post);
 
   /// 记一版被替换的旧内容，版本号接在已有的后面。
   ///
@@ -56,5 +55,6 @@ public interface PostRepository {
   ///
   /// @param id 帖子 ID
   /// @param now 删除时刻
-  void markDeleted(PostId id, Instant now);
+  /// @param actorUserId 操作人（删除的人）
+  void markDeleted(PostId id, Instant now, Long actorUserId);
 }

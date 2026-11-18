@@ -195,7 +195,7 @@ public class VenueRepositoryAdapter implements VenueRepository {
       return Map.of();
     }
 
-    // 查询主表并重建聚合根（JPA 排除软删的期刊）
+    // 查询主表并重建聚合根（排除已删除的期刊）
     Set<Long> venueIds =
         identifierEntities.stream()
             .map(VenueIdentifierEntity::getVenueId)
@@ -221,8 +221,7 @@ public class VenueRepositoryAdapter implements VenueRepository {
     if (nlmIds == null || nlmIds.isEmpty()) {
       return Set.of();
     }
-    return Set.copyOf(
-        identifierDao.findNlmValuesOfSoftDeletedVenues(nlmIds.toArray(String[]::new)));
+    return Set.copyOf(identifierDao.findNlmValuesOfSoftDeletedVenues(nlmIds));
   }
 
   @Override
@@ -282,7 +281,7 @@ public class VenueRepositoryAdapter implements VenueRepository {
 
       // 主表更新
       VenueEntity managed = entityManager.find(VenueEntity.class, venueId);
-      if (managed != null) {
+      if (managed != null && managed.getDeletedAt() == null) {
         jpaConverter.updateEntity(managed, aggregate);
       }
     }
@@ -350,7 +349,7 @@ public class VenueRepositoryAdapter implements VenueRepository {
     }
 
     // 查询主表
-    List<VenueEntity> venueEntities = venueDao.findByIdIn(venueIds);
+    List<VenueEntity> venueEntities = venueDao.findByIdInAndDeletedAtIsNull(venueIds);
     if (venueEntities.isEmpty()) {
       return List.of();
     }

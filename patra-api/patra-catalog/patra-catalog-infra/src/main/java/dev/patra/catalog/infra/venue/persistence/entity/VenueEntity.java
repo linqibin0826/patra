@@ -4,12 +4,10 @@ import dev.patra.catalog.domain.venue.model.vo.CitationMetrics;
 import dev.patra.catalog.domain.venue.model.vo.OpenAccessInfo;
 import dev.patra.catalog.domain.venue.model.vo.PublicationProfile;
 import dev.patra.catalog.domain.venue.model.vo.Society;
-import dev.patra.tool.jpa.entity.SoftDeletableJpaEntity;
+import dev.patra.tool.jpa.entity.BaseJpaEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.Index;
 import jakarta.persistence.Table;
-import jakarta.persistence.UniqueConstraint;
 import java.time.Instant;
 import java.util.List;
 import lombok.Getter;
@@ -50,18 +48,8 @@ import org.hibernate.type.SqlTypes;
 @Getter
 @Setter
 @Entity
-@Table(
-    name = "cat_venue",
-    uniqueConstraints = @UniqueConstraint(name = "uk_venue_nlm_id", columnNames = "nlm_id"),
-    indexes = {
-      @Index(name = "idx_venue_type", columnList = "venue_type"),
-      @Index(name = "idx_title", columnList = "title"),
-      @Index(name = "idx_provenance", columnList = "provenance_code"),
-      @Index(name = "idx_issn_l", columnList = "issn_l"),
-      @Index(name = "idx_openalex_id", columnList = "openalex_id"),
-      @Index(name = "idx_cited_by_count", columnList = "cited_by_count")
-    })
-public class VenueEntity extends SoftDeletableJpaEntity {
+@Table(name = "cat_venue")
+public class VenueEntity extends BaseJpaEntity {
 
   // ========================================
   // 核心属性（不变量验证所需）
@@ -146,4 +134,8 @@ public class VenueEntity extends SoftDeletableJpaEntity {
   @JdbcTypeCode(SqlTypes.JSON)
   @Column(name = "affiliated_societies", columnDefinition = "JSON")
   private List<Society> affiliatedSocieties;
+
+  /// 删除时间，空表示未删除；查询方法自己带「未删除」条件（库表规范第 5 节）。
+  @Column(name = "deleted_at")
+  private Instant deletedAt;
 }

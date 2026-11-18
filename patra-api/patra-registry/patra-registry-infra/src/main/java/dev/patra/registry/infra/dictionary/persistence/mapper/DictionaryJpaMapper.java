@@ -27,6 +27,7 @@ public interface DictionaryJpaMapper {
   ///
   /// @param entity JPA 实体
   /// @return 字典项领域对象
+  @Mapping(target = "typeId", source = "dictTypeId")
   @Mapping(target = "enabled", expression = "java(Boolean.TRUE.equals(entity.getEnabled()))")
   DictionaryItem toDomain(SysDictItemEntity entity);
 }

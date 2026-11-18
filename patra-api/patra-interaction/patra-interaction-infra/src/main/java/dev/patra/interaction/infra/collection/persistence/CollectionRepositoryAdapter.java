@@ -18,6 +18,9 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Component;
 
 /// `CollectionRepository` 的原生 SQL 实现。
+///
+/// 收藏夹是主表，操作人就是收藏夹主人。`content_changed_at` 是业务时间：建夹、改名、改可见性、增减文献时由应用
+/// 写注入的时钟，列表按它排序、接口的「更新于」取它；`updated_at` 由触发器维护，任何列变化都会刷新，不拿来展示。
 @Component
 @RequiredArgsConstructor
 public class CollectionRepositoryAdapter implements CollectionRepository {
@@ -30,7 +33,7 @@ public class CollectionRepositoryAdapter implements CollectionRepository {
   /// @return 个数
   @Override
   public int countCollections(long userId) {
-    return jdbc.sql("SELECT count(*) FROM collection.collection WHERE user_id = :userId")
+    return jdbc.sql("SELECT count(*) FROM itr_collection WHERE user_id = :userId")
         .param("userId", userId)
         .query(Integer.class)
         .single();
@@ -46,7 +49,7 @@ public class CollectionRepositoryAdapter implements CollectionRepository {
     return jdbc.sql(
             "SELECT "
                 + CollectionRows.COLLECTION_COLUMNS
-                + " FROM collection.collection WHERE collection_id = :id AND user_id = :userId")
+                + " FROM itr_collection WHERE id = :id AND user_id = :userId")
         .param("id", id.value())
         .param("userId", userId)
         .query(CollectionRows.COLLECTION)
@@ -62,8 +65,8 @@ public class CollectionRepositoryAdapter implements CollectionRepository {
   @Override
   public boolean nameTaken(long userId, String name, CollectionId excluding) {
     return jdbc.sql(
-            "SELECT EXISTS (SELECT 1 FROM collection.collection WHERE user_id = :userId"
-                + " AND name = :name AND collection_id <> :excluding)")
+            "SELECT EXISTS (SELECT 1 FROM itr_collection WHERE user_id = :userId"
+                + " AND name = :name AND id <> :excluding)")
         .param("userId", userId)
         .param("name", name)
         .param("excluding", excluding == null ? 0L : excluding.value())
@@ -78,7 +81,7 @@ public class CollectionRepositoryAdapter implements CollectionRepository {
   @Override
   public Set<String> findNames(long userId) {
     return new HashSet<>(
-        jdbc.sql("SELECT name FROM collection.collection WHERE user_id = :userId")
+        jdbc.sql("SELECT name FROM itr_collection WHERE user_id = :userId")
             .param("userId", userId)
             .query(String.class)
             .list());
@@ -96,9 +99,10 @@ public class CollectionRepositoryAdapter implements CollectionRepository {
       long userId, CollectionName name, String description, Instant now) {
     return jdbc.sql(
             """
-            INSERT INTO collection.collection
-                   (collection_id, user_id, name, description, visibility, created_at, updated_at)
-            VALUES (:id, :userId, :name, :description, 'PRIVATE', :now, :now)
+            INSERT INTO itr_collection
+                   (id, user_id, name, description, visibility, content_changed_at, created_by,
+                    updated_by)
+            VALUES (:id, :userId, :name, :description, 'PRIVATE', :now, :userId, :userId)
             RETURNING\s"""
                 + CollectionRows.COLLECTION_COLUMNS)
         .param("id", SnowflakeIdGenerator.getId())
@@ -123,8 +127,10 @@ public class CollectionRepositoryAdapter implements CollectionRepository {
       long userId, CollectionId id, CollectionName name, String description, Instant now) {
     return jdbc.sql(
             """
-            UPDATE collection.collection SET name = :name, description = :description, updated_at = :now
-             WHERE collection_id = :id AND user_id = :userId
+            UPDATE itr_collection
+               SET name = :name, description = :description, content_changed_at = :now,
+                   updated_by = :userId
+             WHERE id = :id AND user_id = :userId
             RETURNING\s"""
                 + CollectionRows.COLLECTION_COLUMNS)
         .param("name", name.value())
@@ -148,8 +154,9 @@ public class CollectionRepositoryAdapter implements CollectionRepository {
       long userId, CollectionId id, CollectionVisibility visibility, Instant now) {
     return jdbc.sql(
             """
-            UPDATE collection.collection SET visibility = :visibility, updated_at = :now
-             WHERE collection_id = :id AND user_id = :userId
+            UPDATE itr_collection
+               SET visibility = :visibility, content_changed_at = :now, updated_by = :userId
+             WHERE id = :id AND user_id = :userId
             RETURNING\s"""
                 + CollectionRows.COLLECTION_COLUMNS)
         .param("visibility", visibility.name())
@@ -166,12 +173,11 @@ public class CollectionRepositoryAdapter implements CollectionRepository {
   /// @param id 收藏夹
   @Override
   public void delete(long userId, CollectionId id) {
-    jdbc.sql(
-            "DELETE FROM collection.collection_item WHERE user_id = :userId AND collection_id = :id")
+    jdbc.sql("DELETE FROM itr_collection_item WHERE user_id = :userId AND collection_id = :id")
         .param("userId", userId)
         .param("id", id.value())
         .update();
-    jdbc.sql("DELETE FROM collection.collection WHERE user_id = :userId AND collection_id = :id")
+    jdbc.sql("DELETE FROM itr_collection WHERE user_id = :userId AND id = :id")
         .param("userId", userId)
         .param("id", id.value())
         .update();
@@ -191,7 +197,7 @@ public class CollectionRepositoryAdapter implements CollectionRepository {
     }
     return new HashSet<>(
         jdbc.sql(
-                "SELECT subject_id FROM collection.collection_item WHERE user_id = :userId"
+                "SELECT subject_id FROM itr_collection_item WHERE user_id = :userId"
                     + " AND collection_id = :id AND subject_id IN (:ids)")
             .param("userId", userId)
             .param("id", id.value())
@@ -215,15 +221,18 @@ public class CollectionRepositoryAdapter implements CollectionRepository {
     int added =
         jdbc.sql(
                 """
-                INSERT INTO collection.collection_item (user_id, collection_id, subject_id, added_at)
-                SELECT :userId, :id, s.id, CAST(:addedAt AS timestamptz) - (s.ord - 1) * INTERVAL '1 microsecond'
-                  FROM unnest(CAST(:ids AS bigint[])) WITH ORDINALITY AS s(id, ord)
+                INSERT INTO itr_collection_item (id, user_id, collection_id, subject_id, added_at)
+                SELECT s.row_id, :userId, :id, s.id,
+                       CAST(:addedAt AS timestamptz) - (s.ord - 1) * INTERVAL '1 microsecond'
+                  FROM unnest(CAST(:ids AS bigint[]), CAST(:rowIds AS bigint[]))
+                       WITH ORDINALITY AS s(id, row_id, ord)
                 ON CONFLICT (user_id, collection_id, subject_id) DO NOTHING
                 """)
             .param("userId", userId)
             .param("id", id.value())
             .param("addedAt", CollectionRows.utc(addedAt))
             .param("ids", CollectionRows.idArray(subjectIds))
+            .param("rowIds", CollectionRows.newRowIds(subjectIds.size()))
             .update();
     adjustCount(userId, id, added, addedAt);
   }
@@ -243,7 +252,7 @@ public class CollectionRepositoryAdapter implements CollectionRepository {
     }
     int removed =
         jdbc.sql(
-                "DELETE FROM collection.collection_item WHERE user_id = :userId"
+                "DELETE FROM itr_collection_item WHERE user_id = :userId"
                     + " AND collection_id = :id AND subject_id IN (:ids)")
             .param("userId", userId)
             .param("id", id.value())
@@ -253,7 +262,7 @@ public class CollectionRepositoryAdapter implements CollectionRepository {
     return removed;
   }
 
-  /// 篇数增减，有变化时推进更新时间。
+  /// 篇数增减，有变化时推进内容变更时间。
   ///
   /// @param userId 所有者
   /// @param id 收藏夹
@@ -264,8 +273,9 @@ public class CollectionRepositoryAdapter implements CollectionRepository {
       return;
     }
     jdbc.sql(
-            "UPDATE collection.collection SET item_count = item_count + :delta, updated_at = :now"
-                + " WHERE collection_id = :id AND user_id = :userId")
+            "UPDATE itr_collection SET item_count = item_count + :delta,"
+                + " content_changed_at = :now, updated_by = :userId"
+                + " WHERE id = :id AND user_id = :userId")
         .param("delta", delta)
         .param("now", CollectionRows.utc(now))
         .param("id", id.value())

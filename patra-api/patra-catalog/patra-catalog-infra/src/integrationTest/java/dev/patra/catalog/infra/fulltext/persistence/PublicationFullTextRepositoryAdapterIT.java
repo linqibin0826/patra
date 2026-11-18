@@ -1,6 +1,7 @@
 package dev.patra.catalog.infra.fulltext.persistence;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import dev.patra.catalog.domain.fulltext.model.enums.FullTextUnavailableReason;
 import dev.patra.catalog.domain.fulltext.model.vo.FullTextMedia;
@@ -10,6 +11,7 @@ import dev.patra.catalog.infra.config.CatalogITPostgreSQLContainerInitializer;
 import dev.patra.tool.jpa.autoconfigure.JpaAuditingConfiguration;
 import dev.patra.tool.jpa.autoconfigure.PatraHibernatePropertiesCustomizer;
 import jakarta.persistence.EntityManager;
+import jakarta.persistence.OptimisticLockException;
 import java.time.Instant;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
@@ -65,6 +67,22 @@ class PublicationFullTextRepositoryAdapterIT {
     assertThat(saved.lastError()).isEqualTo("x");
   }
 
+  /// 不清一级缓存连续保存两次：第二次查到的是第一次新建的那个托管实体，要更新它而不是再插一行。
+  @Test
+  @DisplayName("同一事务里同一文献连续 save 两次，仍只有一行")
+  void should_save_same_fulltext_twice() {
+    adapter.save(failed(7003L, 1));
+    adapter.save(failed(7003L, 2));
+    flushAndClear();
+
+    assertThat(
+            jdbc.queryForObject(
+                "SELECT count(*) FROM cat_publication_fulltext WHERE publication_id = 7003",
+                Integer.class))
+        .isEqualTo(1);
+    assertThat(adapter.findByPublicationId(7003L).orElseThrow().attemptCount()).isEqualTo(2);
+  }
+
   @Test
   @DisplayName("全部字段往返一致，含宽高为空的图片")
   void should_round_trip_all_fields() {
@@ -118,6 +136,86 @@ class PublicationFullTextRepositoryAdapterIT {
                 "SELECT media::text FROM cat_publication_fulltext WHERE publication_id = 7003",
                 String.class))
         .isEqualTo("[]");
+  }
+
+  /// 全文升为主表后带乐观锁：每次更新版本号递增，行数始终为 1。
+  @Test
+  @DisplayName("抓取、解析先后两次更新同一篇，版本号递增、仍只有一行")
+  void should_update_fulltext_status_twice() {
+    adapter.save(failed(7004L, 1));
+    flushAndClear();
+    long inserted = version(7004L);
+
+    adapter.save(fetched(7004L));
+    flushAndClear();
+    long afterFetch = version(7004L);
+    adapter.save(fetched(7004L).toBuilder().status(FullTextStatus.PARSED).parserVersion(1).build());
+    flushAndClear();
+
+    assertThat(afterFetch).isGreaterThan(inserted);
+    assertThat(version(7004L)).isGreaterThan(afterFetch);
+    assertThat(
+            jdbc.queryForObject(
+                "SELECT count(*) FROM cat_publication_fulltext WHERE publication_id = 7004",
+                Integer.class))
+        .isEqualTo(1);
+  }
+
+  /// 托管实体读到之后，别的事务已把这行改到新版本：按旧版本写回要撞乐观锁，不能静默覆盖。
+  @Test
+  @DisplayName("按旧版本写回全文记录时抛乐观锁异常")
+  void should_reject_stale_update() {
+    adapter.save(failed(7005L, 1));
+    flushAndClear();
+    adapter.findByPublicationId(7005L);
+    jdbc.update(
+        "UPDATE cat_publication_fulltext SET version = version + 1 WHERE publication_id = 7005");
+
+    adapter.save(fetched(7005L));
+
+    assertThatThrownBy(() -> em.flush()).isInstanceOf(OptimisticLockException.class);
+  }
+
+  /// 一级缓存里的实体读到之后，别的事务已改了这行：锁行时要拿数据库里的当前值，不能返回缓存里的旧值。
+  @Test
+  @DisplayName("锁行时重读当前值，不用之前读到的旧实体")
+  void should_lock_and_reread_row_loaded_before_another_writer() {
+    adapter.save(fetched(7006L));
+    flushAndClear();
+    adapter.findByPublicationId(7006L);
+    jdbc.update(
+        "UPDATE cat_publication_fulltext SET status = 'PARSED', parser_version = 9,"
+            + " version = version + 1 WHERE publication_id = 7006");
+
+    PublicationFullText locked = adapter.lockByPublicationId(7006L).orElseThrow();
+
+    assertThat(locked.status()).isEqualTo(FullTextStatus.PARSED);
+    assertThat(locked.parserVersion()).isEqualTo(9);
+  }
+
+  @Test
+  @DisplayName("没有全文记录时锁行返回空")
+  void should_return_empty_when_locking_missing_row() {
+    assertThat(adapter.lockByPublicationId(7999L)).isEmpty();
+  }
+
+  private long version(long publicationId) {
+    return jdbc.queryForObject(
+        "SELECT version FROM cat_publication_fulltext WHERE publication_id = ?",
+        Long.class,
+        publicationId);
+  }
+
+  private static PublicationFullText fetched(long publicationId) {
+    return PublicationFullText.builder()
+        .publicationId(publicationId)
+        .pmcid("PMC" + publicationId)
+        .pmcVersion("PMC" + publicationId + ".1")
+        .status(FullTextStatus.FETCHED)
+        .objectPrefix("pmc/PMC" + publicationId + "/PMC" + publicationId + ".1/")
+        .fetchedAt(T0)
+        .attemptCount(0)
+        .build();
   }
 
   private static PublicationFullText failed(long publicationId, int attempts) {

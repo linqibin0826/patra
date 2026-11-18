@@ -68,7 +68,7 @@ class NotificationRepositoryAdapterIT extends InboxPersistenceITSupport {
   @Test
   void should_delete_by_subject() {
     notifications.insertAll(List.of(draft(2L, COMMENT_REPLY, 500L), draft(4L, MENTION, 501L)));
-    jdbcTemplate.update("UPDATE inbox.notification SET subject_id = 41 WHERE recipient_id = 4");
+    jdbcTemplate.update("UPDATE ntf_notification SET subject_id = 41 WHERE recipient_user_id = 4");
 
     assertThat(notifications.deleteBySubject(40L)).containsExactly(2L);
     assertThat(notificationRows()).isEqualTo(1);
@@ -89,7 +89,7 @@ class NotificationRepositoryAdapterIT extends InboxPersistenceITSupport {
     assertThat(notifications.markRead(3L, id, NOW)).isEqualTo(MarkReadOutcome.NOT_FOUND);
     assertThat(
             jdbcTemplate.queryForObject(
-                "SELECT read_at = ?::timestamptz FROM inbox.notification",
+                "SELECT read_at = ?::timestamptz FROM ntf_notification",
                 Boolean.class,
                 NOW.toString()))
         .isTrue();
@@ -131,5 +131,38 @@ class NotificationRepositoryAdapterIT extends InboxPersistenceITSupport {
     assertThat(notifications.findRecipientsAfter(0L, 1)).containsExactly(2L);
     assertThat(notifications.deleteAllOf(4L)).isEqualTo(2);
     assertThat(notificationRows()).isEqualTo(2);
+  }
+
+  /// 提醒是主表：标已读与全部已读的操作人是收件人本人；插入来自消息消费，操作人为空。
+  @Test
+  void should_record_reader_when_marking_read() {
+    long id =
+        notifications
+            .insertAll(List.of(draft(2L, COMMENT_REPLY, 500L), draft(2L, MENTION, 501L)))
+            .getFirst()
+            .notificationId();
+    assertThat(updatedBy(2L, id)).isNull();
+
+    notifications.markRead(2L, id, NOW);
+    assertThat(updatedBy(2L, id)).isEqualTo(2L);
+
+    notifications.markAllRead(2L, NOW);
+    assertThat(
+            jdbcTemplate.queryForList(
+                "SELECT updated_by FROM ntf_notification WHERE recipient_user_id = 2", Long.class))
+        .containsOnly(2L);
+  }
+
+  /// 读一条提醒的 `updated_by`。
+  ///
+  /// @param recipientId 收件人
+  /// @param id 提醒 ID
+  /// @return 操作人
+  private Long updatedBy(long recipientId, long id) {
+    return jdbcTemplate.queryForObject(
+        "SELECT updated_by FROM ntf_notification WHERE recipient_user_id = ? AND id = ?",
+        Long.class,
+        recipientId,
+        id);
   }
 }

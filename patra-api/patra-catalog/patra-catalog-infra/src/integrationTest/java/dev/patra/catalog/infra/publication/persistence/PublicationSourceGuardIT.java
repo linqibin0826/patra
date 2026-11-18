@@ -18,6 +18,7 @@ import dev.patra.catalog.domain.publication.model.vo.SourcePosition;
 import dev.patra.catalog.domain.publication.model.vo.VenueInstanceId;
 import dev.patra.catalog.infra.author.persistence.AuthorOrcidReadAdapter;
 import dev.patra.catalog.infra.config.CatalogITPostgreSQLContainerInitializer;
+import dev.patra.catalog.infra.publication.persistence.dao.PublicationSyncDao;
 import dev.patra.tool.jpa.autoconfigure.JpaAuditingConfiguration;
 import dev.patra.tool.jpa.json.JsonColumnCodec;
 import jakarta.persistence.EntityManager;
@@ -206,7 +207,7 @@ class PublicationSourceGuardIT {
     em.createNativeQuery("SET LOCAL enable_seqscan = off").executeUpdate();
 
     List<?> plan =
-        em.createNativeQuery("EXPLAIN " + PublicationSyncRepositoryAdapter.SYNC_TARGETS_SQL)
+        em.createNativeQuery("EXPLAIN " + PublicationSyncDao.SYNC_TARGETS_SQL)
             .setParameter("pmids", new String[] {"92000401", "92000402"})
             .getResultList();
 
@@ -214,8 +215,8 @@ class PublicationSourceGuardIT {
     assertThat(text)
         .doesNotContain("Full Join")
         .doesNotContain("Seq Scan")
-        .contains("uk_pmid")
-        .contains("cat_publication_source_pkey");
+        .contains("uk_cat_publication_pmid")
+        .contains("uk_cat_publication_source_pmid");
   }
 
   @Test

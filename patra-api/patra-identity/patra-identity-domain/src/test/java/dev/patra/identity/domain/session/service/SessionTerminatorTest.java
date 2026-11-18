@@ -134,8 +134,6 @@ class SessionTerminatorTest {
         .deviceClass(DeviceClass.UNKNOWN)
         .expiresAt(NOW.plusSeconds(3600))
         .version(0L)
-        .createdAt(NOW)
-        .updatedAt(NOW)
         .build();
   }
 }

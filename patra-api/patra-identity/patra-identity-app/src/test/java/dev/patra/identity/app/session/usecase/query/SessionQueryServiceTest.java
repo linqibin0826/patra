@@ -133,8 +133,6 @@ class SessionQueryServiceTest {
         .ipRegion(region)
         .expiresAt(T0.plusSeconds(86_400))
         .version(0L)
-        .createdAt(T0)
-        .updatedAt(T0)
         .build();
   }
 }

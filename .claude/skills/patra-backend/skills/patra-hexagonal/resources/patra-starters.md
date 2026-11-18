@@ -34,7 +34,7 @@
 ### patra-tool-jpa
 
 **适用**：`patra-{service}-infra`（涉及数据库）
-**功能**：Spring Data JPA、`BaseJpaEntity` 基类（雪花 ID + 审计 + 乐观锁）、`SoftDeletableJpaEntity`、Flyway 迁移、`JpaErrorMappingContributor`
+**功能**：Spring Data JPA、实体基类 `BaseJpaEntity`（主表：雪花 ID + 操作人审计 + 乐观锁）与 `ValueObjectJpaEntity`（其他表：只有雪花 ID）、Flyway 迁移、`JpaErrorMappingContributor`
 
 ### patra-tool-http-client
 

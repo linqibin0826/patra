@@ -28,7 +28,6 @@ import javax.sql.DataSource;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.transaction.IllegalTransactionStateException;
 
 /// 评论的写端：插入根评论与回复、改正文、存修改历史、变占位、删除、楼锁、楼统计与对象统计。
@@ -91,7 +90,7 @@ class CommentRepositoryAdapterIT extends DiscussionPersistenceITSupport {
 
     transactions.executeWithoutResult(
         s -> {
-          comments.markDeleted(b, T0.plusSeconds(9));
+          comments.markDeleted(b, T0.plusSeconds(9), 1L);
           comments.removeReply(root);
         });
     assertThat(threadStats(root)).containsExactly(2, T0.plusSeconds(3));
@@ -129,7 +128,8 @@ class CommentRepositoryAdapterIT extends DiscussionPersistenceITSupport {
 
     assertThat(
             jdbcTemplate.queryForObject(
-                "SELECT count(*) FROM discussion.thread_stats WHERE root_id = 7", Long.class))
+                "SELECT count(*) FROM itr_comment_thread_stats WHERE root_comment_id = 7",
+                Long.class))
         .isZero();
   }
 
@@ -145,7 +145,7 @@ class CommentRepositoryAdapterIT extends DiscussionPersistenceITSupport {
 
     assertThat(
             jdbcTemplate.queryForList(
-                "SELECT subject_id, comment_count FROM discussion.subject_stats"))
+                "SELECT subject_id, comment_count FROM itr_comment_subject_stats"))
         .containsExactly(Map.of("subject_id", S1.value(), "comment_count", 1));
   }
 
@@ -233,7 +233,7 @@ class CommentRepositoryAdapterIT extends DiscussionPersistenceITSupport {
 
     List<Map<String, Object>> rows =
         jdbcTemplate.queryForList(
-            "SELECT revision_no, body FROM discussion.comment_revision WHERE comment_id = ?"
+            "SELECT revision_no, body FROM itr_comment_revision WHERE comment_id = ?"
                 + " ORDER BY revision_no",
             id);
     assertThat(rows)
@@ -248,7 +248,7 @@ class CommentRepositoryAdapterIT extends DiscussionPersistenceITSupport {
     transactions.executeWithoutResult(s -> comments.appendRevision(id, RevisionRecord.of("旧", T0)));
     Instant now = T0.plusSeconds(60);
 
-    transactions.executeWithoutResult(s -> comments.markDeleted(id, now));
+    transactions.executeWithoutResult(s -> comments.markDeleted(id, now, 1L));
 
     CommentAggregate saved = comments.find(id).orElseThrow();
     assertThat(saved.getState()).isEqualTo(CommentState.DELETED);
@@ -257,15 +257,13 @@ class CommentRepositoryAdapterIT extends DiscussionPersistenceITSupport {
     assertThat(revisionCount(id)).isZero();
     assertThat(
             jdbcTemplate.queryForObject(
-                "SELECT deleted_at IS NOT NULL FROM discussion.comment WHERE comment_id = ?",
-                Boolean.class,
-                id))
+                "SELECT deleted_at IS NOT NULL FROM itr_comment WHERE id = ?", Boolean.class, id))
         .isTrue();
   }
 
-  /// 删除评论，修改历史随外键一起没了。
+  /// 删除评论时在同一事务里先删它的修改历史（没有外键级联，由仓储显式删）。
   @Test
-  void should_delete_comment_with_its_revisions() {
+  void should_delete_revisions_with_comment() {
     long id = insert(null, null, 1L, "当前", List.of(), T0);
     transactions.executeWithoutResult(s -> comments.appendRevision(id, RevisionRecord.of("旧", T0)));
 
@@ -285,14 +283,26 @@ class CommentRepositoryAdapterIT extends DiscussionPersistenceITSupport {
     assertThat(comments.hasReplies(reply)).isFalse();
   }
 
-  /// 还有回复的评论删不掉（外键兜底）。
+  /// 评论是主表：发布的操作人是作者，变占位的操作人由调用方传入（作者本人或管理员）。
   @Test
-  void should_refuse_to_delete_comment_with_replies() {
-    long root = insert(null, null, 1L, "根", List.of(), T0);
-    insert(root, root, 2L, "回复", List.of(), T0.plusSeconds(1));
+  void should_record_actor_when_marking_deleted() {
+    long id = insert(null, null, 1L, "当前", List.of(), T0);
+    assertThat(auditColumn("created_by", id)).isEqualTo(1L);
 
-    assertThatThrownBy(() -> transactions.executeWithoutResult(s -> comments.delete(root)))
-        .isInstanceOf(DataIntegrityViolationException.class);
+    transactions.executeWithoutResult(s -> comments.markDeleted(id, T0.plusSeconds(60), 42L));
+
+    assertThat(auditColumn("updated_by", id)).isEqualTo(42L);
+    assertThat(auditColumn("created_by", id)).isEqualTo(1L);
+  }
+
+  /// 读评论的审计列。
+  ///
+  /// @param column `created_by` 或 `updated_by`
+  /// @param commentId 评论
+  /// @return 列值
+  private Long auditColumn(String column, long commentId) {
+    return jdbcTemplate.queryForObject(
+        "SELECT " + column + " FROM itr_comment WHERE id = ?", Long.class, commentId);
   }
 
   /// 楼锁：别的连接持有同一楼的锁时，`lockThread` 一直等到它释放。
@@ -329,12 +339,12 @@ class CommentRepositoryAdapterIT extends DiscussionPersistenceITSupport {
     insert(root, root, 2L, "一", List.of(), T0.plus(1, ChronoUnit.HOURS));
     long second = insert(root, root, 3L, "二", List.of(), T0.plus(2, ChronoUnit.HOURS));
     transactions.executeWithoutResult(
-        s -> comments.markDeleted(second, T0.plus(3, ChronoUnit.HOURS)));
+        s -> comments.markDeleted(second, T0.plus(3, ChronoUnit.HOURS), 1L));
     long other = insert(null, null, 1L, "另一楼", List.of(), T0);
     insert(other, other, 2L, "回", List.of(), T0.plus(4, ChronoUnit.HOURS));
     jdbcTemplate.update(
-        "INSERT INTO discussion.thread_stats (root_id, reply_count, last_reply_at) VALUES"
-            + " (?, 5, ?), (999, 2, ?)",
+        "INSERT INTO itr_comment_thread_stats (id, root_comment_id, reply_count, last_reply_at)"
+            + " VALUES (1, ?, 5, ?), (2, 999, 2, ?)",
         root,
         Timestamp.from(T0.plus(2, ChronoUnit.HOURS)),
         Timestamp.from(T0));
@@ -349,7 +359,8 @@ class CommentRepositoryAdapterIT extends DiscussionPersistenceITSupport {
     assertThat(recountThread(999L)).contains(StatsCorrection.of(2, 0));
     assertThat(
             jdbcTemplate.queryForObject(
-                "SELECT count(*) FROM discussion.thread_stats WHERE root_id = 999", Long.class))
+                "SELECT count(*) FROM itr_comment_thread_stats WHERE root_comment_id = 999",
+                Long.class))
         .isZero();
     assertThat(comments.findThreadStatsDrift()).isEmpty();
   }
@@ -360,7 +371,8 @@ class CommentRepositoryAdapterIT extends DiscussionPersistenceITSupport {
     long root = insert(null, null, 1L, "根", List.of(), T0);
     insert(root, root, 2L, "一", List.of(), T0.plus(1, ChronoUnit.HOURS));
     jdbcTemplate.update(
-        "INSERT INTO discussion.thread_stats (root_id, reply_count, last_reply_at) VALUES (?, 1, ?)",
+        "INSERT INTO itr_comment_thread_stats (id, root_comment_id, reply_count, last_reply_at)"
+            + " VALUES (1, ?, 1, ?)",
         root,
         Timestamp.from(T0));
 
@@ -375,9 +387,10 @@ class CommentRepositoryAdapterIT extends DiscussionPersistenceITSupport {
     long root = insert(null, null, 1L, "根", List.of(), T0);
     insert(root, root, 2L, "一", List.of(), T0);
     long gone = insert(root, root, 3L, "二", List.of(), T0);
-    transactions.executeWithoutResult(s -> comments.markDeleted(gone, T0));
+    transactions.executeWithoutResult(s -> comments.markDeleted(gone, T0, 1L));
     jdbcTemplate.update(
-        "INSERT INTO discussion.subject_stats (subject_id, comment_count) VALUES (11, 7), (12, 3)");
+        "INSERT INTO itr_comment_subject_stats (id, subject_id, comment_count)"
+            + " VALUES (1, 11, 7), (2, 12, 3)");
 
     assertThat(comments.findCommentCountDrift()).containsExactlyInAnyOrder(S1, S2);
 
@@ -386,7 +399,7 @@ class CommentRepositoryAdapterIT extends DiscussionPersistenceITSupport {
     assertThat(recountSubject(S2)).contains(StatsCorrection.of(3, 0));
     assertThat(
             jdbcTemplate.queryForObject(
-                "SELECT comment_count FROM discussion.subject_stats WHERE subject_id = 12",
+                "SELECT comment_count FROM itr_comment_subject_stats WHERE subject_id = 12",
                 Integer.class))
         .isZero();
     assertThat(comments.findCommentCountDrift()).isEmpty();
@@ -460,7 +473,7 @@ class CommentRepositoryAdapterIT extends DiscussionPersistenceITSupport {
   /// @return `[回复数, 最后回复时间]`，时间为空时第二项为 `null`
   private List<Object> threadStats(long rootId) {
     return jdbcTemplate.queryForObject(
-        "SELECT reply_count, last_reply_at FROM discussion.thread_stats WHERE root_id = ?",
+        "SELECT reply_count, last_reply_at FROM itr_comment_thread_stats WHERE root_comment_id = ?",
         (rs, rowNum) -> {
           Timestamp last = rs.getTimestamp("last_reply_at");
           return Arrays.asList(rs.getInt("reply_count"), last == null ? null : last.toInstant());
@@ -474,9 +487,7 @@ class CommentRepositoryAdapterIT extends DiscussionPersistenceITSupport {
   /// @return 行数
   private long revisionCount(long commentId) {
     return jdbcTemplate.queryForObject(
-        "SELECT count(*) FROM discussion.comment_revision WHERE comment_id = ?",
-        Long.class,
-        commentId);
+        "SELECT count(*) FROM itr_comment_revision WHERE comment_id = ?", Long.class, commentId);
   }
 
   /// 等到有会话在等 advisory lock。

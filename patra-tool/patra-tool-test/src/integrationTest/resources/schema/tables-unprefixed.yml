@@ -1,0 +1,14 @@
+# 变体：把笔记标签表登记成没有前缀的 note_tag，用来验证前缀检查。
+prefix: tst
+tables:
+  tst_note:
+    tier: main
+    note: 测试用笔记，带全套审计列
+  note_tag:
+    tier: other
+    note: 笔记的标签，故意不带前缀
+  tst_event:
+    tier: other
+    note: 按用户分区的事件
+framework:
+  - flyway_schema_history

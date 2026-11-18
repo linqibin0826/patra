@@ -58,7 +58,7 @@ class StatsRecountFlowIT extends CollectionFlowITSupport {
         .containsExactly(
             "collection.collector_count",
             "discussion.comment_count",
-            "discussion.thread_stats",
+            "itr_comment_thread_stats",
             "reaction.helpful_count",
             "reaction.helpful_received");
   }
@@ -67,11 +67,12 @@ class StatsRecountFlowIT extends CollectionFlowITSupport {
   /// 再跑差异为 0。
   @Test
   void should_fix_corrupted_rows_and_report() {
-    jdbcTemplate.update("UPDATE collection.subject_stats SET collector_count = 9");
-    jdbcTemplate.update("DELETE FROM reaction.target_stats");
-    jdbcTemplate.update("UPDATE reaction.user_stats SET helpful_received = 0 WHERE user_id = ?", A);
-    jdbcTemplate.update("UPDATE discussion.thread_stats SET reply_count = 3");
-    jdbcTemplate.update("UPDATE discussion.subject_stats SET comment_count = 9");
+    jdbcTemplate.update("UPDATE itr_library_subject_stats SET collector_count = 9");
+    jdbcTemplate.update("DELETE FROM itr_helpful_target_stats");
+    jdbcTemplate.update(
+        "UPDATE itr_helpful_user_stats SET helpful_received = 0 WHERE user_id = ?", A);
+    jdbcTemplate.update("UPDATE itr_comment_thread_stats SET reply_count = 3");
+    jdbcTemplate.update("UPDATE itr_comment_subject_stats SET comment_count = 9");
 
     RecountResult result = commandBus.handle(RecountStatsCommand.of());
 
@@ -79,15 +80,15 @@ class StatsRecountFlowIT extends CollectionFlowITSupport {
         .containsExactly(
             CounterResult.of("collection.collector_count", 1),
             CounterResult.of("discussion.comment_count", 1),
-            CounterResult.of("discussion.thread_stats", 1),
+            CounterResult.of("itr_comment_thread_stats", 1),
             CounterResult.of("reaction.helpful_count", 1),
             CounterResult.of("reaction.helpful_received", 1));
-    assertThat(count("SELECT sum(collector_count) FROM collection.subject_stats")).isEqualTo(2L);
-    assertThat(count("SELECT sum(helpful_count) FROM reaction.target_stats")).isEqualTo(1L);
-    assertThat(count("SELECT helpful_received FROM reaction.user_stats WHERE user_id = ?", A))
+    assertThat(count("SELECT sum(collector_count) FROM itr_library_subject_stats")).isEqualTo(2L);
+    assertThat(count("SELECT sum(helpful_count) FROM itr_helpful_target_stats")).isEqualTo(1L);
+    assertThat(count("SELECT helpful_received FROM itr_helpful_user_stats WHERE user_id = ?", A))
         .isEqualTo(1L);
-    assertThat(count("SELECT sum(reply_count) FROM discussion.thread_stats")).isEqualTo(1L);
-    assertThat(count("SELECT sum(comment_count) FROM discussion.subject_stats")).isEqualTo(2L);
+    assertThat(count("SELECT sum(reply_count) FROM itr_comment_thread_stats")).isEqualTo(1L);
+    assertThat(count("SELECT sum(comment_count) FROM itr_comment_subject_stats")).isEqualTo(2L);
     assertThat(commandBus.handle(RecountStatsCommand.of()).corrected()).isZero();
   }
 }

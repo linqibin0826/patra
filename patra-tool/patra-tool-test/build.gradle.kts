@@ -100,6 +100,9 @@ dependencies {
     // Jackson（JSON 序列化支持）
     compileOnly("tools.jackson.core:jackson-databind")
 
+    // 库表结构检查读各服务的 db/tables.yml
+    implementation("org.yaml:snakeyaml")
+
     // ==================== 初始化器自己的集成测试 ====================
 
     // Kafka 示例用例收发消息用的客户端：不放进 api，使用方自己引（版本由 Spring Boot 管理）

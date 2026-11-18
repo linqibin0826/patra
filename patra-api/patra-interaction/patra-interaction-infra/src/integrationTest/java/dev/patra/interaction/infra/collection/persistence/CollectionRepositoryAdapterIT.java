@@ -30,7 +30,7 @@ class CollectionRepositoryAdapterIT extends CollectionPersistenceITSupport {
     assertThat(c.description()).isEqualTo("每周四");
     assertThat(c.visibility()).isEqualTo(CollectionVisibility.PRIVATE);
     assertThat(c.itemCount()).isZero();
-    assertThat(c.createdAt()).isEqualTo(T0);
+    assertThat(c.createdAt()).isNotNull();
     assertThat(c.updatedAt()).isEqualTo(T0);
     assertThat(collections.countCollections(U)).isEqualTo(1);
     assertThat(collections.findOwned(V, c.collectionId())).isEmpty();
@@ -83,7 +83,7 @@ class CollectionRepositoryAdapterIT extends CollectionPersistenceITSupport {
         .isEqualTo(Set.of(S1, S2));
   }
 
-  /// 复制时同一时刻建夹再放条目：更新时间就是写入的时刻，不会被换成数据库时间、早于创建时间。
+  /// 复制时同一时刻建夹再放条目：「更新于」取应用写入的内容变更时间，就是注入的时刻，不会被换成数据库时间。
   @Test
   void should_keep_explicit_updated_at_when_written_at_creation_instant() {
     CollectionSummary c = tx(() -> collections.create(U, name("组会"), null, T1));
@@ -91,7 +91,32 @@ class CollectionRepositoryAdapterIT extends CollectionPersistenceITSupport {
 
     CollectionSummary now = collections.findOwned(U, c.collectionId()).orElseThrow();
     assertThat(now.updatedAt()).isEqualTo(T1);
-    assertThat(now.updatedAt()).isAfterOrEqualTo(now.createdAt());
+  }
+
+  /// 收藏夹是主表：建夹与修改的操作人都是收藏夹主人。
+  @Test
+  void should_record_owner_as_actor() {
+    CollectionSummary c = tx(() -> collections.create(U, name("组会"), null, T0));
+    assertThat(auditColumn("created_by", c)).isEqualTo(U);
+    assertThat(auditColumn("updated_by", c)).isEqualTo(U);
+
+    jdbcTemplate.update(
+        "UPDATE itr_collection SET updated_by = NULL WHERE id = ?", c.collectionId().value());
+    txRun(() -> collections.updateVisibility(U, c.collectionId(), CollectionVisibility.PUBLIC, T1));
+
+    assertThat(auditColumn("updated_by", c)).isEqualTo(U);
+  }
+
+  /// 读收藏夹的审计列。
+  ///
+  /// @param column `created_by` 或 `updated_by`
+  /// @param collection 收藏夹
+  /// @return 列值
+  private Long auditColumn(String column, CollectionSummary collection) {
+    return jdbcTemplate.queryForObject(
+        "SELECT " + column + " FROM itr_collection WHERE id = ?",
+        Long.class,
+        collection.collectionId().value());
   }
 
   /// 移出回实际移出的篇数。
@@ -117,7 +142,7 @@ class CollectionRepositoryAdapterIT extends CollectionPersistenceITSupport {
   /// @return 加入时间
   private Timestamp addedAt(CollectionSummary c, SubjectId subject) {
     return jdbcTemplate.queryForObject(
-        "SELECT added_at FROM collection.collection_item WHERE user_id = ? AND collection_id = ?"
+        "SELECT added_at FROM itr_collection_item WHERE user_id = ? AND collection_id = ?"
             + " AND subject_id = ?",
         Timestamp.class,
         U,

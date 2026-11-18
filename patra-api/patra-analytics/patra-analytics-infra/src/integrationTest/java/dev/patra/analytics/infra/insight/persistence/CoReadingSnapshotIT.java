@@ -27,14 +27,13 @@ class CoReadingSnapshotIT extends InsightPersistenceITSupport {
     replace(List.of(entry(9_999L, 1, 1L)));
     replace(entries);
 
-    assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM insight.co_reading", Long.class))
+    assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM anl_co_reading", Long.class))
         .isEqualTo(12_000L);
     assertThat(reads.relatedOf(9_999L, 6)).isEmpty();
     assertThat(reads.relatedOf(7L, 3)).containsExactly(10_701L, 10_702L, 10_703L);
     assertThat(
             jdbcTemplate.queryForObject(
-                "SELECT row_count FROM insight.snapshot_run WHERE kind = 'CO_READING'",
-                Integer.class))
+                "SELECT row_count FROM anl_snapshot_run WHERE kind = 'CO_READING'", Integer.class))
         .isEqualTo(12_000);
   }
 

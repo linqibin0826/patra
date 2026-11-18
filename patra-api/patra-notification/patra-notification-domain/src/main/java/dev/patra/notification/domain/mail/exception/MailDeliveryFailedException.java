@@ -25,8 +25,8 @@ public class MailDeliveryFailedException extends DomainException {
     super(
         "邮件发送失败: template="
             + mail.template()
-            + ", deliveryId="
-            + mail.deliveryId()
+            + ", idempotencyKey="
+            + mail.idempotencyKey()
             + ", failure="
             + failure
             + ", reason="

@@ -3,7 +3,6 @@ package dev.patra.catalog.infra.mesh.persistence.entity;
 import dev.patra.tool.jpa.entity.ValueObjectJpaEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.Index;
 import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
@@ -20,18 +19,12 @@ import lombok.Setter;
 /// - `source` 来源（如 NCI2004_11_17/FDA SRS (2023)/OMIM (2013) 等）
 /// - `order_num` 排序号（在同一 SCR 内的顺序）
 ///
-/// **索引说明**：
-///
-/// - 普通索引 `idx_scr_ui`: 支持查询某 SCR 的所有来源
-///
 /// @author linqibin
 /// @since 0.1.0
 @Getter
 @Setter
 @Entity
-@Table(
-    name = "cat_mesh_scr_source",
-    indexes = {@Index(name = "idx_scr_ui", columnList = "scr_ui")})
+@Table(name = "cat_mesh_scr_source")
 public class MeshScrSourceEntity extends ValueObjectJpaEntity {
 
   /// SCR UI（关联：cat_mesh_scr.ui，格式：C000001）

@@ -77,6 +77,26 @@ class OrganizationRepositoryAdapterIT {
   @Autowired private OrganizationLocationDao locationDao;
   @Autowired private EntityManager entityManager;
 
+  /// 删除用 `deleted_at` 列标记，「未删除」条件要每个查询自己带：已删的机构按 ID、ROR ID 都查不到，也不计数。
+  @Test
+  @DisplayName("已删除的机构按 ID、ROR ID 都查不到，也不计数")
+  void should_not_find_soft_deleted_organization() {
+    long before = repository.count();
+    OrganizationAggregate saved =
+        repository.save(createOrganizationAggregate("0deleted1", "Deleted Org"));
+    entityManager.flush();
+    entityManager
+        .createNativeQuery("UPDATE cat_organization SET deleted_at = now() WHERE id = :id")
+        .setParameter("id", saved.getId().value())
+        .executeUpdate();
+    entityManager.clear();
+
+    assertThat(repository.findById(saved.getId())).isEmpty();
+    assertThat(repository.findByRorId(RorId.of("0deleted1"))).isEmpty();
+    assertThat(repository.existsByRorId(RorId.of("0deleted1"))).isFalse();
+    assertThat(repository.count()).isEqualTo(before);
+  }
+
   @Nested
   @DisplayName("hasAnyData() 测试")
   class HasAnyDataTests {
@@ -130,8 +150,12 @@ class OrganizationRepositoryAdapterIT {
       OrganizationAggregate organization = createOrganizationAggregate(rorId, "Harvard University");
       repository.insertAll(List.of(organization));
 
-      Long orgId = organizationDao.findByRorId(RorId.fromId(rorId).getId()).orElseThrow().getId();
-      OrganizationExternalIdEntity before = externalIdDao.findAllByOrgId(orgId).getFirst();
+      Long orgId =
+          organizationDao
+              .findByRorIdAndDeletedAtIsNull(RorId.fromId(rorId).getId())
+              .orElseThrow()
+              .getId();
+      OrganizationExternalIdEntity before = externalIdDao.findAllByOrganizationId(orgId).getFirst();
       Long beforeId = before.getId();
 
       // 清除 Session 缓存，避免 NonUniqueObjectException
@@ -141,7 +165,7 @@ class OrganizationRepositoryAdapterIT {
       loaded.addExternalId(ExternalId.create(ExternalIdType.GRID, "grid.updated.1"));
       repository.updateBatch(List.of(loaded));
 
-      List<OrganizationExternalIdEntity> updated = externalIdDao.findAllByOrgId(orgId);
+      List<OrganizationExternalIdEntity> updated = externalIdDao.findAllByOrganizationId(orgId);
       assertThat(updated).hasSize(1);
       assertThat(updated.getFirst().getId()).isEqualTo(beforeId);
       assertThat(updated.getFirst().getPreferredValue()).isEqualTo("grid.updated.1");
@@ -191,7 +215,7 @@ class OrganizationRepositoryAdapterIT {
       OrganizationAggregate organization =
           createOrganizationAggregate("0findbyid", "FindById Test");
       repository.insertAll(List.of(organization));
-      Long orgId = organizationDao.findByRorId("0findbyid").orElseThrow().getId();
+      Long orgId = organizationDao.findByRorIdAndDeletedAtIsNull("0findbyid").orElseThrow().getId();
 
       var result = repository.findById(OrganizationId.of(orgId));
 

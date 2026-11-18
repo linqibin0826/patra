@@ -1,10 +1,12 @@
 # Registry Infra 集成测试配置
-# 使用 target 版本限制，跳过种子数据迁移（DictionarySeedIT 单独覆盖为 latest）
+# 只跑建表脚本、不灌种子：种子在 db/seed，服务配置才把它加进 Flyway 位置（DictionarySeedIT 单独加上）
 
 spring:
   flyway:
-    # 只执行到 V1（schema 迁移），跳过 V2、V3 种子数据
-    target: 1
+    locations: classpath:db/migration
+    # 同一个 JVM 里的集成测试共用一个库：DictionarySeedIT 先跑的话，种子脚本已记在历史表里，
+    # 别的上下文本地没有 db/seed，校验时会报「已执行的脚本找不到」，这里放行
+    ignore-migration-patterns: "*:missing,*:future"
     # 允许清理数据库（仅用于测试）
     clean-disabled: false
     # 设置 baseline 跳过已存在的迁移历史检查

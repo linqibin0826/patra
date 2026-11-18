@@ -209,14 +209,14 @@ class UnreadCountStreamFlowIT extends NotificationFlowITSupport {
         .build();
   }
 
-  /// 这个用户最后一次在站的时刻（`kernel.presence`）。
+  /// 这个用户最后一次在站的时刻（`ntf_presence`）。
   ///
   /// @param userId 用户
   /// @return 时刻
   private Instant lastSeen(long userId) {
     return jdbcTemplate
         .queryForObject(
-            "SELECT last_seen_at FROM kernel.presence WHERE user_id = ?", Timestamp.class, userId)
+            "SELECT last_seen_at FROM ntf_presence WHERE user_id = ?", Timestamp.class, userId)
         .toInstant();
   }
 

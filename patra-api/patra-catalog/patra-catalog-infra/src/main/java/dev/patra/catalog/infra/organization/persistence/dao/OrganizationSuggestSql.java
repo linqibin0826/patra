@@ -16,7 +16,7 @@ final class OrganizationSuggestSql {
   /// `type_rank`（ror_display / label 0、alias 1、acronym 2）。
   static final String NAME_CANDIDATES =
       """
-      SELECT n.org_id, n.name_value,
+      SELECT n.organization_id, n.name_value,
              CASE WHEN lower(n.name_value) = lower(:q) THEN 0
                   WHEN n.name_value ILIKE :prefix ESCAPE '!' THEN 1
                   WHEN n.name_value ILIKE :wordStart ESCAPE '!' THEN 2 ELSE 3 END AS match_rank,
@@ -29,7 +29,7 @@ final class OrganizationSuggestSql {
   /// 别名表候选：LABEL 视同官方名（0），ALIAS 视同别名（1）。
   static final String ALIAS_CANDIDATES =
       """
-      SELECT o2.id AS org_id, a.alias AS name_value,
+      SELECT o2.id AS organization_id, a.alias AS name_value,
              CASE WHEN lower(a.alias) = lower(:q) THEN 0
                   WHEN a.alias ILIKE :prefix ESCAPE '!' THEN 1
                   WHEN a.alias ILIKE :wordStart ESCAPE '!' THEN 2 ELSE 3 END AS match_rank,
@@ -69,7 +69,7 @@ final class OrganizationSuggestSql {
           UNION ALL
           SELECT z.name_value, CASE WHEN jsonb_exists(z.types, 'label') THEN 1 ELSE 2 END
           FROM cat_organization_name z
-          WHERE z.org_id = o.id AND z.lang = 'zh') x
+          WHERE z.organization_id = o.id AND z.lang = 'zh') x
         ORDER BY x.pri, length(x.name_value), x.name_value
         LIMIT 1) zh ON TRUE
       """;
@@ -80,14 +80,14 @@ final class OrganizationSuggestSql {
       LEFT JOIN LATERAL (
         SELECT loc.country_code, loc.city_name
         FROM cat_organization_location loc
-        WHERE loc.org_id = o.id
+        WHERE loc.organization_id = o.id
         ORDER BY loc.id
         LIMIT 1) l ON TRUE
       """;
 
   /// 建议查询的开头：把名称表与别名表的候选合在一起，按打分截断。
   static final String SUGGEST_HEAD =
-      "WITH cand AS (SELECT u.org_id, u.name_value, u.match_rank, u.type_rank FROM (";
+      "WITH cand AS (SELECT u.organization_id, u.name_value, u.match_rank, u.type_rank FROM (";
 
   /// 建议查询的结尾：每家机构只留最好的一条，关联机构、中文名、地点后排序。
   static final String SUGGEST_TAIL =
@@ -97,14 +97,14 @@ final class OrganizationSuggestSql {
           + """
       ),
       best AS (
-        SELECT DISTINCT ON (c.org_id) c.org_id, c.name_value, c.match_rank, c.type_rank
+        SELECT DISTINCT ON (c.organization_id) c.organization_id, c.name_value, c.match_rank, c.type_rank
         FROM cand c
-        ORDER BY c.org_id, c.match_rank, c.type_rank, length(c.name_value))
+        ORDER BY c.organization_id, c.match_rank, c.type_rank, length(c.name_value))
       SELECT o.ror_id AS "rorId", o.display_name AS "displayName", b.name_value AS "matchedName",
              zh.name_value AS "zhName", l.country_code AS "countryCode", l.city_name AS "cityName",
              array_to_string(ARRAY(SELECT jsonb_array_elements_text(o.types)), ' ') AS "types"
       FROM best b
-      JOIN cat_organization o ON o.id = b.org_id AND o.status = 'active' AND o.deleted_at IS NULL
+      JOIN cat_organization o ON o.id = b.organization_id AND o.status = 'active' AND o.deleted_at IS NULL
       """
           + ZH_NAME_LATERAL
           + LOCATION_LATERAL

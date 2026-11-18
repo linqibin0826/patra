@@ -2,7 +2,7 @@ package dev.patra.tool.jpa.entity;
 
 /// JPA 实体 ID 访问接口。
 ///
-/// 所有 JPA 实体基类（`BaseJpaEntity`、`ChildJpaEntity`、`ValueObjectJpaEntity`）
+/// 两个 JPA 实体基类（`BaseJpaEntity`、`ValueObjectJpaEntity`）
 /// 都实现此接口，以支持统一的 ID 操作（如预分配雪花 ID）。
 ///
 /// @author linqibin

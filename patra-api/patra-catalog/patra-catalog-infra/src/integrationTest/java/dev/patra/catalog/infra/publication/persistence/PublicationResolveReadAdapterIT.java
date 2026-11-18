@@ -143,7 +143,7 @@ class PublicationResolveReadAdapterIT {
     em.clear();
   }
 
-  /// 软删一篇文献：实体走 Hibernate `@SoftDelete` 会被过滤，测试直接改列。
+  /// 软删一篇文献：测试直接写库置 `deleted_at`，读端靠自己的 `deleted_at IS NULL` 条件排除。
   private void softDelete(Long id) {
     em.getEntityManager()
         .createNativeQuery("UPDATE cat_publication SET deleted_at = now() WHERE id = :id")

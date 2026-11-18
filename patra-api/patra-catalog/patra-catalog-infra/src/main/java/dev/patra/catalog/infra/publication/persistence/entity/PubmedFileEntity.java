@@ -15,7 +15,7 @@ import lombok.Setter;
 
 /// PubMed 文件（baseline 与 updatefiles）处理进度实体，映射 `cat_pubmed_file`。
 ///
-/// 审计列由数据库默认值与 `set_updated_at()` 触发器维护，实体不映射。
+/// 审计时间由数据库默认值与 `set_audit_times()` 触发器维护，实体不映射。
 ///
 /// @author linqibin
 /// @since 0.11.0

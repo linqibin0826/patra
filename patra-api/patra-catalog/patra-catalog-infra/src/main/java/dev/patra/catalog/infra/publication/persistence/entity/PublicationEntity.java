@@ -1,9 +1,8 @@
 package dev.patra.catalog.infra.publication.persistence.entity;
 
-import dev.patra.tool.jpa.entity.SoftDeletableJpaEntity;
+import dev.patra.tool.jpa.entity.BaseJpaEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.Index;
 import jakarta.persistence.Table;
 import java.time.Instant;
 import lombok.AllArgsConstructor;
@@ -19,19 +18,10 @@ import tools.jackson.databind.JsonNode;
 ///
 /// **设计说明**：
 ///
-/// - 继承 `BaseJpaEntity` 获得审计、乐观锁、软删除功能
+/// - 继承 `BaseJpaEntity` 获得审计与乐观锁；删除用 `deletedAt` 列标记
 /// - 嵌入式值对象展开：`LanguageInfo` 直接映射为字段，`pmid`/`doi` 为扁平字段
 /// - `language_base` 是数据库生成列，设为只读
 /// - 枚举类型（ProvenanceCode、PublicationStatus 等）存储为 String
-///
-/// **索引设计**：
-///
-/// - `uk_pmid`：PMID 唯一索引
-/// - `uk_doi`：DOI 唯一索引
-/// - `idx_venue_id`：载体 ID 索引
-/// - `idx_venue_instance_id`：载体实例 ID 索引
-/// - `idx_publication_year`：出版年份索引
-/// - `idx_language_base`：基础语种索引（用于按语系查询）
 ///
 /// @author linqibin
 /// @since 0.1.0
@@ -41,17 +31,8 @@ import tools.jackson.databind.JsonNode;
 @AllArgsConstructor
 @EqualsAndHashCode(callSuper = true)
 @Entity
-@Table(
-    name = "cat_publication",
-    indexes = {
-      @Index(name = "uk_pmid", columnList = "pmid", unique = true),
-      @Index(name = "uk_doi", columnList = "doi", unique = true),
-      @Index(name = "idx_venue_id", columnList = "venue_id"),
-      @Index(name = "idx_venue_instance_id", columnList = "venue_instance_id"),
-      @Index(name = "idx_publication_year", columnList = "publication_year"),
-      @Index(name = "idx_language_base", columnList = "language_base")
-    })
-public class PublicationEntity extends SoftDeletableJpaEntity {
+@Table(name = "cat_publication")
+public class PublicationEntity extends BaseJpaEntity {
 
   // ========== 数据来源追踪 ==========
 
@@ -79,7 +60,7 @@ public class PublicationEntity extends SoftDeletableJpaEntity {
   @Column(name = "venue_id")
   private Long venueId;
 
-  /// 载体实例 ID（外键：cat_venue_instance.id）
+  /// 载体实例 ID（引用 cat_venue_instance.id，不建外键）
   @Column(name = "venue_instance_id", nullable = false)
   private Long venueInstanceId;
 
@@ -181,4 +162,8 @@ public class PublicationEntity extends SoftDeletableJpaEntity {
   @JdbcTypeCode(SqlTypes.JSON)
   @Column(name = "ext_data", columnDefinition = "JSON")
   private JsonNode extData;
+
+  /// 删除时间，空表示未删除；查询方法自己带「未删除」条件（库表规范第 5 节）。
+  @Column(name = "deleted_at")
+  private Instant deletedAt;
 }

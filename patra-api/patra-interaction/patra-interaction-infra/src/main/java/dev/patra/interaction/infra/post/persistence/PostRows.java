@@ -29,12 +29,12 @@ class PostRows {
 
   /// 基表与扩展表连接后的 FROM 子句（别名 `p`、`e`）。
   static final String FROM =
-      " FROM post.post p JOIN post.submission_experience e ON e.post_id = p.post_id";
+      " FROM itr_post p JOIN itr_post_submission_experience e ON e.post_id = p.id";
 
   /// 读回聚合要的列。
   static final String COLUMNS =
-      "p.post_id, p.post_type, p.subject_id, p.author_user_id, p.anonymous, p.body, p.status,"
-          + " p.created_at, p.revised_at, e.submitted_on, e.first_decision_on, e.first_decision,"
+      "p.id, p.post_type, p.subject_id, p.author_user_id, p.anonymous, p.body, p.status,"
+          + " p.published_at, p.revised_at, e.submitted_on, e.first_decision_on, e.first_decision,"
           + " e.final_outcome, e.final_decision_on, e.article_type, e.review_rounds,"
           + " e.review_quality, e.editor_communication, e.apc_paid, e.previously_rejected";
 
@@ -46,7 +46,7 @@ class PostRows {
   RowMapper<PostAggregate> postMapper() {
     return (rs, rowNum) ->
         PostAggregate.builder()
-            .postId(PostId.of(rs.getLong("post_id")))
+            .postId(PostId.of(rs.getLong("id")))
             .type(PostType.valueOf(rs.getString("post_type")))
             .subjectId(SubjectId.of(rs.getLong("subject_id")))
             .authorId(rs.getLong("author_user_id"))
@@ -54,7 +54,7 @@ class PostRows {
             .fields(fields(rs))
             .body(body(rs.getString("body")))
             .status(PostStatus.valueOf(rs.getString("status")))
-            .createdAt(instant(rs, "created_at"))
+            .createdAt(instant(rs, "published_at"))
             .revisedAt(instant(rs, "revised_at"))
             .build();
   }

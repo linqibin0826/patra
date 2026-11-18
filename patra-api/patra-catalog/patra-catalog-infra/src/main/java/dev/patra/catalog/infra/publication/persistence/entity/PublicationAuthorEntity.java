@@ -3,9 +3,7 @@ package dev.patra.catalog.infra.publication.persistence.entity;
 import dev.patra.tool.jpa.entity.ValueObjectJpaEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.Index;
 import jakarta.persistence.Table;
-import jakarta.persistence.UniqueConstraint;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -27,16 +25,6 @@ import tools.jackson.databind.JsonNode;
 /// - 记录作者顺序和角色信息
 /// - 机构归属信息由 `PublicationAuthorAffiliationEntity` 独立管理（支持多机构）
 ///
-/// **索引设计**：
-///
-/// - `uk_pub_author`：出版物 ID + 作者 ID 部分唯一索引（仅 `author_id IS NOT NULL` 的行，
-///   由 Flyway 独占定义——JPA 无法表达部分索引）
-/// - `uk_author_order`：出版物 ID + 作者顺序唯一索引（其首列亦覆盖按出版物的查询，
-///   故不再单列出版物索引）
-/// - `idx_pub_author_author`：作者软关联索引
-/// - `idx_first_author`：第一作者索引
-/// - `idx_corresponding`：通讯作者索引
-///
 /// @author linqibin
 /// @since 0.1.0
 @Data
@@ -45,27 +33,16 @@ import tools.jackson.databind.JsonNode;
 @AllArgsConstructor
 @EqualsAndHashCode(callSuper = true)
 @Entity
-@Table(
-    name = "cat_publication_author",
-    uniqueConstraints = {
-      @UniqueConstraint(
-          name = "uk_author_order",
-          columnNames = {"publication_id", "author_order"})
-    },
-    indexes = {
-      @Index(name = "idx_pub_author_author", columnList = "author_id"),
-      @Index(name = "idx_first_author", columnList = "is_first_author"),
-      @Index(name = "idx_corresponding", columnList = "is_corresponding_author")
-    })
+@Table(name = "cat_publication_author")
 public class PublicationAuthorEntity extends ValueObjectJpaEntity {
 
   // ========== 关联信息 ==========
 
-  /// 出版物 ID（外键：cat_publication.id）。
+  /// 出版物 ID（引用 cat_publication.id，不建外键）。
   @Column(name = "publication_id", nullable = false)
   private Long publicationId;
 
-  /// 作者 ID（外键：cat_author.id；软关联位——仅 ORCID 命中已消歧作者时填，其余为 null）。
+  /// 作者 ID（引用 cat_author.id，不建外键；软关联位——仅 ORCID 命中已消歧作者时填，其余为 null）。
   @Column(name = "author_id")
   private Long authorId;
 

@@ -30,11 +30,11 @@ import org.springframework.test.context.ContextConfiguration;
 /// catalog 导入期刊时按 `country / NAME_EN` 解析国家、按 `language / ISO_639_3` 解析语言。
 /// 种子里缺了这些参考标准时，registry 报标准不存在，catalog 只打 warn、字段静默变空，
 /// 其余测试都自己造数据或 mock，拦不住。这里不造数据，只读 Flyway 灌入的种子；
-/// `test` profile 把 Flyway 限在 V1（跳过种子），本类覆盖为执行到最新版本。
+/// `test` profile 只跑 `db/migration`（不灌种子），本类把 `db/seed` 也加进 Flyway 位置。
 ///
 /// @author linqibin
 /// @since 0.1.0
-@DataJpaTest(properties = "spring.flyway.target=latest")
+@DataJpaTest(properties = "spring.flyway.locations=classpath:db/migration,classpath:db/seed")
 @ContextConfiguration(initializers = RegistryITPostgreSQLContainerInitializer.class)
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @ImportAutoConfiguration({FlywayAutoConfiguration.class, JacksonAutoConfiguration.class})

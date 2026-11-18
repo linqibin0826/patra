@@ -168,14 +168,6 @@ class ProfileSchemaConstraintsIT {
   }
 
   @Test
-  void should_reject_link_of_missing_user() {
-    assertThatThrownBy(
-            () -> jdbcTemplate.update(INSERT_LINK, 10L, 999_998L, 0, null, "https://a.org"))
-        .isInstanceOf(DataIntegrityViolationException.class)
-        .hasMessageContaining("fk_idn_user_profile_link_user");
-  }
-
-  @Test
   void should_reject_eleventh_interest_position() {
     insertUserWithProfile();
     assertThatThrownBy(
@@ -211,14 +203,6 @@ class ProfileSchemaConstraintsIT {
             () -> jdbcTemplate.update(INSERT_INTEREST, 21L, USER, 0, "D006333", "Heart Failure"))
         .isInstanceOf(DataIntegrityViolationException.class)
         .hasMessageContaining("uk_idn_user_research_interest_position");
-  }
-
-  @Test
-  void should_reject_interest_of_missing_user() {
-    assertThatThrownBy(
-            () -> jdbcTemplate.update(INSERT_INTEREST, 20L, 999_998L, 0, "D003920", "Diabetes"))
-        .isInstanceOf(DataIntegrityViolationException.class)
-        .hasMessageContaining("fk_idn_user_research_interest_user");
   }
 
   /// 插一个正常状态的用户和他的空资料行。

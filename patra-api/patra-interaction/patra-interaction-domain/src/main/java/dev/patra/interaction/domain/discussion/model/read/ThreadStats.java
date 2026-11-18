@@ -2,7 +2,7 @@ package dev.patra.interaction.domain.discussion.model.read;
 
 import java.time.Instant;
 
-/// 一楼的统计（`discussion.thread_stats`）：未删除的回复数与其中最新一条的发表时刻。
+/// 一楼的统计（`itr_comment_thread_stats`）：未删除的回复数与其中最新一条的发表时刻。
 ///
 /// @param replyCount 未删除的回复数（任意深度）
 /// @param lastReplyAt 最新一条未删除回复的发表时刻；没有时为 `null`

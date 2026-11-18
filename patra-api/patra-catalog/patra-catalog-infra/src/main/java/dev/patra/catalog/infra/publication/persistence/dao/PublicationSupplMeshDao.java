@@ -31,7 +31,7 @@ public interface PublicationSupplMeshDao extends JpaRepository<PublicationSupplM
   /// 根据出版物 ID 删除所有补充 MeSH 概念。
   ///
   /// @param publicationId 出版物 ID
-  @Modifying
+  @Modifying(flushAutomatically = true, clearAutomatically = true)
   @Query("DELETE FROM PublicationSupplMeshEntity e WHERE e.publicationId = :publicationId")
   void deleteByPublicationId(@Param("publicationId") Long publicationId);
 
@@ -45,7 +45,7 @@ public interface PublicationSupplMeshDao extends JpaRepository<PublicationSupplM
   ///
   /// @param publicationIds 文献 ID
   /// @return 删除行数
-  @Modifying
+  @Modifying(flushAutomatically = true, clearAutomatically = true)
   @Query("DELETE FROM PublicationSupplMeshEntity e WHERE e.publicationId IN :publicationIds")
   int deleteByPublicationIdIn(@Param("publicationIds") Collection<Long> publicationIds);
 }

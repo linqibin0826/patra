@@ -16,6 +16,7 @@ import java.util.Map;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.AuditorAware;
 import org.springframework.stereotype.Repository;
 
 /// 载体实例聚合根仓储实现（JPA 版本）。
@@ -34,7 +35,7 @@ import org.springframework.stereotype.Repository;
 ///
 /// - 使用 Spring Data JPA 的 `saveAll()` 进行批量保存
 /// - ID 由 `SnowflakeIdGenerator` 雪花算法生成
-/// - 审计字段由 JPA Auditing 自动填充
+/// - 操作人由 JPA Auditing 自动填充，`created_at` / `updated_at` 由数据库填
 ///
 /// @author linqibin
 /// @since 0.1.0
@@ -46,6 +47,7 @@ public class VenueInstanceRepositoryAdapter implements VenueInstanceRepository {
   private final VenueInstanceDao jpaRepository;
   private final VenueInstanceJpaMapper jpaConverter;
   private final EntityManager entityManager;
+  private final AuditorAware<Long> auditor;
 
   @Override
   public Optional<VenueInstanceAggregate> findById(Long id) {
@@ -112,23 +114,15 @@ public class VenueInstanceRepositoryAdapter implements VenueInstanceRepository {
   public boolean insertJournalInstanceIfAbsent(VenueInstanceAggregate instance) {
     long id = SnowflakeIdGenerator.getId();
     int inserted =
-        entityManager
-            .createNativeQuery(
-                """
-                INSERT INTO cat_venue_instance
-                    (id, venue_id, volume, issue, publication_year, publication_month, publication_day)
-                VALUES (:id, :venueId, :volume, :issue, :year, :month, :day)
-                ON CONFLICT (venue_id, volume, issue, edition, conference_name, publication_year)
-                DO NOTHING
-                """)
-            .setParameter("id", id)
-            .setParameter("venueId", instance.getVenueId().value())
-            .setParameter("volume", instance.getVolume())
-            .setParameter("issue", instance.getIssue())
-            .setParameter("year", instance.getPublicationYear())
-            .setParameter("month", instance.getPublicationMonth())
-            .setParameter("day", instance.getPublicationDay())
-            .executeUpdate();
+        jpaRepository.insertJournalInstanceIfAbsent(
+            id,
+            instance.getVenueId().value(),
+            instance.getVolume(),
+            instance.getIssue(),
+            instance.getPublicationYear(),
+            instance.getPublicationMonth(),
+            instance.getPublicationDay(),
+            auditor.getCurrentAuditor().orElse(null));
     if (inserted == 0) {
       return false;
     }

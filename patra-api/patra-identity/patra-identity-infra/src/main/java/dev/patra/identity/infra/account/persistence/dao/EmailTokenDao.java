@@ -34,46 +34,59 @@ public interface EmailTokenDao extends JpaRepository<EmailTokenEntity, Long> {
   /// @param userId 用户 ID
   /// @param purpose 用途
   /// @param now 作废时间
+  /// @param actorId 操作人，系统作废时为空
   /// @return 作废了几行
-  @Modifying
+  @Modifying(flushAutomatically = true, clearAutomatically = true)
   @Query(
-      "update EmailTokenEntity t set t.revokedAt = :now where t.userId = :userId"
+      "update EmailTokenEntity t set t.revokedAt = :now, t.updatedBy = :actorId"
+          + " where t.userId = :userId"
           + " and t.purpose = :purpose and t.consumedAt is null and t.revokedAt is null")
   int revokeActive(
-      @Param("userId") Long userId, @Param("purpose") String purpose, @Param("now") Instant now);
+      @Param("userId") Long userId,
+      @Param("purpose") String purpose,
+      @Param("now") Instant now,
+      @Param("actorId") Long actorId);
 
   /// 作废一个用户除改邮箱撤销令牌之外的全部有效令牌。
   ///
   /// @param userId 用户 ID
   /// @param now 作废时间
+  /// @param actorId 操作人，系统作废时为空
   /// @return 作废了几行
-  @Modifying
+  @Modifying(flushAutomatically = true, clearAutomatically = true)
   @Query(
-      "update EmailTokenEntity t set t.revokedAt = :now where t.userId = :userId"
+      "update EmailTokenEntity t set t.revokedAt = :now, t.updatedBy = :actorId"
+          + " where t.userId = :userId"
           + " and t.purpose <> 'EMAIL_CHANGE_REVERT' and t.consumedAt is null"
           + " and t.revokedAt is null")
-  int revokeAllActive(@Param("userId") Long userId, @Param("now") Instant now);
+  int revokeAllActive(
+      @Param("userId") Long userId, @Param("now") Instant now, @Param("actorId") Long actorId);
 
   /// 作废一个用户比指定那条更晚签发（ID 更大）的有效撤销令牌。
   ///
   /// @param userId 用户 ID
   /// @param tokenId 刚消费的撤销令牌的 ID
   /// @param now 作废时间
+  /// @param actorId 操作人，系统作废时为空
   /// @return 作废了几行
-  @Modifying
+  @Modifying(flushAutomatically = true, clearAutomatically = true)
   @Query(
-      "update EmailTokenEntity t set t.revokedAt = :now where t.userId = :userId"
+      "update EmailTokenEntity t set t.revokedAt = :now, t.updatedBy = :actorId"
+          + " where t.userId = :userId"
           + " and t.purpose = 'EMAIL_CHANGE_REVERT' and t.id > :tokenId"
           + " and t.consumedAt is null and t.revokedAt is null")
   int revokeRevertTokensIssuedAfter(
-      @Param("userId") Long userId, @Param("tokenId") Long tokenId, @Param("now") Instant now);
+      @Param("userId") Long userId,
+      @Param("tokenId") Long tokenId,
+      @Param("now") Instant now,
+      @Param("actorId") Long actorId);
 
   /// 删掉过期时间早于截止时间的行，一次最多一批。
   ///
   /// @param cutoff 截止时间
   /// @param batchSize 一批最多几行
   /// @return 删了几行
-  @Modifying
+  @Modifying(flushAutomatically = true, clearAutomatically = true)
   @Query(
       value =
           "DELETE FROM idn_email_token WHERE id IN (SELECT id FROM idn_email_token"
@@ -85,7 +98,7 @@ public interface EmailTokenDao extends JpaRepository<EmailTokenEntity, Long> {
   ///
   /// @param userId 用户 ID
   /// @return 删了几行
-  @Modifying
+  @Modifying(flushAutomatically = true, clearAutomatically = true)
   @Query("delete from EmailTokenEntity t where t.userId = :userId")
   int deleteAllByUserId(@Param("userId") Long userId);
 }

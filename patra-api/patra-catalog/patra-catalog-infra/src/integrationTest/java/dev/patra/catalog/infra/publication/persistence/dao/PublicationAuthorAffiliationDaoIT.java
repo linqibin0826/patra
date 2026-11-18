@@ -70,7 +70,7 @@ class PublicationAuthorAffiliationDaoIT {
       Long pubAuthorId, Long publicationId, int order) {
     return PublicationAuthorAffiliationEntity.builder()
         .id(SnowflakeIdGenerator.getId())
-        .pubAuthorId(pubAuthorId)
+        .publicationAuthorId(pubAuthorId)
         .publicationId(publicationId)
         .affiliationOrder(order)
         .affiliationString("Test University, Department of Computer Science")
@@ -250,11 +250,12 @@ class PublicationAuthorAffiliationDaoIT {
       dao.saveAll(List.of(aff1, aff2, aff3));
 
       // When
-      List<PublicationAuthorAffiliationEntity> result = dao.findAllByPubAuthorId(pubAuthorId1);
+      List<PublicationAuthorAffiliationEntity> result =
+          dao.findAllByPublicationAuthorId(pubAuthorId1);
 
       // Then
       assertThat(result).hasSize(2);
-      assertThat(result).allMatch(e -> e.getPubAuthorId().equals(pubAuthorId1));
+      assertThat(result).allMatch(e -> e.getPublicationAuthorId().equals(pubAuthorId1));
     }
 
     @Test
@@ -270,7 +271,7 @@ class PublicationAuthorAffiliationDaoIT {
 
       // When
       List<PublicationAuthorAffiliationEntity> result =
-          dao.findAllByPubAuthorIdIn(List.of(pubAuthorId1, pubAuthorId2));
+          dao.findAllByPublicationAuthorIdIn(List.of(pubAuthorId1, pubAuthorId2));
 
       // Then
       assertThat(result).hasSize(2);
@@ -360,12 +361,12 @@ class PublicationAuthorAffiliationDaoIT {
       assertThat(dao.count()).isEqualTo(3);
 
       // When
-      dao.deleteAllByPubAuthorId(pubAuthorId1);
+      dao.deleteAllByPublicationAuthorId(pubAuthorId1);
 
       // Then
       assertThat(dao.count()).isEqualTo(1);
-      assertThat(dao.findAllByPubAuthorId(pubAuthorId1)).isEmpty();
-      assertThat(dao.findAllByPubAuthorId(pubAuthorId2)).hasSize(1);
+      assertThat(dao.findAllByPublicationAuthorId(pubAuthorId1)).isEmpty();
+      assertThat(dao.findAllByPublicationAuthorId(pubAuthorId2)).hasSize(1);
     }
 
     @Test
@@ -575,7 +576,7 @@ class PublicationAuthorAffiliationDaoIT {
       dao.saveAll(List.of(aff1, aff2, aff3));
 
       // Then
-      assertThat(dao.findAllByPubAuthorId(pubAuthorId1)).hasSize(3);
+      assertThat(dao.findAllByPublicationAuthorId(pubAuthorId1)).hasSize(3);
     }
   }
 }

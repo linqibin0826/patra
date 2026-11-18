@@ -27,7 +27,7 @@ public class LibraryReadAdapter implements LibraryReadPort {
 
   /// 不在任何收藏夹里。
   private static final String UNFILED =
-      " AND NOT EXISTS (SELECT 1 FROM collection.collection_item ci"
+      " AND NOT EXISTS (SELECT 1 FROM itr_collection_item ci"
           + " WHERE ci.user_id = li.user_id AND ci.subject_id = li.subject_id)";
 
   private static final RowMapper<ItemRef> LIBRARY_REF =
@@ -60,8 +60,7 @@ public class LibraryReadAdapter implements LibraryReadPort {
   @Override
   public long countView(long userId, LibraryView view) {
     return jdbc.sql(
-            "SELECT count(*) FROM collection.library_item li WHERE li.user_id = :userId"
-                + filter(view))
+            "SELECT count(*) FROM itr_library_item li WHERE li.user_id = :userId" + filter(view))
         .param("userId", userId)
         .query(Long.class)
         .single();
@@ -76,8 +75,8 @@ public class LibraryReadAdapter implements LibraryReadPort {
     return jdbc.sql(
             "SELECT "
                 + CollectionRows.COLLECTION_COLUMNS
-                + " FROM collection.collection WHERE user_id = :userId"
-                + " ORDER BY updated_at DESC, collection_id DESC")
+                + " FROM itr_collection WHERE user_id = :userId"
+                + " ORDER BY content_changed_at DESC, id DESC")
         .param("userId", userId)
         .query(CollectionRows.COLLECTION)
         .list();
@@ -90,9 +89,7 @@ public class LibraryReadAdapter implements LibraryReadPort {
   @Override
   public Optional<CollectionSummary> findCollection(CollectionId id) {
     return jdbc.sql(
-            "SELECT "
-                + CollectionRows.COLLECTION_COLUMNS
-                + " FROM collection.collection WHERE collection_id = :id")
+            "SELECT " + CollectionRows.COLLECTION_COLUMNS + " FROM itr_collection WHERE id = :id")
         .param("id", id.value())
         .query(CollectionRows.COLLECTION)
         .optional();
@@ -107,8 +104,8 @@ public class LibraryReadAdapter implements LibraryReadPort {
     return jdbc.sql(
             "SELECT "
                 + CollectionRows.COLLECTION_COLUMNS
-                + " FROM collection.collection WHERE user_id = :userId AND visibility = 'PUBLIC'"
-                + " ORDER BY updated_at DESC, collection_id DESC")
+                + " FROM itr_collection WHERE user_id = :userId AND visibility = 'PUBLIC'"
+                + " ORDER BY content_changed_at DESC, id DESC")
         .param("userId", ownerId)
         .query(CollectionRows.COLLECTION)
         .list();
@@ -185,7 +182,7 @@ public class LibraryReadAdapter implements LibraryReadPort {
     }
     return jdbc
         .sql(
-            "SELECT subject_id, note, collected_at FROM collection.library_item"
+            "SELECT subject_id, note, collected_at FROM itr_library_item"
                 + " WHERE user_id = :userId AND subject_id IN (:ids)")
         .param("userId", userId)
         .param("ids", CollectionRows.ids(subjectIds))
@@ -213,7 +210,7 @@ public class LibraryReadAdapter implements LibraryReadPort {
     }
     Map<SubjectId, List<CollectionId>> result = new HashMap<>();
     jdbc.sql(
-            "SELECT subject_id, collection_id FROM collection.collection_item"
+            "SELECT subject_id, collection_id FROM itr_collection_item"
                 + " WHERE user_id = :userId AND subject_id IN (:ids) ORDER BY collection_id")
         .param("userId", userId)
         .param("ids", CollectionRows.ids(subjectIds))
@@ -238,10 +235,10 @@ public class LibraryReadAdapter implements LibraryReadPort {
     return jdbc.sql(
             """
             SELECT user_id FROM (
-                (SELECT DISTINCT user_id FROM collection.library_item WHERE user_id > :after
+                (SELECT DISTINCT user_id FROM itr_library_item WHERE user_id > :after
                   ORDER BY user_id LIMIT :limit)
                 UNION
-                (SELECT DISTINCT user_id FROM collection.collection WHERE user_id > :after
+                (SELECT DISTINCT user_id FROM itr_collection WHERE user_id > :after
                   ORDER BY user_id LIMIT :limit)
             ) owners
             ORDER BY user_id LIMIT :limit
@@ -254,7 +251,7 @@ public class LibraryReadAdapter implements LibraryReadPort {
 
   /// 收藏夹按加入时间。
   private static final String COLLECTION_SQL =
-      "SELECT subject_id, added_at FROM collection.collection_item"
+      "SELECT subject_id, added_at FROM itr_collection_item"
           + " WHERE user_id = :userId AND collection_id = :id"
           + " ORDER BY added_at DESC, subject_id DESC";
 
@@ -263,7 +260,7 @@ public class LibraryReadAdapter implements LibraryReadPort {
   /// @param view 视图
   /// @return SQL
   private static String librarySql(LibraryView view) {
-    return "SELECT li.subject_id, li.collected_at FROM collection.library_item li"
+    return "SELECT li.subject_id, li.collected_at FROM itr_library_item li"
         + " WHERE li.user_id = :userId"
         + filter(view)
         + " ORDER BY li.collected_at DESC, li.subject_id DESC";

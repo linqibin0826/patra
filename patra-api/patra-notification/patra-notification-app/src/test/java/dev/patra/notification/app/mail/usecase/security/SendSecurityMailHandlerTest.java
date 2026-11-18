@@ -112,7 +112,7 @@ class SendSecurityMailHandlerTest {
             RecordingTransactions.END);
     assertThat(delivered)
         .singleElement()
-        .satisfies(mail -> assertThat(mail.deliveryId()).isEqualTo(EVENT_ID));
+        .satisfies(mail -> assertThat(mail.idempotencyKey()).isEqualTo(EVENT_ID.toString()));
     assertThat(added).containsExactly(MailDelivery.sent(EVENT_ID, "password-reset", NOW));
     verify(processedEvents).markProcessed(QUEUE, EVENT_ID);
   }

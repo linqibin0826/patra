@@ -8,13 +8,13 @@
 
 | 子域 | 职责 | 本版 |
 |---|---|---|
-| `subject` | 对象底座：每个被互动过的对象在登记表 `subject.registry` 里一行，互动数据只引用本地 `subject_id`。外部对象（文献、期刊）锚定在外部标识上（`pmid:…`、`nlm:…`），catalog 内部 ID 只是缓存，首次互动时同步向 catalog 解析并登记（catalog 不可用或对象不存在则拒绝），每日对账按锚刷新；本地对象（投稿经验，`post:…`）由所属子域在自己的事务里登记、改状态，带所有者与「是否匿名」，不对账。能力矩阵在 `SubjectType`。另外提供各子域共用的用户名片（`UserDirectoryPort`）、发表守卫（`PublishGuardGateway`：资格回查与按作者计数的频率限制）、注销清理流程（各子域实现 `UserDataCleanupGateway`），以及评论与投稿经验共用的正文转纯文本（`PlainTextPort`，按门户的 Markdown 子集转，`<@用户ID>` 保留，PAP-128）。工程设计 `docs/patra/specs/2026-10-24-subject-registry-design.md`、`docs/patra/specs/2026-10-27-interaction-foundation-extension-design.md`、`docs/patra/specs/2026-10-30-plaintext-conversion-design.md` | PAP-112、PAP-120、PAP-128 |
+| `subject` | 对象底座：每个被互动过的对象在登记表 `itr_subject` 里一行，互动数据只引用本地 `subject_id`。外部对象（文献、期刊）锚定在外部标识上（`pmid:…`、`nlm:…`），catalog 内部 ID 只是缓存，首次互动时同步向 catalog 解析并登记（catalog 不可用或对象不存在则拒绝），每日对账按锚刷新；本地对象（投稿经验，`post:…`）由所属子域在自己的事务里登记、改状态，带所有者与「是否匿名」，不对账。能力矩阵在 `SubjectType`。另外提供各子域共用的用户名片（`UserDirectoryPort`）、发表守卫（`PublishGuardGateway`：资格回查与按作者计数的频率限制）、注销清理流程（各子域实现 `UserDataCleanupGateway`），以及评论与投稿经验共用的正文转纯文本（`PlainTextPort`，按门户的 Markdown 子集转，`<@用户ID>` 保留，PAP-128）。工程设计 `docs/patra/specs/2026-10-24-subject-registry-design.md`、`docs/patra/specs/2026-10-27-interaction-foundation-extension-design.md`、`docs/patra/specs/2026-10-30-plaintext-conversion-design.md` | PAP-112、PAP-120、PAP-128 |
 | `collection` | 文献库与收藏夹：文献库条目（用户 × 文献唯一，可带备注），扁平的收藏夹（私有 / 公开、一个条目可进多个夹），复制别人的公开收藏夹、批量「我的状态」、导出 key；向底座登记注销清理动作。工程设计 `docs/patra/specs/2026-10-24-interaction-collection-design.md` | PAP-113 |
 | `discussion` | 文献与投稿经验下的讨论：评论与回复（树存、两层展示、「回复 @X」）、单楼视图与对话链、Markdown 正文与 @（存 `<@用户ID>`）、修改历史（发布 5 分钟内的修改不记版本）、有回复的删除留占位、@ 联想；匿名所有者的评论对别人显示「匿名作者」。评论写入、编辑、删除时在同一事务里发布进程内事件（事件契约 `domain.discussion.event`）。工程设计 `docs/patra/specs/2026-10-27-interaction-discussion-design.md` | PAP-121 |
 | `post` | 投稿经验（按帖子结构存）：帖子基表 + 经验扩展表 + 修改历史（发布后 5 分钟内的修改不记版本）；字段与首轮 / 最终结果的一致性规则；同一作者同刊同投稿日期只能有一条；匿名由服务端遮蔽（他人拿不到作者 ID）；期刊页汇总读取时由 PG `percentile_cont` 算、Java 半进位；写入经发表守卫（每天 10 条），经验作为本地对象 `POST` 在同一事务里登记、删除时置为失效，并在同一事务里发布进程内事件 `PostDeletedEvent`（事件契约 `domain.post.event`）。工程设计 `docs/patra/specs/2026-10-27-interaction-post-design.md` | PAP-122、PAP-127 |
 | `reaction` | 「有帮助」：给别人的评论（根评论、楼内回复）与投稿经验点、取消；明细、每个目标的有帮助数、每个用户的获赞同事务维护（明细真插入 / 删除才 ±1）。资格与每天 300 次复用发表守卫（种类 `HELPFUL`），不能给自己点（含匿名经验作者）；匿名经验与作者在自己匿名经验下的评论不计获赞。订阅评论与投稿经验的删除事件，在删除的同一事务里清掉被删目标的有帮助。不接入注销清理。点、取消真写入时发布进程内事件（事件契约 `domain.reaction.event`），「已点」外送给通知服务（4.7）。工程设计 `docs/patra/specs/2026-10-29-reaction-helpful-design.md` | PAP-131、PAP-141 |
 
-`InteractionArchitectureTest` 的子域清单已经写满上面五个（v0.16 删掉了提醒子域 `notification`）；以后再新增子域才改清单。子域的各层包随第一批代码建（规则 22b：一个子域只要有一层出现，四层就都要有），不建没有代码的空包和空 schema。
+`InteractionArchitectureTest` 的子域清单已经写满上面五个（v0.16 删掉了提醒子域 `notification`）；以后再新增子域才改清单。子域的各层包随第一批代码建（规则 22b：一个子域只要有一层出现，四层就都要有），不建没有代码的空包和空迁移目录。
 
 ## 2. 模块与包
 
@@ -45,54 +45,53 @@ dev.patra.interaction.config           装配（XXL-Job 执行器等），不属
 
 ## 4. 存储
 
-- 库 `patra_interaction`（现有 PG 实例），每个子域一个 schema，schema 名就是子域名，在迁移脚本里 `CREATE SCHEMA`。
-- 整个服务一份 Flyway 历史（`public.flyway_schema_history`）。脚本放 `patra-interaction-infra/src/main/resources/db/migration/{子域}/`，版本号是写脚本时的时间戳 `yyyyMMddHHmmss`（如 `V20261024100000__create_subject_schema.sql`），子域各自加脚本不会撞号。不设 `spring.flyway.schemas`：设了 Flyway 会自己建 schema 并把历史表挪进去。
-- 实体用 `@Table(schema = "…")` 写明 schema，原生 SQL 写带 schema 的表名；不设 Hibernate 默认 schema。
-- 子域的表不对 `subject` 建跨 schema 外键，只建索引；引用完整性由写入路径和每日对账保证。
+- 库 `patra_interaction`（现有 PG 实例），所有表都在 `public`，不建子域 schema；表名统一 `itr_` 前缀（`itr_{聚合}[_{子表}]`）。库表规范见 `.claude/rules/tech/database.md`。
+- 整个服务一份 Flyway 历史（`public.flyway_schema_history`）。脚本放 `patra-interaction-infra/src/main/resources/db/migration/{子域}/`，版本号是写脚本时的时间戳 `yyyyMMddHHmmss`（如 `V20261116130100__create_subject.sql`），子域各自加脚本不会撞号。
+- 写侧一律用 `JdbcClient` 写 SQL，本服务没有 JPA 实体。
+- 所有表都不建外键，只建索引与唯一索引；引用完整性由写入路径和每日对账保证。每张表有雪花 `id` 主键；主表（`itr_subject`、`itr_collection`、`itr_comment`、`itr_post`）另带 `created_by`、`updated_by`、`ip_address`、`record_remarks`。表清单与档位登记在 `db/tables.yml`。
 - 表里只存用户 ID，不存用户名、昵称、头像（R6 检查守着迁移脚本）。
-- 表名不带服务前缀，schema 已经说明归属（如 `subject.registry`）。
-- `set_updated_at()` 触发器函数每个 schema 一份（`subject.set_updated_at()`），schema 整体搬走时不依赖 `public`。
-- `subject.registry`：类型 1 文献、2 期刊（`nlm:` 锚按字符串存，保留前导零）、3 投稿经验（本地对象，`source_id` 就是帖子 ID）；所有者两列 `owner_user_id`、`owner_anonymous` 只有本地对象有，登记后不变。
-- `subject.publish_quota`：发表守卫的计数，每个作者每种发表（评论 / 投稿经验）一行，记北京时间当天的条数与上次发表时刻；同一作者的发表在事务级 advisory lock `subject.publish:{userId}` 上排队。
+- `created_at`、`updated_at` 由数据库触发器 `set_audit_times()` 填，函数只有 `public` 里这一份（`V20261116130000__create_set_audit_times.sql`），各表挂自己的触发器。
+- `itr_subject`（对象登记）：类型 1 文献、2 期刊（`nlm:` 锚按字符串存，保留前导零）、3 投稿经验（本地对象，`source_id` 就是帖子 ID）；所有者两列 `owner_user_id`、`owner_anonymous` 只有本地对象有，登记后不变。
+- `itr_publish_quota`：发表守卫的计数，每个作者每种发表（评论 / 投稿经验）一行，记北京时间当天的条数与上次发表时刻；同一作者的发表在事务级 advisory lock `subject.publish:{userId}` 上排队。
 
 ## 4.1 collection 的存储与并发
 
-- 三张表：`collection.library_item`（用户 × 对象，备注、收藏时间）、`collection.collection`（收藏夹，维护 `item_count`）、`collection.collection_item`（收藏夹 × 对象，加入该夹的时间）。两张状态窄表按 `user_id` 哈希分 16 区，主键以 `user_id` 打头，每条语句都带 `user_id`。
+- 三张表：`itr_library_item`（用户 × 对象，备注、收藏时间）、`itr_collection`（收藏夹，维护 `item_count`）、`itr_collection_item`（收藏夹 × 对象，加入该夹的时间）。两张状态窄表按 `user_id` 哈希分 16 区，主键 `(user_id, id)`，每条语句都带 `user_id`。
 - 每个改某个用户数据的事务先拿事务级 advisory lock `collection.user:{userId}`，再在锁内「查上限 / 查重名 → 写」：上限（文献库 20,000、收藏夹 200、单夹 5,000）与重名都是先查再写，靠这把锁串行。
 - 新增收藏经 subject 的 `SubjectGateway`（事务外，可能同步调 catalog）；已有条目只用 `subject_id`（= 对外的 `itemId`），对象失效、catalog 整行消失后仍能改备注、移出、移除。
 - 排序：加入时间走 SQL 分页；出版日期、期刊在内存里排（快照经 `SubjectReadPort.findByIds` 每 5,000 个一块取），不把排序键抄进条目。
 - 公开资格与可见性只问 identity（批量用户摘要）：设公开回查账号状态与邮箱，读公开收藏夹透传访客 ID、看 `profileVisible`。
-- 收藏人数 `collection.subject_stats`（每个对象一行，没有行即为 0）：`LibraryRepositoryAdapter` 改文献库条目的四个方法（收藏、复制收藏夹、移出、注销清理）按 `RETURNING` 到的行在同一事务里 ±1；多行 ±1 按 `subject_id` 升序拿行锁。一人放进多个收藏夹只算一次（PAP-133）。
+- 收藏人数 `itr_library_subject_stats`（每个对象一行，没有行即为 0）：`LibraryRepositoryAdapter` 改文献库条目的四个方法（收藏、复制收藏夹、移出、注销清理）按 `RETURNING` 到的行在同一事务里 ±1；多行 ±1 按 `subject_id` 升序拿行锁。一人放进多个收藏夹只算一次（PAP-133）。
 
 ## 4.2 post 的存储与并发
 
-- 三张表：`post.post`（帖子基表：类型、挂在哪个对象下、作者、是否匿名、正文、状态、`revised_at`）、`post.submission_experience`（经验扩展表，一对一）、`post.revision`（被替换的旧版本，结构化字段存 jsonb，各帖子类型共用）。都不分区（按对象读，量很小）。
+- 三张表：`itr_post`（帖子基表：类型、挂在哪个对象下、作者、是否匿名、正文、状态、`revised_at`）、`itr_post_submission_experience`（经验扩展表，一对一）、`itr_post_revision`（被替换的旧版本，结构化字段存 jsonb，各帖子类型共用）。都不分区（按对象读，量很小）。
 - 删除是软删：内容留在库里不再展示；列表、汇总、主页都只读 `ACTIVE`。帖子不物理删除，所以列表的游标（上一页最后一条的 ID）总能反查排序键。
 - 「同一作者同刊同投稿日期只能有一条未删除的经验」跨两张表、只对 `ACTIVE` 生效，没有唯一索引：写、改经验的事务先拿事务级 advisory lock `post.author:{userId}` 再查重。写经验时先过底座的发表守卫（它拿 `subject.publish:{userId}`），再拿作者锁。
 - 登记表里 `POST` 的快照：`journal` = 期刊全称、`abbreviation` = 期刊缩写、`publishedDate` = 投稿月份（提醒的上下文行用）；改投稿月份时刷新。
 
 ## 4.3 discussion 的存储与并发
 
-- 两张表：`discussion.comment`（根评论与回复，`root_id` 是所在楼的根评论、根评论等于自己；`parent_id` 是回复的那一条；正文存 Markdown 原文，@ 存 `<@用户ID>`；`mentioned_user_ids` 记这条评论曾经 @ 过的人，编辑时只对第一次 @ 到的人算新增）、`discussion.comment_revision`（被替换下来的旧版本，当前版本在主表）。按对象读、量很小，不分区。
-- 树的完整性：`root_id`、`parent_id` 两个自引用外键，还有回复的评论删不掉（只能变占位）；修改历史随评论级联删除。删除时有直接回复的变占位（清正文与修改历史），没有的整行删除，再沿父评论往上删掉已经没有回复的占位。
+- 两张表：`itr_comment`（根评论与回复，`root_comment_id` 是所在楼的根评论、根评论等于自己；`parent_comment_id` 是回复的那一条；正文存 Markdown 原文，@ 存 `<@用户ID>`；`mentioned_user_ids` 记这条评论曾经 @ 过的人，编辑时只对第一次 @ 到的人算新增）、`itr_comment_revision`（被替换下来的旧版本，当前版本在主表）。按对象读、量很小，不分区。
+- 树的完整性：不建外键，由 `ck_itr_comment_tree` 检查约束与写入路径保证，有回复的评论删不掉（只能变占位）；删评论时在同一事务里显式删它的修改历史。删除时有直接回复的变占位（清正文与修改历史），没有的整行删除，再沿父评论往上删掉已经没有回复的占位。
 - 并发：发表回复、删除先拿事务级 advisory lock `discussion.thread:{rootId}`（同一楼的结构变化排队），编辑用 `SELECT … FOR NO KEY UPDATE` 锁行；加锁顺序是作者锁（发表守卫）→ 楼锁 → 行锁。
 - 读：对象未登记（还没人讨论过）回空列表，对象已失效回 404 `SUBJECT_UNAVAILABLE`；作者、被回复者、被 @ 的人一次批量向 identity 取名片，主页对访客不可见的去掉用户名与头像地址。
 - 进程内事件：`CommentPublishedEvent`、`CommentEditedEvent`、`CommentDeletedEvent`，在写入事务里用 `ApplicationEventPublisher` 发布并外送给通知服务（PAP-141），站内提醒由通知服务生成（PAP-143）。
 
 ## 4.4 站内提醒已搬走
 
-v0.16 起站内提醒归 patra-notification（PAP-143）：这里的 `notification` 子域连同表删掉，`db/migration/notification/` 的三个旧脚本只为 Flyway 历史保留，由前向迁移 `DROP SCHEMA notification CASCADE` 删掉 schema，旧提醒不迁移。通知服务读提醒列表时调这里的两个内部接口现查对象视图与经验结果。
+v0.16 起站内提醒归 patra-notification（PAP-143）：这里的 `notification` 子域连同表删掉，`db/migration/notification/` 已不存在，旧提醒不迁移。通知服务读提醒列表时调这里的两个内部接口现查对象视图与经验结果。
 
 ## 4.5 reaction 的存储与并发
 
-- 三张表：明细 `reaction.helpful`（主键 `(user_id, target_type, target_id)`，`credited_user_id` 记这一条计入谁的获赞，匿名目标为空）、每个目标的有帮助数 `reaction.target_stats`、每个用户的获赞 `reaction.user_stats`。目标类型存名字 `'COMMENT'` / `'POST'`，ID 是评论 ID / 帖子 ID；没有统计行即为 0。
+- 三张表：明细 `itr_helpful`（唯一索引 `(user_id, target_type, target_id)`，`credited_user_id` 记这一条计入谁的获赞，匿名目标为空）、每个目标的有帮助数 `itr_helpful_target_stats`、每个用户的获赞 `itr_helpful_user_stats`。目标类型存名字 `'COMMENT'` / `'POST'`，ID 是评论 ID / 帖子 ID；没有统计行即为 0。
 - 点：事务外解析目标（评论经讨论读端口 + 登记表，经验只读登记表）、查资格、已点过直接返回；事务里发表守卫计数 → 目标锁 `reaction.target:{种类}:{ID}`（advisory）→ 锁内复核 → `ON CONFLICT DO NOTHING` 插明细，真插入才两张统计表各 +1。取消只要登录，目标锁里真删掉才 −1。锁顺序：配额锁 → 业务对象锁 → 目标锁 → 目标行 → 用户行（用户 ID 升序）。
 - 删除联动：同步订阅 `CommentDeletedEvent`（变占位与整条去掉）与 `PostDeletedEvent`，拿目标锁后删明细与统计行、扣回获赞；失败包成 500（`HelpfulWriteFailedException`），删除一起回滚。经验下的评论不连带。
 - 给讨论串统计与对象统计（PAP-132 / 133）的表名、列与关联写法见工程 spec 第 9 节。
 
 ## 4.6 公开计数的读与重算（PAP-133）
 
-- 批量对象统计 `POST /subjects/stats`（不要会话）挂在底座读端：`SubjectStatsReadAdapter` 只经 SQL 读收藏、讨论两张统计表，是本服务唯一一处跨子域读。主页获赞 `GET /users/{userId}/helpful-received` 读 `reaction.user_stats`。
+- 批量对象统计 `POST /subjects/stats`（不要会话）挂在底座读端：`SubjectStatsReadAdapter` 只经 SQL 读收藏、讨论两张统计表，是本服务唯一一处跨子域读。主页获赞 `GET /users/{userId}/helpful-received` 读 `itr_helpful_user_stats`。
 - 按明细重算：底座定扩展点 `StatsRecountGateway<K>`，每项计数一个 `*RecountGatewayImpl`（各在自己子域的 app 层）；`RecountStatsHandler` 先让每项不加锁地找差异，再每个差异键一个短事务「先锁、再用新语句数、不一致才写」。锁与写方相同：收藏人数、获赞、对象评论总数锁统计行，有帮助数拿目标锁，楼统计拿楼锁（根评论已不在的楼统计行删掉）。设计见 `docs/patra/specs/2026-10-29-object-stats-design.md`。
 
 ## 4.7 集成事件（PAP-141）
@@ -101,7 +100,7 @@ interaction 把提醒要用的事实外送给通知服务：领域事件在业�
 
 - 外送五种，交换机 `interaction.events`（topic），路由键是事件类型：`comment.published`、`comment.edited`、`comment.deleted`、`post.deleted`、`helpful.marked`。没有队列绑定的事件会被退回、一直补投，所以取消有帮助不发事件：通知服务对它没有动作。
 - 契约是 `patra-interaction-api` 里的 record（`api.{子域}.event`，实现 `IntegrationEvent`，带 `ROUTING_KEY` 常量）；领域事件到集成事件的选择、路由、映射只在 boot 的 `InteractionEventsConfiguration` 与 `IntegrationEventMapper`，领域层不贴 `@Externalized`，映射只拷字段。
-- 领域事件带 `eventId`（发布处生成，补投不变，消费方据此去重）；评论事件带正文版本（`discussion.comment.version`，发表为 1、每次正文确有变化加 1，消费方据此丢弃晚到的旧编辑）与 PAP-128 的全文纯文本。事件只带算收件人与判乱序要用的事实，对象的展示信息由消费方按 `subjectId` 读时现查。
+- 领域事件带 `eventId`（发布处生成，补投不变，消费方据此去重）；评论事件带正文版本（`itr_comment.body_version`，发表为 1、每次正文确有变化加 1，消费方据此丢弃晚到的旧编辑）与 PAP-128 的全文纯文本。事件只带算收件人与判乱序要用的事实，对象的展示信息由消费方按 `subjectId` 读时现查。
 - 上线后改外送领域事件的类名或字段，先确认 `event_publication` 里没有未完成（`completion_date` 为空）的行；新增外送事件时通知服务要先绑定它的路由键。
 
 ## 5. 运行
@@ -122,5 +121,5 @@ interaction 把提醒要用的事实外送给通知服务：领域事件在业�
 当某个子域的**负载、发布节奏或存储引擎**明显和其余部分分化时（比如行为数据要换 ClickHouse、讨论的写入量远超收藏），把它剥成独立服务：
 
 1. 先确认它和其他子域之间只剩公开包上的依赖（ArchUnit 已保证）。
-2. 它的 schema 整体搬到新服务的库里；没有跨 schema 外键，不用先拆约束。
+2. 它的 `itr_` 前缀表整体搬到新服务的库里；没有外键，不用先拆约束。
 3. 它被别的子域用到的公开包换成 HTTP 契约，放进新服务的 api 模块。

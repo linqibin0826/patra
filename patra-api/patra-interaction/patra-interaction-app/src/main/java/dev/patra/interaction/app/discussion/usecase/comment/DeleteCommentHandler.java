@@ -56,7 +56,9 @@ public class DeleteCommentHandler implements CommandHandler<DeleteCommentCommand
               .map(
                   event -> {
                     DeleteResult result =
-                        event.placeholder() ? leavePlaceholder(comment, now) : remove(comment);
+                        event.placeholder()
+                            ? leavePlaceholder(comment, now, actor)
+                            : remove(comment);
                     events.publishEvent(event);
                     return result;
                   })
@@ -68,9 +70,10 @@ public class DeleteCommentHandler implements CommandHandler<DeleteCommentCommand
   ///
   /// @param comment 锁内读到的评论
   /// @param now 删除时刻
+  /// @param actor 删除的人
   /// @return 留下占位，没有评论被去掉
-  private DeleteResult leavePlaceholder(CommentAggregate comment, Instant now) {
-    comments.markDeleted(comment.getCommentId(), now);
+  private DeleteResult leavePlaceholder(CommentAggregate comment, Instant now, long actor) {
+    comments.markDeleted(comment.getCommentId(), now, actor);
     uncount(comment);
     return DeleteResult.of(true, List.of());
   }

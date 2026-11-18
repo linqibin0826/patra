@@ -8,7 +8,6 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
-import java.util.UUID;
 import lombok.Builder;
 import lombok.Getter;
 
@@ -26,7 +25,7 @@ public final class ReminderDelivery {
   /// 退避的上限。
   private static final long MAX_BACKOFF_MINUTES = 30;
 
-  private final UUID deliveryId;
+  private final long deliveryId;
   private final long recipientId;
   private final DeliveryKind kind;
   private final NotificationCategory category;
@@ -57,7 +56,7 @@ public final class ReminderDelivery {
   /// @param finishedAt 结束的时刻，可空
   @Builder(builderMethodName = "restore")
   private ReminderDelivery(
-      UUID deliveryId,
+      long deliveryId,
       long recipientId,
       DeliveryKind kind,
       NotificationCategory category,
@@ -70,7 +69,7 @@ public final class ReminderDelivery {
       Instant nextAttemptAt,
       Instant firstSentAt,
       Instant finishedAt) {
-    this.deliveryId = Objects.requireNonNull(deliveryId, "deliveryId 不能为 null");
+    this.deliveryId = deliveryId;
     this.recipientId = recipientId;
     this.kind = Objects.requireNonNull(kind, "kind 不能为 null");
     this.category = category;
@@ -95,7 +94,7 @@ public final class ReminderDelivery {
   /// @return 待发的投递
   /// @throws IllegalArgumentException 类别没有邮件，或一条提醒都没有
   public static ReminderDelivery instant(
-      UUID deliveryId,
+      long deliveryId,
       long recipientId,
       NotificationCategory category,
       List<Long> notificationIds,
@@ -118,7 +117,7 @@ public final class ReminderDelivery {
   /// @param now 此刻
   /// @return 待发的投递
   public static ReminderDelivery digest(
-      UUID deliveryId, long recipientId, Instant windowEnd, Instant now) {
+      long deliveryId, long recipientId, Instant windowEnd, Instant now) {
     Objects.requireNonNull(windowEnd, "windowEnd 不能为 null");
     return pending(deliveryId, recipientId, DeliveryKind.DIGEST, null, List.of(), windowEnd, now);
   }
@@ -199,7 +198,7 @@ public final class ReminderDelivery {
   /// @param now 此刻
   /// @return 记录
   private static ReminderDelivery pending(
-      UUID deliveryId,
+      long deliveryId,
       long recipientId,
       DeliveryKind kind,
       NotificationCategory category,

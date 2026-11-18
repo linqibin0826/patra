@@ -9,7 +9,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.support.TransactionOperations;
 
-/// 删一条阅读历史（spec §6.2）：一个事务里删掉这一行、写删除记录（`deleted_at` = 现在）。这一篇本来不在也照样写，
+/// 删一条阅读历史（spec §6.2）：一个事务里删掉这一行、写删除记录（删除时刻 = 现在）。这一篇本来不在也照样写，
 /// 重复删除按成功处理。
 @Component
 @RequiredArgsConstructor

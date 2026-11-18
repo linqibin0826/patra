@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.AuditorAware;
 import org.springframework.stereotype.Component;
 
 /// [LetPubEnrichmentPersistPort] 的 JPA 实现。
@@ -40,6 +41,7 @@ public class LetPubEnrichmentPersistAdapter implements LetPubEnrichmentPersistPo
   private final CasRatingDao casRatingDao;
   private final CasWarningDao casWarningDao;
   private final VenueDao venueDao;
+  private final AuditorAware<Long> auditor;
 
   @Override
   public PersistStats persist(long venueId, LetPubVenueData data, String coverObjectKey) {
@@ -51,7 +53,9 @@ public class LetPubEnrichmentPersistAdapter implements LetPubEnrichmentPersistPo
 
     boolean coverUpdated = false;
     if (coverObjectKey != null) {
-      int updated = venueDao.updateImageObjectKey(venueId, coverObjectKey);
+      int updated =
+          venueDao.updateImageObjectKey(
+              venueId, coverObjectKey, auditor.getCurrentAuditor().orElse(null));
       if (updated == 0) {
         log.warn("Venue [id={}] 封面对象键 UPDATE 影响 0 行", venueId);
       } else {

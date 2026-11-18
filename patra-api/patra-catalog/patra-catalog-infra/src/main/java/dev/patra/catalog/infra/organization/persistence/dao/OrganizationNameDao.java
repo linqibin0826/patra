@@ -20,23 +20,23 @@ public interface OrganizationNameDao extends JpaRepository<OrganizationNameEntit
   ///
   /// @param orgId 机构 ID
   /// @return 名称实体列表
-  List<OrganizationNameEntity> findAllByOrgId(Long orgId);
+  List<OrganizationNameEntity> findAllByOrganizationId(Long orgId);
 
   /// 按机构 ID 列表批量查询名称。
   ///
   /// @param orgIds 机构 ID 列表
   /// @return 名称实体列表
-  List<OrganizationNameEntity> findAllByOrgIdIn(Collection<Long> orgIds);
+  List<OrganizationNameEntity> findAllByOrganizationIdIn(Collection<Long> orgIds);
 
   /// 按机构 ID 删除所有名称。
   ///
   /// @param orgId 机构 ID
-  void deleteAllByOrgId(Long orgId);
+  void deleteAllByOrganizationId(Long orgId);
 
   /// 按机构 ID 列表批量删除名称。
   ///
   /// @param orgIds 机构 ID 列表
-  void deleteAllByOrgIdIn(Collection<Long> orgIds);
+  void deleteAllByOrganizationIdIn(Collection<Long> orgIds);
 
   /// 子串模式的机构建议（查询含中日韩文字）：名称表与别名表任意位置子串命中。
   ///

@@ -55,8 +55,7 @@ class MailDeliveryRepositoryAdapterIT {
 
     Map<String, Object> row =
         jdbcClient
-            .sql(
-                "SELECT template, outcome, recorded_at FROM mail.mail_delivery WHERE delivery_id = ?")
+            .sql("SELECT template, outcome, recorded_at FROM ntf_mail_delivery WHERE event_id = ?")
             .param(id)
             .query()
             .singleRow();
@@ -72,18 +71,5 @@ class MailDeliveryRepositoryAdapterIT {
     assertThatThrownBy(
             () -> deliveries.add(MailDelivery.sent(UUID.randomUUID(), "password-reset", AT)))
         .isInstanceOf(IllegalTransactionStateException.class);
-  }
-
-  /// 表里只有四列：不存正文、链接、收件地址与用户 ID。
-  @Test
-  void should_only_have_four_columns() {
-    assertThat(
-            jdbcClient
-                .sql(
-                    "SELECT column_name FROM information_schema.columns "
-                        + "WHERE table_schema = 'mail' AND table_name = 'mail_delivery'")
-                .query(String.class)
-                .list())
-        .containsExactlyInAnyOrder("delivery_id", "template", "outcome", "recorded_at");
   }
 }

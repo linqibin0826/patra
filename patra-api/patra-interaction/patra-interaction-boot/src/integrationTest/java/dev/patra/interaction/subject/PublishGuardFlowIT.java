@@ -78,8 +78,7 @@ class PublishGuardFlowIT extends InteractionFlowITSupport {
         SubjectErrorTrait.DAILY_LIMIT_REACHED);
     assertRejected(
         () -> admitInTransaction(2L, PublishKind.POST), 429, SubjectErrorTrait.DAILY_LIMIT_REACHED);
-    assertThat(count("SELECT day_count FROM subject.publish_quota WHERE user_id = 1"))
-        .isEqualTo(100L);
+    assertThat(count("SELECT day_count FROM itr_publish_quota WHERE user_id = 1")).isEqualTo(100L);
   }
 
   /// 同一作者在上限边上并发写两条经验：作者锁让它们排队，只放行一个，库里正好到上限。
@@ -111,8 +110,7 @@ class PublishGuardFlowIT extends InteractionFlowITSupport {
       }
       assertThat(results).containsExactlyInAnyOrder("admitted", "daily-limit");
     }
-    assertThat(count("SELECT day_count FROM subject.publish_quota WHERE user_id = 3"))
-        .isEqualTo(10L);
+    assertThat(count("SELECT day_count FROM itr_publish_quota WHERE user_id = 3")).isEqualTo(10L);
   }
 
   /// 计数必须和内容写在同一事务里：事务外调用直接拒绝。
@@ -120,7 +118,7 @@ class PublishGuardFlowIT extends InteractionFlowITSupport {
   void should_require_callers_transaction_for_admit() {
     assertThatThrownBy(() -> guard.admit(1L, PublishKind.COMMENT))
         .isInstanceOf(IllegalTransactionStateException.class);
-    assertThat(count("SELECT count(*) FROM subject.publish_quota")).isZero();
+    assertThat(count("SELECT count(*) FROM itr_publish_quota")).isZero();
   }
 
   /// 在事务里放行一次。
@@ -139,8 +137,8 @@ class PublishGuardFlowIT extends InteractionFlowITSupport {
   private void seedQuota(long userId, PublishKind kind, int dayCount) {
     Instant now = clock.instant();
     jdbcTemplate.update(
-        "INSERT INTO subject.publish_quota (user_id, kind, quota_day, day_count, last_published_at)"
-            + " VALUES (?, ?, ?, ?, ?)",
+        "INSERT INTO itr_publish_quota (id, user_id, kind, quota_day, day_count, last_published_at)"
+            + " VALUES ((SELECT COALESCE(max(id), 0) + 1 FROM itr_publish_quota), ?, ?, ?, ?, ?)",
         userId,
         kind.name(),
         LocalDate.ofInstant(now, PublishQuota.ZONE),

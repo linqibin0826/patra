@@ -42,7 +42,7 @@ public interface AuthorOrcidDao extends JpaRepository<AuthorOrcidEntity, Long> {
   /// 根据作者 ID 删除所有 ORCID。
   ///
   /// @param authorId 作者 ID
-  @Modifying
+  @Modifying(flushAutomatically = true, clearAutomatically = true)
   @Query("DELETE FROM AuthorOrcidEntity o WHERE o.author.id = :authorId")
   void deleteByAuthorId(@Param("authorId") Long authorId);
 
@@ -61,9 +61,6 @@ public interface AuthorOrcidDao extends JpaRepository<AuthorOrcidEntity, Long> {
 
   /// 批量查询 orcid → authorId 投影（仅 ACTIVE 且未软删的作者可被软关联）。
   ///
-  /// 软删除条件无需显式书写：`AuthorEntity` 继承 `SoftDeletableJpaEntity`，
-  /// Hibernate `@SoftDelete` 会为 `cat_author` 的表引用自动追加 `deleted_at IS NULL`。
-  ///
   /// @param orcids 归一化 ORCID 集合；调用方须保证单次规模有界（PG 绑定参数上限 65535），
   ///     超大 chunk 须自行分片
   /// @return 命中的投影列表；未命中的 ORCID 不产生行；`uk_orcid` 全局唯一保证每个 ORCID 至多一行
@@ -71,7 +68,7 @@ public interface AuthorOrcidDao extends JpaRepository<AuthorOrcidEntity, Long> {
       """
       SELECT o.orcid AS orcid, a.id AS authorId
       FROM AuthorOrcidEntity o JOIN o.author a
-      WHERE o.orcid IN :orcids AND a.status = 'ACTIVE'
+      WHERE o.orcid IN :orcids AND a.status = 'ACTIVE' AND a.deletedAt IS NULL
       """)
   List<OrcidAuthorIdView> findAuthorIdsByOrcidIn(@Param("orcids") Collection<String> orcids);
 }

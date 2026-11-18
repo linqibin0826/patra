@@ -182,7 +182,7 @@ RabbitMQ 队列的一个参数 `x-single-active-consumer`。打开后，多个�
    - 执行器停了但还没过期（90 秒没心跳才算下线）时，派给它的调度失败，下一分钟再派。提醒邮件晚一两分钟，可以接受。
 3. **两轮重叠时数据层挡得住**：
    - 到点处理（`FlushDueRemindersHandler`）：每人一个事务，先删掉（认领）排队行再建投递，只给认领到的建。注释写明这是为部署切换时两轮重叠设计的。
-   - 每日汇总：部分唯一索引 `uk_reminder_delivery_digest` 加 `ON CONFLICT DO NOTHING`，一人一个汇总窗口只有一封。
+   - 每日汇总：部分唯一索引 `uk_ntf_reminder_delivery_digest` 加 `ON CONFLICT DO NOTHING`，一人一个汇总窗口只有一封。
    - 发送（`SendPendingDeliveriesHandler`）：`findDue` 是不加锁的普通查询，两轮可能取到同一条投递、都去发；投递 ID 就是 Resend 的幂等键（`Resend-Idempotency-Key`），24 小时内只送达一次。本机和 e2e 用的 Mailpit 不认幂等键，会收到两封，不影响线上。
 
 结论：提醒邮件设计里「只有一个实例、不加分布式锁」在多实例下仍然成立。保障来自路由「第一个」加上数据层的认领、唯一索引和幂等键，而不是调度中心的串行。写进 notification README。

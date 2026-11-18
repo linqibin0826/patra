@@ -28,7 +28,7 @@ class UnsubscribeFlowIT extends NotificationFlowITSupport {
     call(HttpMethod.PUT, OWNER, PREFERENCES + "/REPLY", "{\"mode\":\"DIGEST\"}");
     token =
         jdbcTemplate.queryForObject(
-            "SELECT unsubscribe_token FROM preference.email_preference WHERE user_id = ?",
+            "SELECT unsubscribe_token FROM ntf_email_preference WHERE user_id = ?",
             String.class,
             OWNER);
     stubRecipient(OWNER, "chen.yu@example.com", "ACTIVE");
@@ -267,8 +267,7 @@ class UnsubscribeFlowIT extends NotificationFlowITSupport {
   /// @return 档位
   private String modes() {
     return jdbcTemplate.queryForObject(
-        "SELECT reply_mode || '/' || mention_mode FROM preference.email_preference"
-            + " WHERE user_id = ?",
+        "SELECT reply_mode || '/' || mention_mode FROM ntf_email_preference" + " WHERE user_id = ?",
         String.class,
         OWNER);
   }
@@ -278,7 +277,7 @@ class UnsubscribeFlowIT extends NotificationFlowITSupport {
   /// @return 更新时间
   private OffsetDateTime updatedAt() {
     return jdbcTemplate.queryForObject(
-        "SELECT updated_at FROM preference.email_preference WHERE user_id = ?",
+        "SELECT updated_at FROM ntf_email_preference WHERE user_id = ?",
         OffsetDateTime.class,
         OWNER);
   }

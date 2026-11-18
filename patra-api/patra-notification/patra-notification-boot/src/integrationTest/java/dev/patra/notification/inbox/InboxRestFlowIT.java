@@ -63,12 +63,12 @@ class InboxRestFlowIT extends NotificationFlowITSupport {
   @Test
   void should_record_presence_on_poll_and_304() {
     call(HttpMethod.GET, ME, UNREAD, null);
-    jdbcTemplate.update("DELETE FROM kernel.presence");
+    jdbcTemplate.update("DELETE FROM ntf_presence");
 
     assertThat(status(conditional("\"0-0-0\""))).isEqualTo(304);
     assertThat(
             jdbcTemplate.queryForObject(
-                "SELECT count(*) FROM kernel.presence WHERE user_id = ?", Long.class, ME))
+                "SELECT count(*) FROM ntf_presence WHERE user_id = ?", Long.class, ME))
         .isEqualTo(1);
   }
 
@@ -77,8 +77,8 @@ class InboxRestFlowIT extends NotificationFlowITSupport {
   void should_list_with_subject_from_interaction() {
     insert(11L, ME, "REPLY", "COMMENT_REPLY", 500L, null);
     jdbcTemplate.update(
-        "INSERT INTO inbox.comment (comment_id, subject_id, version, plain_text, updated_at)"
-            + " VALUES (500, 40, 1, '谢谢 <@4>', now())");
+        "INSERT INTO ntf_comment (id, comment_id, subject_id, source_version, plain_text, synced_at)"
+            + " VALUES (1, 500, 40, 1, '谢谢 <@4>', now())");
     stubSubjectViews(
         "{\"subjectId\":40,\"type\":\"POST\",\"key\":\"55\",\"available\":true,"
             + "\"journal\":\"The Lancet\",\"abbreviation\":\"Lancet\",\"publishedDate\":\"2026-08\","
@@ -196,8 +196,8 @@ class InboxRestFlowIT extends NotificationFlowITSupport {
       long id, long recipient, String category, String type, long commentId, String readAt) {
     OffsetDateTime at = OffsetDateTime.parse("2026-10-31T08:00:00Z");
     jdbcTemplate.update(
-        "INSERT INTO inbox.notification (recipient_id, notification_id, category, type, actor_id,"
-            + " actor_anonymous, subject_id, comment_id, occurred_at, created_at, read_at)"
+        "INSERT INTO ntf_notification (recipient_user_id, id, category, type, actor_user_id,"
+            + " actor_anonymous, subject_id, comment_id, occurred_at, notified_at, read_at)"
             + " VALUES (?, ?, ?, ?, ?, false, 40, ?, ?, ?, ?)",
         recipient,
         id,

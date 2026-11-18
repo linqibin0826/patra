@@ -48,7 +48,7 @@ class CollectionFlowIT extends CollectionFlowITSupport {
     String itemId = json(first).get("item").get("itemId").asString();
     assertThat(json(second).get("item").get("itemId").asString()).isEqualTo(itemId);
     assertThat(json(first).get("item").get("key").asString()).isEqualTo("100");
-    assertThat(count("SELECT count(*) FROM collection.library_item")).isEqualTo(1L);
+    assertThat(count("SELECT count(*) FROM itr_library_item")).isEqualTo(1L);
 
     assertThat(status(call(HttpMethod.DELETE, A, "/me/library/items?itemIds=" + itemId, null)))
         .isEqualTo(204);
@@ -90,7 +90,7 @@ class CollectionFlowIT extends CollectionFlowITSupport {
     assertThat(items.get("items").get(0).get("addedAt").isNull()).isFalse();
     assertThat(
             count(
-                "SELECT count(*) FROM collection.collection_item WHERE subject_id = ?",
+                "SELECT count(*) FROM itr_collection_item WHERE subject_id = ?",
                 Long.parseLong(i100)))
         .isZero();
   }
@@ -230,20 +230,16 @@ class CollectionFlowIT extends CollectionFlowITSupport {
 
     commandBus.handle(CleanupDeletedUsersCommand.of());
 
-    for (String table : List.of("library_item", "collection", "collection_item")) {
-      assertThat(count("SELECT count(*) FROM collection." + table + " WHERE user_id = ?", A))
+    for (String table : List.of("itr_library_item", "itr_collection", "itr_collection_item")) {
+      assertThat(count("SELECT count(*) FROM " + table + " WHERE user_id = ?", A))
           .as(table)
           .isZero();
     }
-    assertThat(
-            count(
-                "SELECT count(*) FROM collection.collection WHERE collection_id = ?",
-                Long.parseLong(copy)))
+    assertThat(count("SELECT count(*) FROM itr_collection WHERE id = ?", Long.parseLong(copy)))
         .isEqualTo(1L);
-    assertThat(count("SELECT count(*) FROM collection.collection_item WHERE user_id = ?", B))
+    assertThat(count("SELECT count(*) FROM itr_collection_item WHERE user_id = ?", B))
         .isEqualTo(1L);
-    assertThat(count("SELECT count(*) FROM collection.library_item WHERE user_id = ?", B))
-        .isEqualTo(1L);
+    assertThat(count("SELECT count(*) FROM itr_library_item WHERE user_id = ?", B)).isEqualTo(1L);
   }
 
   /// AC：「我的状态」一次请求完成 100 个对象的判定；101 个 422。
@@ -279,15 +275,15 @@ class CollectionFlowIT extends CollectionFlowITSupport {
   void should_return_clear_errors_at_limits() {
     collect(A, 100);
     jdbcTemplate.update(
-        "INSERT INTO collection.library_item (user_id, subject_id, collected_at)"
-            + " SELECT ?, g, now() FROM generate_series(1, 19999) g",
+        "INSERT INTO itr_library_item (id, user_id, subject_id, collected_at)"
+            + " SELECT g, ?, g, now() FROM generate_series(1, 19999) g",
         A);
     assertRejected(
         call(HttpMethod.PUT, A, "/me/library/publication/200", null), 409, "LIBRARY_FULL");
 
     jdbcTemplate.update(
-        "INSERT INTO collection.collection (collection_id, user_id, name, visibility)"
-            + " SELECT g, ?, 'c' || g, 'PRIVATE' FROM generate_series(1, 200) g",
+        "INSERT INTO itr_collection (id, user_id, name, visibility, content_changed_at)"
+            + " SELECT g, ?, 'c' || g, 'PRIVATE', now() FROM generate_series(1, 200) g",
         B);
     assertRejected(
         call(HttpMethod.POST, B, "/me/collections", "{\"name\":\"新的\"}"),

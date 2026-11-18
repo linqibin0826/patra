@@ -30,8 +30,6 @@ public final class EmailToken {
   private String requestedIp;
 
   private Long version;
-  private Instant createdAt;
-  private Instant updatedAt;
 
   /// 只能经工厂方法创建。
   private EmailToken() {}
@@ -48,8 +46,6 @@ public final class EmailToken {
   /// @param revokedAt 作废时间，没作废时为 `null`
   /// @param requestedIp 发起请求的 IP，没有时为 `null`
   /// @param version 乐观锁版本
-  /// @param createdAt 创建时间
-  /// @param updatedAt 更新时间
   @Builder(builderMethodName = "restore")
   private EmailToken(
       Long id,
@@ -61,9 +57,7 @@ public final class EmailToken {
       Instant consumedAt,
       Instant revokedAt,
       String requestedIp,
-      Long version,
-      Instant createdAt,
-      Instant updatedAt) {
+      Long version) {
     this.id = Objects.requireNonNull(id, "id 不能为 null");
     this.userId = Objects.requireNonNull(userId, "userId 不能为 null");
     this.purpose = Objects.requireNonNull(purpose, "purpose 不能为 null");
@@ -74,8 +68,6 @@ public final class EmailToken {
     this.revokedAt = revokedAt;
     this.requestedIp = requestedIp;
     this.version = version;
-    this.createdAt = createdAt;
-    this.updatedAt = updatedAt;
   }
 
   /// 签发一枚新令牌：过期时间是现在加用途的有效期，只记原文的哈希。ID 由仓储在保存时分配。

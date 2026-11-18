@@ -1,7 +1,6 @@
 package dev.patra.notification.infra.preference.persistence;
 
 import dev.patra.notification.infra.config.NotificationITPostgreSQLContainerInitializer;
-import java.time.OffsetDateTime;
 import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -28,7 +27,7 @@ abstract class PreferencePersistenceITSupport {
   /// 每例从空表开始。
   @BeforeEach
   void truncatePreferenceTables() {
-    jdbcTemplate.update("TRUNCATE preference.email_preference");
+    jdbcTemplate.update("TRUNCATE ntf_email_preference");
   }
 
   /// 直接插一行。
@@ -39,21 +38,19 @@ abstract class PreferencePersistenceITSupport {
   /// @param token 令牌原文
   protected void insertRow(long userId, String reply, String mention, String token) {
     jdbcTemplate.update(
-        "INSERT INTO preference.email_preference (user_id, reply_mode, mention_mode,"
-            + " unsubscribe_token, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
+        "INSERT INTO ntf_email_preference (id, user_id, reply_mode, mention_mode,"
+            + " unsubscribe_token) VALUES (?, ?, ?, ?, ?)",
+        userId,
         userId,
         reply,
         mention,
-        token,
-        OffsetDateTime.parse("2026-10-30T08:00:00Z"),
-        OffsetDateTime.parse("2026-10-30T08:00:00Z"));
+        token);
   }
 
   /// 表行数。
   ///
   /// @return 行数
   protected long rows() {
-    return jdbcTemplate.queryForObject(
-        "SELECT count(*) FROM preference.email_preference", Long.class);
+    return jdbcTemplate.queryForObject("SELECT count(*) FROM ntf_email_preference", Long.class);
   }
 }

@@ -6,6 +6,7 @@ import dev.patra.notification.domain.mail.model.enums.DeliveryKind;
 import dev.patra.notification.domain.mail.model.enums.DeliveryStatus;
 import dev.patra.notification.domain.mail.model.enums.SkipReason;
 import dev.patra.notification.domain.mail.port.repository.ReminderDeliveryRepository;
+import dev.patra.tool.jpa.id.SnowflakeIdGenerator;
 import java.sql.Array;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -14,7 +15,6 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.Arrays;
 import java.util.List;
-import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -28,19 +28,19 @@ public class ReminderDeliveryRepositoryAdapter implements ReminderDeliveryReposi
   /// 插入的列与值。
   private static final String INSERT =
       """
-      INSERT INTO mail.reminder_delivery
-        (delivery_id, recipient_id, kind, category, notification_ids, window_end, status, skip_reason,
-         attempts, next_attempt_at, created_at, first_sent_at, finished_at)
+      INSERT INTO ntf_reminder_delivery
+        (id, recipient_user_id, kind, category, notification_ids, window_end, status, skip_reason,
+         attempts, next_attempt_at, first_sent_at, finished_at)
       VALUES (:deliveryId, :recipientId, :kind, :category, :notificationIds, :windowEnd, :status,
-              :skipReason, :attempts, :nextAttemptAt, :createdAt, :firstSentAt, :finishedAt)
+              :skipReason, :attempts, :nextAttemptAt, :firstSentAt, :finishedAt)
       """;
 
   /// 一行映射成投递记录。
   private static final RowMapper<ReminderDelivery> ROW =
       (rs, rowNum) ->
           ReminderDelivery.restore()
-              .deliveryId(rs.getObject("delivery_id", UUID.class))
-              .recipientId(rs.getLong("recipient_id"))
+              .deliveryId(rs.getLong("id"))
+              .recipientId(rs.getLong("recipient_user_id"))
               .kind(DeliveryKind.valueOf(rs.getString("kind")))
               .category(enumOrNull(NotificationCategory.class, rs.getString("category")))
               .notificationIds(ids(rs.getArray("notification_ids")))
@@ -55,6 +55,14 @@ public class ReminderDeliveryRepositoryAdapter implements ReminderDeliveryReposi
               .build();
 
   private final JdbcClient jdbc;
+
+  /// 新投递的 ID：雪花 ID，也是服务商幂等键与 `Message-ID` 的一部分。
+  ///
+  /// @return 新 ID
+  @Override
+  public long nextId() {
+    return SnowflakeIdGenerator.getId();
+  }
 
   /// 新建一条。
   ///
@@ -73,7 +81,7 @@ public class ReminderDeliveryRepositoryAdapter implements ReminderDeliveryReposi
     return bind(
                 jdbc.sql(
                     INSERT
-                        + " ON CONFLICT (recipient_id, window_end) WHERE kind = 'DIGEST' DO NOTHING"),
+                        + " ON CONFLICT (recipient_user_id, window_end) WHERE kind = 'DIGEST' DO NOTHING"),
                 delivery)
             .update()
         == 1;
@@ -88,9 +96,9 @@ public class ReminderDeliveryRepositoryAdapter implements ReminderDeliveryReposi
   public List<ReminderDelivery> findDue(Instant now, int limit) {
     return jdbc.sql(
             """
-            SELECT * FROM mail.reminder_delivery
+            SELECT * FROM ntf_reminder_delivery
             WHERE status = 'PENDING' AND next_attempt_at <= :now
-            ORDER BY next_attempt_at, created_at LIMIT :limit
+            ORDER BY next_attempt_at, id LIMIT :limit
             """)
         .param("now", utc(now))
         .param("limit", limit)
@@ -105,10 +113,10 @@ public class ReminderDeliveryRepositoryAdapter implements ReminderDeliveryReposi
   public void update(ReminderDelivery delivery) {
     jdbc.sql(
             """
-            UPDATE mail.reminder_delivery
+            UPDATE ntf_reminder_delivery
             SET status = :status, skip_reason = :skipReason, attempts = :attempts,
                 next_attempt_at = :nextAttemptAt, first_sent_at = :firstSentAt, finished_at = :finishedAt
-            WHERE delivery_id = :deliveryId
+            WHERE id = :deliveryId
             """)
         .param("status", delivery.getStatus().name())
         .param("skipReason", nameOrNull(delivery.getSkipReason()))
@@ -126,7 +134,7 @@ public class ReminderDeliveryRepositoryAdapter implements ReminderDeliveryReposi
   /// @return 删掉的行数
   @Override
   public int deleteFinishedBefore(Instant cutoff) {
-    return jdbc.sql("DELETE FROM mail.reminder_delivery WHERE finished_at < :cutoff")
+    return jdbc.sql("DELETE FROM ntf_reminder_delivery WHERE finished_at < :cutoff")
         .param("cutoff", utc(cutoff))
         .update();
   }
@@ -148,7 +156,6 @@ public class ReminderDeliveryRepositoryAdapter implements ReminderDeliveryReposi
         .param("skipReason", nameOrNull(d.getSkipReason()))
         .param("attempts", d.getAttempts())
         .param("nextAttemptAt", utc(d.getNextAttemptAt()))
-        .param("createdAt", utc(d.getCreatedAt()))
         .param("firstSentAt", utc(d.getFirstSentAt()))
         .param("finishedAt", utc(d.getFinishedAt()));
   }

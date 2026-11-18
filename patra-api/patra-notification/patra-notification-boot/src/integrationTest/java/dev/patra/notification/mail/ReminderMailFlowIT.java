@@ -139,10 +139,10 @@ class ReminderMailFlowIT extends ReminderMailITSupport {
     MimeMessage mail = mails()[0];
     String token =
         jdbcTemplate.queryForObject(
-            "SELECT unsubscribe_token FROM preference.email_preference WHERE user_id = ?",
+            "SELECT unsubscribe_token FROM ntf_email_preference WHERE user_id = ?",
             String.class,
             ME);
-    String deliveryId = delivery().get("delivery_id").toString();
+    String deliveryId = delivery().get("id").toString();
     assertThat(mail.getHeader("List-Unsubscribe", null))
         .isEqualTo("<http://portal.test/unsubscribe/one-click?token=" + token + "&category=REPLY>");
     assertThat(mail.getHeader("List-Unsubscribe-Post", null))
@@ -192,7 +192,7 @@ class ReminderMailFlowIT extends ReminderMailITSupport {
     runReminderJob();
 
     assertThat(mails()).hasSize(1);
-    String deliveryId = deferred.get("delivery_id").toString();
+    String deliveryId = deferred.get("id").toString();
     assertThat(mails()[0].getHeader("Resend-Idempotency-Key", null)).isEqualTo(deliveryId);
     assertThat(mails()[0].getMessageID()).startsWith("<" + deliveryId + "@");
   }
@@ -202,13 +202,13 @@ class ReminderMailFlowIT extends ReminderMailITSupport {
   /// @return 一行
   private Map<String, Object> delivery() {
     return jdbcTemplate.queryForMap(
-        "SELECT delivery_id, status, skip_reason, attempts, first_sent_at FROM mail.reminder_delivery");
+        "SELECT id, status, skip_reason, attempts, first_sent_at FROM ntf_reminder_delivery");
   }
 
   /// 排队表行数。
   ///
   /// @return 行数
   private long queueRows() {
-    return jdbcTemplate.queryForObject("SELECT count(*) FROM mail.reminder_queue", Long.class);
+    return jdbcTemplate.queryForObject("SELECT count(*) FROM ntf_reminder_queue", Long.class);
   }
 }

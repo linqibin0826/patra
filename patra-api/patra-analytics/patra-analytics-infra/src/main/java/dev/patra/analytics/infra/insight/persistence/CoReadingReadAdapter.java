@@ -6,7 +6,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Component;
 
-/// `CoReadingReadPort` 的原生 SQL 实现：按主键 `(article_id, position)` 取前几行。
+/// `CoReadingReadPort` 的原生 SQL 实现：按唯一索引 `(publication_id, position)` 取前几行。
 @Component
 @RequiredArgsConstructor
 public class CoReadingReadAdapter implements CoReadingReadPort {
@@ -21,8 +21,8 @@ public class CoReadingReadAdapter implements CoReadingReadPort {
   @Override
   public List<Long> relatedOf(long articleId, int limit) {
     return jdbc.sql(
-            "SELECT related_article_id FROM insight.co_reading"
-                + " WHERE article_id = :articleId ORDER BY position LIMIT :limit")
+            "SELECT related_publication_id FROM anl_co_reading"
+                + " WHERE publication_id = :articleId ORDER BY position LIMIT :limit")
         .param("articleId", articleId)
         .param("limit", limit)
         .query(Long.class)

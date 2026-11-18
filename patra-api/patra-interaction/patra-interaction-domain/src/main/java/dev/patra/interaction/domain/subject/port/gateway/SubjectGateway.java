@@ -46,7 +46,13 @@ public interface SubjectGateway {
   /// @param localId 所属子域里的 ID
   /// @param state 新状态
   /// @param snapshot 新快照（删除时传当前快照）
+  /// @param actorUserId 操作人（编辑或删除的人）
   /// @throws IllegalArgumentException `type` 不是本地对象
   /// @throws IllegalStateException 这个本地对象没有登记
-  void updateLocal(SubjectType type, long localId, SubjectState state, SubjectSnapshot snapshot);
+  void updateLocal(
+      SubjectType type,
+      long localId,
+      SubjectState state,
+      SubjectSnapshot snapshot,
+      Long actorUserId);
 }

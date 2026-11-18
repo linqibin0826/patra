@@ -276,8 +276,6 @@ class UserTest {
   @Test
   @DisplayName("从库里恢复用构建器，保留全部字段；DELETED 允许没有邮箱，其他状态不允许")
   void should_restore_all_fields_via_builder() {
-    Instant createdAt = Instant.parse("2026-10-01T00:00:00Z");
-    Instant updatedAt = Instant.parse("2026-10-02T00:00:00Z");
 
     User user =
         User.restore()
@@ -289,8 +287,6 @@ class UserTest {
             .status(UserStatus.BANNED)
             .bannedAt(T0)
             .version(3L)
-            .createdAt(createdAt)
-            .updatedAt(updatedAt)
             .build();
 
     assertThat(user.getId()).isEqualTo(42L);
@@ -303,8 +299,6 @@ class UserTest {
     assertThat(user.getDeletionDueAt()).isNull();
     assertThat(user.getDeletedAt()).isNull();
     assertThat(user.getVersion()).isEqualTo(3L);
-    assertThat(user.getCreatedAt()).isEqualTo(createdAt);
-    assertThat(user.getUpdatedAt()).isEqualTo(updatedAt);
 
     User deleted =
         User.restore()

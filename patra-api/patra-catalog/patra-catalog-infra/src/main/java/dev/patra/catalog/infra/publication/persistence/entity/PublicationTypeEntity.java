@@ -3,9 +3,7 @@ package dev.patra.catalog.infra.publication.persistence.entity;
 import dev.patra.tool.jpa.entity.ValueObjectJpaEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.Index;
 import jakarta.persistence.Table;
-import jakarta.persistence.UniqueConstraint;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -31,12 +29,6 @@ import lombok.experimental.SuperBuilder;
 /// - Letter（通讯）
 /// - Editorial（社论）
 ///
-/// **索引设计**：
-///
-/// - `uk_pub_type`：出版物 ID + 类型值 + 词表来源 唯一索引（避免重复）
-/// - `idx_publication`：出版物索引
-/// - `idx_type_value`：类型值索引（按类型检索）
-///
 /// @author linqibin
 /// @since 0.1.0
 @Data
@@ -45,22 +37,12 @@ import lombok.experimental.SuperBuilder;
 @AllArgsConstructor
 @EqualsAndHashCode(callSuper = true)
 @Entity
-@Table(
-    name = "cat_publication_type",
-    uniqueConstraints = {
-      @UniqueConstraint(
-          name = "uk_pub_type",
-          columnNames = {"publication_id", "type_value", "vocabulary_source"})
-    },
-    indexes = {
-      @Index(name = "idx_publication", columnList = "publication_id"),
-      @Index(name = "idx_type_value", columnList = "type_value")
-    })
+@Table(name = "cat_publication_type")
 public class PublicationTypeEntity extends ValueObjectJpaEntity {
 
   // ========== 关联信息 ==========
 
-  /// 出版物 ID（外键：cat_publication.id）。
+  /// 出版物 ID（引用 cat_publication.id，不建外键）。
   @Column(name = "publication_id", nullable = false)
   private Long publicationId;
 

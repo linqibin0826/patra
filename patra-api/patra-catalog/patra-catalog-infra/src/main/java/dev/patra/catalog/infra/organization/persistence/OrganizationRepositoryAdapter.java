@@ -75,19 +75,23 @@ public class OrganizationRepositoryAdapter implements OrganizationRepository {
 
   @Override
   public boolean existsByRorId(RorId rorId) {
-    return organizationDao.existsByRorId(rorId.getId());
+    return organizationDao.existsByRorIdAndDeletedAtIsNull(rorId.getId());
   }
 
   // ========== 基本查询 ==========
 
   @Override
   public Optional<OrganizationAggregate> findById(OrganizationId id) {
-    return organizationDao.findById(id.value()).map(this::toAggregateWithChildren);
+    return organizationDao
+        .findByIdAndDeletedAtIsNull(id.value())
+        .map(this::toAggregateWithChildren);
   }
 
   @Override
   public Optional<OrganizationAggregate> findByRorId(RorId rorId) {
-    return organizationDao.findByRorId(rorId.getId()).map(this::toAggregateWithChildren);
+    return organizationDao
+        .findByRorIdAndDeletedAtIsNull(rorId.getId())
+        .map(this::toAggregateWithChildren);
   }
 
   @Override
@@ -97,7 +101,8 @@ public class OrganizationRepositoryAdapter implements OrganizationRepository {
     }
 
     List<String> rorIdStrings = rorIds.stream().map(RorId::getId).toList();
-    List<OrganizationEntity> entities = organizationDao.findByRorIdIn(rorIdStrings);
+    List<OrganizationEntity> entities =
+        organizationDao.findByRorIdInAndDeletedAtIsNull(rorIdStrings);
 
     if (entities.isEmpty()) {
       return Map.of();
@@ -136,7 +141,7 @@ public class OrganizationRepositoryAdapter implements OrganizationRepository {
       return Map.of();
     }
 
-    List<OrganizationEntity> entities = organizationDao.findByRorIdIn(rorIds);
+    List<OrganizationEntity> entities = organizationDao.findByRorIdInAndDeletedAtIsNull(rorIds);
     return entities.stream()
         .collect(Collectors.toMap(OrganizationEntity::getRorId, OrganizationEntity::getId));
   }
@@ -244,7 +249,8 @@ public class OrganizationRepositoryAdapter implements OrganizationRepository {
 
       // 主表更新：先查询已存在的实体，然后更新字段
       // 这样可以正确处理乐观锁（version 字段），避免 StaleObjectStateException
-      OrganizationEntity existingEntity = organizationDao.findById(orgId).orElse(null);
+      OrganizationEntity existingEntity =
+          organizationDao.findByIdAndDeletedAtIsNull(orgId).orElse(null);
       if (existingEntity != null) {
         mapper.updateEntity(existingEntity, aggregate);
         organizationDao.save(existingEntity);
@@ -283,7 +289,7 @@ public class OrganizationRepositoryAdapter implements OrganizationRepository {
 
   @Override
   public long count() {
-    return organizationDao.count();
+    return organizationDao.countByDeletedAtIsNull();
   }
 
   @Override
@@ -299,10 +305,10 @@ public class OrganizationRepositoryAdapter implements OrganizationRepository {
     OrganizationAggregate aggregate = mapper.toAggregate(entity);
     Long orgId = entity.getId();
 
-    mapper.addNamesToAggregate(aggregate, nameDao.findAllByOrgId(orgId));
-    mapper.addExternalIdsToAggregate(aggregate, externalIdDao.findAllByOrgId(orgId));
-    mapper.addRelationsToAggregate(aggregate, relationDao.findAllByOrgId(orgId));
-    mapper.addLocationsToAggregate(aggregate, locationDao.findAllByOrgId(orgId));
+    mapper.addNamesToAggregate(aggregate, nameDao.findAllByOrganizationId(orgId));
+    mapper.addExternalIdsToAggregate(aggregate, externalIdDao.findAllByOrganizationId(orgId));
+    mapper.addRelationsToAggregate(aggregate, relationDao.findAllByOrganizationId(orgId));
+    mapper.addLocationsToAggregate(aggregate, locationDao.findAllByOrganizationId(orgId));
 
     return aggregate;
   }
@@ -344,10 +350,10 @@ public class OrganizationRepositoryAdapter implements OrganizationRepository {
   /// 保存子表数据（删除旧数据，插入新数据）。
   private void saveChildren(OrganizationAggregate aggregate, Long orgId) {
     // 删除旧数据
-    nameDao.deleteAllByOrgId(orgId);
-    externalIdDao.deleteAllByOrgId(orgId);
-    relationDao.deleteAllByOrgId(orgId);
-    locationDao.deleteAllByOrgId(orgId);
+    nameDao.deleteAllByOrganizationId(orgId);
+    externalIdDao.deleteAllByOrganizationId(orgId);
+    relationDao.deleteAllByOrganizationId(orgId);
+    locationDao.deleteAllByOrganizationId(orgId);
 
     // 刷新并清除 Session，确保删除操作提交并移除缓存，避免重用 ID 时出现 NonUniqueObjectException
     entityManager.flush();
@@ -378,27 +384,27 @@ public class OrganizationRepositoryAdapter implements OrganizationRepository {
 
   /// 批量加载名称并按机构 ID 分组。
   private Map<Long, List<OrganizationNameEntity>> loadNamesGroupByOrgId(List<Long> orgIds) {
-    return nameDao.findAllByOrgIdIn(orgIds).stream()
-        .collect(Collectors.groupingBy(OrganizationNameEntity::getOrgId));
+    return nameDao.findAllByOrganizationIdIn(orgIds).stream()
+        .collect(Collectors.groupingBy(OrganizationNameEntity::getOrganizationId));
   }
 
   /// 批量加载外部标识符并按机构 ID 分组。
   private Map<Long, List<OrganizationExternalIdEntity>> loadExternalIdsGroupByOrgId(
       List<Long> orgIds) {
-    return externalIdDao.findAllByOrgIdIn(orgIds).stream()
-        .collect(Collectors.groupingBy(OrganizationExternalIdEntity::getOrgId));
+    return externalIdDao.findAllByOrganizationIdIn(orgIds).stream()
+        .collect(Collectors.groupingBy(OrganizationExternalIdEntity::getOrganizationId));
   }
 
   /// 批量加载关系并按机构 ID 分组。
   private Map<Long, List<OrganizationRelationEntity>> loadRelationsGroupByOrgId(List<Long> orgIds) {
-    return relationDao.findAllByOrgIdIn(orgIds).stream()
-        .collect(Collectors.groupingBy(OrganizationRelationEntity::getOrgId));
+    return relationDao.findAllByOrganizationIdIn(orgIds).stream()
+        .collect(Collectors.groupingBy(OrganizationRelationEntity::getOrganizationId));
   }
 
   /// 批量加载地理位置并按机构 ID 分组。
   private Map<Long, List<OrganizationLocationEntity>> loadLocationsGroupByOrgId(List<Long> orgIds) {
-    return locationDao.findAllByOrgIdIn(orgIds).stream()
-        .collect(Collectors.groupingBy(OrganizationLocationEntity::getOrgId));
+    return locationDao.findAllByOrganizationIdIn(orgIds).stream()
+        .collect(Collectors.groupingBy(OrganizationLocationEntity::getOrganizationId));
   }
 
   /// 批量保存实体，定期 flush + clear 防止内存溢出。

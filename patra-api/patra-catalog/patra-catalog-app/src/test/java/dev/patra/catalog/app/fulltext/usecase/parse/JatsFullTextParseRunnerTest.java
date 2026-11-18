@@ -81,6 +81,7 @@ class JatsFullTextParseRunnerTest {
     FullTextBody body = FullTextBody.builder().schemaVersion(1).wordCount(5).build();
     when(storage.open("pmc/PMC1/PMC1.2/PMC1.2.xml")).thenReturn(file());
     when(parser.parse(any(), eq(MEDIA))).thenReturn(JatsParseResult.ofBody(body, 0));
+    when(persister.recordParsed(CANDIDATE, body, NOW)).thenReturn(true);
 
     assertThat(runner.run()).isEqualTo(FullTextParseRunStats.of(1, 1, 0, 0));
 
@@ -92,6 +93,7 @@ class JatsFullTextParseRunnerTest {
   void should_mark_no_body_with_parser_version() {
     when(storage.open("pmc/PMC1/PMC1.2/PMC1.2.xml")).thenReturn(file());
     when(parser.parse(any(), eq(MEDIA))).thenReturn(JatsParseResult.ofNoBody());
+    when(persister.recordNoBody(CANDIDATE, NOW)).thenReturn(true);
 
     assertThat(runner.run()).isEqualTo(FullTextParseRunStats.of(1, 0, 1, 0));
 
@@ -104,10 +106,23 @@ class JatsFullTextParseRunnerTest {
     when(storage.open("pmc/PMC1/PMC1.2/PMC1.2.xml")).thenReturn(file());
     XmlParseException error = new XmlParseException("bad");
     when(parser.parse(any(), eq(MEDIA))).thenThrow(error);
+    when(persister.recordParseFailure(CANDIDATE, error, NOW)).thenReturn(true);
 
     assertThat(runner.run()).isEqualTo(FullTextParseRunStats.of(1, 0, 0, 1));
 
     verify(persister).recordParseFailure(CANDIDATE, error, NOW);
+  }
+
+  /// Persister 发现解析期间已重抓、丢弃了结果：只计处理篇数，不算成功也不算失败。
+  @Test
+  @DisplayName("解析结果因重抓被丢弃时只计处理数")
+  void should_count_only_processed_when_result_discarded() {
+    FullTextBody body = FullTextBody.builder().schemaVersion(1).wordCount(5).build();
+    when(storage.open("pmc/PMC1/PMC1.2/PMC1.2.xml")).thenReturn(file());
+    when(parser.parse(any(), eq(MEDIA))).thenReturn(JatsParseResult.ofBody(body, 0));
+    when(persister.recordParsed(CANDIDATE, body, NOW)).thenReturn(false);
+
+    assertThat(runner.run()).isEqualTo(FullTextParseRunStats.of(1, 0, 0, 0));
   }
 
   @Test

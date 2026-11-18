@@ -60,35 +60,34 @@ public interface VenueIdentifierDao extends JpaRepository<VenueIdentifierEntity,
 
   /// 找出属于已软删期刊的 NLM 值（主或副）。
   ///
-  /// native SQL：绕过 `@SoftDelete` 对期刊的过滤；走 `uk_venue_identifier_nlm`。
+  /// 走 NLM 标识符的唯一索引。
   ///
   /// @param nlmIds NLM ID 数组
   /// @return 入参中属于已软删期刊的 NLM 值
   @Query(
-      value =
-          """
-          SELECT i.identifier_value
-          FROM cat_venue_identifier i
-          JOIN cat_venue v ON v.id = i.venue_id
-          WHERE i.identifier_type = 'NLM'
-            AND i.identifier_value = ANY((:nlmIds)::text[])
-            AND v.deleted_at IS NOT NULL
-          """,
-      nativeQuery = true)
-  List<String> findNlmValuesOfSoftDeletedVenues(@Param("nlmIds") String[] nlmIds);
+      """
+      SELECT i.identifierValue
+      FROM VenueIdentifierEntity i, VenueEntity v
+      WHERE v.id = i.venueId
+        AND i.identifierType = 'NLM'
+        AND i.identifierValue IN :nlmIds
+        AND v.deletedAt IS NOT NULL
+      """)
+  List<String> findNlmValuesOfSoftDeletedVenues(@Param("nlmIds") Collection<String> nlmIds);
 
   /// 根据载体 ID 删除所有标识符。
   ///
   /// @param venueId 载体 ID
   /// @return 删除的记录数
-  @Modifying
-  int deleteByVenueId(Long venueId);
+  @Modifying(flushAutomatically = true, clearAutomatically = true)
+  @Query("DELETE FROM VenueIdentifierEntity e WHERE e.venueId = :venueId")
+  int deleteByVenueId(@Param("venueId") Long venueId);
 
   /// 根据载体 ID 列表批量删除标识符。
   ///
   /// @param venueIds 载体 ID 列表
   /// @return 删除的记录数
-  @Modifying
+  @Modifying(flushAutomatically = true, clearAutomatically = true)
   @Query("DELETE FROM VenueIdentifierEntity e WHERE e.venueId IN :venueIds")
   int deleteByVenueIdIn(@Param("venueIds") Collection<Long> venueIds);
 }

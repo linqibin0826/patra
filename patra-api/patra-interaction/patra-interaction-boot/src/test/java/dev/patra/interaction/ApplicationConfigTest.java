@@ -13,7 +13,7 @@ import org.springframework.core.env.EnumerablePropertySource;
 import org.springframework.core.io.ClassPathResource;
 
 /// jar 里配置文件的约束：随环境变的值在 Nacos，jar 里没有 profile 文件，服务名由启动器传入，
-/// Nacos 接入由 starter 注入；Flyway 历史留在默认 schema。
+/// Nacos 接入由 starter 注入；Flyway 历史在 public 的 `flyway_schema_history`。
 @DisplayName("jar 内配置文件约束")
 class ApplicationConfigTest {
 
@@ -46,7 +46,7 @@ class ApplicationConfigTest {
     assertThat(property("patra.web.error.context-prefix")).isEqualTo("INTERACTION");
   }
 
-  /// Flyway 递归扫 `db/migration`，不设 `schemas`：设了 Flyway 会自己建 schema 并把历史表挪进去。
+  /// Flyway 递归扫 `db/migration`，不设 `schemas`：设了 Flyway 会把历史表挪进第一个 schema。
   ///
   /// @throws IOException 读取失败时
   @Test

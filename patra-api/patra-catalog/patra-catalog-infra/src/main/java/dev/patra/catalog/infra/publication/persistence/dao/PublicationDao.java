@@ -1,11 +1,10 @@
 package dev.patra.catalog.infra.publication.persistence.dao;
 
 import dev.patra.catalog.infra.publication.persistence.entity.PublicationEntity;
+import java.sql.Timestamp;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -19,17 +18,23 @@ import org.springframework.data.repository.query.Param;
 /// @since 0.1.0
 public interface PublicationDao extends JpaRepository<PublicationEntity, Long> {
 
+  /// 按 ID 查未删除的文献。
+  ///
+  /// @param id 文献 ID
+  /// @return 匹配的文献
+  Optional<PublicationEntity> findByIdAndDeletedAtIsNull(Long id);
+
   /// 根据 PMID 查找文献。
   ///
   /// @param pmid PubMed ID
   /// @return 匹配的文献
-  Optional<PublicationEntity> findByPmid(String pmid);
+  Optional<PublicationEntity> findByPmidAndDeletedAtIsNull(String pmid);
 
   /// 根据 DOI 查找文献。
   ///
   /// @param doi Digital Object Identifier
   /// @return 匹配的文献
-  Optional<PublicationEntity> findByDoi(String doi);
+  Optional<PublicationEntity> findByDoiAndDeletedAtIsNull(String doi);
 
   /// 根据 PMID 或 DOI 查找文献（任一匹配即可）。
   ///
@@ -41,8 +46,9 @@ public interface PublicationDao extends JpaRepository<PublicationEntity, Long> {
   @Query(
       """
       SELECT e FROM PublicationEntity e
-      WHERE (:pmid IS NOT NULL AND e.pmid = :pmid)
-         OR (:doi IS NOT NULL AND e.doi = :doi)
+      WHERE e.deletedAt IS NULL
+        AND ((:pmid IS NOT NULL AND e.pmid = :pmid)
+          OR (:doi IS NOT NULL AND e.doi = :doi))
       """)
   Optional<PublicationEntity> findByPmidOrDoi(@Param("pmid") String pmid, @Param("doi") String doi);
 
@@ -50,167 +56,70 @@ public interface PublicationDao extends JpaRepository<PublicationEntity, Long> {
   ///
   /// @param pmid PubMed ID
   /// @return true 如果存在
-  boolean existsByPmid(String pmid);
+  boolean existsByPmidAndDeletedAtIsNull(String pmid);
 
   /// 检查 DOI 是否已存在。
   ///
   /// @param doi Digital Object Identifier
   /// @return true 如果存在
-  boolean existsByDoi(String doi);
+  boolean existsByDoiAndDeletedAtIsNull(String doi);
 
   /// 查出库里已占用的 PMID，包含已软删除的行。
   ///
-  /// `uk_pmid` 约束覆盖软删除行，用 native 查询绕开 `@SoftDelete` 过滤，才能与约束口径一致。
+  /// PMID 唯一索引也管着已删除的行，所以这里不加「未删除」条件，与唯一索引口径一致。
   ///
   /// @param pmids 待检查的 PMID 集合（不能为空集合）
   /// @return 已占用的 PMID
-  @Query(value = "SELECT pmid FROM cat_publication WHERE pmid IN (:pmids)", nativeQuery = true)
+  @Query("SELECT e.pmid FROM PublicationEntity e WHERE e.pmid IN :pmids")
   List<String> findOccupiedPmids(@Param("pmids") Collection<String> pmids);
 
   /// 查出库里已占用的 DOI，包含已软删除的行。
   ///
-  /// `uk_doi` 约束覆盖软删除行，用 native 查询绕开 `@SoftDelete` 过滤，才能与约束口径一致。
+  /// DOI 唯一索引也管着已删除的行，所以这里不加「未删除」条件，与唯一索引口径一致。
   ///
   /// @param dois 待检查的 DOI 集合（不能为空集合）
   /// @return 已占用的 DOI 原值
-  @Query(value = "SELECT doi FROM cat_publication WHERE doi IN (:dois)", nativeQuery = true)
+  @Query("SELECT e.doi FROM PublicationEntity e WHERE e.doi IN :dois")
   List<String> findOccupiedDois(@Param("dois") Collection<String> dois);
 
   /// 根据载体实例 ID 查找文献列表。
   ///
   /// @param venueInstanceId 载体实例 ID
   /// @return 文献列表
-  List<PublicationEntity> findByVenueInstanceId(Long venueInstanceId);
+  List<PublicationEntity> findByVenueInstanceIdAndDeletedAtIsNull(Long venueInstanceId);
 
   /// 根据载体 ID 查找文献列表。
   ///
   /// @param venueId 载体 ID
   /// @return 文献列表
-  List<PublicationEntity> findByVenueId(Long venueId);
+  List<PublicationEntity> findByVenueIdAndDeletedAtIsNull(Long venueId);
 
   /// 根据载体实例 ID 集合批量查找文献。
   ///
   /// @param venueInstanceIds 载体实例 ID 集合
   /// @return 文献列表
-  List<PublicationEntity> findByVenueInstanceIdIn(Collection<Long> venueInstanceIds);
+  List<PublicationEntity> findByVenueInstanceIdInAndDeletedAtIsNull(
+      Collection<Long> venueInstanceIds);
 
   /// 根据数据来源和出版年份查找文献。
   ///
   /// @param provenanceCode 数据来源代码
   /// @param publicationYear 出版年份
   /// @return 文献列表
-  List<PublicationEntity> findByProvenanceCodeAndPublicationYear(
+  List<PublicationEntity> findByProvenanceCodeAndPublicationYearAndDeletedAtIsNull(
       String provenanceCode, Integer publicationYear);
 
   /// 统计指定载体的文献数量。
   ///
   /// @param venueId 载体 ID
   /// @return 文献数量
-  long countByVenueId(Long venueId);
-
-  /// 分页查询文献列表，支持多维度筛选。
-  ///
-  /// 所有筛选参数均可为 null（表示不筛选）。关键词使用包含匹配（`%keyword%`）。
-  ///
-  /// **关键词匹配契约**：
-  ///
-  /// - 使用 `ILIKE` 实现大小写不敏感（与 DB collation 解耦）；
-  ///   因查询形态为 infix 匹配（`%keyword%`）本身即不可能命中 B-tree 前缀索引
-  /// - **调用方契约**：`:keyword` 必须是已通过 `StringUtils.escapeLike()`
-  ///   转义的字符串，查询内置 `ESCAPE '!'` 子句与之配套，防止用户输入的
-  ///   `%` / `_` 被当作通配符
-  ///
-  /// @param keyword 标题关键词（已通过 `StringUtils.escapeLike` 转义，包含匹配，大小写不敏感）
-  /// @param yearFrom 起始年份（含）
-  /// @param yearTo 截止年份（含）
-  /// @param languageBase 基础语种代码
-  /// @param isOa 是否有 OA 版本
-  /// @param oaStatus OA 状态
-  /// @param venueId 载体 ID
-  /// @param venueInstanceId 载体实例 ID
-  /// @param pmid PubMed ID
-  /// @param doi DOI
-  /// @param provenanceCode 数据来源代码
-  /// @param publicationStatus 出版状态
-  /// @param pageable 分页参数
-  /// @return 分页结果
-  @Query(
-      value =
-          """
-      SELECT * FROM cat_publication p
-      WHERE (:keyword IS NULL OR p.title ILIKE CONCAT('%', CAST(:keyword AS text), '%') ESCAPE '!')
-        AND (:yearFrom IS NULL OR p.publication_year >= :yearFrom)
-        AND (:yearTo IS NULL OR p.publication_year <= :yearTo)
-        AND (:languageBase IS NULL OR p.language_base = :languageBase)
-        AND (:isOa IS NULL OR p.is_oa = :isOa)
-        AND (:oaStatus IS NULL OR p.oa_status = :oaStatus)
-        AND (:venueId IS NULL OR p.venue_id = :venueId)
-        AND (:venueInstanceId IS NULL OR p.venue_instance_id = :venueInstanceId)
-        AND (:pmid IS NULL OR p.pmid = :pmid)
-        AND (:doi IS NULL OR p.doi = :doi)
-        AND (:provenanceCode IS NULL OR p.provenance_code = :provenanceCode)
-        AND (:publicationStatus IS NULL OR p.publication_status = :publicationStatus)
-        AND p.deleted_at IS NULL
-      ORDER BY
-        CASE WHEN :sortBy = 'citedByCount' THEN COALESCE(p.citation_count, -1) ELSE NULL END DESC,
-        CASE WHEN :sortBy IS NULL OR :sortBy != 'citedByCount' THEN p.updated_at ELSE NULL END DESC,
-        p.id DESC
-      """,
-      countQuery =
-          """
-      SELECT COUNT(*) FROM cat_publication p
-      WHERE (:keyword IS NULL OR p.title ILIKE CONCAT('%', CAST(:keyword AS text), '%') ESCAPE '!')
-        AND (:yearFrom IS NULL OR p.publication_year >= :yearFrom)
-        AND (:yearTo IS NULL OR p.publication_year <= :yearTo)
-        AND (:languageBase IS NULL OR p.language_base = :languageBase)
-        AND (:isOa IS NULL OR p.is_oa = :isOa)
-        AND (:oaStatus IS NULL OR p.oa_status = :oaStatus)
-        AND (:venueId IS NULL OR p.venue_id = :venueId)
-        AND (:venueInstanceId IS NULL OR p.venue_instance_id = :venueInstanceId)
-        AND (:pmid IS NULL OR p.pmid = :pmid)
-        AND (:doi IS NULL OR p.doi = :doi)
-        AND (:provenanceCode IS NULL OR p.provenance_code = :provenanceCode)
-        AND (:publicationStatus IS NULL OR p.publication_status = :publicationStatus)
-        AND p.deleted_at IS NULL
-      """,
-      nativeQuery = true)
-  Page<PublicationEntity> findPublicationPage(
-      @Param("keyword") String keyword,
-      @Param("yearFrom") Integer yearFrom,
-      @Param("yearTo") Integer yearTo,
-      @Param("languageBase") String languageBase,
-      @Param("isOa") Boolean isOa,
-      @Param("oaStatus") String oaStatus,
-      @Param("venueId") Long venueId,
-      @Param("venueInstanceId") Long venueInstanceId,
-      @Param("pmid") String pmid,
-      @Param("doi") String doi,
-      @Param("provenanceCode") String provenanceCode,
-      @Param("publicationStatus") String publicationStatus,
-      @Param("sortBy") String sortBy,
-      Pageable pageable);
-
-  /// 根据载体实例 ID 删除所有关联文献。
-  ///
-  /// @param venueInstanceId 载体实例 ID
-  /// @return 删除的记录数
-  @Modifying
-  @Query("DELETE FROM PublicationEntity e WHERE e.venueInstanceId = :venueInstanceId")
-  int deleteByVenueInstanceId(@Param("venueInstanceId") Long venueInstanceId);
-
-  /// 根据载体 ID 删除所有关联文献。
-  ///
-  /// @param venueId 载体 ID
-  /// @return 删除的记录数
-  @Modifying
-  @Query("DELETE FROM PublicationEntity e WHERE e.venueId = :venueId")
-  int deleteByVenueId(@Param("venueId") Long venueId);
+  long countByVenueIdAndDeletedAtIsNull(Long venueId);
 
   /// 按 venue 查询 Top N 高被引文献。
   ///
   /// **排序规则**：`citation_count DESC`（NULL 排在最后）、`publication_year DESC`。
   ///
-  /// **软删除**：手动过滤 `deleted_at IS NULL`（使用 `nativeQuery`，不经 Hibernate `@SoftDelete` 拦截）。
+  /// 排除已删除的文献。
   ///
   /// @param venueId 期刊 ID
   /// @param since   发表年下限（可为 null，表示不过滤）
@@ -233,8 +142,71 @@ public interface PublicationDao extends JpaRepository<PublicationEntity, Long> {
   /// 把文献标为开放获取（只会置为 `true`），并清掉持久化上下文里的旧值。
   ///
   /// @param id 文献 ID
+  /// @param actorId 操作人
   /// @return 更新行数
-  @Modifying(clearAutomatically = true)
-  @Query("UPDATE PublicationEntity p SET p.isOa = true WHERE p.id = :id")
-  int markOpenAccess(@Param("id") Long id);
+  @Modifying(flushAutomatically = true, clearAutomatically = true)
+  @Query("UPDATE PublicationEntity p SET p.isOa = true, p.updatedBy = :actorId WHERE p.id = :id")
+  int markOpenAccess(@Param("id") Long id, @Param("actorId") Long actorId);
+
+  /// 按 PMID 写一行原文缓存，已有则整行覆盖（位置、原文、解析时间）；`id` 只在新插入时用上。
+  ///
+  /// @param id 新行的雪花 ID
+  /// @param pmid PMID
+  /// @param file 来源文件名
+  /// @param rank 来源位置
+  /// @param raw 原文，墓碑行为空
+  /// @param parsedAt 解析时间，可空
+  /// @return 写入的行数
+  @Modifying(flushAutomatically = true, clearAutomatically = true)
+  @Query(
+      value =
+          """
+          INSERT INTO cat_publication_source (id, pmid, source_file, source_rank, raw_xml, parsed_at)
+          VALUES (:id, :pmid, :file, :rank, :raw, :parsedAt)
+          ON CONFLICT (pmid) DO UPDATE SET source_file = EXCLUDED.source_file,
+              source_rank = EXCLUDED.source_rank, raw_xml = EXCLUDED.raw_xml,
+              parsed_at = EXCLUDED.parsed_at
+          """,
+      nativeQuery = true)
+  int upsertSource(
+      @Param("id") long id,
+      @Param("pmid") String pmid,
+      @Param("file") String file,
+      @Param("rank") int rank,
+      @Param("raw") String raw,
+      @Param("parsedAt") Timestamp parsedAt);
+
+  /// 库里已有的 PMID（含已软删的行），写墓碑前筛候选用。
+  ///
+  /// @param pmids PMID
+  /// @return 其中库里已有的
+  @Query(
+      value = "SELECT p.pmid FROM cat_publication p WHERE p.pmid = ANY(CAST(:pmids AS text[]))",
+      nativeQuery = true)
+  List<String> findExistingPmids(@Param("pmids") String[] pmids);
+
+  /// 为删除列表写原文缓存的墓碑行（只有位置、没有原文）；已有的行只在新位置不早于旧位置时更新。
+  ///
+  /// @param ids 每个 PMID 一个新雪花 ID，与 `pmids` 一一对应
+  /// @param pmids PMID，不能重复
+  /// @param file 删除文件名
+  /// @param rank 删除文件的来源位置
+  /// @return 写入的行数
+  @Modifying(flushAutomatically = true, clearAutomatically = true)
+  @Query(
+      value =
+          """
+          INSERT INTO cat_publication_source (id, pmid, source_file, source_rank)
+          SELECT u.id, u.pmid, :file, :rank
+            FROM unnest(CAST(:ids AS bigint[]), CAST(:pmids AS text[])) AS u(id, pmid)
+          ON CONFLICT (pmid) DO UPDATE SET source_file = EXCLUDED.source_file,
+              source_rank = EXCLUDED.source_rank
+          WHERE cat_publication_source.source_rank <= EXCLUDED.source_rank
+          """,
+      nativeQuery = true)
+  int upsertTombstones(
+      @Param("ids") Long[] ids,
+      @Param("pmids") String[] pmids,
+      @Param("file") String file,
+      @Param("rank") int rank);
 }

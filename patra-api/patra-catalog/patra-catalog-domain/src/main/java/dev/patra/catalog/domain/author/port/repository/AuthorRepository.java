@@ -47,11 +47,6 @@ public interface AuthorRepository {
   /// @return 作者聚合根（可选）
   Optional<AuthorAggregate> findById(AuthorId id);
 
-  /// 根据 ID 删除作者（软删除）。
-  ///
-  /// @param id 作者 ID
-  void deleteById(AuthorId id);
-
   // ========== 姓名规范化格式查询 ==========
 
   /// 根据姓名规范化格式查询作者。

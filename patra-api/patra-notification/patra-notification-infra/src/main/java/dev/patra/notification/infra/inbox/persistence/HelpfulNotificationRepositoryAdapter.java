@@ -19,8 +19,9 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
-/// `HelpfulNotificationRepository` 的原生 SQL 实现：合并条目是 `inbox.notification` 的一行（`category = HELPFUL`），
-/// 点过的人在附表 `inbox.helpful_actor`（级联外键随信箱行删除）。每条语句都带 `recipient_id`，只扫一个分区。
+/// `HelpfulNotificationRepository` 的原生 SQL 实现：合并条目是 `ntf_notification` 的一行（`category = HELPFUL`），
+/// 点过的人在附表 `ntf_notification_helpful_actor`（不建外键，随信箱行由仓储在同一条语句里一并删）。
+/// 每条语句都带 `recipient_user_id`，只扫一个分区。
 /// 三个方法都要求调用方的事务（`MANDATORY`）：加锁读要在事务里才有意义，写入与写回各是两条语句（信箱行 + 附表），
 /// 事务外调用会留下没有附表行的条目。
 @Component
@@ -29,9 +30,9 @@ public class HelpfulNotificationRepositoryAdapter implements HelpfulNotification
 
   /// 按合并键找信箱行并加锁；评论列的条件按目标拼（点经验时为空）。
   private static final String FIND =
-      "SELECT notification_id, read_at, post_plain_text, post_plain_text_at"
-          + " FROM inbox.notification"
-          + " WHERE recipient_id = :recipientId AND category = 'HELPFUL'"
+      "SELECT id, read_at, post_plain_text, post_plain_text_at"
+          + " FROM ntf_notification"
+          + " WHERE recipient_user_id = :recipientId AND category = 'HELPFUL'"
           + " AND subject_id = :subjectId AND helpful_day = :day AND ";
 
   private final JdbcClient jdbc;
@@ -63,7 +64,7 @@ public class HelpfulNotificationRepositoryAdapter implements HelpfulNotification
             (rs, rowNum) -> {
               Instant textAt = InboxRows.instant(rs, "post_plain_text_at");
               return new Row(
-                  rs.getLong("notification_id"),
+                  rs.getLong("id"),
                   InboxRows.instant(rs, "read_at"),
                   textAt == null ? null : PostText.of(rs.getString("post_plain_text"), textAt));
             })
@@ -92,8 +93,8 @@ public class HelpfulNotificationRepositoryAdapter implements HelpfulNotification
     long id = SnowflakeIdGenerator.getId();
     PostText postText = notification.getPostText();
     jdbc.sql(
-            "INSERT INTO inbox.notification (recipient_id, notification_id, category, type,"
-                + " actor_id, actor_anonymous, subject_id, comment_id, occurred_at, created_at,"
+            "INSERT INTO ntf_notification (recipient_user_id, id, category, type,"
+                + " actor_user_id, actor_anonymous, subject_id, comment_id, occurred_at, notified_at,"
                 + " read_at, helpful_day, post_plain_text, post_plain_text_at)"
                 + " VALUES (:recipientId, :id, :category, :type, :actorId, :actorAnonymous,"
                 + " :subjectId, :commentId, :occurredAt, :createdAt, :readAt, :day, :text, :textAt)")
@@ -120,7 +121,7 @@ public class HelpfulNotificationRepositoryAdapter implements HelpfulNotification
     return id;
   }
 
-  /// 写回并入一次点击后的条目。
+  /// 写回并入一次点击后的条目。由消费事件触发，是系统写入：最后修改人置空，不留收件人标已读时记下的 ID。
   ///
   /// @param notification 条目
   /// @param mark 刚并入的点击
@@ -132,10 +133,10 @@ public class HelpfulNotificationRepositoryAdapter implements HelpfulNotification
     upsertActor(recipientId, id, mark.actorId(), notification.getMarks().get(mark.actorId()));
     PostText postText = notification.getPostText();
     jdbc.sql(
-            "UPDATE inbox.notification SET actor_id = :actorId, actor_anonymous = :actorAnonymous,"
+            "UPDATE ntf_notification SET actor_user_id = :actorId, actor_anonymous = :actorAnonymous,"
                 + " occurred_at = :occurredAt, read_at = :readAt, post_plain_text = :text,"
-                + " post_plain_text_at = :textAt"
-                + " WHERE recipient_id = :recipientId AND notification_id = :id")
+                + " post_plain_text_at = :textAt, updated_by = NULL"
+                + " WHERE recipient_user_id = :recipientId AND id = :id")
         .param("actorId", notification.getLatestActorId())
         .param("actorAnonymous", notification.isLatestActorAnonymous())
         .param("occurredAt", InboxRows.utc(notification.getOccurredAt()))
@@ -158,11 +159,13 @@ public class HelpfulNotificationRepositoryAdapter implements HelpfulNotification
   private void upsertActor(
       long recipientId, long notificationId, long actorId, Instant firstMarkedAt) {
     jdbc.sql(
-            "INSERT INTO inbox.helpful_actor (recipient_id, notification_id, actor_id,"
-                + " first_marked_at) VALUES (:recipientId, :id, :actorId, :at)"
-                + " ON CONFLICT (recipient_id, notification_id, actor_id) DO UPDATE"
-                + " SET first_marked_at = LEAST(inbox.helpful_actor.first_marked_at,"
+            "INSERT INTO ntf_notification_helpful_actor"
+                + " (id, recipient_user_id, notification_id, actor_user_id, first_marked_at)"
+                + " VALUES (:rowId, :recipientId, :id, :actorId, :at)"
+                + " ON CONFLICT (recipient_user_id, notification_id, actor_user_id) DO UPDATE"
+                + " SET first_marked_at = LEAST(ntf_notification_helpful_actor.first_marked_at,"
                 + " EXCLUDED.first_marked_at)")
+        .param("rowId", SnowflakeIdGenerator.getId())
         .param("recipientId", recipientId)
         .param("id", notificationId)
         .param("actorId", actorId)
@@ -178,13 +181,13 @@ public class HelpfulNotificationRepositoryAdapter implements HelpfulNotification
   private Map<Long, Instant> marksOf(long recipientId, long notificationId) {
     Map<Long, Instant> marks = new HashMap<>();
     jdbc.sql(
-            "SELECT actor_id, first_marked_at FROM inbox.helpful_actor"
-                + " WHERE recipient_id = :recipientId AND notification_id = :id")
+            "SELECT actor_user_id, first_marked_at FROM ntf_notification_helpful_actor"
+                + " WHERE recipient_user_id = :recipientId AND notification_id = :id")
         .param("recipientId", recipientId)
         .param("id", notificationId)
         .query(
             rs -> {
-              marks.put(rs.getLong("actor_id"), InboxRows.instant(rs, "first_marked_at"));
+              marks.put(rs.getLong("actor_user_id"), InboxRows.instant(rs, "first_marked_at"));
             });
     return marks;
   }

@@ -21,6 +21,6 @@ abstract class InsightPersistenceITSupport {
   /// 每例从空表开始。
   @BeforeEach
   void truncateInsightTables() {
-    jdbcTemplate.update("TRUNCATE insight.hot_reading, insight.co_reading, insight.snapshot_run");
+    jdbcTemplate.update("TRUNCATE anl_hot_reading, anl_co_reading, anl_snapshot_run");
   }
 }

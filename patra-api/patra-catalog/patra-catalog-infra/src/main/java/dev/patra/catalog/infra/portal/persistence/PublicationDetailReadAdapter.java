@@ -71,7 +71,7 @@ public class PublicationDetailReadAdapter implements PublicationDetailReadPort {
       SELECT pa.author_order AS "order", pa.is_first_author AS "first",
         pa.is_corresponding_author AS "corresponding", pa.display_name AS "name",
         (SELECT aff.affiliation_string FROM cat_publication_author_affiliation aff
-           WHERE aff.pub_author_id = pa.id ORDER BY aff.affiliation_order ASC, aff.id ASC LIMIT 1) AS "affiliation"
+           WHERE aff.publication_author_id = pa.id ORDER BY aff.affiliation_order ASC, aff.id ASC LIMIT 1) AS "affiliation"
       FROM cat_publication_author pa
       WHERE pa.publication_id = :id
       ORDER BY pa.author_order ASC, pa.id ASC

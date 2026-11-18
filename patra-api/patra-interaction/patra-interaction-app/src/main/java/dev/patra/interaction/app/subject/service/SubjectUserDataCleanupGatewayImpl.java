@@ -6,7 +6,7 @@ import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
-/// 底座登记的注销清理动作：已注销用户的发表计数（`subject.publish_quota`）。
+/// 底座登记的注销清理动作：已注销用户的发表计数（`itr_publish_quota`）。
 @Component
 @RequiredArgsConstructor
 public class SubjectUserDataCleanupGatewayImpl implements UserDataCleanupGateway {

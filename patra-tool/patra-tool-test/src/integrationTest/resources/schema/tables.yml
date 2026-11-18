@@ -1,0 +1,14 @@
+# SchemaStandardIT 的登记文件，与 baseline.sql 建的表一一对应。
+prefix: tst
+tables:
+  tst_note:
+    tier: main
+    note: 测试用笔记，带全套审计列
+  tst_note_tag:
+    tier: other
+    note: 笔记的标签
+  tst_event:
+    tier: other
+    note: 按用户分区的事件
+framework:
+  - flyway_schema_history

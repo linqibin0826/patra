@@ -11,7 +11,6 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
-import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -88,7 +87,7 @@ public class ScheduleDailyDigestHandler
   /// @return 真建了为 1，已有为 0
   private int create(long userId, Instant windowEnd, Instant now) {
     return deliveries.insertDigestIfAbsent(
-            ReminderDelivery.digest(UUID.randomUUID(), userId, windowEnd, now))
+            ReminderDelivery.digest(deliveries.nextId(), userId, windowEnd, now))
         ? 1
         : 0;
   }

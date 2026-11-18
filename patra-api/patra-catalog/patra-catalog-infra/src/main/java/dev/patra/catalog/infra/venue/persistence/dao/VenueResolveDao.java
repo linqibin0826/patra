@@ -8,7 +8,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-/// 期刊批量解析 native query DAO：不过滤软删，只认期刊类型；按主键或 `uk_venue_identifier_nlm` 命中。
+/// 期刊批量解析 native query DAO：不过滤已删除的期刊，只认期刊类型；按主键或 `uk_cat_venue_identifier_nlm` 命中。
 ///
 /// @author linqibin
 /// @since 0.1.0

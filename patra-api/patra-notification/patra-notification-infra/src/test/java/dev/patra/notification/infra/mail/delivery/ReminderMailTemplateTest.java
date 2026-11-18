@@ -185,7 +185,7 @@ class ReminderMailTemplateTest {
     RenderedMail mail =
         renderer.render(
             OutgoingMail.builder()
-                .deliveryId(UUID.randomUUID())
+                .idempotencyKey(UUID.randomUUID().toString())
                 .to("chen@example.com")
                 .template("email-verification")
                 .subject("验证邮箱")
@@ -256,7 +256,7 @@ class ReminderMailTemplateTest {
             new Link("通知设置", content.preferencesUrl())));
     return renderer.render(
         OutgoingMail.builder()
-            .deliveryId(UUID.randomUUID())
+            .idempotencyKey(UUID.randomUUID().toString())
             .to("chen@example.com")
             .template(template)
             .subject(content.subject())

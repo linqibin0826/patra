@@ -6,7 +6,7 @@ import dev.patra.identity.infra.account.persistence.entity.FormerUsernameEntity;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 
-/// FormerUsername 与 FormerUsernameEntity 的转换。行只插不改，审计时间由 JPA 审计管理。
+/// FormerUsername 与 FormerUsernameEntity 的转换。行只插不改，审计时间由数据库触发器填。
 @Mapper(componentModel = "spring")
 public interface FormerUsernameJpaMapper {
 
@@ -15,12 +15,8 @@ public interface FormerUsernameJpaMapper {
   /// @param formerUsername 旧名记录
   /// @return 实体
   @Mapping(target = "username", expression = "java(formerUsername.getUsername().value())")
-  @Mapping(target = "createdAt", ignore = true)
   @Mapping(target = "createdBy", ignore = true)
-  @Mapping(target = "createdByName", ignore = true)
-  @Mapping(target = "updatedAt", ignore = true)
   @Mapping(target = "updatedBy", ignore = true)
-  @Mapping(target = "updatedByName", ignore = true)
   @Mapping(target = "recordRemarks", ignore = true)
   @Mapping(target = "ipAddress", ignore = true)
   FormerUsernameEntity toEntity(FormerUsername formerUsername);

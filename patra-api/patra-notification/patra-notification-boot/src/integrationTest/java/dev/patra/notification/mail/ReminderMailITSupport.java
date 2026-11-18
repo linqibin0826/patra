@@ -159,8 +159,8 @@ abstract class ReminderMailITSupport extends NotificationFlowITSupport {
         .until(
             () ->
                 jdbcTemplate.queryForObject(
-                        "SELECT count(*) FROM mail.reminder_queue q JOIN inbox.notification n"
-                            + " ON n.notification_id = q.notification_id WHERE n.comment_id = ?",
+                        "SELECT count(*) FROM ntf_reminder_queue q JOIN ntf_notification n"
+                            + " ON n.id = q.notification_id WHERE n.comment_id = ?",
                         Long.class,
                         commentId)
                     == 1);

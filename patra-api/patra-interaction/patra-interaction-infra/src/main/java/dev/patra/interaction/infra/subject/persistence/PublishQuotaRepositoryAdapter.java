@@ -3,6 +3,7 @@ package dev.patra.interaction.infra.subject.persistence;
 import dev.patra.interaction.domain.subject.model.enums.PublishKind;
 import dev.patra.interaction.domain.subject.policy.PublishQuota;
 import dev.patra.interaction.domain.subject.port.repository.PublishQuotaRepository;
+import dev.patra.tool.jpa.id.SnowflakeIdGenerator;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -13,7 +14,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
-/// `PublishQuotaRepository` 的原生 SQL 实现（`subject.publish_quota`）。写方法不开事务，由 app 层的事务包住。
+/// `PublishQuotaRepository` 的原生 SQL 实现（`itr_publish_quota`）。写方法不开事务，由 app 层的事务包住。
 @Component
 @RequiredArgsConstructor
 public class PublishQuotaRepositoryAdapter implements PublishQuotaRepository {
@@ -43,7 +44,7 @@ public class PublishQuotaRepositoryAdapter implements PublishQuotaRepository {
   @Override
   public Optional<PublishQuota> find(long userId, PublishKind kind) {
     return jdbc.sql(
-            "SELECT quota_day, day_count, last_published_at FROM subject.publish_quota"
+            "SELECT quota_day, day_count, last_published_at FROM itr_publish_quota"
                 + " WHERE user_id = :userId AND kind = :kind")
         .param("userId", userId)
         .param("kind", kind.name())
@@ -56,7 +57,7 @@ public class PublishQuotaRepositoryAdapter implements PublishQuotaRepository {
         .optional();
   }
 
-  /// 按主键 upsert。
+  /// 按（作者、种类）upsert；新行的 `id` 预分配雪花 ID，冲突时保留原行的 `id`。
   ///
   /// @param userId 作者
   /// @param kind 种类
@@ -65,13 +66,14 @@ public class PublishQuotaRepositoryAdapter implements PublishQuotaRepository {
   public void save(long userId, PublishKind kind, PublishQuota quota) {
     jdbc.sql(
             """
-            INSERT INTO subject.publish_quota
-                   (user_id, kind, quota_day, day_count, last_published_at)
-            VALUES (:userId, :kind, :day, :count, :last)
+            INSERT INTO itr_publish_quota
+                   (id, user_id, kind, quota_day, day_count, last_published_at)
+            VALUES (:id, :userId, :kind, :day, :count, :last)
             ON CONFLICT (user_id, kind) DO UPDATE
                SET quota_day = EXCLUDED.quota_day, day_count = EXCLUDED.day_count,
                    last_published_at = EXCLUDED.last_published_at
             """)
+        .param("id", SnowflakeIdGenerator.getId())
         .param("userId", userId)
         .param("kind", kind.name())
         .param("day", quota.day())
@@ -88,7 +90,7 @@ public class PublishQuotaRepositoryAdapter implements PublishQuotaRepository {
   @Override
   public List<Long> findUsersAfter(long afterUserId, int limit) {
     return jdbc.sql(
-            "SELECT DISTINCT user_id FROM subject.publish_quota WHERE user_id > :after"
+            "SELECT DISTINCT user_id FROM itr_publish_quota WHERE user_id > :after"
                 + " ORDER BY user_id LIMIT :limit")
         .param("after", afterUserId)
         .param("limit", limit)
@@ -102,7 +104,7 @@ public class PublishQuotaRepositoryAdapter implements PublishQuotaRepository {
   /// @return 行数
   @Override
   public int deleteAllOf(long userId) {
-    return jdbc.sql("DELETE FROM subject.publish_quota WHERE user_id = :userId")
+    return jdbc.sql("DELETE FROM itr_publish_quota WHERE user_id = :userId")
         .param("userId", userId)
         .update();
   }

@@ -24,7 +24,7 @@ class SecurityMailTest {
   void should_compose_outgoing_mail_with_event_id_as_delivery_id() {
     OutgoingMail mail = passwordReset(EXPIRES).compose();
 
-    assertThat(mail.deliveryId()).isEqualTo(EVENT_ID);
+    assertThat(mail.idempotencyKey()).isEqualTo(EVENT_ID.toString());
     assertThat(mail.to()).isEqualTo(TO);
     assertThat(mail.template()).isEqualTo("password-reset");
     assertThat(mail.subject()).isEqualTo("重设你的 Patra 密码");
