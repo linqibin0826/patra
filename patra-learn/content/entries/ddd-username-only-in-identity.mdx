@@ -10,6 +10,9 @@ sources:
   - version: v0.12
     issue: PAP-93
     pr: 273
+  - version: v0.21
+    issue: PAP-200
+    pr: 433
 personalEnv: false
 ---
 
@@ -84,21 +87,23 @@ v0.12 用户中心那一版给每个账号加了用户名，主页地址是 `/u/
 
 ## 把规则写进构建：R6
 
-规则只写在文档里，迟早有人在新表里顺手加一个 `username` 列。所以这条规则做成了构建检查 `checkMigrationColumns`（Patra 构建规则的第 6 条，简称 R6），挂在 `./gradlew check` 上：扫描每个服务的 Flyway 迁移脚本，看到 `CREATE TABLE` 或 `ALTER TABLE ... ADD` / `RENAME ... TO` 里出现了 `username` 或 `user_name` 列，而表不是 identity 那两张，构建就失败。
+规则只写在文档里，迟早有人在新表里顺手加一个 `username` 列。所以这条规则做成了构建检查（Patra 构建规则的第 6 条，简称 R6；Gradle 任务最初叫 `checkMigrationColumns`），挂在 `./gradlew check` 上：扫描每个服务的 Flyway 迁移脚本，看到 `CREATE TABLE` 或 `ALTER TABLE ... ADD` / `RENAME ... TO` 里出现了 `username` 或 `user_name` 列，而表不是 identity 那两张，构建就失败。
 
-<CodeRef at="build-logic/src/main/kotlin/MigrationColumnRules.kt@af8cd13c3ec367ccba78615b72e6ff19535cef90" lines="1-23" />
+v0.21 定下库表规范后，这个任务改名为 `checkMigrationScripts`，在用户名列之外又多拦 `CREATE SCHEMA` 和外键两种写法，用户名这一条没有变：
+
+<CodeRef at="build-logic/src/main/kotlin/MigrationScriptRules.kt@1c14ff5ba53ff774c52a9ead82653c5097586a53" lines="4-28" />
 
 ```kotlin
-object MigrationColumnRules {
+object MigrationScriptRules {
     private val FORBIDDEN_COLUMNS = setOf("username", "user_name")
     private val ALLOWED_TABLES = setOf("idn_user", "idn_user_former_username")
-    // ……把 SQL 切成词，逐条语句看建表与改表
+    // ……把 SQL 切成词，逐条语句看建 schema、建表与改表
 }
 ```
 
-失败时的提示直接写出了规则本身：用户名只存 identity 的两张表，其他表引用用户一律存 user_id，展示时按 ID 现读当前名。
+失败时的提示直接写出了规则本身：用户名只存 identity 的两张表，其他表引用用户存 user_id。
 
-<CodeRef at="build-logic/src/main/kotlin/MigrationColumnCheck.kt@af8cd13c3ec367ccba78615b72e6ff19535cef90" lines="29-41" />
+<CodeRef at="build-logic/src/main/kotlin/MigrationScriptRules.kt@1c14ff5ba53ff774c52a9ead82653c5097586a53" lines="97-106" />
 
 ## 代价
 

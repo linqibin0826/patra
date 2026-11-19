@@ -5,6 +5,10 @@ type: concept
 difficulty: advanced
 tags: [database, backend]
 prerequisites: [db-indexes, db-constraints-and-null]
+sources:
+  - version: v0.21
+    issue: PAP-203
+    pr: 433
 ---
 
 <Diagnose
@@ -43,19 +47,15 @@ CREATE UNIQUE INDEX uk_user_email_alive
 
 catalog 为机构维护了一张别名表 `cat_organization_alias`，补 ROR 里缺的中文名和简称。每条别名有类型：`LABEL` 是可作显示名的全名，`ALIAS` 是简称、旧名这类只参与搜索匹配的。显示中文名时取"中文的 LABEL"，如果同一家机构有两条中文 LABEL，取哪个就说不清了。于是有这条规则：
 
-<CodeRef at="patra-api/patra-catalog/patra-catalog-infra/src/main/resources/db/migration/V9__add_suggest_trigram_indexes.sql@af8cd13c3ec367ccba78615b72e6ff19535cef90" lines="64-68" />
+<CodeRef at="patra-api/patra-catalog/patra-catalog-infra/src/main/resources/db/migration/organization/V20261116120400__create_organization.sql@1c14ff5ba53ff774c52a9ead82653c5097586a53" lines="192" />
 
 ```sql
--- 一家机构只能有一条中文 LABEL：zhName 取 zh LABEL，两条文字不同的 LABEL 会让「最短者胜出」压掉审过的名字。
--- 种子（R__cat_organization_alias_seed.sql）按此规则生成：某机构已有手工 LABEL 时，Wikidata 的 LABEL 生成为 ALIAS。
-CREATE UNIQUE INDEX uk_org_alias_zh_label
-    ON cat_organization_alias (ror_id)
-    WHERE alias_type = 'LABEL' AND lang = 'zh';
+CREATE UNIQUE INDEX uk_cat_organization_alias_zh_label ON cat_organization_alias (ror_id) WHERE (((alias_type)::text = 'LABEL'::text) AND ((lang)::text = 'zh'::text));
 ```
 
-读法：只有"类型是 LABEL 且语言是 zh"的行才进这个索引；在这些行里 `ror_id` 不许重复。同一家机构可以有任意多条 `ALIAS`，也可以有英文的 `LABEL`，只是不能有第二条中文 `LABEL`。
+`::text` 是类型转换，括号也只是写得保守，条件就是 `alias_type = 'LABEL' AND lang = 'zh'`。读法：只有"类型是 LABEL 且语言是 zh"的行才进这个索引；在这些行里 `ror_id` 不许重复。同一家机构可以有任意多条 `ALIAS`，也可以有英文的 `LABEL`，只是不能有第二条中文 `LABEL`。
 
-这张表还有一个普通唯一约束 `uk_org_alias (ror_id, alias)`：同一家机构同样的别名文字不能出现两次。两条规矩各管各的：
+这张表还有一个普通唯一索引 `uk_cat_organization_alias_ror_alias (ror_id, alias)`：同一家机构同样的别名文字不能出现两次。两条规矩各管各的：
 
 <Params
   title="动手试试：往别名表里再插一行，会被挡住吗"
@@ -65,33 +65,30 @@ CREATE UNIQUE INDEX uk_org_alias_zh_label
     { type: "switch", id: "zh", label: "新行的语言是 zh（关 = 其他语言）", default: true }
   ]}
   cases={[
-    { when: { label: true, zh: true }, results: [{ label: "是否进入局部索引", value: "是", tone: "wait" }, { label: "和已有的中文 LABEL 冲突", value: "冲突", tone: "bad" }, { label: "插入结果", value: "被拒绝（违反 uk_org_alias_zh_label）", tone: "bad" }], verdict: { tone: "bad", head: "第二条中文 LABEL 被挡住。", text: "这正是这条索引存在的意义：一家机构只能有一条审过的中文显示名。" } },
+    { when: { label: true, zh: true }, results: [{ label: "是否进入局部索引", value: "是", tone: "wait" }, { label: "和已有的中文 LABEL 冲突", value: "冲突", tone: "bad" }, { label: "插入结果", value: "被拒绝（违反 uk_cat_organization_alias_zh_label）", tone: "bad" }], verdict: { tone: "bad", head: "第二条中文 LABEL 被挡住。", text: "这正是这条索引存在的意义：一家机构只能有一条审过的中文显示名。" } },
     { results: [{ label: "是否进入局部索引", value: "否", tone: "ok" }, { label: "插入结果", value: "允许", tone: "ok" }], verdict: { tone: "ok", head: "不在约束范围内。", text: "只要不同时是 LABEL 和 zh，这一行就不进局部索引。同一机构可以有很多条别名，或英文的 LABEL。" } }
   ]}
 />
 
-第二个例子在迁移 V12：要求"NLM 编号全站唯一"。NLM 编号存在期刊标识符表里，这张表还存 ISSN 等别的类型的值，别的类型的值不要求全站唯一：
+第二个例子在期刊标识符表上：要求"NLM 编号全站唯一"，主 NLM、副 NLM 都只属于一个期刊。NLM 编号存在期刊标识符表里，这张表还存 ISSN 等别的类型的值，别的类型的值不要求全站唯一：
 
-<CodeRef at="patra-api/patra-catalog/patra-catalog-infra/src/main/resources/db/migration/V12__add_venue_nlm_unique.sql@6d96ac9d6c2b8463cddf24d8b3461215b4ff8f4c" lines="12-15" />
+<CodeRef at="patra-api/patra-catalog/patra-catalog-infra/src/main/resources/db/migration/venue/V20261116120200__create_venue.sql@1c14ff5ba53ff774c52a9ead82653c5097586a53" lines="79" />
 
 ```sql
--- 标识符表里 NLM 类型的值全表唯一：主 NLM、副 NLM 都只属于一个期刊
-CREATE UNIQUE INDEX uk_venue_identifier_nlm
-    ON cat_venue_identifier (identifier_value)
-    WHERE identifier_type = 'NLM';
+CREATE UNIQUE INDEX uk_cat_venue_identifier_nlm ON cat_venue_identifier (identifier_value) WHERE ((identifier_type)::text = 'NLM'::text);
 ```
 
 ## 一个容易误会的写法：WHERE ... IS NOT NULL
 
 catalog 的作者表和 interaction 的对象登记表里各有一条这样写的：
 
-<CodeRef at="patra-api/patra-catalog/patra-catalog-infra/src/main/resources/db/migration/V3__create_author.sql@da049982156cfbb1f3c7bd753948df3a5b9bc06c" lines="132-134" />
+<CodeRef at="patra-api/patra-catalog/patra-catalog-infra/src/main/resources/db/migration/publication/V20261116120100__create_publication.sql@1c14ff5ba53ff774c52a9ead82653c5097586a53" lines="638" />
 
 ```sql
--- 软关联部分唯一索引：仅 author_id 非空时约束同篇不重复关联同一已消歧作者
-CREATE UNIQUE INDEX uk_pub_author ON cat_publication_author (publication_id, author_id)
-    WHERE author_id IS NOT NULL;
+CREATE UNIQUE INDEX uk_cat_publication_author_author ON cat_publication_author (publication_id, author_id) WHERE (author_id IS NOT NULL);
 ```
+
+它的意图是：同一篇文献里，不会把两个作者条目关联到同一位已确认身份的作者。
 
 `author_id` 允许为空（作者暂时没匹配上已知作者）。这条索引的 `WHERE author_id IS NOT NULL` 表达了意图："只在 `author_id` 有值时检查"。
 
@@ -107,7 +104,9 @@ CREATE UNIQUE INDEX uk_pub_author ON cat_publication_author (publication_id, aut
 |---|---|---|
 | 局部唯一 | `UNIQUE ... WHERE deleted_at IS NULL`，已删的行不参与 | 示意（上面的 users 例子） |
 | 清空唯一的那一列 | 注销时把邮箱设成 NULL，NULL 不冲突 | 用户表：`ck_idn_user_email_deleted` 规定已注销用户的邮箱必须为空 |
-| 干脆不放开 | 软删行仍占着名额 | 期刊 NLM 编号 `uk_venue_nlm_id` 的注释写明「覆盖软删行」；用户名「never released」，不再发给别人 |
+| 干脆不放开 | 软删行仍占着名额 | 期刊 NLM 编号的唯一索引 `uk_cat_venue_nlm` 不带 `WHERE`，软删的期刊照样占着编号；用户名的列注释写着「全表唯一，改名后也不释放」 |
+
+v0.21 的库表规范把选哪种写成了规则：PMID、NLM 号、用户名、邮箱这类身份标识全表唯一；只有删除后允许别人重新占用的值，才用 `WHERE deleted_at IS NULL` 的局部唯一索引。
 
 没有哪种一定对，要看业务想不想让名字被复用。
 
@@ -121,7 +120,7 @@ CREATE UNIQUE INDEX uk_pub_author ON cat_publication_author (publication_id, aut
   title="考考自己"
   questions={[
     {
-      question: "uk_org_alias_zh_label 是局部唯一索引，条件是 alias_type = 'LABEL' AND lang = 'zh'。下面哪两行可以同时存在于同一家机构？",
+      question: "uk_cat_organization_alias_zh_label 是局部唯一索引，条件是 alias_type = 'LABEL' AND lang = 'zh'。下面哪两行可以同时存在于同一家机构？",
       options: ["lang=zh 和 lang=en 各一条 LABEL", "两条 lang=zh 的 LABEL，别名文字相同", "两条 lang=zh 的 LABEL，只要别名文字不同"],
       answer: "A",
       explain: "英文的 LABEL 不满足 lang = 'zh'，不进这个索引。两条中文 LABEL 无论文字是否相同，都会在索引里撞上同一个 ror_id。"
@@ -136,9 +135,9 @@ CREATE UNIQUE INDEX uk_pub_author ON cat_publication_author (publication_id, aut
 />
 
 <Transfer
-  prompt="收藏夹表里，同一个用户的收藏夹名字不能重复（Patra 建了 uk_collection_owner_name (user_id, name)）。现在产品想加「回收站」：删除的收藏夹先标记 deleted_at，30 天后才真正清除，期间用户可以建一个同名的新收藏夹。你怎么改这条唯一规则？"
+  prompt="收藏夹表里，同一个用户的收藏夹名字不能重复（Patra 建了 uk_itr_collection_owner_name (user_id, name)）。现在产品想加「回收站」：删除的收藏夹先标记 deleted_at，30 天后才真正清除，期间用户可以建一个同名的新收藏夹。你怎么改这条唯一规则？"
   points={[
-    { label: "改成局部唯一", text: "把唯一索引改成 CREATE UNIQUE INDEX ... ON collection (user_id, name) WHERE deleted_at IS NULL，回收站里的行不参与唯一检查。" },
+    { label: "改成局部唯一", text: "把唯一索引改成 CREATE UNIQUE INDEX ... ON itr_collection (user_id, name) WHERE deleted_at IS NULL，回收站里的行不参与唯一检查。" },
     { label: "怎么改", text: "已执行的迁移脚本不改。新增一个脚本：先 DROP 旧的唯一索引，再 CREATE 新的局部唯一索引。" },
     { label: "还要想到", text: "恢复回收站里的收藏夹时，可能和新建的同名收藏夹撞名，要定好冲突时怎么办（改名、拒绝恢复）；用到这个名字做冲突判断的 ON CONFLICT 也要带上同样的 WHERE。" }
   ]}

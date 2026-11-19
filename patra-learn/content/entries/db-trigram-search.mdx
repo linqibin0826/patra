@@ -65,30 +65,38 @@ PostgreSQL 有一个扩展 `pg_trgm`（trigram，三元组）。它的想法是�
 
 建索引只有一行：
 
-<CodeRef at="patra-api/patra-catalog/patra-catalog-infra/src/main/resources/db/migration/V9__add_suggest_trigram_indexes.sql@af8cd13c3ec367ccba78615b72e6ff19535cef90" lines="13-14" />
+<CodeRef at="patra-api/patra-catalog/patra-catalog-infra/src/main/resources/db/migration/organization/V20261116120400__create_organization.sql@1c14ff5ba53ff774c52a9ead82653c5097586a53" lines="66" />
 
 ```sql
-CREATE INDEX idx_org_name_value_trgm
-    ON cat_organization_name USING gin (name_value gin_trgm_ops);
+CREATE INDEX idx_cat_organization_name_value_trgm ON cat_organization_name USING gin (name_value gin_trgm_ops);
 ```
 
-`USING gin` 指定索引类型，`gin_trgm_ops` 告诉它"用三元组切分文字"。这个迁移脚本最前面还要先启用扩展：`CREATE EXTENSION IF NOT EXISTS pg_trgm;`。
+`USING gin` 指定索引类型，`gin_trgm_ops` 告诉它"用三元组切分文字"。在这之前还要先启用扩展，catalog 放在最先执行的那个迁移脚本里：
 
-脚本里另外两个索引更有意思，它们带了 `WHERE`：
-
-<CodeRef at="patra-api/patra-catalog/patra-catalog-infra/src/main/resources/db/migration/V9__add_suggest_trigram_indexes.sql@af8cd13c3ec367ccba78615b72e6ff19535cef90" lines="20-30" />
+<CodeRef at="patra-api/patra-catalog/patra-catalog-infra/src/main/resources/db/migration/V20261116120000__create_set_audit_times.sql@1c14ff5ba53ff774c52a9ead82653c5097586a53" lines="1-2" />
 
 ```sql
-CREATE INDEX idx_mesh_desc_name_trgm
-    ON cat_mesh_descriptor USING gin (name gin_trgm_ops)
-    WHERE descriptor_class = '1' AND active_status;
-
-CREATE INDEX idx_entry_term_term_trgm
-    ON cat_mesh_entry_term USING gin (term gin_trgm_ops)
-    WHERE record_type = 'DESCRIPTOR' AND is_permuted_term = false;
+-- 审计时间触发器函数，每张表建表后挂上它（库表规范第 4 节）；机构名称与别名的模糊建议要用 pg_trgm
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
 ```
 
-这是「局部索引」（只给满足条件的行建索引）的思路用在 GIN 上：MeSH 词表里很多行（非主题类、已停用、排列入口词）搜索根本不会用到，不把它们放进索引，索引更小、写得更快。代价是**查询的 WHERE 必须包含同样的条件**才能用上这个索引，所以脚本注释写明了"谓词与建议查询的 WHERE 逐字相同"。
+MeSH 那边的两个索引更有意思，它们带了 `WHERE`（`::text` 是类型转换，不影响意思）：
+
+<CodeRef at="patra-api/patra-catalog/patra-catalog-infra/src/main/resources/db/migration/mesh/V20261116120500__create_mesh.sql@1c14ff5ba53ff774c52a9ead82653c5097586a53" lines="38" />
+
+```sql
+CREATE INDEX idx_cat_mesh_descriptor_name_trgm ON cat_mesh_descriptor USING gin (name gin_trgm_ops) WHERE (((descriptor_class)::text = '1'::text) AND active_status);
+```
+
+<CodeRef at="patra-api/patra-catalog/patra-catalog-infra/src/main/resources/db/migration/mesh/V20261116120500__create_mesh.sql@1c14ff5ba53ff774c52a9ead82653c5097586a53" lines="163" />
+
+```sql
+CREATE INDEX idx_cat_mesh_entry_term_term_trgm ON cat_mesh_entry_term USING gin (term gin_trgm_ops) WHERE (((record_type)::text = 'DESCRIPTOR'::text) AND (is_permuted_term = false));
+```
+
+这是「局部索引」（只给满足条件的行建索引）的思路用在 GIN 上：MeSH 词表里很多行（非主题类、已停用、排列入口词）搜索根本不会用到，不把它们放进索引，索引更小、写得更快。代价是**查询的 WHERE 必须包含同样的条件**才能用上这个索引，所以建议查询的代码注释写明了这一点：
+
+<CodeRef at="patra-api/patra-catalog/patra-catalog-infra/src/main/java/dev/patra/catalog/infra/mesh/persistence/dao/MeshDescriptorSuggestSql.java@5073ab1358404ecd989e722373cd9f7edafe238b" lines="14-17" />
 
 ## 最大的局限：词太短就凑不出片段
 

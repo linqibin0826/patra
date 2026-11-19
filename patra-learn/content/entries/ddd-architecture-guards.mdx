@@ -5,6 +5,10 @@ type: concept
 difficulty: advanced
 tags: [ddd, backend, testing]
 prerequisites: [ddd-patra-six-modules]
+sources:
+  - version: v0.21
+    issue: PAP-200
+    pr: 433
 personalEnv: false
 ---
 
@@ -76,11 +80,11 @@ R 开头的其他几条同样是构建规则：
 | R3 | 领域层类路径白名单（上面这条） |
 | R4 | 自动配置的写法 |
 | R5 | 声明了的 project 依赖必须真的被 import，不留没用的依赖 |
-| R6 | Flyway 迁移脚本里，用户名列只许出现在 identity 的两张表 |
+| R6 | Flyway 迁移脚本：用户名列只许出现在 identity 的两张表，不许建 schema、不许建外键 |
 
-R6 很有意思，它守的是数据归属，而不是代码分层：用户名只存在 identity 里，别的服务只存用户 ID。这条约定被写成检查，扫描迁移脚本里的建表和改表语句。
+R6 很有意思，它守的是数据，而不是代码分层。它最早只管一件事：用户名只存在 identity 里，别的服务只存用户 ID。v0.21 定下库表规范后，它又多拦两种写法：`CREATE SCHEMA` 和外键。检查逐条扫描迁移脚本里的建表和改表语句：
 
-<CodeRef at="build-logic/src/main/kotlin/MigrationColumnRules.kt@af8cd13c3ec367ccba78615b72e6ff19535cef90" lines="1-6" />
+<CodeRef at="build-logic/src/main/kotlin/MigrationScriptRules.kt@1c14ff5ba53ff774c52a9ead82653c5097586a53" lines="1-4" />
 
 ## ArchUnit：检查类与包的关系
 

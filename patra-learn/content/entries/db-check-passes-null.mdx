@@ -9,6 +9,9 @@ sources:
   - version: v0.14
     issue: PAP-120
     pr: 304
+  - version: v0.21
+    issue: PAP-204
+    pr: 433
 personalEnv: false
 ---
 
@@ -63,9 +66,9 @@ SQL 用三值逻辑：true、false、unknown（NULL）。NULL 表示「不知道
 
 ## 怎么避开
 
-**1. 条件里可能为 NULL 的列，显式写 `IS NOT NULL`。** 最终的约束：
+**1. 条件里可能为 NULL 的列，显式写 `IS NOT NULL`。** 最终的约束如下。v0.21 统一库表规范后，表改名 `itr_subject`，约束随之改名 `ck_itr_subject_post_key`，条件和注释里的理由都原样保留：
 
-<CodeRef at="patra-api/patra-interaction/patra-interaction-infra/src/main/resources/db/migration/subject/V20261027120000__extend_registry_for_journal_and_post.sql@6d96ac9d6c2b8463cddf24d8b3461215b4ff8f4c" lines="14-20" />
+<CodeRef at="patra-api/patra-interaction/patra-interaction-infra/src/main/resources/db/migration/subject/V20261116130100__create_subject.sql@1c14ff5ba53ff774c52a9ead82653c5097586a53" lines="29-34" />
 
 **2. 约束测试要断言违反的是哪条约束。** 只断言「抛了 `DataIntegrityViolationException`」不够：可能是别的约束碰巧拦住了，测试照样是绿的。这一版的这个漏洞，单测和集成测试都没抓到，是收尾评审时才查出来的。
 

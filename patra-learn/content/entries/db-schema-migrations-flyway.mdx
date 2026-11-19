@@ -5,6 +5,10 @@ type: concept
 difficulty: advanced
 tags: [database, backend, spring]
 prerequisites: [db-constraints-and-null, db-indexes]
+sources:
+  - version: v0.21
+    issue: PAP-203
+    pr: 433
 ---
 
 <Diagnose
@@ -31,32 +35,39 @@ Flyway 在你的数据库里建一张表 `flyway_schema_history`，每执行一�
 看 Patra 的 catalog 服务，它的迁移目录里是这样一组文件：
 
 ```
-V1__create_venue.sql
-V2__create_publication.sql
+V20261116120000__create_set_audit_times.sql
+publication/V20261116120100__create_publication.sql
+venue/V20261116120200__create_venue.sql
+author/V20261116120300__create_author.sql
 ...
-V12__add_venue_nlm_unique.sql
-V13__add_venue_instance_unique_key.sql
 R__cat_organization_alias_seed.sql
 ```
 
-文件名的规则：`V` + 版本号 + 两个下划线 + 描述。版本号决定执行顺序。
+文件名的规则：`V` + 版本号 + 两个下划线 + 描述。版本号决定执行顺序，这里的版本号是精确到秒的时间戳（后面「版本号怎么排」再讲）。
 
-看一个具体的脚本，它给期刊表加一条唯一约束：
+看一个具体的脚本。期刊子域的脚本一上来就是建表：
 
-<CodeRef at="patra-api/patra-catalog/patra-catalog-infra/src/main/resources/db/migration/V12__add_venue_nlm_unique.sql@6d96ac9d6c2b8463cddf24d8b3461215b4ff8f4c" lines="8-15" />
+<CodeRef at="patra-api/patra-catalog/patra-catalog-infra/src/main/resources/db/migration/venue/V20261116120200__create_venue.sql@1c14ff5ba53ff774c52a9ead82653c5097586a53" lines="7-36" />
 
 ```sql
--- 主 NLM：覆盖软删行；允许为空（多个 NULL 互不冲突）
-ALTER TABLE cat_venue
-    ADD CONSTRAINT uk_venue_nlm_id UNIQUE (nlm_id);
-
--- 标识符表里 NLM 类型的值全表唯一：主 NLM、副 NLM 都只属于一个期刊
-CREATE UNIQUE INDEX uk_venue_identifier_nlm
-    ON cat_venue_identifier (identifier_value)
-    WHERE identifier_type = 'NLM';
+CREATE TABLE cat_venue
+(
+    id BIGINT NOT NULL PRIMARY KEY,
+    venue_type VARCHAR(32) NOT NULL,
+    title VARCHAR(500) NOT NULL,
+    ...
+);
+CREATE UNIQUE INDEX uk_cat_venue_nlm ON cat_venue (nlm_id);
 ```
 
-脚本里只写"这一版要做的变更"，不是整张表重来。V1 建了 `cat_venue`，V12 就用 `ALTER TABLE` 在原表上加东西。
+以后要给这张表加列、加索引，不回头改这个文件，而是再写一个新脚本，只写"这一次要做的变更"，比如（示意，不是仓库里的文件）：
+
+```sql
+-- V20261201090000__add_venue_homepage.sql
+ALTER TABLE cat_venue ADD COLUMN homepage_url TEXT NULL;
+```
+
+v0.21 之前，catalog 就有过这样的增量脚本：V1 建了 `cat_venue`，V12 用 `ALTER TABLE` 给它加了 NLM 编号的唯一约束。v0.21 把全部脚本整批重写（原因见后文），这些增量脚本也并进了现在的建表脚本。
 
 <Structure
   title="服务启动时，Flyway 做的事"
@@ -115,9 +126,7 @@ Patra 的上线手册里记着这个坑发生过的样子：开发期间本机�
 
 当时给出的处理办法是：开发库的数据可以丢，确认没有要留的数据就删库重建；改动无害时也可以用 `flyway repair` 把记账表里的校验和更新成新的。更重要的是以后的纪律：**在 mini 上执行过的脚本不再改，有改动就新增脚本**。
 
-比如 interaction 服务给评论加版本号这件事，就是新增了一个脚本，没去动原来建表的脚本：
-
-<CodeRef at="patra-api/patra-interaction/patra-interaction-infra/src/main/resources/db/migration/discussion/V20261031015300__add_comment_version.sql@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="8-12" />
+比如 v0.16 那一版，interaction 服务给评论加正文版本号，就是新增了一个脚本 `V20261031015300__add_comment_version.sql`，没去动原来建表的脚本。v0.21 整批重写后这个文件已经不在了，下面是它当时的内容：
 
 ```sql
 ALTER TABLE discussion.comment
@@ -127,16 +136,28 @@ ALTER TABLE discussion.comment
     ADD CONSTRAINT ck_comment_version CHECK (version > 0);
 ```
 
-注意 `NOT NULL DEFAULT 1`：表里已经有评论了，新加的 `NOT NULL` 列必须给已有的行一个值，`DEFAULT 1` 让"已有的评论都算版本 1"。给已有数据的表加约束，永远要想一想存量数据怎么办。前面的 V12 也是这样：它加的是唯一约束，开头的注释就写着「上线前须在 mini 核对没有重复」，因为库里要是已经有重复的 NLM 编号，这个脚本执行时会失败。
+注意 `NOT NULL DEFAULT 1`：表里已经有评论了，新加的 `NOT NULL` 列必须给已有的行一个值，`DEFAULT 1` 让"已有的评论都算版本 1"。给已有数据的表加约束，永远要想一想存量数据怎么办。前面提到的 V12 也是这样：它加的是唯一约束，开头的注释写着「上线前须在 mini 核对没有重复」，因为库里要是已经有重复的 NLM 编号，这个脚本执行时会失败。
+
+这条纪律有个前提：库里有要保住的数据。v0.21 统一库表规范时，六个服务都还没有要保的数据，所以没有在后面追加一串改名、加列的增量脚本，而是原地重写全部迁移脚本、清空重建六个库。评论的那一列也并进了建表脚本，按新规范改名 `body_version`（规范里 `version` 这个名字只留给乐观锁）：
+
+<CodeRef at="patra-api/patra-interaction/patra-interaction-infra/src/main/resources/db/migration/discussion/V20261116130400__create_discussion.sql@1c14ff5ba53ff774c52a9ead82653c5097586a53" lines="19-34" />
+
+```sql
+    body_version       INTEGER         NOT NULL DEFAULT 1,
+    ...
+    CONSTRAINT ck_itr_comment_body_version CHECK (body_version > 0)
+```
+
+规则文件同时写明：出现第一个不能丢数据的环境之后，已执行的脚本禁止修改。
 
 ## 版本号怎么排
 
-Patra 里能看到两种版本号风格：
+Patra 先后用过两种版本号风格：
 
-- catalog：`V1`、`V2`……`V13`，顺序编号。
-- interaction：`V20261031015300__add_comment_version.sql`，用时间戳当版本号，并且按子域放在 `db/migration/discussion/`、`db/migration/reaction/` 这样的子目录里。配置里是 `locations: classpath:db/migration`，Flyway **递归扫描**子目录，整个服务仍然是一份历史、一张记账表。
+- catalog 早先用 `V1`、`V2`……`V13`，顺序编号。
+- interaction 从一开始就用时间戳当版本号（`V20261031015300__add_comment_version.sql`），并且按子域放在 `db/migration/discussion/`、`db/migration/reaction/` 这样的子目录里。配置里是 `locations: classpath:db/migration`，Flyway **递归扫描**子目录，整个服务仍然是一份历史、一张记账表。
 
-顺序编号很直观，但两个人同时在各自的分支上新增脚本，容易都取到 `V14`，合并时撞号。时间戳版本号一般不会撞，这是它的好处之一。
+顺序编号很直观，但两个人同时在各自的分支上新增脚本，容易都取到 `V14`，合并时撞号。时间戳版本号一般不会撞，这是它的好处之一。v0.21 起六个服务统一成时间戳版本号、按子域分目录。
 
 除了 `V` 开头的版本化脚本，还有 `R__` 开头的**可重复迁移**，比如 catalog 的 `R__cat_organization_alias_seed.sql`：它没有版本号，**每次内容变了（校验和变了）就重新执行一遍**，并且总在所有版本化脚本之后。适合放"可以反复重新生成"的东西，比如种子数据。脚本开头先删再插，所以改这个文件就是改线上数据。
 

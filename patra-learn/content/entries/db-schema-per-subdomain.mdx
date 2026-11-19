@@ -12,6 +12,9 @@ sources:
   - version: v0.16
     issue: PAP-143
     pr: 343
+  - version: v0.21
+    issue: PAP-204
+    pr: 433
 personalEnv: false
 ---
 
@@ -51,9 +54,12 @@ v0.13 文献库那一版新建了 `patra-interaction`（社区互动服务）。
 
 选「一个库，每个子域一个 schema」。具体做法有四点。
 
-**1. schema 在脚本里建。** 每个子域的第一个迁移脚本就是 `CREATE SCHEMA`：
+**1. schema 在脚本里建。** 每个子域的第一个迁移脚本就是 `CREATE SCHEMA`。下面是当时 subject 子域的 `V20261024100000__create_subject_schema.sql`（v0.21 已删除，见文末）：
 
-<CodeRef at="patra-api/patra-interaction/patra-interaction-infra/src/main/resources/db/migration/subject/V20261024100000__create_subject_schema.sql@3cf6fa5757b3be54c3b030e4cace871f53e2599c" />
+```sql
+-- subject 子域：对象登记表等对象底座的表（PAP-112 起）。子域表不对这里建跨 schema 外键
+CREATE SCHEMA subject;
+```
 
 **2. 一份历史，递归扫描，不设 `schemas`。** 脚本按子域放在 `db/migration/{子域}/` 下，Flyway 递归扫描整个目录。
 
@@ -63,15 +69,37 @@ v0.13 文献库那一版新建了 `patra-interaction`（社区互动服务）。
 
 **3. 版本号用时间戳。** 几个子域同时加脚本时，`V5`、`V6` 这种递增号很容易撞；`V20261024100000` 这种时间戳基本不会。
 
-**4. 每个 schema 自给自足。** 连 `set_updated_at()` 这样的触发器函数也在每个 schema 里各建一份，schema 整体搬走时不依赖别的 schema。
+**4. 每个 schema 自给自足。** 连 `set_updated_at()` 这样的触发器函数也在每个 schema 里各建一份，schema 整体搬走时不依赖别的 schema。当时 collection 子域建表脚本里的这一段：
 
-<CodeRef at="patra-api/patra-interaction/patra-interaction-infra/src/main/resources/db/migration/collection/V20261024210000__create_collection_tables.sql@3cf6fa5757b3be54c3b030e4cace871f53e2599c" lines="1-23" />
+```sql
+-- ……
+-- set_updated_at()：每个 schema 一份，schema 整体搬走时不依赖别的 schema；只给 library_item 用（改备注不显式写 updated_at）
+CREATE OR REPLACE FUNCTION collection.set_updated_at() RETURNS TRIGGER AS $$
+BEGIN
+  IF NEW.updated_at IS NOT DISTINCT FROM OLD.updated_at THEN
+    NEW.updated_at = now();
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- ……
+CREATE TABLE collection.library_item
+(
+    user_id       BIGINT          NOT NULL,
+    subject_id    BIGINT          NOT NULL,
+    ...
+```
 
 ## 三版之后：真的搬了一次
 
-v0.16 通知中心那一版，站内提醒从 interaction 搬去了新建的 `patra-notification` 服务。interaction 这边删掉提醒子域的数据，只需要一个新脚本：
+v0.16 通知中心那一版，站内提醒从 interaction 搬去了新建的 `patra-notification` 服务。interaction 这边删掉提醒子域的数据，只需要一个新脚本 `V20261031180000__drop_notification_schema.sql`：
 
-<CodeRef at="patra-api/patra-interaction/patra-interaction-infra/src/main/resources/db/migration/notification/V20261031180000__drop_notification_schema.sql@5b1d855a5da18806b91a52f24253e64d40d743a8" />
+```sql
+-- ……
+-- 本目录的三个旧脚本保留，只为 Flyway 历史：它们已在 mini 上执行过，删掉脚本会让校验失败、服务起不来。
+DROP SCHEMA notification CASCADE;
+```
 
 <Quiz
   questions={[
@@ -95,6 +123,12 @@ v0.16 通知中心那一版，站内提醒从 interaction 搬去了新建的 `pa
 - **库只有一个**：连接池、备份、磁盘都共用，一个子域的慢查询会拖累别的子域。真到这一步，就是该按拆分条件剥成独立服务的时候。
 
 </Callout>
+
+## 后来：v0.21 改回 public
+
+这个决定在 v0.21 库表规范那一版被推翻了。那时项目里有两套库表做法：老的 registry、catalog、identity 三个服务的表都在 `public`，带 `sys_`、`cat_`、`idn_` 前缀；从 interaction 起的三个新服务按子域分了 11 个 schema，表名没有前缀。v0.21 把六个服务按同一份规范重建：业务表全部回到 `public`，表名带服务前缀（interaction 的是 `itr_`，`subject.registry` 变成了 `itr_subject`），任何一张表看名字就知道属于哪个服务。迁移脚本里写 `CREATE SCHEMA` 会被构建检查拦下。
+
+上面的四点做法里，留下来的是一份历史、递归扫描、时间戳版本号、脚本按子域分目录；触发器函数改成每个服务在 `public` 里建一份 `set_audit_times()`。「不建外键」也留下了，而且从子域之间扩大到了全项目。
 
 <Transfer
   prompt="你的服务里有「订单」和「库存」两个子域，现在想按这种做法分 schema。库存表要不要对订单表建外键？如果半年后库存要拆成独立服务，你会怎么做？"

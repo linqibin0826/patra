@@ -69,24 +69,26 @@ prerequisites: []
 - **列**：这张表有哪几种信息，每一列有名字、有类型（数字、文字、时间……）。
 - **行**：一条记录。表里有多少条记录就有多少行。
 
-Patra 的 catalog 服务要记录期刊，第一张表就叫 `cat_venue`（venue 是「出版载体」，期刊是其中最常见的一种）。它的前几列：
+Patra 的 catalog 服务要记录期刊，用的表叫 `cat_venue`（venue 是「出版载体」，期刊是其中最常见的一种）。它的前几列：
 
-<CodeRef at="patra-api/patra-catalog/patra-catalog-infra/src/main/resources/db/migration/V1__create_venue.sql@0d51a79f0e608944fc44907891b4b37c22a68e6c" lines="20-26" />
+<CodeRef at="patra-api/patra-catalog/patra-catalog-infra/src/main/resources/db/migration/venue/V20261116120200__create_venue.sql@1c14ff5ba53ff774c52a9ead82653c5097586a53" lines="7-14" />
 
 ```sql
-CREATE TABLE cat_venue (
-    id                  BIGINT                      NOT NULL,
-    venue_type          VARCHAR(32)                 NOT NULL,
-    title               VARCHAR(500)                NOT NULL,
-    provenance_code     VARCHAR(32)                 NOT NULL,
-    last_synced_at      TIMESTAMPTZ(6)              NULL,
-    nlm_id              VARCHAR(20)                 NULL,
+CREATE TABLE cat_venue
+(
+    id BIGINT NOT NULL PRIMARY KEY,
+    venue_type VARCHAR(32) NOT NULL,
+    title VARCHAR(500) NOT NULL,
+    provenance_code VARCHAR(32) NOT NULL,
+    last_synced_at TIMESTAMPTZ NULL,
+    nlm_id VARCHAR(20) NULL,
 ```
 
 读这几行就够了：
 
 - 每一列写着**名字**和**类型**：`BIGINT` 是大整数，`VARCHAR(500)` 是最长 500 个字符的文字，`TIMESTAMPTZ` 是带时区的时间点。
 - 列末尾的 `NOT NULL` 表示「这一格必须有值」，`NULL` 表示「这一格可以空着」。比如每本期刊一定有标题，但不一定有 NLM 编号。
+- `id` 后面的 `PRIMARY KEY` 表示它是这张表的主键，讲主键的那篇再细说。
 
 放进几行数据，它大概是这个样子（示意数据，不是真实期刊）：
 

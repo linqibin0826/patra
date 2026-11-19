@@ -41,27 +41,26 @@ PostgreSQL 有两种 JSON 类型：
 
 catalog 的期刊表就是一张"列加 JSON 混合"的表：
 
-<CodeRef at="patra-api/patra-catalog/patra-catalog-infra/src/main/resources/db/migration/V1__create_venue.sql@0d51a79f0e608944fc44907891b4b37c22a68e6c" lines="33-38" />
+<CodeRef at="patra-api/patra-catalog/patra-catalog-infra/src/main/resources/db/migration/venue/V20261116120200__create_venue.sql@1c14ff5ba53ff774c52a9ead82653c5097586a53" lines="21-25" />
 
 ```sql
-    cited_by_count      INTEGER                     NULL,
-    publication_profile JSONB                       NULL,
-    citation_metrics    JSONB                       NULL,
-    open_access         JSONB                       NULL,
-    affiliated_societies JSONB                      NULL,
-    record_remarks      JSONB                       NULL,
+    cited_by_count INTEGER NULL,
+    publication_profile JSONB NULL,
+    citation_metrics JSONB NULL,
+    open_access JSONB NULL,
+    affiliated_societies JSONB NULL,
 ```
 
 出版概况、引用指标、开放获取信息、关联学会，各自是一块内部结构复杂、不同来源详略不同的数据，整块放进 jsonb。
 
 interaction 的对象登记表也有一个：
 
-<CodeRef at="patra-api/patra-interaction/patra-interaction-infra/src/main/resources/db/migration/subject/V20261024200000__create_subject_registry.sql@3cf6fa5757b3be54c3b030e4cace871f53e2599c" lines="23-25" />
+<CodeRef at="patra-api/patra-interaction/patra-interaction-infra/src/main/resources/db/migration/subject/V20261116130100__create_subject.sql@1c14ff5ba53ff774c52a9ead82653c5097586a53" lines="15-17" />
 
 ```sql
-    state        VARCHAR(16)     NOT NULL,
-    snapshot     jsonb           NOT NULL,
-    snapshot_at  timestamptz(6)  NOT NULL,
+    state           VARCHAR(16)     NOT NULL,
+    snapshot        jsonb           NOT NULL,
+    snapshot_at     timestamptz(6)  NOT NULL,
 ```
 
 `snapshot` 存的是被互动过的文献的展示快照（标题、期刊、发表日期这几项），用来在源数据暂时取不到时顶一下。它是个"整块存、整块取"的典型：展示用，从不按里面的字段过滤。

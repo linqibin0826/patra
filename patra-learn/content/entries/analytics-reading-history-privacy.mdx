@@ -10,6 +10,9 @@ sources:
   - version: v0.18
     issue: PAP-169
     pr: 373
+  - version: v0.21
+    issue: PAP-206
+    pr: 433
 personalEnv: false
 ---
 
@@ -120,30 +123,42 @@ v0.18 给登录用户加了「阅读历史」：打开过哪些文献、最近�
   ]}
 />
 
-规则落在两张小表上：
+规则落在两张小表上（v0.21 库表规范统一后，表名带上了服务前缀 `anl_`，每张表都有自己的 `id`；下面省略了每张表都有的审计列）。第一张是阅读记录设置，改过开关或清空过历史的人才有一行，没有行就是开着、没清空过：
 
-<CodeRef at="patra-api/patra-analytics/patra-analytics-infra/src/main/resources/db/migration/history/V20261102100000__create_history_schema.sql@8140a9d9482324670b63f00ab3c62690102196c5" lines="18-32" />
+<CodeRef at="patra-api/patra-analytics/patra-analytics-infra/src/main/resources/db/migration/history/V20261116150100__create_history.sql@1c14ff5ba53ff774c52a9ead82653c5097586a53" lines="35-49" />
 
 ```sql
--- 改过开关或清空过历史的人才有一行；没有行 = 开着、没清空过
-CREATE TABLE history.recording_setting (
-    user_id            BIGINT      PRIMARY KEY,
-    recording_enabled  BOOLEAN     NOT NULL,
-    cleared_at         TIMESTAMPTZ,              -- 最近一次清空的时刻；没清空过为 NULL
-    updated_at         TIMESTAMPTZ NOT NULL
+CREATE TABLE anl_recording_setting
+(
+    id                BIGINT            NOT NULL,
+    user_id           BIGINT            NOT NULL,
+    recording_enabled BOOLEAN           NOT NULL,
+    cleared_at        timestamptz(6)    NULL,
+    -- ……审计列
+    PRIMARY KEY (id)
 );
+CREATE UNIQUE INDEX uk_anl_recording_setting_user ON anl_recording_setting (user_id);
+```
 
--- 单条删除的记录：挡住删除之前发生、删除之后才到的事件；2 天后由过期清理删掉
-CREATE TABLE history.deleted_entry (
-    user_id     BIGINT      NOT NULL,
-    article_id  BIGINT      NOT NULL,
-    deleted_at  TIMESTAMPTZ NOT NULL,
-    PRIMARY KEY (user_id, article_id)
+第二张是单条删除的记录，挡住删除之前发生、删除之后才到的事件：
+
+<CodeRef at="patra-api/patra-analytics/patra-analytics-infra/src/main/resources/db/migration/history/V20261116150100__create_history.sql@1c14ff5ba53ff774c52a9ead82653c5097586a53" lines="63-73" />
+
+```sql
+CREATE TABLE anl_reading_history_tombstone
+(
+    id             BIGINT            NOT NULL,
+    user_id        BIGINT            NOT NULL,
+    publication_id BIGINT            NOT NULL,
+    removed_at     timestamptz(6)    NOT NULL,
+    -- ……审计列
+    PRIMARY KEY (id)
 );
+CREATE UNIQUE INDEX uk_anl_reading_history_tombstone_user_publication ON anl_reading_history_tombstone (user_id, publication_id);
 ```
 
 - **清空**记 `cleared_at`（服务端时钟），存在设置表里，不过期。
-- **单条删除**在删掉那一行的同一个事务里写一条删除记录。之后这一篇事件时间不晚于 `deleted_at` 的丢掉；之后真的再打开（时间更晚），照常记、重新出现在最上面。
+- **单条删除**在删掉那一行的同一个事务里写一条删除记录。之后这一篇事件时间不晚于 `removed_at` 的丢掉；之后真的再打开（时间更晚），照常记、重新出现在最上面。
 - **删除记录只留 2 天**：采集端点会校正事件时间，比收到时刻早 24 小时以上的按收到时刻算，那就是一次「新」的打开。所以 2 天后删除记录不再起作用，由每天的清理任务删掉。
 
 监听器里的过滤：

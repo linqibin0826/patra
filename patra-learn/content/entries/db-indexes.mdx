@@ -5,6 +5,10 @@ type: concept
 difficulty: basic
 tags: [database, backend]
 prerequisites: [db-sql-select]
+sources:
+  - version: v0.21
+    issue: PAP-203
+    pr: 433
 ---
 
 <Diagnose
@@ -58,21 +62,24 @@ PostgreSQL 默认建的索引叫 **B 树**。你不用记它的细节，只要�
 
 所以索引建在「经常出现在 WHERE、JOIN、ORDER BY 里，并且能筛掉大部分行」的列上。
 
-Patra 的 catalog 迁移脚本里就有一个清理冗余索引的例子：
+Patra 的 catalog 期刊标识符表就是一个「少建一个索引」的例子。早先的建表脚本里，它还单独给 `venue_id` 建过一个索引，后来作为冗余删掉了。现在它的索引是这样的：
 
-<CodeRef at="patra-api/patra-catalog/patra-catalog-infra/src/main/resources/db/migration/V1__create_venue.sql@0d51a79f0e608944fc44907891b4b37c22a68e6c" lines="66-83" />
+<CodeRef at="patra-api/patra-catalog/patra-catalog-infra/src/main/resources/db/migration/venue/V20261116120200__create_venue.sql@1c14ff5ba53ff774c52a9ead82653c5097586a53" lines="67-78" />
 
 ```sql
--- 表 2: cat_venue_identifier (载体标识符表)
--- 冗余索引 idx_venue_id 被 uk_venue_type_value 首列覆盖，已删除（§4.50）
-...
-    CONSTRAINT uk_venue_type_value UNIQUE (venue_id, identifier_type, identifier_value)
+CREATE TABLE cat_venue_identifier
+(
+    id BIGINT NOT NULL PRIMARY KEY,
+    venue_id BIGINT NOT NULL,
+    identifier_type VARCHAR(32) NOT NULL,
+    identifier_value VARCHAR(255) NOT NULL,
+    ...
 );
-
-CREATE INDEX idx_type_value ON cat_venue_identifier (identifier_type, identifier_value);
+CREATE UNIQUE INDEX uk_cat_venue_identifier_type_value ON cat_venue_identifier (venue_id, identifier_type, identifier_value);
+CREATE INDEX idx_cat_venue_identifier_type_value ON cat_venue_identifier (identifier_type, identifier_value);
 ```
 
-注意：`UNIQUE` 约束背后数据库也会建一个索引。这张表要按 `venue_id` 查，而唯一约束的第一列正好是 `venue_id`，所以再单独给 `venue_id` 建一个索引就多余了。这引出下一个话题：联合索引。
+注意：唯一索引也是索引，除了挡重复，照样能拿来查。这张表要按 `venue_id` 查，而唯一索引的第一列正好是 `venue_id`，所以再单独给 `venue_id` 建一个索引就多余了。这引出下一个话题：联合索引。
 
 ## 联合索引：列的顺序很重要
 
@@ -105,10 +112,10 @@ CREATE INDEX idx_type_value ON cat_venue_identifier (identifier_type, identifier
 
 排序也能"白捡"：Patra 的文献库索引是这样建的：
 
-<CodeRef at="patra-api/patra-interaction/patra-interaction-infra/src/main/resources/db/migration/collection/V20261024210000__create_collection_tables.sql@3cf6fa5757b3be54c3b030e4cace871f53e2599c" lines="53" />
+<CodeRef at="patra-api/patra-interaction/patra-interaction-infra/src/main/resources/db/migration/collection/V20261116130300__create_collection.sql@1c14ff5ba53ff774c52a9ead82653c5097586a53" lines="36" />
 
 ```sql
-CREATE INDEX idx_library_item_collected ON collection.library_item (user_id, collected_at DESC, subject_id DESC);
+CREATE INDEX idx_itr_library_item_collected ON itr_library_item (user_id, collected_at DESC, subject_id DESC);
 ```
 
 读文献库的查询是 `WHERE user_id = ? ORDER BY collected_at DESC, subject_id DESC`。索引里数据**已经按这个顺序排好了**，数据库定位到这个用户之后顺着读就行，不用再拿出来排序一遍。
@@ -132,10 +139,10 @@ CREATE INDEX idx_library_item_collected ON collection.library_item (user_id, col
 />
 
 <Transfer
-  prompt="catalog 的 cat_venue_instance 表里同时有 idx_venue_volume_issue (venue_id, volume, issue) 和 idx_venue_id (venue_id) 两个索引。你觉得其中有多余的吗？说出理由，以及删掉它的好处。"
+  prompt="catalog 的 cat_venue_instance 表里同时有 idx_cat_venue_instance_volume_issue (venue_id, volume, issue) 和 idx_cat_venue_instance_venue (venue_id) 两个索引。你觉得其中有多余的吗？说出理由，以及删掉它的好处。"
   points={[
-    { label: "哪个多余", text: "idx_venue_id 多余。联合索引 (venue_id, volume, issue) 的最左列就是 venue_id，只按 venue_id 查时用它就够了。" },
+    { label: "哪个多余", text: "idx_cat_venue_instance_venue 多余。联合索引 (venue_id, volume, issue) 的最左列就是 venue_id，只按 venue_id 查时用它就够了。" },
     { label: "为什么放着不管不好", text: "多余的索引每次写入都要维护，白占磁盘，却不带来任何查询上的好处。" },
-    { label: "删之前要确认", text: "确认没有别的查询靠它（比如查询计划里在用它）。删索引要新写一个迁移脚本，不是去改已经执行过的 V1。" }
+    { label: "删之前要确认", text: "确认没有别的查询靠它（比如查询计划里在用它）。删索引要新写一个迁移脚本，不是去改已经执行过的建表脚本。" }
   ]}
 />

@@ -50,7 +50,7 @@ jsonb 列上的 `NOT NULL` 只拦 SQL 的 NULL。JSON 文本 `null` 转成 jsonb
 
 v0.14 讨论那一版，interaction 的对象登记表要登记本地对象（帖子）。登记行有一列 `snapshot jsonb NOT NULL`，存标题、期刊等展示信息。写库时用的是 `jsonMapper.writeValueAsString(snapshot)` 再 `CAST(:snapshot AS jsonb)`。
 
-<CodeRef at="patra-api/patra-interaction/patra-interaction-infra/src/main/resources/db/migration/subject/V20261024200000__create_subject_registry.sql@3cf6fa5757b3be54c3b030e4cace871f53e2599c" lines="24-25" />
+<CodeRef at="patra-api/patra-interaction/patra-interaction-infra/src/main/resources/db/migration/subject/V20261116130100__create_subject.sql@1c14ff5ba53ff774c52a9ead82653c5097586a53" lines="16-17" />
 
 <CodeRef at="patra-api/patra-interaction/patra-interaction-infra/src/main/java/dev/patra/interaction/infra/subject/persistence/SubjectRows.java@6d96ac9d6c2b8463cddf24d8b3461215b4ff8f4c" lines="74-76" />
 

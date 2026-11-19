@@ -5,6 +5,10 @@ type: concept
 difficulty: basic
 tags: [database, backend]
 prerequisites: [db-sql-write]
+sources:
+  - version: v0.21
+    issue: PAP-199
+    pr: 433
 ---
 
 <Diagnose
@@ -25,7 +29,7 @@ prerequisites: [db-sql-write]
 | `NOT NULL` | 这一格必须有值 | `cat_venue.title`：每本期刊都有标题 |
 | `UNIQUE` | 这一列（或几列的组合）不能重复 | `idn_user.email`：一个邮箱只能注册一个账号 |
 | `CHECK` | 值必须满足一个条件 | 状态只能是 `ACTIVE`、`BANNED`、`PENDING_DELETION`、`DELETED` 之一 |
-| `FOREIGN KEY` | 值必须是另一张表里真实存在的主键 | 个人资料的 `user_id` 必须是真实用户 |
+| `FOREIGN KEY` | 值必须是另一张表里真实存在的主键 | Patra 不建外键：个人资料的 `user_id` 指向真实用户，由应用保证（上一篇讲过） |
 
 为什么要让数据库来守，而不是只在代码里判断？因为代码有很多入口：接口、批量导入、定时任务、人工修数据的脚本……每个入口都得记着判断，总有漏的。数据库是所有写入的必经之路，放在这里是最后一道防线，漏了也不会写进脏数据。
 
@@ -33,16 +37,18 @@ prerequisites: [db-sql-write]
 
 用户表 `idn_user` 的约束很能说明问题：
 
-<CodeRef at="patra-api/patra-identity/patra-identity-infra/src/main/resources/db/migration/V1__init_identity_schema.sql@af8cd13c3ec367ccba78615b72e6ff19535cef90" lines="36-46" />
+<CodeRef at="patra-api/patra-identity/patra-identity-infra/src/main/resources/db/migration/account/V20261116110100__create_account.sql@1c14ff5ba53ff774c52a9ead82653c5097586a53" lines="27-41" />
 
 ```sql
-    CONSTRAINT uk_idn_user_email UNIQUE (email),
-    CONSTRAINT uk_idn_user_username UNIQUE (username),
     CONSTRAINT ck_idn_user_email_lowercase CHECK (email IS NULL OR email = lower(email)),
     CONSTRAINT ck_idn_user_email_deleted CHECK ((status = 'DELETED') = (email IS NULL)),
     ...
     CONSTRAINT ck_idn_user_status CHECK (status IN ('ACTIVE', 'BANNED', 'PENDING_DELETION', 'DELETED')),
     CONSTRAINT ck_idn_user_banned_at CHECK ((status = 'BANNED') = (banned_at IS NOT NULL)),
+    ...
+);
+CREATE UNIQUE INDEX uk_idn_user_email ON idn_user (email);
+CREATE UNIQUE INDEX uk_idn_user_username ON idn_user (username);
 ```
 
 逐条读：
@@ -51,8 +57,9 @@ prerequisites: [db-sql-write]
 - `ck_idn_user_email_deleted`：**状态是已注销，当且仅当邮箱是空的**。注销的账号一定没有邮箱，没注销的一定有。两个字段之间的关系，也能靠约束守住。
 - `ck_idn_user_banned_at`：被封禁了就必须有封禁时间，没被封禁就不能有。
 - 每条约束都有名字（`ck_` 开头是 CHECK，`uk_` 是唯一）。约束失败时错误里会带这个名字，一看就知道违反了哪条规矩。
+- 「邮箱不能重复」写在表定义外面，是一个**唯一索引**（`CREATE UNIQUE INDEX`）。PostgreSQL 的 `UNIQUE` 约束本身就是靠一个唯一索引实现的，两种写法挡重复的效果一样。Patra 的库表规范统一用唯一索引：它验证过，以后想把这几列改成主键时，现成的唯一索引能直接提升为主键，唯一约束名下的索引不行。
 
-注意这里的邮箱列既要 `UNIQUE`，又允许 `NULL`。这两件事不冲突：**唯一约束只比较有值的格子，多个 NULL 互不冲突**。所以所有已注销的账号（邮箱都是空的）不会互相撞车。
+注意这里的邮箱列既要唯一，又允许 `NULL`。这两件事不冲突：**唯一约束和唯一索引都只比较有值的格子，多个 NULL 互不冲突**。所以所有已注销的账号（邮箱都是空的）不会互相撞车。
 
 ## NULL：不是 0，也不是空字符串
 
@@ -93,12 +100,14 @@ prerequisites: [db-sql-write]
 
 Patra 的"有帮助"明细表里有一条正是这样写的：
 
-<CodeRef at="patra-api/patra-interaction/patra-interaction-infra/src/main/resources/db/migration/reaction/V20261029200100__create_reaction_tables.sql@b554d996121f219ca9dc8a6ea08baf4f93648f5a" lines="18-20" />
+<CodeRef at="patra-api/patra-interaction/patra-interaction-infra/src/main/resources/db/migration/reaction/V20261116130200__create_reaction.sql@1c14ff5ba53ff774c52a9ead82653c5097586a53" lines="18-22" />
 
 ```sql
-    PRIMARY KEY (user_id, target_type, target_id),
-    CONSTRAINT ck_helpful_target_type CHECK (target_type IN ('COMMENT', 'POST')),
-    CONSTRAINT ck_helpful_not_self CHECK (credited_user_id IS DISTINCT FROM user_id)
+    PRIMARY KEY (id),
+    CONSTRAINT ck_itr_helpful_target_type CHECK (target_type IN ('COMMENT', 'POST')),
+    CONSTRAINT ck_itr_helpful_not_self CHECK (credited_user_id IS DISTINCT FROM user_id)
+);
+CREATE UNIQUE INDEX uk_itr_helpful_user_target ON itr_helpful (user_id, target_type, target_id);
 ```
 
 `credited_user_id` 是"这次点赞给谁加获赞数"，匿名发表的内容这一列是 NULL。规则是"不能给自己点"。用 `IS DISTINCT FROM`，匿名（NULL）和用户 ID 比较得到"确实不同"，语义清楚，不依赖"未知放行"这个容易忘的特性。
@@ -116,7 +125,7 @@ Patra 的"有帮助"明细表里有一条正是这样写的：
       question: "给 cat_venue.nlm_id 加了 UNIQUE。能同时存在多少行 nlm_id 是 NULL？",
       options: ["最多 1 行", "0 行，唯一列不能为空", "任意多行"],
       answer: "C",
-      explain: "唯一约束只比较有值的格子，多个 NULL 互不冲突。Patra 的 V12 迁移注释里就写着「允许为空（多个 NULL 互不冲突）」。"
+      explain: "唯一约束只比较有值的格子，多个 NULL 互不冲突。Patra 的 cat_venue 正是这样：nlm_id 允许为空，上面建了唯一索引 uk_cat_venue_nlm，没有 NLM 编号的期刊可以有很多本。"
     }
   ]}
 />
