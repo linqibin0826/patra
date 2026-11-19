@@ -29,7 +29,7 @@ Modulith 的事件登记是这样工作的：事务里调 `publishEvent(事件)`
 v0.16 Patra 第一次跨服务发事件，登记表只想放一种东西：**要外送到 RabbitMQ 的事件**。理由有两条：
 
 - 服务内部还有「提交后做一下、丢了也无所谓」的副作用。通知服务（v0.16 新建）要用普通的提交后监听器给浏览器推实时消息，推不到，用户下次刷新页面照样看得到提醒。这类事要是进了登记表，失败后会被补投，过几分钟又推一遍，反而奇怪。
-- Patra 把发成功的登记行设成「发完即删」，表里只剩没发出去的。只放外送的事件，「表不空」就等于「有事件卡住了」，排查一眼就看出来。
+- 当时 Patra 把发成功的登记行设成「发完即删」，表里只剩没发出去的。只放外送的事件，「表不空」就等于「有事件卡住了」，排查一眼就看出来。后来（#405）发成功的行改成标完成、留在表里，这条理由换成看未完成的行：只放外送的事件，「有 `completion_date` 为空的行」就等于「有事件卡住了」。
 
 要分清这两类监听器，先得认识 Modulith 自己的注解。`@ApplicationModuleListener` 只是三个 Spring 注解的组合：
 
@@ -47,7 +47,7 @@ public @interface ApplicationModuleListener {
 
 <DecisionOptions
   options={[
-    { name: "照默认，全部登记", summary: "什么都不配，每个提交后监听器都写登记行。", pros: "零配置。", cons: "内部副作用也被补投，失败的推送过几分钟又推一遍；表里混着两类行，「表不空」不再等于「有积压」。" },
+    { name: "照默认，全部登记", summary: "什么都不配，每个提交后监听器都写登记行。", pros: "零配置。", cons: "内部副作用也被补投，失败的推送过几分钟又推一遍；表里混着两类行，「有未完成的行」不再等于「有外送积压」。" },
     { name: "留在旧版本，用规则禁掉", summary: "停在 Modulith 2.0.8，用 ArchUnit 禁止发事件的服务写提交后监听器，模块再拆成「发布」「消费」两块。", pros: "不用先升 Spring Boot。", cons: "通知服务恰恰要用提交后监听器做实时推送，规则得开例外；为了绕开框架行为多拆一层模块。" },
     { name: "升到 2.1.2，按注解挑", summary: "用 2.1.2 新加的 `spring.modulith.events.registry-trigger-annotation`，只登记带 `@ApplicationModuleListener` 的监听器。", pros: "一行配置；外送器自带这个注解，正好只剩它进表；普通 `@TransactionalEventListener` 照 Spring 原来的行为走。", cons: "要先把 Spring Boot 升到 4.1；服务代码里从此不能写 `@ApplicationModuleListener`。", chosen: true }
   ]}
@@ -63,14 +63,14 @@ public @interface ApplicationModuleListener {
 
 </Callout>
 
-<CodeRef at="patra-tool/patra-tool-events/src/main/java/dev/patra/tool/events/autoconfigure/EventsDefaultsPostProcessor.java@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="24-31" />
+<CodeRef at="patra-tool/patra-tool-events/src/main/java/dev/patra/tool/events/autoconfigure/EventsDefaultsPostProcessor.java@f8611392886d8771c3ef4ed5d620486dbb0c97dd" lines="25-32" />
 
 ```java
 /// 本模块出的默认键。
 static final Map<String, Object> DEFAULTS =
     Map.ofEntries(
         entry("spring.modulith.events.jdbc.schema-initialization.enabled", "false"),
-        entry("spring.modulith.events.completion-mode", "delete"),
+        entry("spring.modulith.events.completion-mode", "update"),
         entry(
             "spring.modulith.events.registry-trigger-annotation",
             "org.springframework.modulith.events.ApplicationModuleListener"),
@@ -82,7 +82,7 @@ static final Map<String, Object> DEFAULTS =
   title="同一次 publishEvent，两种配置各写几行登记"
   variants={[
     { label: "默认", steps: ["事务里 publishEvent(评论已发表)", "多播器找出两个提交后监听器：外送器、实时推送", "两个监听器各写一行登记", "提交后两个都执行；推送失败的那行留下等补投"], results: [{ label: "event_publication", value: "2 行", tone: "wait" }, { label: "推送失败时", value: "几分钟后再推一遍", tone: "bad" }], verdict: { tone: "bad", head: "内部副作用也被补投。", text: "表里有一行没完成，可能只是一次无所谓的推送失败。" } },
-    { label: "按注解挑", steps: ["事务里 publishEvent(评论已发表)", "多播器只认带 @ApplicationModuleListener 的：外送器", "只为外送器写一行登记", "提交后两个都执行；推送失败就算了"], results: [{ label: "event_publication", value: "1 行", tone: "ok" }, { label: "推送失败时", value: "不补，用户刷新照样看得到", tone: "ok" }], verdict: { tone: "ok", head: "表里只有外送。", text: "表不空，就是有事件没送到 RabbitMQ。" } }
+    { label: "按注解挑", steps: ["事务里 publishEvent(评论已发表)", "多播器只认带 @ApplicationModuleListener 的：外送器", "只为外送器写一行登记", "提交后两个都执行；推送失败就算了"], results: [{ label: "event_publication", value: "1 行", tone: "ok" }, { label: "推送失败时", value: "不补，用户刷新照样看得到", tone: "ok" }], verdict: { tone: "ok", head: "表里只有外送。", text: "有未完成的行，就是有事件没送到 RabbitMQ。" } }
   ]}
 />
 

@@ -33,7 +33,7 @@ personalEnv: false
 上一篇讲的登记是「每个提交后监听器一行」。外送没有另起一套机制，它就是其中一个监听器：Modulith 的事件核心里有一个 `EventExternalizerModuleListener`，方法上贴着 `@ApplicationModuleListener`；AMQP 构件负责把它接到 RabbitMQ 上。所以：
 
 - 发布一个要外送的事件，表里就有一行属于外送器的登记；
-- 外送器方法正常返回，这一行算完成（Patra 的完成模式是删掉）；
+- 外送器方法正常返回，这一行算完成（Patra 的完成模式是标完成、留在表里）；
 - 外送器抛了异常，这一行停在失败，等补投再发一次。
 
 有一点不一样：外送器把事务传播方式改成了 `SUPPORTS`，不给自己开新事务。这和「等 broker 确认时占不占数据库连接」有关，后面「等确认不占连接」那篇讲。
@@ -59,7 +59,7 @@ personalEnv: false
         { at: "domain", caption: "讨论子域发布「评论已发表」，事件 ID 在这时生成。" },
         { at: "registry", caption: "同一个事务里，为外送器记一行登记；事务提交。" },
         { at: "externalizer", caption: "外送器被选中执行：映射成 CommentPublished，路由键 comment.published。" },
-        { at: "exchange", caption: "消息进了交换机，再转给通知服务的队列；登记行删掉。" }
+        { at: "exchange", caption: "消息进了交换机，再转给通知服务的队列；登记行标成完成。" }
       ]
     }
   ]}
@@ -75,7 +75,7 @@ personalEnv: false
 
 配置有两种写法。注解式是在事件类上贴 `@Externalized("交换机::路由键")`；编程式是在配置类里定义一个 `EventExternalizationConfiguration` bean。Patra 只用编程式，领域层的事件类上什么都不贴：领域层不该知道自己的事件会被发到 RabbitMQ。interaction 的配置：
 
-<CodeRef at="patra-api/patra-interaction/patra-interaction-boot/src/main/java/dev/patra/interaction/config/InteractionEventsConfiguration.java@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="49-75" />
+<CodeRef at="patra-api/patra-interaction/patra-interaction-boot/src/main/java/dev/patra/interaction/config/InteractionEventsConfiguration.java@f8611392886d8771c3ef4ed5d620486dbb0c97dd" lines="50-76" />
 
 ```java
 @Bean
@@ -110,7 +110,7 @@ Modulith 2.1 起有两种外送模式，由 `spring.modulith.events.externalizat
 
 外送跑通了，不等于可靠了。Patra 接入时碰到的三件事：
 
-**1. 不等 broker 确认。** 默认模式下，RabbitMQ 外送调完发送方法就算成功，不等 broker 回确认。broker 恰好没收下，登记行也已经被当成完成删掉了，这条消息就丢了。Patra 在发送模板这一层补上了「同步等确认，没确认就抛异常」，「发送确认」那篇细讲。
+**1. 不等 broker 确认。** 默认模式下，RabbitMQ 外送调完发送方法就算成功，不等 broker 回确认。broker 恰好没收下，登记行也已经被标成完成，补投不会再碰它，这条消息就丢了。Patra 在发送模板这一层补上了「同步等确认，没确认就抛异常」，「发送确认」那篇细讲。
 
 **2. 映射会重跑。** 登记表里存的是领域事件，映射发生在每次外送时，补投就会再映射一遍。所以：
 

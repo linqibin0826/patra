@@ -42,7 +42,7 @@ personalEnv: false
   states={[
     { id: "published", label: "已提交", sub: "未执行", col: 1, desc: "`PUBLISHED`。事务提交，登记行落库。外送器在另一条线程里很快就会开始执行它。" },
     { id: "processing", label: "发送中", sub: "等确认", col: 2, desc: "`PROCESSING`。外送器正在发送、等 RabbitMQ 的确认。确认来了就完成，失败或超时就标 FAILED。" },
-    { id: "deleted", label: "已删除", sub: "发成功了", col: 3, desc: "`COMPLETED`。发成功了。Patra 的完成模式是「发完即删」，表里不留这一行。" },
+    { id: "completed", label: "已完成", sub: "发成功了", col: 3, desc: "`COMPLETED`。发成功了，写上完成时间、留在表里。补投只领未完成的行，不会再碰它。" },
     { id: "resubmitted", label: "被领走", sub: "等重新执行", col: 1, row: 2, desc: "`RESUBMITTED`。补投任务领走了它，排队等重新执行。Modulith 不会再领一次已经是这个状态的行：进程这时崩了，它就一直停在这里。" },
     { id: "failed", label: "失败", sub: "等补投", col: 2, row: 2, desc: "`FAILED`。发送失败（broker 停了、被退回、等不到确认）。下一轮补投会领走它。" }
   ]}
@@ -57,7 +57,7 @@ personalEnv: false
   transitions={[
     { from: "published", event: "run", to: "processing", label: "执行" },
     { from: "published", event: "claim", to: "resubmitted", label: "发布超 1 分钟才领" },
-    { from: "processing", event: "ok", to: "deleted", label: "确认" },
+    { from: "processing", event: "ok", to: "completed", label: "确认" },
     { from: "processing", event: "fail", to: "failed", label: "失败" },
     { from: "processing", event: "claim", to: "resubmitted", label: "超 10 分钟没动静才领" },
     { from: "failed", event: "claim", to: "resubmitted", label: "领走" },

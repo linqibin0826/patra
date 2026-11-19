@@ -62,7 +62,7 @@ personalEnv: false
 
 外送哪些事件、发到哪个交换机、带什么路由键，都在一个配置类里：
 
-<CodeRef at="patra-api/patra-interaction/patra-interaction-boot/src/main/java/dev/patra/interaction/config/InteractionEventsConfiguration.java@5b1d855a5da18806b91a52f24253e64d40d743a8" lines="26-69" />
+<CodeRef at="patra-api/patra-interaction/patra-interaction-boot/src/main/java/dev/patra/interaction/config/InteractionEventsConfiguration.java@f8611392886d8771c3ef4ed5d620486dbb0c97dd" lines="26-70" />
 
 注意注释里的一句：「领域层不贴 `@Externalized`」。领域层不知道自己的事件会被发到 RabbitMQ，这件事只有 boot 模块的这个配置知道。
 

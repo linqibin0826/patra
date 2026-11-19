@@ -178,7 +178,7 @@ public record IdentityProperties(
 
 identity 的 jar 里写着 IP 属地数据文件的目录，默认在用户主目录下。容器里没有那个目录，于是 compose 给容器设了一个环境变量，把它改成挂载进来的目录：
 
-<CodeRef at="patra-api/patra-identity/patra-identity-boot/src/main/resources/application.yml@e3120fa01976688a7eb6f4c627d900e9c4b214d2" lines="140-143" />
+<CodeRef at="patra-api/patra-identity/patra-identity-boot/src/main/resources/application.yml@f8611392886d8771c3ef4ed5d620486dbb0c97dd" lines="135-138" />
 
 ```yaml
     # IP 属地（PAP-99）：ip2region 两个 xdb 所在目录，由 patra-infra/scripts/fetch-ip2region.sh 下载；
