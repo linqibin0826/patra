@@ -14,6 +14,18 @@ spring:
       connection-timeout: 30000
       idle-timeout: 600000
       max-lifetime: 1800000
+  task:
+    execution:
+      # 未读数广播另有一个线程池 bean（UnreadBroadcastConfiguration）。容器里有别的 Executor 时 Boot 默认不再建
+      # applicationTaskExecutor，而推送的 @Async 和 MVC 的异步请求都用它，所以强制建
+      mode: force
+  rabbitmq:
+    listener:
+      simple:
+        # 停机时不先取消订阅，处理完手上这一条就关信道，其余预取的由 broker 退回（默认会先取消订阅、再把预取的全部
+        # 处理完）。信箱队列是单活跃消费者：取消订阅那一刻 broker 就换下一台，旧实例接着处理预取的几条，两台会并行；
+        # 改成关信道时才换人，交接时不并行，只剩单条处理超过停机等待（默认 5 秒）被打断这一种情况
+        force-stop: true
   flyway:
     enabled: true
     # 递归扫描：每个子域的脚本在 db/migration/{子域}/，整个服务一份历史（public.flyway_schema_history）。

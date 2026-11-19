@@ -56,6 +56,26 @@ class ApplicationConfigTest {
     assertThat(property("patra.notification.realtime.max-connection-age")).isEqualTo("30m");
   }
 
+  /// 信箱队列是单活跃消费者（#406）：停机时不先取消订阅，处理完手上这一条再关信道，broker 这时才换下一台，交接时
+  /// 两台不并行。
+  ///
+  /// @throws IOException 读取失败时
+  @Test
+  @DisplayName("监听容器停机时不处理完全部预取")
+  void should_force_stop_listener_containers() throws IOException {
+    assertThat(property("spring.rabbitmq.listener.simple.force-stop")).isEqualTo("true");
+  }
+
+  /// 广播另有一个线程池 bean（#406）：容器里有别的 `Executor` 时 Boot 默认不再建 `applicationTaskExecutor`，
+  /// 推送的 `@Async` 和 MVC 异步请求都靠它，所以强制建。
+  ///
+  /// @throws IOException 读取失败时
+  @Test
+  @DisplayName("强制建 Boot 的异步线程池")
+  void should_force_boot_task_executor_beside_broadcast_executor() throws IOException {
+    assertThat(property("spring.task.execution.mode")).isEqualTo("force");
+  }
+
   /// Flyway 递归扫 `db/migration`，不设 `schemas`：设了 Flyway 会把历史表挪进第一个 schema。
   ///
   /// @throws IOException 读取失败时

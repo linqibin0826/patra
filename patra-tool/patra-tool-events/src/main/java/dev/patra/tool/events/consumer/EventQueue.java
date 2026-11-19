@@ -30,9 +30,14 @@ import org.springframework.amqp.core.TopicExchange;
 /// 重试耗尽的消息被拒绝且不回队列，RabbitMQ 按队列参数把它转进死信队列。发布方的交换机也在这里声明一遍
 /// （持久化主题交换机，与发布方的声明一致），绑定不依赖发布方先部署。
 ///
+/// 靠顺序处理保证正确、又要跑多个实例的队列，打开 {@link #singleActiveConsumer()}：每个实例都订阅，同一时刻只有
+/// 最先订阅的那个收到消息，它断开或取消订阅时 RabbitMQ 把下一个提升为活跃消费者。这个参数只能在声明队列时设置，
+/// 已经存在的队列要先停掉消费者、删掉队列，再按新参数重建。
+///
 /// @param queue 队列名
 /// @param bindings 交换机 → 路由键
-public record EventQueue(String queue, Map<String, List<String>> bindings) {
+/// @param singleActive 主队列是否带 `x-single-active-consumer`
+public record EventQueue(String queue, Map<String, List<String>> bindings, boolean singleActive) {
 
   /// 防御性拷贝。
   public EventQueue {
@@ -44,7 +49,7 @@ public record EventQueue(String queue, Map<String, List<String>> bindings) {
   /// @param queue 队列名
   /// @return 还没有绑定的声明
   public static EventQueue named(String queue) {
-    return new EventQueue(queue, Map.of());
+    return new EventQueue(queue, Map.of(), false);
   }
 
   /// 把队列按路由键绑到发布方的主题交换机。
@@ -61,7 +66,14 @@ public record EventQueue(String queue, Map<String, List<String>> bindings) {
     List<String> keys = new ArrayList<>(merged.getOrDefault(exchange, List.of()));
     keys.addAll(List.of(routingKeys));
     merged.put(exchange, List.copyOf(keys));
-    return new EventQueue(queue, merged);
+    return new EventQueue(queue, merged, singleActive);
+  }
+
+  /// 主队列同一时刻只投给一个消费者（见类注释）。
+  ///
+  /// @return 打开了单活跃消费者的新声明
+  public EventQueue singleActiveConsumer() {
+    return new EventQueue(queue, bindings, true);
   }
 
   /// 生成全部声明。
@@ -70,11 +82,14 @@ public record EventQueue(String queue, Map<String, List<String>> bindings) {
   public Declarables declarables() {
     String deadLetterExchange = queue + ".dlx";
     String deadLetterQueue = queue + ".dlq";
-    Queue main =
+    QueueBuilder mainBuilder =
         QueueBuilder.durable(queue)
             .deadLetterExchange(deadLetterExchange)
-            .deadLetterRoutingKey(queue)
-            .build();
+            .deadLetterRoutingKey(queue);
+    if (singleActive) {
+      mainBuilder.singleActiveConsumer();
+    }
+    Queue main = mainBuilder.build();
     DirectExchange dlx = ExchangeBuilder.directExchange(deadLetterExchange).durable(true).build();
     Queue dlq = QueueBuilder.durable(deadLetterQueue).build();
 

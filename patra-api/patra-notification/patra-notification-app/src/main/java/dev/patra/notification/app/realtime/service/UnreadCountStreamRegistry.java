@@ -17,6 +17,10 @@ import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 
 /// 推送连接表（PAP-145）：「用户 → 连接」。
+///
+/// 只记本实例上的连接。跑多台时，别的实例上发生的变化经未读数广播送到这里的 {@link #push}（#406）。连接建立时先放进
+/// 表、再读当前值（见 {@link #open}）：读数之后才提交的变化，不管发生在本机还是别的实例，推送到达时表里已经有这条
+/// 连接，所以不会漏推。
 @Slf4j
 @Component
 @RequiredArgsConstructor

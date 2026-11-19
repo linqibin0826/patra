@@ -25,6 +25,9 @@ dependencies {
     // 发信：Boot 的 JavaMailSender 自动配置 + Jakarta Mail。用 api：boot 的装配类签名里要用 JavaMailSender
     api("org.springframework.boot:spring-boot-starter-mail")
 
+    // 未读数广播：经 RabbitTemplate 发到 fanout 交换机，通知服务的其他实例推各自手上的连接（#406）
+    implementation("org.springframework.boot:spring-boot-starter-amqp")
+
     // 邮件模板：只要 Thymeleaf 引擎本体，不用 starter——通知服务的邮件不走 MVC 视图解析器
     implementation("org.thymeleaf:thymeleaf")
 

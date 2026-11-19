@@ -7,6 +7,7 @@ import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.amqp.core.Binding;
+import org.springframework.amqp.core.Declarables;
 import org.springframework.amqp.core.DirectExchange;
 import org.springframework.amqp.core.Queue;
 import org.springframework.amqp.core.TopicExchange;
@@ -73,6 +74,50 @@ class EventQueueTest {
 
     assertThatThrownBy(() -> queue.bind("interaction.events"))
         .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  @DisplayName("打开单活跃消费者：主队列带 x-single-active-consumer，死信队列不带")
+  void should_mark_only_main_queue_single_active_consumer_when_enabled() {
+    Declarables declared =
+        EventQueue.named("q").bind("x", "k").singleActiveConsumer().declarables();
+
+    assertThat(queueOf(declared, "q").getArguments())
+        .containsEntry("x-single-active-consumer", true)
+        .containsEntry("x-dead-letter-exchange", "q.dlx");
+    assertThat(queueOf(declared, "q.dlq").getArguments())
+        .doesNotContainKey("x-single-active-consumer");
+  }
+
+  @Test
+  @DisplayName("默认不带 x-single-active-consumer")
+  void should_not_set_single_active_consumer_by_default() {
+    assertThat(queue("notification.inbox").getArguments())
+        .doesNotContainKey("x-single-active-consumer");
+  }
+
+  @Test
+  @DisplayName("先开开关再绑定，开关不丢")
+  void should_keep_single_active_consumer_when_binding_afterwards() {
+    Declarables declared =
+        EventQueue.named("q").singleActiveConsumer().bind("x", "k").declarables();
+
+    assertThat(queueOf(declared, "q").getArguments())
+        .containsEntry("x-single-active-consumer", true);
+  }
+
+  /// 按名字找某次声明里的队列。
+  ///
+  /// @param declared 声明
+  /// @param name 队列名
+  /// @return 队列
+  private static Queue queueOf(Declarables declared, String name) {
+    return declared.getDeclarables().stream()
+        .filter(Queue.class::isInstance)
+        .map(Queue.class::cast)
+        .filter(queue -> queue.getName().equals(name))
+        .findFirst()
+        .orElseThrow();
   }
 
   /// 按名字找声明里的队列。

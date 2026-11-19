@@ -14,6 +14,9 @@ import org.springframework.context.annotation.Configuration;
 
 /// 信箱队列的声明（PAP-143）：`notification.inbox` 与它的死信交换机、死信队列，绑定 interaction 交换机的五个路由键
 /// （评论发表 / 编辑 / 删除、经验删除、有帮助已点）。由 `RabbitAdmin` 在连接时声明，不依赖 interaction 先部署。
+///
+/// 队列是单活跃消费者（#406）：信箱靠顺序处理保证正确（见 `InboxEventListener`），跑多台时每台都订阅，同一时刻只有
+/// 一台在收。
 @Configuration
 public class InboxQueueConfiguration {
 
@@ -30,6 +33,7 @@ public class InboxQueueConfiguration {
             CommentDeleted.ROUTING_KEY,
             PostDeleted.ROUTING_KEY,
             HelpfulMarked.ROUTING_KEY)
+        .singleActiveConsumer()
         .declarables();
   }
 }
