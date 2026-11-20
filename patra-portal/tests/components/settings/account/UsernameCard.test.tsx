@@ -2,7 +2,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { USER } from "@tests/fixtures/user";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import "@testing-library/jest-dom/vitest";
 import { UsernameCard } from "@/components/settings/account/UsernameCard";
 import type { CurrentUser } from "@/lib/auth/types";
@@ -16,9 +16,19 @@ vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
 import { toast } from "sonner";
 
-afterEach(() => vi.clearAllMocks());
-
 const NOW = Date.parse("2026-10-23T08:00:00Z");
+
+// 卡片挂载后会把传入的 now 换成 Date.now()，浏览器时钟也要停在 NOW，否则真实日期一过用例里的冷却截止日，
+// 「冷却中」就不成立了。只伪造 Date，定时器照常走，userEvent 不受影响
+beforeEach(() => {
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(NOW);
+});
+
+afterEach(() => {
+  vi.useRealTimers();
+  vi.clearAllMocks();
+});
 
 function renderCard(user: Partial<CurrentUser> = {}) {
   const client = new QueryClient();
