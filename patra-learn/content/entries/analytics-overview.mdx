@@ -85,8 +85,8 @@ Patra 选了第四条路：照业界做法自建一整条管线。这一版也�
   nodes={[
     { id: "plan", label: "埋点方案", sub: "事件字典 + 口径", col: 1, row: 2, desc: "写任何代码之前先定的规格：记哪 10 种事件、每种带哪些字段、「看过人数」「读过全文」怎么算。格式落成 JSON Schema，由机器校验。" },
     { id: "portal", label: "门户", sub: "产生事件", col: 1, desc: "门户服务端在渲染文献页、执行检索时发服务端事件；浏览器里的曝光、点击、全文停留先发到门户自己的路径，由门户补上设备、会话与登录身份再转发。" },
-    { id: "collector", label: "采集端点", sub: "POST /patra-analytics/events", code: true, col: 2, desc: "逐条按 JSON Schema 校验，补上服务端接收时间，解析 UA、判爬虫，把 IP 换成省级地区后丢掉，写进 Kafka 就返回 202。不合格的进 events.dlq。" },
-    { id: "kafka", label: "Kafka", sub: "events.raw", code: true, col: 3, desc: "缓冲：一本只追加的日志，事件按保留期（2 天）留着。ClickHouse 停机时事件在这里等，恢复后补写。" },
+    { id: "collector", label: "采集端点", sub: "POST /patra-analytics/events", code: true, col: 2, desc: "逐条按 JSON Schema 校验，补上服务端接收时间，解析 UA、判爬虫，把 IP 换成省级地区后丢掉，写进 Kafka 就返回 202。不合格的进 analytics.events.rejected。" },
+    { id: "kafka", label: "Kafka", sub: "analytics.events.enriched", code: true, col: 3, desc: "缓冲：一本只追加的日志，事件按保留期（2 天）留着。ClickHouse 停机时事件在这里等，恢复后补写。" },
     { id: "events", label: "明细表 events", sub: "ClickHouse", col: 4, desc: "一行一条事件，按列存储、按天分区，90 天后整个分区丢掉。没有 IP 列。" },
     { id: "summary", label: "汇总表", sub: "物化视图", col: 4, row: 2, desc: "每批写入明细时同时触发：写出「文献 × 会话有没有看过」「会话里有没有浏览器事件、有没有爬虫」「每人每天活跃」三张汇总，长期保留。" },
     { id: "app", label: "应用层", sub: "计数 · 热读 · 看过还看了", col: 3, row: 2, desc: "计数接口查汇总表，套 Redis 60 秒缓存；热读每小时、看过还看了每天由定时任务算好写进 PostgreSQL 快照，页面只读快照。" },
@@ -108,7 +108,7 @@ Patra 选了第四条路：照业界做法自建一整条管线。这一版也�
       hops: [
         { at: "portal", caption: "B 打开一篇文献，门户服务端渲染完页面，组装一条 article_viewed，不等结果就发出去。" },
         { at: "collector", caption: "采集端点校验通过，补上接收时间、省级地区和爬虫标记，删掉 IP 与原始 UA。" },
-        { at: "kafka", caption: "写进 events.raw，采集端点返回 202。到这里只用了几毫秒。" },
+        { at: "kafka", caption: "写进 analytics.events.enriched，采集端点返回 202。到这里只用了几毫秒。" },
         { at: "events", caption: "入库消费者攒满 5 万条或等满 1 秒，一次写进明细表。" },
         { at: "summary", caption: "同一次写入触发物化视图：这篇文献多了一行「B 的这个会话看过」。" },
         { at: "app", caption: "门户来要计数：按人去重、只数真人会话，B 算 1 个人。" }
@@ -119,7 +119,7 @@ Patra 选了第四条路：照业界做法自建一整条管线。这一版也�
       packet: "坏事件",
       hops: [
         { at: "portal", caption: "一条事件多带了一个埋点方案里没有的字段。" },
-        { at: "collector", caption: "按 JSON Schema 校验不通过：这一条进 events.dlq 留着排查，同批其他事件照常进 events.raw。它不会出现在明细表里。", drop: true }
+        { at: "collector", caption: "按 JSON Schema 校验不通过：这一条进 analytics.events.rejected 留着排查，同批其他事件照常进 analytics.events.enriched。它不会出现在明细表里。", drop: true }
       ]
     }
   ]}
@@ -129,7 +129,7 @@ Patra 选了第四条路：照业界做法自建一整条管线。这一版也�
 |---|---|---|
 | 埋点方案 | 先定名字、格式、口径，再写代码 | 10 个事件，Object Action 命名；格式是 `patra-analytics-api` 里的 JSON Schema |
 | 采集端点 | 校验、补字段、写进队列，收下就走 | `patra-analytics` 服务的 `collect` 子域 |
-| Kafka | 入库前的缓冲，消息按保留期留着 | 单节点，`events.raw` 与 `events.dlq`，保留 2 天 |
+| Kafka | 入库前的缓冲，消息按保留期留着 | 单节点，`analytics.events.enriched` 与 `analytics.events.rejected`，保留 2 天 |
 | 明细表 | 一行一条事件，按列存储 | ClickHouse 的 `events`，按天分区，90 天 TTL |
 | 物化视图汇总 | 写入时就汇总，查询不用扫明细 | `article_session_reads`、`session_quality`、`daily_person_activity` |
 | 应用层 | 新鲜的数字现查，排名提前算好 | 计数接口 + Redis；热读、看过还看了写进 PG 快照 |
@@ -157,7 +157,7 @@ Patra 选了第四条路：照业界做法自建一整条管线。这一版也�
   ]}
   steps={[
     { caption: "B 打开文献页。门户服务端组装一条 article_viewed：带上设备 ID、会话 ID、B 的用户 ID、IP 和 UA，交给采集端点，不等结果。", focus: ["portal"], tokens: [{ id: "e1", label: "viewed", at: "portal" }] },
-    { caption: "采集端点按 JSON Schema 校验，补上接收时间，判断不是爬虫，把 IP 换成省份后丢掉，写进 Kafka，返回 202。", focus: ["collector", "kafka"], links: ["portal>collector", "collector>kafka"], tokens: [{ id: "e1", label: "viewed", at: "kafka" }], notes: [{ at: "kafka", text: "events.raw · 排队", tone: "wait" }] },
+    { caption: "采集端点按 JSON Schema 校验，补上接收时间，判断不是爬虫，把 IP 换成省份后丢掉，写进 Kafka，返回 202。", focus: ["collector", "kafka"], links: ["portal>collector", "collector>kafka"], tokens: [{ id: "e1", label: "viewed", at: "kafka" }], notes: [{ at: "kafka", text: "analytics.events.enriched · 排队", tone: "wait" }] },
     { caption: "入库消费者从 Kafka 拉一批，一次写进明细表；物化视图在同一次写入里更新汇总。B 的浏览器随后发来 page_viewed、fulltext_read，这个会话被认作真人会话。", focus: ["clickhouse"], links: ["kafka>clickhouse"], tokens: [{ id: "e1", label: "viewed", at: "clickhouse" }], notes: [{ at: "clickhouse", text: "汇总 · B 看过", tone: "ok" }] },
     { caption: "门户渲染下一个页面时来要计数：Redis 里没有，就按人去重查汇总表，结果缓存 60 秒。这篇的「看过」多了 1。", focus: ["api"], links: ["clickhouse>api"], notes: [{ at: "api", text: "看过 +1", tone: "ok" }] },
     { caption: "B 又刷新了 3 次：又多了 3 条 article_viewed，明细表里都在，可它们都是同一个人。按人去重之后，数字不变。", focus: ["clickhouse", "api"], tokens: [{ id: "e2", label: "viewed ×3", at: "clickhouse" }], notes: [{ at: "api", text: "看过不变", tone: "ok" }] }

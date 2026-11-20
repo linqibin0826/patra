@@ -47,18 +47,20 @@ public class KafkaIngestLagGauge {
   /// @param admin Kafka 管理客户端
   /// @param meters 指标
   /// @param groupId 入库的消费组
-  /// @param rawTopic 富化事件的 topic
-  /// @param dlqTopic 不合格事件的 topic
+  /// @param enrichedTopic 富化事件的 topic
+  /// @param rejectedTopic 不合格事件的 topic
   public KafkaIngestLagGauge(
       Admin admin,
       MeterRegistry meters,
       @Value("${patra.analytics.ingest.group-id}") String groupId,
-      @Value("${patra.analytics.kafka.raw-topic:events.raw}") String rawTopic,
-      @Value("${patra.analytics.kafka.dlq-topic:events.dlq}") String dlqTopic) {
+      @Value("${patra.analytics.kafka.enriched-topic:analytics.events.enriched}")
+          String enrichedTopic,
+      @Value("${patra.analytics.kafka.rejected-topic:analytics.events.rejected}")
+          String rejectedTopic) {
     this.admin = admin;
     this.meters = meters;
     this.groupId = groupId;
-    this.topics = List.of(rawTopic, dlqTopic);
+    this.topics = List.of(enrichedTopic, rejectedTopic);
   }
 
   /// 重新计算每个分区的滞后。

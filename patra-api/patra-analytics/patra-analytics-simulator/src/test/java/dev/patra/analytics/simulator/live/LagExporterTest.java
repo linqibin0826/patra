@@ -18,8 +18,8 @@ class LagExporterTest {
   private static final String RESPONSE =
       """
       {"status":"success","data":{"resultType":"matrix","result":[
-        {"metric":{"topic":"events.raw"},"values":[[1762048800,"120"],[1762048815,"80"]]},
-        {"metric":{"topic":"events.dlq"},"values":[[1762048800,"0"]]}]}}""";
+        {"metric":{"topic":"analytics.events.enriched"},"values":[[1762048800,"120"],[1762048815,"80"]]},
+        {"metric":{"topic":"analytics.events.rejected"},"values":[[1762048800,"0"]]}]}}""";
 
   @Test
   void exports_one_row_per_point() throws Exception {
@@ -51,9 +51,9 @@ class LagExporterTest {
       assertThat(csv.toString().split("\n"))
           .containsExactly(
               "time,series,value",
-              "2025-11-02T02:00:00Z,events.raw,120",
-              "2025-11-02T02:00:15Z,events.raw,80",
-              "2025-11-02T02:00:00Z,events.dlq,0");
+              "2025-11-02T02:00:00Z,analytics.events.enriched,120",
+              "2025-11-02T02:00:15Z,analytics.events.enriched,80",
+              "2025-11-02T02:00:00Z,analytics.events.rejected,0");
     } finally {
       server.stop(0);
     }

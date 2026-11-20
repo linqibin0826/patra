@@ -30,8 +30,8 @@ import tools.jackson.databind.node.ObjectNode;
 @SpringBootTest(
     webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
     properties = {
-      "patra.analytics.kafka.raw-topic=it-collect.raw",
-      "patra.analytics.kafka.dlq-topic=it-collect.dlq"
+      "patra.analytics.kafka.enriched-topic=it-collect.enriched",
+      "patra.analytics.kafka.rejected-topic=it-collect.rejected"
     })
 @AutoConfigureRestTestClient
 @ContextConfiguration(
@@ -70,7 +70,7 @@ class CollectFlowIT {
         .jsonPath("$.rejected")
         .isEqualTo(1);
 
-    List<ConsumerRecord<String, String>> raw = read("it-collect.raw", id(viewed), id(page));
+    List<ConsumerRecord<String, String>> raw = read("it-collect.enriched", id(viewed), id(page));
     assertThat(raw).hasSize(2);
     for (ConsumerRecord<String, String> record : raw) {
       JsonNode event = MAPPER.readTree(record.value());
@@ -81,7 +81,7 @@ class CollectFlowIT {
       assertThat(event.get("is_bot").asBoolean()).isFalse();
       assertThat(record.key()).isEqualTo(event.get("device_id").asString());
     }
-    List<ConsumerRecord<String, String>> dlq = read("it-collect.dlq", id(mismatch));
+    List<ConsumerRecord<String, String>> dlq = read("it-collect.rejected", id(mismatch));
     JsonNode rejected = MAPPER.readTree(dlq.getFirst().value());
     assertThat(rejected.get("reason_code").asString()).isEqualTo("source_mismatch");
     assertThat(rejected.get("raw").asString()).doesNotContain("client_ip", "203.0.113.24");
@@ -101,7 +101,7 @@ class CollectFlowIT {
         .expectStatus()
         .isAccepted();
 
-    JsonNode event = MAPPER.readTree(read("it-collect.raw", id(viewed)).getFirst().value());
+    JsonNode event = MAPPER.readTree(read("it-collect.enriched", id(viewed)).getFirst().value());
     assertThat(event.get("is_bot").asBoolean()).isTrue();
     assertThat(event.get("bot_reason").asString()).isEqualTo("ua_list");
   }

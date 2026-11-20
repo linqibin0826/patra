@@ -31,7 +31,7 @@ dependencies {
     implementation(libs.ip2region)
     // 爬虫频率规则的滑动窗口
     implementation("org.springframework.boot:spring-boot-starter-data-redis")
-    // 写 events.raw / events.dlq
+    // 写 analytics.events.enriched / analytics.events.rejected
     implementation("org.springframework.boot:spring-boot-starter-kafka")
     // 写 Kafka 的耗时指标
     implementation("io.micrometer:micrometer-core")

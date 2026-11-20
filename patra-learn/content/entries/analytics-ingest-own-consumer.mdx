@@ -24,12 +24,12 @@ personalEnv: false
 
 ## 背景：事件在 Kafka 里，要批量进 ClickHouse
 
-v0.18 的行为数据管线里，采集端点把校验、富化过的事件写进 Kafka 的 `events.raw`，坏事件写进 `events.dlq`。下一步要有人把它们读出来，写进 ClickHouse 的明细表 `events`。
+v0.18 的行为数据管线里，采集端点把校验、富化过的事件写进 Kafka 的 `analytics.events.enriched`，坏事件写进 `analytics.events.rejected`。下一步要有人把它们读出来，写进 ClickHouse 的明细表 `events`。
 
 这一步有几条硬约束：
 
 - **只能批量写**。ClickHouse 每写一次，就在每张受影响的表上各多一个数据片段（part）；写得太碎，后台合并跟不上，会报 `TOO_MANY_PARTS`。一条一写是不行的。
-- **不能丢**。ClickHouse 停机或变慢时，事件要能在 Kafka 里等着（`events.raw` 保留 2 天），恢复后补齐。
+- **不能丢**。ClickHouse 停机或变慢时，事件要能在 Kafka 里等着（`analytics.events.enriched` 保留 2 天），恢复后补齐。
 - **出问题要看得见**。卡在哪、落后多少、哪条坏数据被拒，要能在指标和日志里查到。
 - **机器小**。所有服务跑在作者家里的一台 mini 上，内存很紧。
 
@@ -109,7 +109,7 @@ Patra 的批次去重令牌是同一个思路的轻量版：令牌就是这批�
 | `max.poll.interval.ms` | 600,000 | 一批的写入（包括被拒时的二分重写）要在 10 分钟内完成，否则消费组认为它死了、触发重平衡 |
 | `enable.auto.commit` + `AckMode.MANUAL` | 关 + 手动 | 写成功才提交；写失败不提交，下次重来 |
 | `auto.offset.reset` | `earliest` | 新的消费组从头读，Kafka 里已有的 2 天不丢 |
-| 并发 | 1 | 单实例，`events.raw` 的 3 个分区由一个线程轮流拉 |
+| 并发 | 1 | 单实例，`analytics.events.enriched` 的 3 个分区由一个线程轮流拉 |
 | 错误处理 | 指数退避，1 秒起、上限 30 秒、不限次数 | ClickHouse 恢复前，消费就停在原地等 |
 
 「写成才提交」落在监听方法里，就是先交给入库用例，用例正常返回才 `acknowledge()`：
@@ -155,7 +155,7 @@ Patra 的批次去重令牌是同一个思路的轻量版：令牌就是这批�
   questions={[
     {
       question: "ClickHouse 宕机了一个小时。这一个小时里，入库消费者在做什么？",
-      options: ["停在原地按退避重试同一批，不提交偏移量，事件在 Kafka 里等着", "跳过写不进去的批次继续往后读，等 ClickHouse 恢复后再回头补", "把写不进去的事件全部转进 events.dlq，免得 Kafka 被写满"],
+      options: ["停在原地按退避重试同一批，不提交偏移量，事件在 Kafka 里等着", "跳过写不进去的批次继续往后读，等 ClickHouse 恢复后再回头补", "把写不进去的事件全部转进 analytics.events.rejected，免得 Kafka 被写满"],
       answer: "A",
       explain: "连不上属于「重试会好」的失败：不提交偏移量，错误处理器按 1 秒到 30 秒的退避无限重试同一批。Kafka 保留 2 天，一个小时的事件都还在，恢复后接着写。只有 ClickHouse 明确拒收的坏数据才进 dlq 表。"
     },
@@ -174,7 +174,7 @@ Patra 的批次去重令牌是同一个思路的轻量版：令牌就是这批�
 
 - **代码要自己写、自己测**：令牌、二分定位坏行、退避重试、滞后指标，另外两种做法里，这部分活由 ClickHouse 或 Connect 插件承担。
 - **只有至少一次**：崩在写成和提交之间，会写出部分重复，必须有下游去重兜底：明细表 `ReplacingMergeTree` 按 `event_id` 去重、数条数一律 `uniqExact(event_id)`、汇总表只存 `max` / `min`。
-- **单实例单线程**：`events.raw` 的 3 个分区由一个线程轮流拉、一次写一批，入库的吞吐上限就由这一个线程决定。
+- **单实例单线程**：`analytics.events.enriched` 的 3 个分区由一个线程轮流拉、一次写一批，入库的吞吐上限就由这一个线程决定。
 
 </Callout>
 

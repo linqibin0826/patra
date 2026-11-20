@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://patra.linqibin.dev/schemas/analytics/enriched-event.schema.json",
-  "title": "③ 富化事件：Kafka events.raw 的消息、ClickHouse 明细表的一行；不含 IP 与原始 UA",
+  "title": "③ 富化事件：Kafka analytics.events.enriched 的消息、ClickHouse 明细表的一行；不含 IP 与原始 UA",
   "x-patra-version": "1-0-0",
   "type": "object",
   "properties": {

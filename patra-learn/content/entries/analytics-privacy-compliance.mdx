@@ -151,7 +151,7 @@ Patra 按用途分层定（release spec 决策 J、入库设计）：
 
 | 数据 | 保留 | 为什么这么长 |
 |---|---|---|
-| Kafka `events.raw`、`events.dlq` | 2 天，另有磁盘上限 | 只是缓冲，ClickHouse 停机时能等一阵就够 |
+| Kafka `analytics.events.enriched`、`analytics.events.rejected` | 2 天，另有磁盘上限 | 只是缓冲，ClickHouse 停机时能等一阵就够 |
 | ClickHouse 事件明细 | 90 天，表 TTL 到期整个分区丢弃 | spec 没写具体理由；它决定明细最多能回看多远，原样保存的检索词也跟着只留 90 天 |
 | 每人每天活跃 `daily_person_activity` | 400 天 | 够看一年的同比，留存从这里算 |
 | 其他汇总 | 长期 | 「N 人看过」按人长期去重，要一直累计 |

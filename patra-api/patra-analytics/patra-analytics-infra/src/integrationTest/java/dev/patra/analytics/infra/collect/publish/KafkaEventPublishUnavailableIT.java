@@ -23,13 +23,14 @@ class KafkaEventPublishUnavailableIT {
     KafkaEventPublishAdapter adapter =
         new KafkaEventPublishAdapter(
             new KafkaTemplate<>(producerFactory),
-            new KafkaPublishProperties("events.raw", "events.dlq", Duration.ofSeconds(5)),
+            new KafkaPublishProperties(
+                "analytics.events.enriched", "analytics.events.rejected", Duration.ofSeconds(5)),
             Clock.systemUTC(),
             new SimpleMeterRegistry());
     List<OutboundMessage> batch =
-        IntStream.range(0, 500).mapToObj(i -> OutboundMessage.raw("d" + i, "{}")).toList();
+        IntStream.range(0, 500).mapToObj(i -> OutboundMessage.enriched("d" + i, "{}")).toList();
     // 预热：建生产者等冷启动开销不计入，计的是服务跑起来之后一批的耗时
-    assertThatThrownBy(() -> adapter.publish(List.of(OutboundMessage.raw("warm", "{}"))))
+    assertThatThrownBy(() -> adapter.publish(List.of(OutboundMessage.enriched("warm", "{}"))))
         .isInstanceOf(EventPublishUnavailableException.class);
 
     long started = System.nanoTime();

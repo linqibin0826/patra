@@ -29,7 +29,7 @@ personalEnv: false
 
 门户每处理一个页面请求，都可能顺手发一批事件给采集端点（`POST /patra-analytics/events`）。采集端点后面的入库、汇总、去重，都隔着 Kafka 异步进行；只有它，是门户要等着回话的。它慢一点，门户就跟着慢；它挂了，不能连累门户。
 
-业界的采集服务（PostHog 的 capture、Snowplow 的 collector）因此都只做三件事：**校验格式、补上只有服务端知道的字段、写进消息队列，然后立刻返回**。重活全在队列后面做，ClickHouse 停机或变慢时采集照收，事件在 Kafka 里等着。Patra 的采集端点也是这样：逐条校验、富化、判爬虫，合格的写 `events.raw`、不合格的写 `events.dlq`，等这一批全部确认后返回 202 和「合格几条、不合格几条」。
+业界的采集服务（PostHog 的 capture、Snowplow 的 collector）因此都只做三件事：**校验格式、补上只有服务端知道的字段、写进消息队列，然后立刻返回**。重活全在队列后面做，ClickHouse 停机或变慢时采集照收，事件在 Kafka 里等着。Patra 的采集端点也是这样：逐条校验、富化、判爬虫，合格的写 `analytics.events.enriched`、不合格的写 `analytics.events.rejected`，等这一批全部确认后返回 202 和「合格几条、不合格几条」。
 
 剩下要决定的是：**Kafka 本身不可用时怎么办。**
 

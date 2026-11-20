@@ -34,7 +34,8 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
 
 /// 采集一批事件（采集 spec §4.2）：拆批 → 逐条预检与校验 → 富化（时间校正、UA、爬虫、地区）→ 合格的写
-/// `events.raw`、不合格的写 `events.dlq`，一次写出整批；写成后把这批里的文献阅读发成 {@link ArticlesReadEvent}，
+/// `analytics.events.enriched`、不合格的写 `analytics.events.rejected`，一次写出整批；写成后把这批里的文献阅读发成 {@link
+// ArticlesReadEvent}，
 /// history 子域同步监听、写阅读历史（阅读历史 spec §4.2）。
 ///
 /// 不开事务：采集链路本身不写 PG，阅读历史的写入事务归监听方。爬虫判定先看 UA，没命中才查 Redis 的频率窗口；Redis 出错跳过频率规则。
@@ -105,7 +106,7 @@ public class CollectEventsHandler
     return CollectEventsResult.of(accepted, events.size() - accepted);
   }
 
-  /// 富化一条合格的事件，生成 `events.raw` 消息；产物不合格时转进 dlq。
+  /// 富化一条合格的事件，生成 `analytics.events.enriched` 消息；产物不合格时转进 dlq。
   ///
   /// @param event 合格的事件
   /// @param eventJson 原文（转进 dlq 时用）
@@ -159,7 +160,7 @@ public class CollectEventsHandler
             event.eventName().wire())
         .increment();
     ArticleRead.from(event, enrichment.derivedAt()).ifPresent(reads::add);
-    return Optional.of(OutboundMessage.raw(event.deviceId(), payload));
+    return Optional.of(OutboundMessage.enriched(event.deviceId(), payload));
   }
 
   /// 判定爬虫：先看 UA，没命中再查频率窗口。同一批里频率窗口第一次出错后，剩下的事件直接跳过频率规则：
@@ -217,7 +218,7 @@ public class CollectEventsHandler
             "event_name",
             EventName.fromWire(eventName).map(EventName::wire).orElse("unknown"))
         .increment();
-    return OutboundMessage.dlq(
+    return OutboundMessage.rejected(
         dlqRecords.dlqJson(
             RejectedEnvelope.builder()
                 .reason(reason)

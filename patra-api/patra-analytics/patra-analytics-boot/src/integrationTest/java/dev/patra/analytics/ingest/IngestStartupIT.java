@@ -35,8 +35,8 @@ import org.testcontainers.clickhouse.ClickHouseContainer;
     webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
     properties = {
       "patra.analytics.ingest.enabled=true",
-      "patra.analytics.kafka.raw-topic=it-ingest-startup.raw",
-      "patra.analytics.kafka.dlq-topic=it-ingest-startup.dlq"
+      "patra.analytics.kafka.enriched-topic=it-ingest-startup.enriched",
+      "patra.analytics.kafka.rejected-topic=it-ingest-startup.rejected"
     })
 @AutoConfigureRestTestClient
 @ContextConfiguration(
@@ -82,7 +82,7 @@ class IngestStartupIT {
         .exchange()
         .expectStatus()
         .isAccepted();
-    assertThat(listeners.getListenerContainer("ingest-raw").isRunning()).isFalse();
+    assertThat(listeners.getListenerContainer("ingest-enriched").isRunning()).isFalse();
 
     RELAY.enable();
 
@@ -90,8 +90,8 @@ class IngestStartupIT {
             eventually(
                 Duration.ofSeconds(45),
                 () ->
-                    listeners.getListenerContainer("ingest-raw").isRunning()
-                        && listeners.getListenerContainer("ingest-dlq").isRunning()))
+                    listeners.getListenerContainer("ingest-enriched").isRunning()
+                        && listeners.getListenerContainer("ingest-rejected").isRunning()))
         .isTrue();
     assertThat(number(clickhouse, "SELECT count() AS n FROM schema_migrations")).isEqualTo(13);
   }

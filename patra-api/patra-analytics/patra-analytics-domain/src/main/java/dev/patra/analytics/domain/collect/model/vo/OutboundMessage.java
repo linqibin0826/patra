@@ -21,16 +21,16 @@ public record OutboundMessage(EventStream stream, String key, String payload) {
   /// @param deviceId 设备 ID，作分区键
   /// @param payload 富化事件 JSON
   /// @return 消息
-  public static OutboundMessage raw(String deviceId, String payload) {
+  public static OutboundMessage enriched(String deviceId, String payload) {
     return new OutboundMessage(
-        EventStream.RAW, Objects.requireNonNull(deviceId, "deviceId"), payload);
+        EventStream.ENRICHED, Objects.requireNonNull(deviceId, "deviceId"), payload);
   }
 
   /// 一条 dlq 记录。
   ///
   /// @param payload dlq 记录 JSON
   /// @return 消息
-  public static OutboundMessage dlq(String payload) {
-    return new OutboundMessage(EventStream.DLQ, null, payload);
+  public static OutboundMessage rejected(String payload) {
+    return new OutboundMessage(EventStream.REJECTED, null, payload);
   }
 }

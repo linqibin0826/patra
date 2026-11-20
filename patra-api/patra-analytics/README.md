@@ -15,15 +15,15 @@
 ```text
 门户服务端 / 模拟器 ──POST /patra-analytics/events──▶ 网关 ──▶ CollectController
   └─ CollectEventsHandler：拆批 → 预检 + JSON Schema 校验 → 富化（时间校正、UA、爬虫、地区、去掉 IP）
-       ├─ 合格 → Kafka events.raw（key = device_id）
-       ├─ 不合格 → Kafka events.dlq（原因 + 删掉 IP 的原文）
+       ├─ 合格 → Kafka analytics.events.enriched（key = device_id）
+       ├─ 不合格 → Kafka analytics.events.rejected（原因 + 删掉 IP 的原文）
        └─ Kafka 写成后发进程内事件 ArticlesReadEvent ──同步──▶ ReadingHistoryListener（history 子域）
             └─ 按（用户，文献）合并 → 去掉开关关着、清空或删除之前发生的 → 一条 upsert 写 PG `anl_reading_history`
                （语句与锁等待各 500 ms，失败只记指标，采集照常 202）
 
 门户 ──/patra-analytics/me/reading-history──▶ MyReadingHistoryController（登录用户：翻页、删一条、清空、开关）
 
-Kafka events.raw / events.dlq ──批量拉取（一批最多 5 万条）──▶ EventIngestListener
+Kafka analytics.events.enriched / analytics.events.rejected ──批量拉取（一批最多 5 万条）──▶ EventIngestListener
   └─ IngestBatchHandler：整批一次 INSERT FORMAT JSONEachRow，带去重令牌 {topic ID}|p{分区}:{首}-{尾}
        ├─ 写成 → 提交偏移量；物化视图随之写 article_session_reads、session_quality、daily_person_activity
        ├─ ClickHouse 不可用 → 不提交，指数退避（1 秒起、上限 30 秒）重试同一批

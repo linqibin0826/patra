@@ -46,11 +46,11 @@ class KafkaEventPublishAdapterIT {
   }
 
   @Test
-  void publishes_raw_with_device_key_and_dlq_without_key() throws Exception {
+  void publishes_enriched_with_device_key_and_rejected_without_key() throws Exception {
     String suffix = UUID.randomUUID().toString();
     KafkaPublishProperties properties =
         new KafkaPublishProperties("raw-" + suffix, "dlq-" + suffix, Duration.ofSeconds(5));
-    createTopics(properties.rawTopic(), properties.dlqTopic());
+    createTopics(properties.enrichedTopic(), properties.rejectedTopic());
     KafkaEventPublishAdapter adapter =
         new KafkaEventPublishAdapter(
             new KafkaTemplate<>(producerFactory),
@@ -60,14 +60,14 @@ class KafkaEventPublishAdapterIT {
 
     adapter.publish(
         List.of(
-            OutboundMessage.raw("d1", "{\"n\":1}"),
-            OutboundMessage.raw("d2", "{\"n\":2}"),
-            OutboundMessage.dlq("{\"reason_code\":\"schema_invalid\"}")));
+            OutboundMessage.enriched("d1", "{\"n\":1}"),
+            OutboundMessage.enriched("d2", "{\"n\":2}"),
+            OutboundMessage.rejected("{\"reason_code\":\"schema_invalid\"}")));
 
-    List<ConsumerRecord<String, String>> raw = readAll(properties.rawTopic(), 2);
+    List<ConsumerRecord<String, String>> raw = readAll(properties.enrichedTopic(), 2);
     assertThat(raw).extracting(ConsumerRecord::key).containsExactlyInAnyOrder("d1", "d2");
     assertThat(raw).extracting(ConsumerRecord::value).contains("{\"n\":1}", "{\"n\":2}");
-    List<ConsumerRecord<String, String>> dlq = readAll(properties.dlqTopic(), 1);
+    List<ConsumerRecord<String, String>> dlq = readAll(properties.rejectedTopic(), 1);
     assertThat(dlq.getFirst().key()).isNull();
     assertThat(dlq.getFirst().value()).isEqualTo("{\"reason_code\":\"schema_invalid\"}");
   }

@@ -81,11 +81,11 @@ class CollectEventsHandlerTest {
     assertThat(publisher.batches).hasSize(1);
     List<OutboundMessage> sent = publisher.batches.getFirst();
     assertThat(sent)
-        .filteredOn(m -> m.stream() == EventStream.RAW)
+        .filteredOn(m -> m.stream() == EventStream.ENRICHED)
         .extracting(OutboundMessage::key)
         .containsExactly("d1", "d2");
     assertThat(sent)
-        .filteredOn(m -> m.stream() == EventStream.DLQ)
+        .filteredOn(m -> m.stream() == EventStream.REJECTED)
         .extracting(OutboundMessage::payload)
         .containsExactly("dlq:source_mismatch");
     assertThat(meters.get("analytics.collect.events").tag("outcome", "rejected").counter().count())
@@ -182,7 +182,7 @@ class CollectEventsHandlerTest {
   }
 
   @Test
-  void enriched_output_violation_goes_to_dlq() {
+  void enriched_output_violation_goes_to_rejected() {
     schema.valid("a", envelope("e1", "d1", EventName.ARTICLE_VIEWED));
     schema.brokenOutput.add("e1");
 

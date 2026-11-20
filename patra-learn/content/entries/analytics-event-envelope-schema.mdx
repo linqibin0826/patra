@@ -52,7 +52,7 @@ personalEnv: false
     { id: "browser", label: "浏览器", sub: "埋点脚本", col: 1, desc: "只知道页面上发生了什么。拿不到 httpOnly 的设备 Cookie，也不该自报身份，所以它写出的 ① 里没有任何身份字段。" },
     { id: "portal", label: "门户服务端", sub: "第一方路径", col: 2, desc: "从请求带来的 Cookie 和登录会话里取设备 ID、会话 ID、账号 ID，从请求里取 IP 和 UA，把每条事件组装成 ②。服务端自己产生的事件（如文献浏览）直接组装成 ②。" },
     { id: "collector", label: "采集端点", sub: "POST /patra-analytics/events", col: 3, desc: "逐条校验 ②，用 IP 查地区、用 UA 判爬虫，然后去掉 IP 和 UA，写成 ③。采集端点只经网关给门户服务端和模拟器调，浏览器打不到它，所以它信任 ② 里的账号 ID。" },
-    { id: "kafka", label: "events.raw", sub: "Kafka", code: true, col: 4, desc: "③ 是 Kafka 里的消息格式，也是 ClickHouse 明细表的一行。这里开始落盘，所以没有 IP。" }
+    { id: "kafka", label: "analytics.events.enriched", sub: "Kafka", code: true, col: 4, desc: "③ 是 Kafka 里的消息格式，也是 ClickHouse 明细表的一行。这里开始落盘，所以没有 IP。" }
   ]}
   edges={[
     { from: "browser", to: "portal", label: "①" },
@@ -67,7 +67,7 @@ personalEnv: false
         { at: "browser", caption: "卡片满足曝光规则，脚本写出 ①：事件 ID、事件名、时间、页面、`article_id` 等属性，没有身份。" },
         { at: "portal", caption: "门户补上设备 ID、会话 ID、账号 ID、IP、UA，`source` 填 `client`，`is_synthetic` 强制填 `false`，成为 ②。" },
         { at: "collector", caption: "校验通过；IP 查出省份，UA 解析出浏览器和设备类别、判定不是爬虫；删掉 IP 和 UA。" },
-        { at: "kafka", caption: "③ 写进 events.raw：有地区和爬虫标记，没有 IP 和原始 UA。" }
+        { at: "kafka", caption: "③ 写进 analytics.events.enriched：有地区和爬虫标记，没有 IP 和原始 UA。" }
       ]
     },
     {
@@ -76,7 +76,7 @@ personalEnv: false
       hops: [
         { at: "browser", caption: "有人改了脚本，从浏览器路径发出一条 `article_viewed`，想刷浏览量。" },
         { at: "portal", caption: "门户照常组装，浏览器来的事件 `source` 一律是 `client`。" },
-        { at: "collector", caption: "`article_viewed` 只能由服务端发，来源对不上，这一条进 events.dlq，原因 `source_mismatch`。", drop: true }
+        { at: "collector", caption: "`article_viewed` 只能由服务端发，来源对不上，这一条进 analytics.events.rejected，原因 `source_mismatch`。", drop: true }
       ]
     }
   ]}
@@ -162,7 +162,7 @@ Patra 每个事件一份属性 schema，`article_viewed` 的最简单：
 一批里有一条坏事件，整批都拒掉吗？Patra 把「批次外壳」和「单条事件」分开校验：
 
 - **整批拒收（400）**：请求体不是合法 JSON、条数为 0 或超过 500、外壳上多了字段；请求体超过 1 MiB 返回 413。这些情况不进任何 topic。
-- **单条进死信**：外壳合格，就逐条预检、校验。不合格的那条写进 `events.dlq`，同批其余合格的照常写进 `events.raw`，响应是 202 加「合格几条、不合格几条」。
+- **单条进死信**：外壳合格，就逐条预检、校验。不合格的那条写进 `analytics.events.rejected`，同批其余合格的照常写进 `analytics.events.enriched`，响应是 202 加「合格几条、不合格几条」。
 
 死信（dead letter）是业界对「处理不了、但留着排查」的消息的叫法。死信记录也有自己的 schema：收到时刻、原因码、第一条错误、原事件名，以及原事件的 JSON 原文。原文**先删掉 `client_ip` 和 `user_agent` 两个键再存**：死信也在 Kafka 里落盘、保留 2 天，同样不能有 IP。
 
@@ -220,7 +220,7 @@ Snowplow 的做法（`derived_tstamp`）是：客户端时钟的**绝对值**不
   prompt="假设 Patra 要给 `article_viewed` 加一个必填属性 `from_list`，记读者是从哪个列表点进来的。按这篇的规则，版本号怎么变？部署前后几分钟里会发生什么？有没有办法让这次改动不丢事件？"
   points={[
     { label: "MODEL +1", text: "加必填属性会让旧事件不合格，版本从 `1-x-x` 变成 `2-0-0`，采集端点的「当前 MODEL」也跟着变。" },
-    { label: "旧事件进死信", text: "门户新版部署前、或旧标签页还在跑时发出的 `1-x-x` 事件会被判 `version_rejected`，进 `events.dlq`。" },
+    { label: "旧事件进死信", text: "门户新版部署前、或旧标签页还在跑时发出的 `1-x-x` 事件会被判 `version_rejected`，进 `analytics.events.rejected`。" },
     { label: "改成可选", text: "如果能接受旧事件没有这个字段，就把它定成可选属性，只是 ADDITION +1，新旧版本都收，一条不丢。" },
     { label: "部署顺序", text: "不管怎么改，都按先改 schema、再改采集端点、最后改门户的顺序，让收的一方先认得新格式。" }
   ]}

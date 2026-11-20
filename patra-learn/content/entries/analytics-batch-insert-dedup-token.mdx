@@ -32,7 +32,7 @@ personalEnv: false
 
 MergeTree 那篇讲过：ClickHouse 每写一次，就在表上新建一个数据片段，后台再慢慢合并。Patra 的明细表 `events` 挂着三个物化视图，一次写入会在 `events` 和三张汇总表上**各**多一个片段，也就是 4 个；而合并线程只有 2 个。一秒写几百次，片段数很快超过上限，写入被拒（`TOO_MANY_PARTS`）。
 
-所以入库消费者攒批：一批最多 5 万条，流量小时最多等 1 秒，**一批只写一次**。连按分区拆开分别写都不做：`events.raw` 有 3 个分区，拆开就是 3 倍的片段。
+所以入库消费者攒批：一批最多 5 万条，流量小时最多等 1 秒，**一批只写一次**。连按分区拆开分别写都不做：`analytics.events.enriched` 有 3 个分区，拆开就是 3 倍的片段。
 
 ## 至少一次，重复从哪来
 
@@ -81,7 +81,7 @@ MergeTree 那篇讲过：ClickHouse 每写一次，就在表上新建一个数�
 <Stepper
   title="两次故障：响应超时与提交前崩溃"
   nodes={[
-    { id: "kafka", label: "events.raw", sub: "分区 0" },
+    { id: "kafka", label: "analytics.events.enriched", sub: "分区 0" },
     { id: "consumer", label: "入库消费者", sub: "批量监听" },
     { id: "ch", label: "ClickHouse", sub: "events" }
   ]}

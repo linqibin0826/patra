@@ -40,8 +40,8 @@ import tools.jackson.databind.node.ObjectNode;
 @SpringBootTest(
     webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
     properties = {
-      "patra.analytics.kafka.raw-topic=it-history.raw",
-      "patra.analytics.kafka.dlq-topic=it-history.dlq"
+      "patra.analytics.kafka.enriched-topic=it-history.enriched",
+      "patra.analytics.kafka.rejected-topic=it-history.rejected"
     })
 @AutoConfigureRestTestClient
 @ContextConfiguration(
@@ -196,7 +196,7 @@ class HistoryFlowIT {
             "earliest");
     try (KafkaConsumer<String, String> consumer =
         new KafkaConsumer<>(config, new StringDeserializer(), new StringDeserializer())) {
-      consumer.subscribe(List.of("it-history.raw"));
+      consumer.subscribe(List.of("it-history.enriched"));
       long deadline = System.nanoTime() + Duration.ofSeconds(20).toNanos();
       while (System.nanoTime() < deadline) {
         List<ConsumerRecord<String, String>> found = new ArrayList<>();

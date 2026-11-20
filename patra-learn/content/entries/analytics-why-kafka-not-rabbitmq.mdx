@@ -60,7 +60,7 @@ RabbitMQ Streams 这条值得多说一句：后来 Patra 的入库并没有用 C
 mini 是一台机器，Kafka 跑单节点：同一个进程既当控制器（管元数据）又当 broker，不需要 ZooKeeper。
 
 - **内存**：堆 512 MB，容器上限 1 GB。堆外还有元空间、线程栈、网络缓冲，以及 Kafka 重度依赖的页缓存，留给上限兜住。
-- **两个 topic**：`events.raw`（采集端点收下的事件，3 个分区）、`events.dlq`（校验没通过的事件，留着排查，1 个分区）。
+- **两个 topic**：`analytics.events.enriched`（采集端点收下的事件，3 个分区）、`analytics.events.rejected`（校验没通过的事件，留着排查，1 个分区）。
 - **保留 2 天，同时设磁盘上限**：按时间清理防止旧数据无限堆积，按大小清理防止压测把磁盘写满。「5 GB」按整个 Kafka 算，两个 topic 合计最坏约 4.4 GiB（怎么算见 Kafka 那篇）。
 - **关掉自动建 topic**：写错 topic 名直接报错，不会悄悄建出一个没有大小上限的新 topic，把前面那笔磁盘账算漏。
 
@@ -101,7 +101,7 @@ Kafka 的端口只在 tailnet 与局域网里可达，不进公网入口，Patra
 |---|---|---|
 | 加密（TLS） | 链路上的数据不被偷看 | 监听器协议从 `PLAINTEXT` 换成 `SASL_SSL`，broker 配证书，客户端信任 CA |
 | 认证（SASL） | 证明「你是谁」 | 常用 `SCRAM-SHA-512`，账号存在 KRaft 元数据里；每个服务一个账号，例如采集端点用 `analytics-collector` |
-| 授权（ACL） | 规定「你能做什么」 | 开 KRaft 的 `StandardAuthorizer`，`allow.everyone.if.no.acl.found=false`，再按最小权限授：采集端点只能写 `events.raw` 与 `events.dlq`，入库消费者只能读 `events.raw`、只能用自己的消费组 |
+| 授权（ACL） | 规定「你能做什么」 | 开 KRaft 的 `StandardAuthorizer`，`allow.everyone.if.no.acl.found=false`，再按最小权限授：采集端点只能写 `analytics.events.enriched` 与 `analytics.events.rejected`，入库消费者只能读 `analytics.events.enriched`、只能用自己的消费组 |
 
 三层是递进的：只加密不认证，谁都能连上来写；只认证不授权，任何一个服务的账号泄露，整个 Kafka 都能读写。
 

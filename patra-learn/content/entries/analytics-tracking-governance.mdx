@@ -15,7 +15,7 @@ personalEnv: false
 
 <Diagnose
   question="门户给 `article_clicked` 多带了一个 schema 里没登记的属性 `source_tab`，和另外两条正常事件放在同一批发给采集端点。这条事件会怎样？"
-  options={["照常收下，多出来的 `source_tab` 原样写进明细表", "这一条进 `events.dlq`，同批另外两条照常进 `events.raw`", "整批被拒绝，采集端点返回 400，三条都不入库"]}
+  options={["照常收下，多出来的 `source_tab` 原样写进明细表", "这一条进 `analytics.events.rejected`，同批另外两条照常进 `analytics.events.enriched`", "整批被拒绝，采集端点返回 400，三条都不入库"]}
   answer="B"
   ifRight="对。属性 schema 写了 `additionalProperties: false`，多一个字段就算不合格；单条事件逐条校验，坏的只连累它自己。这篇讲这道机器检查在业界叫什么、还要配哪些流程。"
   ifWrong="答案是 B。事件信封那篇讲过：每个事件的属性 schema 都是 `additionalProperties: false`，多一个没登记的字段就进死信 topic；校验是逐条的，同批合格的照常入库。整批拒收只发生在整批不是合法 JSON、超过条数或大小上限时。"
@@ -53,7 +53,7 @@ Segment 的做法类似但工具化：埋点方案可以在界面上编辑或上
 - **Snowplow 的 Iglu**：官方文档说它是托管和管理 JSON Schema 的一套工具，也叫 schema 仓库或注册中心；事件按 schema 校验，没通过的「失败事件」不进主表，单独存放，必要时可以重放（据 [Snowplow schemas](https://docs.snowplow.io/docs/fundamentals/schemas/)、[Snowplow failed events](https://docs.snowplow.io/docs/fundamentals/failed-events/)）。
 - **Segment 的 Protocols**：埋点方案就是一组 JSON Schema，和方案对不上的事件或属性会产生一条违规记录；可以严格到直接拦下，被拦的事件转进一个单独的隔离来源供排查；还能在不改代码的情况下改事件名和属性名（据 [Segment Protocols](https://www.twilio.com/docs/segment/protocols)）。
 
-Patra 没有单独部署注册中心，而是把 schema 放在 `patra-analytics-api` 模块的资源目录里，当成仓库内的注册中心：采集端点按它校验，模拟器按它造事件，门户的类型由它生成（release spec 决策 H）。不合格的事件进 `events.dlq`，原因只有五种：
+Patra 没有单独部署注册中心，而是把 schema 放在 `patra-analytics-api` 模块的资源目录里，当成仓库内的注册中心：采集端点按它校验，模拟器按它造事件，门户的类型由它生成（release spec 决策 H）。不合格的事件进 `analytics.events.rejected`，原因只有五种：
 
 <CodeRef at="patra-api/patra-analytics/patra-analytics-domain/src/main/java/dev/patra/analytics/domain/kernel/model/enums/RejectionReason.java@8140a9d9482324670b63f00ab3c62690102196c5" lines="3-14" />
 
@@ -99,7 +99,7 @@ Patra 的验收靠样例文件：埋点方案在 schema 旁边放了合格样例
 
 | 维度 | 问的是 | Patra 的对应做法 |
 |---|---|---|
-| 合法（validity） | 格式、类型、取值范围对不对 | JSON Schema 逐条校验，不合格进 `events.dlq` |
+| 合法（validity） | 格式、类型、取值范围对不对 | JSON Schema 逐条校验，不合格进 `analytics.events.rejected` |
 | 唯一（uniqueness） | 同一个事件有没有被记了多次 | 每条事件自带 `event_id`；批次去重令牌拦住重试；数条数一律 `uniqExact(event_id)` |
 | 及时（timeliness） | 数据多久之后才到、时间准不准 | 记下产生、发送、接收三个时间，用 `derived_at` 校正客户端时钟 |
 | 完整（completeness） | 该到的有没有都到 | 管线自己看不出来，要靠外部真值对账 |
