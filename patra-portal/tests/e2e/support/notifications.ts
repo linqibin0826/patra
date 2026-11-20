@@ -66,11 +66,15 @@ const INBOX_PATH = {
   helpful: "/notifications/helpful",
 } as const;
 
-/// 打开提醒列表的一个标签
+/// 打开提醒列表的一个标签。打开到出现「提醒」标题为止，没出来就重新打开，最多重试 2 分钟。连 mini 跑时有两种情况
+/// 打不开：next dev 编译新路由时让已开的页面整页重载，打断正在进行的跳转（`net::ERR_ABORTED`）；门户渲染前要向网关
+/// 确认登录状态，本机经 tailscale 中继访问 mini 时网络慢，这一步会超时（10 秒），页面就交给错误页
 export async function openInbox(page: Page, tab: keyof typeof INBOX_PATH): Promise<Locator> {
-  await page.goto(INBOX_PATH[tab]);
   const list = page.locator("main");
-  await expect(list.getByRole("heading", { level: 1, name: "提醒" })).toBeVisible(ROUND_TRIP);
+  await expect(async () => {
+    await page.goto(INBOX_PATH[tab], { timeout: 60_000 });
+    await expect(list.getByRole("heading", { level: 1, name: "提醒" })).toBeVisible(ROUND_TRIP);
+  }).toPass({ timeout: 2 * 60_000 });
   await expect(list.getByTestId("notification-skeleton-row")).toHaveCount(0, ROUND_TRIP);
   return list;
 }
@@ -151,23 +155,22 @@ export async function setReplyMode(page: Page, mode: ReplyMode): Promise<void> {
   await expect(page.getByText("已保存")).toBeVisible(ROUND_TRIP);
 }
 
-/// 点「全部标为已读」（三类都没有未读时直接跳过），等铃铛不挂徽标。未读数回来之前按钮也是禁用的，不能看按钮当下
-/// 可不可点：用页面打开时那次未读数请求（新页面第一次不带 ETag，总是 200 带数）判断
+/// 用例开始前、清理时把这个账号的提醒全部标为已读，再打开提醒页，等铃铛不挂徽标。
+///
+/// 直接调门户的「全部已读」接口，不点页面上的按钮：按钮要等页面自己的未读数请求成功回来才会启用，连 mini 时本机
+/// 走 tailscale 中继、网络慢，这条请求会超时失败（门户回 502），按钮就一直禁用。也不能用 `waitForResponse` 等这条
+/// 请求再决定点不点：next dev 每编译一个新模块，已开的页面会整页重载，旧页面在跳转途中还会再发一次，抢先被等到，
+/// 跳转完成后它的响应体就读不到了。按钮本身由提醒用例里的「全部标为已读后未读数归零」那一步测
 export async function markAllRead(page: Page): Promise<void> {
-  const counted = page.waitForResponse(
-    (res) => res.url().includes("/api/me/notifications/unread-count"),
-    { timeout: 60_000 },
-  );
-  const list = await openInbox(page, "replies");
-  const counts = (await (await counted).json()) as {
-    replies: number;
-    mentions: number;
-    helpful: number;
-  };
-  if (counts.replies + counts.mentions + counts.helpful > 0) {
-    const button = list.getByRole("button", { name: "全部标为已读" });
-    await expect(button).toBeEnabled(ROUND_TRIP);
-    await button.click();
-  }
+  // 写操作要带同源的 `Origin`（门户防跨站请求伪造），`page.request` 默认不带。调用时页面必须已经停在门户上，
+  // 否则取不到门户的 origin
+  const origin = new URL(page.url()).origin;
+  await expect(async () => {
+    const res = await page.request.put("/api/me/notifications/read", {
+      headers: { Origin: origin },
+    });
+    expect(res.status()).toBe(200);
+  }).toPass({ timeout: 60_000 });
+  await openInbox(page, "replies");
   await expect(bell(page)).toHaveAccessibleName("提醒", ROUND_TRIP);
 }
