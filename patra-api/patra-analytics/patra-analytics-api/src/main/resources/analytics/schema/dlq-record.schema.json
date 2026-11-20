@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://patra.linqibin.dev/schemas/analytics/dlq-record.schema.json",
-  "title": "analytics.events.rejected 的消息：不合格事件与原因；raw 里已删掉 client_ip 与 user_agent",
+  "title": "analytics.events.rejected 的消息（同时是 dlq_events 表的行格式）：不合格事件与原因；raw 字段（原事件文本）已删掉 client_ip 与 user_agent",
   "x-patra-version": "1-0-0",
   "type": "object",
   "additionalProperties": false,

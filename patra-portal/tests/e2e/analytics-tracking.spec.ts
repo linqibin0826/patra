@@ -7,7 +7,8 @@ import type { Verified } from "@tests/e2e/support/helpful";
 /// 测试账号 B 的凭据在 ~/.patra/secrets/e2e.env，不进仓库。
 ///
 /// 页面上看不到采集端点收到了什么，下面两条在 mini 上人工核对：
-/// 1. 打开一篇文献后，Kafka `analytics.events.enriched` 里有这条 `article_viewed`，带 `device_id`；登录时带 `user_id`；没有 IP 字段
+/// 1. 打开一篇文献后，Kafka `analytics.events.enriched` 里有这条 `article_viewed`，带 `device_id`；
+///    登录时带 `user_id`；没有 IP 字段
 ///    （`kafka-console-consumer --topic analytics.events.enriched` 看最新几条）。
 /// 2. 停掉 patra-analytics（`docker stop patra-analytics`）后再跑本文件：页面照常、控制台没有错误；跑完再启动。
 const B: Verified = {

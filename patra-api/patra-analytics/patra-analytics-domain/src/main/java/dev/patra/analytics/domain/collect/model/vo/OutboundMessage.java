@@ -6,7 +6,7 @@ import java.util.Objects;
 /// 要写出的一条消息。
 ///
 /// @param stream 写往哪里
-/// @param key 分区键：富化事件是设备 ID，dlq 记录为 `null`
+/// @param key 分区键：富化事件是设备 ID，不合格记录为 `null`
 /// @param payload 消息内容（JSON 文本）
 public record OutboundMessage(EventStream stream, String key, String payload) {
 
@@ -26,9 +26,9 @@ public record OutboundMessage(EventStream stream, String key, String payload) {
         EventStream.ENRICHED, Objects.requireNonNull(deviceId, "deviceId"), payload);
   }
 
-  /// 一条 dlq 记录。
+  /// 一条不合格记录，写往 rejected topic；格式见 dlq-record schema。
   ///
-  /// @param payload dlq 记录 JSON
+  /// @param payload 不合格记录 JSON
   /// @return 消息
   public static OutboundMessage rejected(String payload) {
     return new OutboundMessage(EventStream.REJECTED, null, payload);

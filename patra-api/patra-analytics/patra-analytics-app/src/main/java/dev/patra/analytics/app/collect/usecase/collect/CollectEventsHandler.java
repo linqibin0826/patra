@@ -33,13 +33,13 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
 
-/// 采集一批事件（采集 spec §4.2）：拆批 → 逐条预检与校验 → 富化（时间校正、UA、爬虫、地区）→ 合格的写
-/// `analytics.events.enriched`、不合格的写 `analytics.events.rejected`，一次写出整批；写成后把这批里的文献阅读发成 {@link
-// ArticlesReadEvent}，
+/// 采集一批事件（采集 spec §4.2）：拆批 → 逐条预检与校验 → 富化（时间校正、UA、爬虫、地区）→
+/// 合格的写 `analytics.events.enriched`、不合格的写 `analytics.events.rejected`，一次写出整批；
+/// 写成后把这批里的文献阅读发成 {@link ArticlesReadEvent}，
 /// history 子域同步监听、写阅读历史（阅读历史 spec §4.2）。
 ///
 /// 不开事务：采集链路本身不写 PG，阅读历史的写入事务归监听方。爬虫判定先看 UA，没命中才查 Redis 的频率窗口；Redis 出错跳过频率规则。
-/// 产物不合格（实现有 bug）的那条转进 dlq，不拖累同批其他事件。
+/// 产物不合格（实现有 bug）的那条转成不合格记录写进 rejected topic，不拖累同批其他事件。
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -106,15 +106,15 @@ public class CollectEventsHandler
     return CollectEventsResult.of(accepted, events.size() - accepted);
   }
 
-  /// 富化一条合格的事件，生成 `analytics.events.enriched` 消息；产物不合格时转进 dlq。
+  /// 富化一条合格的事件，生成 `analytics.events.enriched` 消息；产物不合格时转成不合格记录。
   ///
   /// @param event 合格的事件
-  /// @param eventJson 原文（转进 dlq 时用）
+  /// @param eventJson 原文（转成不合格记录时用）
   /// @param receivedAt 本批收到的时刻
-  /// @param messages 本批的消息（转进 dlq 时加入）
+  /// @param messages 本批的消息（转成不合格记录时加入）
   /// @param state 本批的状态
   /// @param reads 本批的文献阅读（合格时加入）
-  /// @return 富化事件消息；转进 dlq 时为空
+  /// @return 富化事件消息；转成不合格记录时为空
   private Optional<OutboundMessage> enrich(
       CollectedEnvelope event,
       String eventJson,
@@ -136,7 +136,7 @@ public class CollectEventsHandler
     try {
       payload = schema.enrichedJson(event, enrichment);
     } catch (IllegalStateException e) {
-      log.error("富化事件不合格，转进 dlq: eventId={}, {}", event.eventId(), e.getMessage());
+      log.error("富化事件不合格，转成不合格记录: eventId={}, {}", event.eventId(), e.getMessage());
       messages.add(
           reject(
               RejectionReason.SCHEMA_INVALID,
@@ -194,14 +194,14 @@ public class CollectEventsHandler
         : Optional.empty();
   }
 
-  /// 生成一条 dlq 消息并记指标。
+  /// 生成一条不合格记录（写往 rejected topic）并记指标。
   ///
   /// @param reason 原因
   /// @param detail 说明
   /// @param eventName 原事件名，可为 `null`
   /// @param eventJson 原文
   /// @param receivedAt 本批收到的时刻
-  /// @return dlq 消息
+  /// @return 不合格记录消息
   private OutboundMessage reject(
       RejectionReason reason,
       String detail,
