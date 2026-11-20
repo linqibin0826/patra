@@ -6,11 +6,11 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
 
 /// 采集写 Kafka 的 topic 与整批截止时间。
 ///
-/// @param rawTopic 富化事件的 topic
-/// @param dlqTopic 不合格事件的 topic
+/// @param enrichedTopic 富化事件的 topic
+/// @param rejectedTopic 不合格事件的 topic
 /// @param batchDeadline 一批从开始发送到全部确认的总时限，超时整批返回 503
 @ConfigurationProperties("patra.analytics.kafka")
 public record KafkaPublishProperties(
-    @DefaultValue("events.raw") String rawTopic,
-    @DefaultValue("events.dlq") String dlqTopic,
+    @DefaultValue("analytics.events.enriched") String enrichedTopic,
+    @DefaultValue("analytics.events.rejected") String rejectedTopic,
     @DefaultValue("5s") Duration batchDeadline) {}

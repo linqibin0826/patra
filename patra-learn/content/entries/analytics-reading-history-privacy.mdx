@@ -60,7 +60,7 @@ v0.18 给登录用户加了「阅读历史」：打开过哪些文献、最近�
 <DecisionOptions
   options={[
     { name: "直接查 ClickHouse 明细当历史", summary: "不另存，历史页按用户 ID 查事件明细表。", pros: "只存一份，不用同步。", cons: "按行删除和翻页正撞上 ClickHouse 的短板；明细 90 天就过期；删一条历史等于删统计数据，两层数据混在一起。" },
-    { name: "PostgreSQL，另起一个 Kafka 消费者写", summary: "第二个消费组读 events.raw，把文献浏览写进历史表。", pros: "采集端点不多一次数据库写入；历史出故障完全不影响采集。", cons: "消费有延迟。清空历史后，还在 Kafka 里排队的打开会被写回来，刚清空的历史又冒出一条；要防就得记下每个人的清空、删除时间逐条比对。" },
+    { name: "PostgreSQL，另起一个 Kafka 消费者写", summary: "第二个消费组读 analytics.events.enriched，把文献浏览写进历史表。", pros: "采集端点不多一次数据库写入；历史出故障完全不影响采集。", cons: "消费有延迟。清空历史后，还在 Kafka 里排队的打开会被写回来，刚清空的历史又冒出一条；要防就得记下每个人的清空、删除时间逐条比对。" },
     { name: "PostgreSQL，采集时同步写", summary: "采集端点把一批事件写进 Kafka 成功后，在同一次请求里把其中的文献浏览写进历史表。", pros: "写完才返回，历史和请求同步；不多一个要部署、要盯滞后的消费者。", cons: "采集端点多一次 PostgreSQL 写入；写失败只是这次没记上。", chosen: true }
   ]}
 />
@@ -84,7 +84,7 @@ v0.18 给登录用户加了「阅读历史」：打开过哪些文献、最近�
   ]}
   messages={[
     { from: "portal", to: "collect", label: "一批事件", caption: "门户服务端发来一批事件，其中有一条 article_viewed，带着 C 的用户 ID。" },
-    { from: "collect", to: "kafka", label: "写 events.raw", caption: "校验、富化后整批写进 Kafka。" },
+    { from: "collect", to: "kafka", label: "写 analytics.events.enriched", caption: "校验、富化后整批写进 Kafka。" },
     { from: "kafka", to: "collect", label: "写成", dashed: true, caption: "Kafka 确认写成。写失败的话返回 503，后面的步骤都不发生，这一批也不进历史。" },
     { from: "collect", to: "history", label: "ArticlesReadEvent", caption: "同一个线程里发出进程内事件，只含登录、非合成的三种阅读事件。" },
     { from: "history", to: "pg", label: "查开关、清空时刻、删除记录", caption: "开事务、限时 500 毫秒，查出这批用户的设置和删除记录，过滤掉不该写的。" },

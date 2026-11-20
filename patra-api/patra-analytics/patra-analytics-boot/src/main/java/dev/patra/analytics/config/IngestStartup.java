@@ -74,8 +74,8 @@ public class IngestStartup implements SmartLifecycle {
       try {
         migrator.migrate();
         if (ingestEnabled) {
-          listeners.getListenerContainer(EventIngestListener.RAW_LISTENER_ID).start();
-          listeners.getListenerContainer(EventIngestListener.DLQ_LISTENER_ID).start();
+          listeners.getListenerContainer(EventIngestListener.ENRICHED_LISTENER_ID).start();
+          listeners.getListenerContainer(EventIngestListener.REJECTED_LISTENER_ID).start();
           log.info("ClickHouse 迁移完成，入库消费者已启动");
         }
         return;

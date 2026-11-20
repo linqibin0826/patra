@@ -2,8 +2,8 @@ package dev.patra.analytics.adapter.collect.rest.response;
 
 /// 采集结果。
 ///
-/// @param accepted 写进 `events.raw` 的条数
-/// @param rejected 写进 `events.dlq` 的条数
+/// @param accepted 写进 `analytics.events.enriched` 的条数
+/// @param rejected 写进 `analytics.events.rejected` 的条数
 public record CollectResponse(int accepted, int rejected) {
 
   /// 创建响应。

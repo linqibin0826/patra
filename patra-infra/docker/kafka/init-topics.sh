@@ -7,8 +7,8 @@
 #
 # 「5 GB 上限」按整个 Kafka 算（spec 4.2 节）。retention.bytes 是每个分区的上限，且只删写满关闭的段文件，
 # 所以一个分区最坏占用 = retention.bytes + segment.bytes（再加 broker 两次清理检查之间新写入的量）：
-#   events.raw  3 × (1 GiB + 256 MiB) = 3.75 GiB
-#   events.dlq  1 × (512 MiB + 128 MiB) = 0.625 GiB
+#   analytics.events.enriched  3 × (1 GiB + 256 MiB) = 3.75 GiB
+#   analytics.events.rejected  1 × (512 MiB + 128 MiB) = 0.625 GiB
 # segment.ms 让流量小时段文件也按 6 小时滚动，否则一个段迟迟写不满，「保留 2 天」会拖成好几天。
 set -euo pipefail
 
@@ -19,8 +19,8 @@ SIX_HOURS_MS=21600000
 
 # 名称 分区数 retention.bytes（每分区） segment.bytes
 TOPICS=(
-  "events.raw 3 1073741824 268435456"
-  "events.dlq 1 536870912 134217728"
+  "analytics.events.enriched 3 1073741824 268435456"
+  "analytics.events.rejected 1 536870912 134217728"
 )
 
 for line in "${TOPICS[@]}"; do

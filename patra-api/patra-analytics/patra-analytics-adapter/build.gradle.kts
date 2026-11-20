@@ -10,7 +10,7 @@ dependencies {
     api(project(":patra-api:patra-analytics:patra-analytics-app"))
     api(project(":patra-tool:patra-tool-web"))
     api(libs.xxl.job)
-    // 入库：批量消费 events.raw / events.dlq
+    // 入库：批量消费 analytics.events.enriched / analytics.events.rejected
     implementation("org.springframework.kafka:spring-kafka")
     // 每批采集结果的指标
     implementation("io.micrometer:micrometer-core")

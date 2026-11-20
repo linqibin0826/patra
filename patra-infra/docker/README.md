@@ -364,8 +364,8 @@ v0.18 起行为事件的缓冲：采集端点写进来，入库消费者批量�
 - **KRaft 单节点**：不需要 ZooKeeper，同一个进程既管元数据又收发消息。集群 ID 写死在 compose 的 `CLUSTER_ID`，数据目录第一次格式化时记下，之后每次启动都要对得上，**不要改**（改了会报 `Invalid cluster.id` 起不来）。
 - **两个地址**：客户端先连引导地址，broker 再告诉它「以后连哪」（通告地址）。`EXTERNAL` 监听 9092、通告 `linqibins-mac-mini:9092`，MacBook 上的进程和 apps 栈的容器（`extra_hosts` 指回宿主机）都用它；`INTERNAL` 监听 29092、通告 `patra-kafka:29092`，只给 `patra-net` 上的 kafka-init 和健康检查用。控制器端口 9093 只在容器里（宿主机 9093 是 alertmanager）。
 - **没有认证**（PLAINTEXT）：只在 tailnet 与局域网内可达，不要加进 Cloudflare Tunnel 或路由器的端口转发。事件里没有令牌或密码。生产环境的开法（TLS + SASL/SCRAM + ACL）见 spec 4.2 节。
-- **topic 只由 kafka-init 建**：关闭了自动建 topic，往不存在的 topic 写会报错。`kafka/init-topics.sh` 定义了 `events.raw`（3 个分区）和 `events.dlq`（1 个分区），每次 `compose-all.sh up pipeline` 都会重跑：不存在就建，保留策略写回脚本里的值，分区数只增不减（改小会报错退出）。
-- **磁盘上限**：两个 topic 都保留 2 天，并按大小清理。`retention.bytes` 是每个分区的上限，且只删写满关闭的段文件，所以最坏占用是 `分区数 ×（retention.bytes + segment.bytes）`：`events.raw` 3.75 GiB、`events.dlq` 0.625 GiB。超出的部分要等清理检查（30 秒一次）发现、再等删除延迟（5 秒）才删掉，这段时间里写进来的量会暂时超出上限。本机不限速写 7 GiB（约 500 MB/s）时 `events.raw` 峰值 8.46 GiB，约 35 秒后回落并稳定在 3.67 GiB。
+- **topic 只由 kafka-init 建**：关闭了自动建 topic，往不存在的 topic 写会报错。`kafka/init-topics.sh` 定义了 `analytics.events.enriched`（3 个分区）和 `analytics.events.rejected`（1 个分区），每次 `compose-all.sh up pipeline` 都会重跑：不存在就建，保留策略写回脚本里的值，分区数只增不减（改小会报错退出）。
+- **磁盘上限**：两个 topic 都保留 2 天，并按大小清理。`retention.bytes` 是每个分区的上限，且只删写满关闭的段文件，所以最坏占用是 `分区数 ×（retention.bytes + segment.bytes）`：`analytics.events.enriched` 3.75 GiB、`analytics.events.rejected` 0.625 GiB。超出的部分要等清理检查（30 秒一次）发现、再等删除延迟（5 秒）才删掉，这段时间里写进来的量会暂时超出上限。本机不限速写 7 GiB（约 500 MB/s）时 `analytics.events.enriched` 峰值 8.46 GiB，约 35 秒后回落并稳定在 3.67 GiB。
 
 ```bash
 K='docker exec -e KAFKA_HEAP_OPTS=-Xmx128m patra-kafka /opt/kafka/bin'
@@ -376,7 +376,7 @@ du -sh ~/.patra/docker/kafka/data/events.*
 # 消费组的滞后：LAG 一直涨，说明入库消费者没在读或读不过来
 $K/kafka-consumer-groups.sh --bootstrap-server patra-kafka:29092 --describe --all-groups
 # 看几条原始事件
-$K/kafka-console-consumer.sh --bootstrap-server patra-kafka:29092 --topic events.raw --from-beginning --max-messages 5
+$K/kafka-console-consumer.sh --bootstrap-server patra-kafka:29092 --topic analytics.events.enriched --from-beginning --max-messages 5
 ```
 
 命令行工具每次都起一个 JVM，`KAFKA_HEAP_OPTS` 要压小，否则沿用容器里 512 MB 的设置，可能把 1 GB 的容器挤爆。

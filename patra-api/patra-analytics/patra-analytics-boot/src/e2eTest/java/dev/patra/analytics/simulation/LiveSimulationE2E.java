@@ -49,8 +49,8 @@ import tools.jackson.databind.json.JsonMapper;
     webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
     properties = {
       "patra.analytics.ingest.enabled=true",
-      "patra.analytics.kafka.raw-topic=e2e-live.raw",
-      "patra.analytics.kafka.dlq-topic=e2e-live.dlq"
+      "patra.analytics.kafka.enriched-topic=e2e-live.enriched",
+      "patra.analytics.kafka.rejected-topic=e2e-live.rejected"
     })
 @ContextConfiguration(
     initializers = {

@@ -29,7 +29,7 @@ import org.springframework.stereotype.Component;
 /// 也不必靠二分去找（坏行多时二分的写入次数与数据片段会成倍增加）。
 ///
 /// 其余整批一次写入，带批次去重令牌；ClickHouse 拒绝时二分定位坏行：写成的那半就算写成，写不进的继续对半拆，
-/// 到单条还写不进就转成 dlq 记录（`events.dlq` 来的被拒单条只记日志与指标，不再转 dlq）。
+/// 到单条还写不进就写进 dlq 表（`analytics.events.rejected` 来的消息本身已是不合格记录，被拒单条只记日志与指标，不再写 dlq 表）。
 /// 连不上、超时等可重试的失败直接抛出，由消费者不提交偏移量、按退避重试同一批。不开事务：不写 PG。
 @Slf4j
 @Component
@@ -124,7 +124,7 @@ public class IngestBatchHandler implements CommandHandler<IngestBatchCommand, In
   /// @param lines 每条一行
   /// @param token 令牌
   private void insert(EventStream stream, List<String> lines, String token) {
-    if (stream == EventStream.RAW) {
+    if (stream == EventStream.ENRICHED) {
       store.insertEvents(lines, token);
     } else {
       store.insertDlq(lines, token);
@@ -144,7 +144,7 @@ public class IngestBatchHandler implements CommandHandler<IngestBatchCommand, In
                 rejection.record().partition(),
                 rejection.record().offset(),
                 rejection.detail()));
-    if (stream == EventStream.DLQ) {
+    if (stream == EventStream.REJECTED) {
       return;
     }
     Instant now = clock.instant();

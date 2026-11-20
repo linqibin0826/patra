@@ -110,6 +110,6 @@ public class KafkaEventPublishAdapter implements EventPublishPort {
   /// @param stream 去向
   /// @return topic 名
   private String topicOf(EventStream stream) {
-    return stream == EventStream.RAW ? properties.rawTopic() : properties.dlqTopic();
+    return stream == EventStream.ENRICHED ? properties.enrichedTopic() : properties.rejectedTopic();
   }
 }

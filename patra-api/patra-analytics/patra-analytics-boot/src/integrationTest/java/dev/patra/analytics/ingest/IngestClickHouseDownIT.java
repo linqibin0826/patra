@@ -33,8 +33,8 @@ import org.testcontainers.clickhouse.ClickHouseContainer;
 @SpringBootTest(
     properties = {
       "patra.analytics.ingest.enabled=true",
-      "patra.analytics.kafka.raw-topic=it-ingest-down.raw",
-      "patra.analytics.kafka.dlq-topic=it-ingest-down.dlq"
+      "patra.analytics.kafka.enriched-topic=it-ingest-down.enriched",
+      "patra.analytics.kafka.rejected-topic=it-ingest-down.rejected"
     })
 @ContextConfiguration(
     initializers = {
@@ -45,7 +45,7 @@ import org.testcontainers.clickhouse.ClickHouseContainer;
 @ActiveProfiles("test")
 class IngestClickHouseDownIT {
 
-  private static final String RAW = "it-ingest-down.raw";
+  private static final String ENRICHED = "it-ingest-down.enriched";
 
   private static final TcpRelay RELAY = TcpRelay.start();
 
@@ -68,16 +68,17 @@ class IngestClickHouseDownIT {
   @Timeout(90)
   void clickhouse_down_keeps_offsets_until_recovered() throws Exception {
     String session = UUID.randomUUID().toString();
-    long before = committed(RAW);
+    long before = committed(ENRICHED);
     RELAY.disable();
 
-    send(RAW, event(session), event(session), event(session));
+    send(ENRICHED, event(session), event(session), event(session));
     Thread.sleep(5000);
 
-    assertThat(committed(RAW)).isEqualTo(before);
+    assertThat(committed(ENRICHED)).isEqualTo(before);
     RELAY.enable();
     assertThat(eventually(Duration.ofSeconds(30), () -> rows(session) == 3)).isTrue();
-    assertThat(eventually(Duration.ofSeconds(10), () -> committed(RAW) == end(RAW))).isTrue();
+    assertThat(eventually(Duration.ofSeconds(10), () -> committed(ENRICHED) == end(ENRICHED)))
+        .isTrue();
   }
 
   private long rows(String session) {

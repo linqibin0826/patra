@@ -1340,13 +1340,13 @@
     },
     {
       "type": "timeseries",
-      "title": "坏数据量（events.dlq，不受开关影响）",
+      "title": "坏数据量（dlq_events 表，不受开关影响）",
       "id": 30,
       "datasource": {
         "type": "grafana-clickhouse-datasource",
         "uid": "clickhouse"
       },
-      "description": "每天进 events.dlq 的不合格事件，按原因分色（埋点方案 §5）。dlq 里读不出合成标记，不受开关影响。实时的采集拒收与入库滞后见「Analytics 管线」看板。",
+      "description": "每天进 dlq_events 表的不合格事件，按原因分色（埋点方案 §5）。dlq 里读不出合成标记，不受开关影响。实时的采集拒收与入库滞后见「Analytics 管线」看板。",
       "gridPos": {
         "h": 8,
         "w": 24,

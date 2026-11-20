@@ -69,8 +69,8 @@ import tools.jackson.databind.node.ObjectNode;
     webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
     properties = {
       "patra.analytics.ingest.enabled=true",
-      "patra.analytics.kafka.raw-topic=it-insight.raw",
-      "patra.analytics.kafka.dlq-topic=it-insight.dlq"
+      "patra.analytics.kafka.enriched-topic=it-insight.enriched",
+      "patra.analytics.kafka.rejected-topic=it-insight.rejected"
     })
 @AutoConfigureRestTestClient
 @ContextConfiguration(
@@ -83,7 +83,7 @@ import tools.jackson.databind.node.ObjectNode;
 @ActiveProfiles("test")
 class InsightFlowIT {
 
-  private static final String RAW = "it-insight.raw";
+  private static final String ENRICHED = "it-insight.enriched";
   private static final JsonMapper MAPPER = JsonMapper.builder().build();
   private static final List<Long> LATEST = LongStream.rangeClosed(1, 28).boxed().toList();
 
@@ -305,7 +305,7 @@ class InsightFlowIT {
     try (KafkaProducer<String, String> producer =
         new KafkaProducer<>(config, new StringSerializer(), new StringSerializer())) {
       for (String value : values) {
-        producer.send(new ProducerRecord<>(RAW, value)).get(10, TimeUnit.SECONDS);
+        producer.send(new ProducerRecord<>(ENRICHED, value)).get(10, TimeUnit.SECONDS);
       }
     } catch (Exception e) {
       throw new IllegalStateException("写 Kafka 失败", e);

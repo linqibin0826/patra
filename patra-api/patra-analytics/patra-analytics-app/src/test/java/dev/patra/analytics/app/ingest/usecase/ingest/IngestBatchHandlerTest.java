@@ -34,7 +34,7 @@ class IngestBatchHandlerTest {
   void token_covers_each_partition_range() {
     handler.handle(
         IngestBatchCommand.of(
-            EventStream.RAW,
+            EventStream.ENRICHED,
             List.of(
                 record(0, 10, "a"), record(0, 11, "b"), record(0, 12, "c"), record(2, 5, "d"))));
 
@@ -48,7 +48,7 @@ class IngestBatchHandlerTest {
   void token_is_stable_across_partition_order() {
     handler.handle(
         IngestBatchCommand.of(
-            EventStream.RAW,
+            EventStream.ENRICHED,
             List.of(record(2, 5, "d"), record(0, 10, "a"), record(1, 7, "x"), record(0, 12, "c"))));
 
     assertThat(store.writes.getFirst().token()).isEqualTo("T|p0:10-12|p1:7-7|p2:5-5");
@@ -61,7 +61,7 @@ class IngestBatchHandlerTest {
     assertThatThrownBy(
             () ->
                 handler.handle(
-                    IngestBatchCommand.of(EventStream.RAW, List.of(record(0, 0, "BAD")))))
+                    IngestBatchCommand.of(EventStream.ENRICHED, List.of(record(0, 0, "BAD")))))
         .isInstanceOf(IngestUnavailableException.class);
     assertThat(store.dlqWrites()).isEmpty();
   }
@@ -73,7 +73,7 @@ class IngestBatchHandlerTest {
             .mapToObj(i -> record(0, 100 + i, i == 5 ? "BAD-" + i : "ok-" + i))
             .toList();
 
-    IngestBatchResult result = handler.handle(IngestBatchCommand.of(EventStream.RAW, records));
+    IngestBatchResult result = handler.handle(IngestBatchCommand.of(EventStream.ENRICHED, records));
 
     List<Write> eventWrites = store.eventWrites();
     assertThat(eventWrites).hasSizeLessThanOrEqualTo(7);
@@ -95,7 +95,8 @@ class IngestBatchHandlerTest {
   void blank_record_goes_to_dlq_without_being_written() {
     IngestBatchResult result =
         handler.handle(
-            IngestBatchCommand.of(EventStream.RAW, List.of(record(0, 0, "ok"), raw(0, 1, null))));
+            IngestBatchCommand.of(
+                EventStream.ENRICHED, List.of(record(0, 0, "ok"), raw(0, 1, null))));
 
     assertThat(store.eventWrites())
         .singleElement()
@@ -110,7 +111,7 @@ class IngestBatchHandlerTest {
     IngestBatchResult result =
         handler.handle(
             IngestBatchCommand.of(
-                EventStream.RAW, List.of(record(0, 0, "ok"), raw(0, 1, "  not json"))));
+                EventStream.ENRICHED, List.of(record(0, 0, "ok"), raw(0, 1, "  not json"))));
 
     assertThat(store.eventWrites())
         .singleElement()
@@ -126,7 +127,7 @@ class IngestBatchHandlerTest {
     IngestBatchResult result =
         handler.handle(
             IngestBatchCommand.of(
-                EventStream.DLQ, List.of(record(0, 0, "ok-0"), record(0, 1, "BAD-1"))));
+                EventStream.REJECTED, List.of(record(0, 0, "ok-0"), record(0, 1, "BAD-1"))));
 
     assertThat(store.writes).allSatisfy(write -> assertThat(write.table()).isEqualTo("dlq"));
     assertThat(store.ingested).containsExactly("{ok-0}");
@@ -137,12 +138,17 @@ class IngestBatchHandlerTest {
   @Test
   void metrics_record_batch_size_and_rejections() {
     handler.handle(
-        IngestBatchCommand.of(EventStream.RAW, List.of(record(0, 0, "ok"), record(0, 1, "BAD"))));
+        IngestBatchCommand.of(
+            EventStream.ENRICHED, List.of(record(0, 0, "ok"), record(0, 1, "BAD"))));
 
     assertThat(
-            meters.get("analytics.ingest.batch.size").tag("stream", "raw").summary().totalAmount())
+            meters
+                .get("analytics.ingest.batch.size")
+                .tag("stream", "enriched")
+                .summary()
+                .totalAmount())
         .isEqualTo(2);
-    assertThat(meters.get("analytics.ingest.rejected").tag("stream", "raw").counter().count())
+    assertThat(meters.get("analytics.ingest.rejected").tag("stream", "enriched").counter().count())
         .isEqualTo(1);
   }
 

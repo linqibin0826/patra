@@ -28,12 +28,12 @@ import org.springframework.kafka.listener.MessageListenerContainer;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.ContextConfiguration;
 
-/// 入库端到端：events.raw / events.dlq → 批量消费 → ClickHouse，写成后才提交位点。
+/// 入库端到端：analytics.events.enriched / analytics.events.rejected → 批量消费 → ClickHouse，写成后才提交位点。
 @SpringBootTest(
     properties = {
       "patra.analytics.ingest.enabled=true",
-      "patra.analytics.kafka.raw-topic=it-ingest-flow.raw",
-      "patra.analytics.kafka.dlq-topic=it-ingest-flow.dlq"
+      "patra.analytics.kafka.enriched-topic=it-ingest-flow.enriched",
+      "patra.analytics.kafka.rejected-topic=it-ingest-flow.rejected"
     })
 @ContextConfiguration(
     initializers = {
@@ -45,7 +45,7 @@ import org.springframework.test.context.ContextConfiguration;
 @ActiveProfiles("test")
 class IngestFlowIT {
 
-  private static final String RAW = "it-ingest-flow.raw";
+  private static final String ENRICHED = "it-ingest-flow.enriched";
 
   @Autowired private Client clickhouse;
   @Autowired private KafkaListenerEndpointRegistry listeners;
@@ -56,10 +56,11 @@ class IngestFlowIT {
   @Timeout(60)
   void records_are_ingested_and_committed() {
     String session = UUID.randomUUID().toString();
-    send(RAW, IntStream.range(0, 20).mapToObj(i -> event(session)).toArray(String[]::new));
+    send(ENRICHED, IntStream.range(0, 20).mapToObj(i -> event(session)).toArray(String[]::new));
 
     assertThat(eventually(Duration.ofSeconds(20), () -> rows(session) == 20)).isTrue();
-    assertThat(eventually(Duration.ofSeconds(10), () -> committed(RAW) == end(RAW))).isTrue();
+    assertThat(eventually(Duration.ofSeconds(10), () -> committed(ENRICHED) == end(ENRICHED)))
+        .isTrue();
   }
 
   @Test
@@ -68,7 +69,7 @@ class IngestFlowIT {
     String session = UUID.randomUUID().toString();
     String garbage = "not json " + session;
 
-    send(RAW, event(session), garbage, event(session));
+    send(ENRICHED, event(session), garbage, event(session));
 
     assertThat(eventually(Duration.ofSeconds(20), () -> rows(session) == 2)).isTrue();
     assertThat(
@@ -88,17 +89,17 @@ class IngestFlowIT {
   @Test
   @Timeout(60)
   void lag_gauge_reports_backlog() {
-    MessageListenerContainer raw = listeners.getListenerContainer("ingest-raw");
+    MessageListenerContainer raw = listeners.getListenerContainer("ingest-enriched");
     raw.pause();
     try {
       assertThat(eventually(Duration.ofSeconds(10), raw::isContainerPaused)).isTrue();
       String session = UUID.randomUUID().toString();
-      send(RAW, IntStream.range(0, 5).mapToObj(i -> event(session)).toArray(String[]::new));
+      send(ENRICHED, IntStream.range(0, 5).mapToObj(i -> event(session)).toArray(String[]::new));
 
       lagGauge.refresh();
 
       double lag =
-          meters.get("analytics.ingest.lag").tag("topic", RAW).gauges().stream()
+          meters.get("analytics.ingest.lag").tag("topic", ENRICHED).gauges().stream()
               .mapToDouble(Gauge::value)
               .sum();
       assertThat(lag).isGreaterThanOrEqualTo(5);

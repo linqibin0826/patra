@@ -7,7 +7,7 @@ import java.util.List;
 
 /// 把一批 Kafka 消息写进 ClickHouse。
 ///
-/// @param stream 来自哪个 topic：`RAW` 写明细表，`DLQ` 写 dlq 表
+/// @param stream 来自哪个 topic：`ENRICHED` 写明细表，`REJECTED` 写 dlq 表
 /// @param records 这一批消息，顺序同拉取
 public record IngestBatchCommand(EventStream stream, List<IngestRecord> records)
     implements Command<IngestBatchResult> {
